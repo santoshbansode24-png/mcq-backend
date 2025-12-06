@@ -2,21 +2,51 @@
 /**
  * Database Configuration File
  * MCQ Project 2.0
- * 
- * This file establishes connection to MySQL database using PDO
  */
 
-// Enable error reporting for development
+// Enable error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// CORS Headers - Allow requests from Android app
+// CORS Headers
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-// Removed global JSON header to allow HTML pages
 
 // Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Database Credentials (Cloud First, then Local)
+$db_host = getenv('DB_HOST') ?: 'localhost';
+$db_name = getenv('DB_NAME') ?: 'mcq_project_v2';
+$db_user = getenv('DB_USER') ?: 'root';
+$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
+
+try {
+    $dsn = "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4";
+    
+    // SSL options for TiDB Cloud
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    // Enable SSL if connecting to Cloud (Hostname contains 'tidbcloud')
+    if (strpos($db_host, 'tidbcloud') !== false) {
+        $options[PDO::MYSQL_ATTR_SSL_CA] = true;
+        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+    }
+    
+    $pdo = new PDO($dsn, $db_user, $db_pass, $options);
+    
+} catch (PDOException $e) {
+    http_response_code(500);
+    header("Content-Type: application/json");
+    echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
     exit();
 }
 
@@ -61,7 +91,4 @@ function validateRequired($data, $requiredFields) {
 function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)));
 }
-
-// Database connection is now available as $pdo
-// Use this in all API files by including this file
 ?>

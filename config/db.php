@@ -19,14 +19,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-// Database Credentials (Cloud First, then Local)
-$db_host = getenv('DB_HOST') ?: 'localhost';
-$db_name = getenv('DB_NAME') ?: 'mcq_project_v2';
-$db_user = getenv('DB_USER') ?: 'root';
-$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
+// Helper to get env var from multiple sources
+function getEnvVar($key, $default = null) {
+    if (getenv($key) !== false) return getenv($key);
+    if (isset($_ENV[$key])) return $_ENV[$key];
+    if (isset($_SERVER[$key])) return $_SERVER[$key];
+    return $default;
+}
+
+// Database Credentials
+$db_host = getEnvVar('DB_HOST');
+$db_name = getEnvVar('DB_NAME', 'mcq_project_v2');
+$db_user = getEnvVar('DB_USER', 'root');
+$db_pass = getEnvVar('DB_PASS', '');
+$db_port = getEnvVar('DB_PORT', '4000'); // TiDB defaults to 4000
+
+// Fail early if no host
+if (!$db_host) {
+    header("Content-Type: application/json");
+    echo json_encode(['status' => 'error', 'message' => 'Configuration Error: DB_HOST environment variable is missing.']);
+    exit();
+}
 
 try {
-    $dsn = "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4";
+    // Add Port to DSN
+    $dsn = "mysql:host=$db_host;port=$db_port;dbname=$db_name;charset=utf8mb4";
     
     // SSL options for TiDB Cloud
     $options = [
@@ -35,7 +52,7 @@ try {
         PDO::ATTR_EMULATE_PREPARES   => false,
     ];
 
-    // Enable SSL if connecting to Cloud (Hostname contains 'tidbcloud')
+    // Enable SSL if connecting to Cloud
     if (strpos($db_host, 'tidbcloud') !== false) {
         $options[PDO::MYSQL_ATTR_SSL_CA] = true;
         $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
@@ -43,9 +60,9 @@ try {
     
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
     
-} catch (PDOException $e) {
-    http_response_code(500);
-    header("Content-Type: application/json");
+} catch (PDOException $e) {   
+    // Return unified JSON error if connection fails
+    header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
     exit();
 }

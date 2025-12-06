@@ -1,0 +1,47 @@
+# MCQ Project 2.0 - Apache Configuration
+
+# Enable Rewrite Engine
+RewriteEngine On
+
+# Security Headers
+<IfModule mod_headers.c>
+    # CORS Headers
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    
+    # Security Headers
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Disable Directory Browsing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "\.(sql|log|md|json|lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect config directory
+# Protect config directory
+RewriteRule ^config/ - [F,L]
+
+# PHP Settings
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 50M
+    php_value post_max_size 50M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+# Handle OPTIONS requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Error Pages (optional)
+# ErrorDocument 404 /404.html
+# ErrorDocument 500 /500.html

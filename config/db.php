@@ -19,27 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-// Helper to get env var from multiple sources
-function getEnvVar($key, $default = null) {
-    if (getenv($key) !== false) return getenv($key);
-    if (isset($_ENV[$key])) return $_ENV[$key];
-    if (isset($_SERVER[$key])) return $_SERVER[$key];
-    return $default;
-}
-
-// Database Credentials
-$db_host = getEnvVar('DB_HOST');
-$db_name = getEnvVar('DB_NAME', 'mcq_project_v2');
-$db_user = getEnvVar('DB_USER', 'root');
-$db_pass = getEnvVar('DB_PASS', '');
-$db_port = getEnvVar('DB_PORT', '4000'); // TiDB defaults to 4000
-
-// Fail early if no host
-if (!$db_host) {
-    header("Content-Type: application/json");
-    echo json_encode(['status' => 'error', 'message' => 'Configuration Error: DB_HOST environment variable is missing.']);
-    exit();
-}
+// Database Credentials (Hardcoded for Production Stability)
+$db_host = 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com';
+$db_name = 'test';
+$db_user = 'f5vNyKym3dZo9L9.root';
+$db_pass = 'bv4kAHsj6ZdW16Dx';
+$db_port = '4000';
 
 try {
     // Add Port to DSN
@@ -52,11 +37,9 @@ try {
         PDO::ATTR_EMULATE_PREPARES   => false,
     ];
 
-    // Enable SSL if connecting to Cloud
-    if (strpos($db_host, 'tidbcloud') !== false) {
-        $options[PDO::MYSQL_ATTR_SSL_CA] = true;
-        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
-    }
+    // Always enable SSL for TiDB
+    $options[PDO::MYSQL_ATTR_SSL_CA] = true;
+    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
     
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
     

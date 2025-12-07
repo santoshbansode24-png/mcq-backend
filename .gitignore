@@ -1,0 +1,16 @@
+# System Files
+.DS_Store
+Thumbs.db
+*.log
+
+# Sensitive Scripts
+migrate_to_cloud.php
+database_export.sql
+
+# Uploads (Render filesystem is ephemeral, so uploads won't persist anyway without S3)
+# But we keep the folder for structure
+# uploads/*
+# !uploads/.gitkeep
+
+# Vendor (if we add Composer later)
+vendor/

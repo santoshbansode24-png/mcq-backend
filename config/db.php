@@ -25,7 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 $db_host = getenv('DB_HOST') ?: 'localhost';
 $db_name = getenv('DB_NAME') ?: 'mcq_project_v2';
 $db_user = getenv('DB_USER') ?: 'root';
-$db_pass = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '';
+$db_pass = getenv('DB_PASSWORD');
+if ($db_pass === false) {
+    $db_pass = getenv('DB_PASS');
+}
+if ($db_pass === false) {
+    $db_pass = '';
+}
 $db_port = getenv('DB_PORT') ?: '3306';
 
 try {

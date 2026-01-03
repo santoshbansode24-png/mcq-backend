@@ -7,9 +7,10 @@ RUN docker-php-ext-install pdo pdo_mysql
 RUN a2enmod rewrite
 
 # Fix for "More than one MPM loaded" error
-# Explicitly disable event/worker and enable prefork
-RUN a2dismod mpm_event || true
-RUN a2dismod mpm_worker || true
+# Fix for "More than one MPM loaded" error
+# Manually remove conflicting MPMs to ensure only prefork is active
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_event.conf
+RUN rm -f /etc/apache2/mods-enabled/mpm_worker.load /etc/apache2/mods-enabled/mpm_worker.conf
 RUN a2enmod mpm_prefork
 
 # Copy source code

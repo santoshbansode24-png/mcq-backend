@@ -26,8 +26,17 @@ PORT=${PORT:-80}
 echo "Configuring Apache to listen on port $PORT..."
 
 # Replace default port 80 in ports.conf and default site config
-sed -i "s/Listen 80/Listen $PORT/" /etc/apache2/ports.conf
+# Force binding to 0.0.0.0 to ensure external access
+sed -i "s/Listen 80/Listen 0.0.0.0:$PORT/" /etc/apache2/ports.conf
 sed -i "s/:80/:$PORT/" /etc/apache2/sites-available/000-default.conf
+
+echo "=== DEBUG: ports.conf ==="
+cat /etc/apache2/ports.conf
+echo "=== DEBUG: 000-default.conf ==="
+cat /etc/apache2/sites-available/000-default.conf
+echo "=== DEBUG: apache2ctl -S ==="
+apache2ctl -S
+echo "=== STARTING APACHE ==="
 
 # Execute the CMD from Dockerfile (usually apache2-foreground)
 exec "$@"

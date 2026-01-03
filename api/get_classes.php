@@ -1,15 +1,18 @@
 <?php
 /**
  * Get Classes API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: GET /api/get_classes.php
  * Purpose: Get all available classes
  */
 
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
 // Only allow GET requests
+file_put_contents('../debug_classes.log', date('Y-m-d H:i:s') . " - Request received from " . $_SERVER['REMOTE_ADDR'] . "\n", FILE_APPEND);
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse('error', 'Only GET requests are allowed', null, 405);
 }

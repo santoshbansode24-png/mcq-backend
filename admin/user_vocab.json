@@ -1,0 +1,702 @@
+[
+    {
+        "word": "Happy",
+        "synonym": "Joyful",
+        "definition": "Feeling or showing pleasure or contentment.",
+        "definition_marathi": "आनंदी, समाधानी.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Sad",
+            "B": "Joyful",
+            "C": "Angry",
+            "D": "Tired"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Big",
+        "synonym": "Large",
+        "definition": "Of considerable size, extent, or intensity.",
+        "definition_marathi": "मोठा, विशाल.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Large",
+            "B": "Small",
+            "C": "Tiny",
+            "D": "Weak"
+        },
+        "correct_answer": "A"
+    },
+    {
+        "word": "Fast",
+        "synonym": "Quick",
+        "definition": "Moving or capable of moving at high speed.",
+        "definition_marathi": "वेगवान, जलद.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Slow",
+            "B": "Lazy",
+            "C": "Quick",
+            "D": "Late"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Beautiful",
+        "synonym": "Pretty",
+        "definition": "Pleasing the senses or mind aesthetically.",
+        "definition_marathi": "सुंदर, देखणा.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Ugly",
+            "B": "Pretty",
+            "C": "Dirty",
+            "D": "Mean"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Start",
+        "synonym": "Begin",
+        "definition": "To cause something to happen or exist.",
+        "definition_marathi": "सुरुवात करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Stop",
+            "B": "End",
+            "C": "Begin",
+            "D": "Finish"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Rich",
+        "synonym": "Wealthy",
+        "definition": "Having a great deal of money or assets.",
+        "definition_marathi": "श्रीमंत, धनवान.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Poor",
+            "B": "Weak",
+            "C": "Wealthy",
+            "D": "Sick"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Smart",
+        "synonym": "Clever",
+        "definition": "Having or showing a quick-witted intelligence.",
+        "definition_marathi": "हुशार, बुद्धिमान.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Dumb",
+            "B": "Clever",
+            "C": "Slow",
+            "D": "Dull"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Angry",
+        "synonym": "Mad",
+        "definition": "Feeling or showing strong annoyance or hostility.",
+        "definition_marathi": "रागावलेला, संतापलेला.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Calm",
+            "B": "Happy",
+            "C": "Mad",
+            "D": "Glad"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Small",
+        "synonym": "Tiny",
+        "definition": "Of a size that is less than normal or usual.",
+        "definition_marathi": "लहान, छोटा.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Huge",
+            "B": "Giant",
+            "C": "Tiny",
+            "D": "Tall"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Help",
+        "synonym": "Assist",
+        "definition": "To make it easier for someone to do something.",
+        "definition_marathi": "मदत करणे, सहाय्य करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Hurt",
+            "B": "Ignore",
+            "C": "Block",
+            "D": "Assist"
+        },
+        "correct_answer": "D"
+    },
+    {
+        "word": "Quiet",
+        "synonym": "Silent",
+        "definition": "Making little or no noise.",
+        "definition_marathi": "शांत, निमूट.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Loud",
+            "B": "Noisy",
+            "C": "Silent",
+            "D": "Wild"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Brave",
+        "synonym": "Courageous",
+        "definition": "Ready to face and endure danger or pain.",
+        "definition_marathi": "शूर, धाडसी.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Scared",
+            "B": "Courageous",
+            "C": "Weak",
+            "D": "Shy"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Correct",
+        "synonym": "Right",
+        "definition": "Free from error; in accordance with fact or truth.",
+        "definition_marathi": "बरोबर, अचूक.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Wrong",
+            "B": "False",
+            "C": "Right",
+            "D": "Bad"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Difficult",
+        "synonym": "Hard",
+        "definition": "Needing much effort or skill to accomplish.",
+        "definition_marathi": "कठीण, अवघड.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Easy",
+            "B": "Simple",
+            "C": "Hard",
+            "D": "Soft"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "End",
+        "synonym": "Finish",
+        "definition": "A final part of something.",
+        "definition_marathi": "शेवट, अंत.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Start",
+            "B": "Begin",
+            "C": "Finish",
+            "D": "Open"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Funny",
+        "synonym": "Humorous",
+        "definition": "Causing laughter or amusement.",
+        "definition_marathi": "विनोदी, मजेशीर.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Serious",
+            "B": "Sad",
+            "C": "Humorous",
+            "D": "Boring"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Idea",
+        "synonym": "Concept",
+        "definition": "A thought or suggestion as to a possible course of action.",
+        "definition_marathi": "कल्पना, विचार.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Thing",
+            "B": "Concept",
+            "C": "Rock",
+            "D": "Hand"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Kind",
+        "synonym": "Nice",
+        "definition": "Having or showing a friendly, generous, and considerate nature.",
+        "definition_marathi": "दयाळू, प्रेमळ.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Mean",
+            "B": "Cruel",
+            "C": "Nice",
+            "D": "Rude"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Listen",
+        "synonym": "Hear",
+        "definition": "Give attention to sound.",
+        "definition_marathi": "ऐकणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Speak",
+            "B": "Hear",
+            "C": "Talk",
+            "D": "Run"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Look",
+        "synonym": "See",
+        "definition": "Direct one's gaze toward someone or something.",
+        "definition_marathi": "पाहणे, बघणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Hear",
+            "B": "Smell",
+            "C": "See",
+            "D": "Touch"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Mistake",
+        "synonym": "Error",
+        "definition": "An action or judgment that is misguided or wrong.",
+        "definition_marathi": "चूक, गल्लत.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Fact",
+            "B": "Error",
+            "C": "Truth",
+            "D": "Right"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Neat",
+        "synonym": "Tidy",
+        "definition": "Arranged in an orderly, tidy way.",
+        "definition_marathi": "नेटका, व्यवस्थित.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Messy",
+            "B": "Dirty",
+            "C": "Tidy",
+            "D": "Rough"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Old",
+        "synonym": "Ancient",
+        "definition": "Having lived for a long time; no longer young.",
+        "definition_marathi": "जुने, प्राचीन.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "New",
+            "B": "Fresh",
+            "C": "Young",
+            "D": "Ancient"
+        },
+        "correct_answer": "D"
+    },
+    {
+        "word": "Page",
+        "synonym": "Sheet",
+        "definition": "One side of a sheet of paper in a book.",
+        "definition_marathi": "पान, पृष्ठ.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Book",
+            "B": "Sheet",
+            "C": "Pen",
+            "D": "Cover"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Run",
+        "synonym": "Sprint",
+        "definition": "Move at a speed faster than a walk.",
+        "definition_marathi": "धावणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Walk",
+            "B": "Sit",
+            "C": "Sprint",
+            "D": "Sleep"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Scared",
+        "synonym": "Afraid",
+        "definition": "Fearful; frightened.",
+        "definition_marathi": "घाबरलेला.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Brave",
+            "B": "Afraid",
+            "C": "Bold",
+            "D": "Happy"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Teach",
+        "synonym": "Educate",
+        "definition": "Show or explain to (someone) how to do something.",
+        "definition_marathi": "शिकवणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Learn",
+            "B": "Study",
+            "C": "Educate",
+            "D": "Hide"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "True",
+        "synonym": "Real",
+        "definition": "In accordance with fact or reality.",
+        "definition_marathi": "खरे, सत्य.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Fake",
+            "B": "Real",
+            "C": "Lie",
+            "D": "False"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Use",
+        "synonym": "Utilize",
+        "definition": "Take, hold, or deploy (something) as a means of accomplishing a purpose.",
+        "definition_marathi": "वापरणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Waste",
+            "B": "Drop",
+            "C": "Utilize",
+            "D": "Save"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Value",
+        "synonym": "Worth",
+        "definition": "The importance, worth, or usefulness of something.",
+        "definition_marathi": "किंमत, मूल्य.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Cost",
+            "B": "Trash",
+            "C": "Worth",
+            "D": "Waste"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Want",
+        "synonym": "Desire",
+        "definition": "Have a desire to possess or do (something).",
+        "definition_marathi": "पाहिजे असणे, इच्छा असणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Hate",
+            "B": "Desire",
+            "C": "Have",
+            "D": "Give"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Yell",
+        "synonym": "Shout",
+        "definition": "Give a loud, sharp cry.",
+        "definition_marathi": "ओरडणे, किंचाळणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Whisper",
+            "B": "Shout",
+            "C": "Talk",
+            "D": "Sing"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Zero",
+        "synonym": "Nothing",
+        "definition": "No quantity or number.",
+        "definition_marathi": "शून्य, काहीही नाही.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "All",
+            "B": "Many",
+            "C": "Nothing",
+            "D": "One"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Abundant",
+        "synonym": "Plentiful",
+        "definition": "Existing or available in large quantities.",
+        "definition_marathi": "विपुल, भरपूर.",
+        "difficulty_level": "Hard",
+        "options": {
+            "A": "Scarce",
+            "B": "Plentiful",
+            "C": "Empty",
+            "D": "Rare"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Candid",
+        "synonym": "Honest",
+        "definition": "Truthful and straightforward.",
+        "definition_marathi": "निष्कपट, स्पष्टवक्ता.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Lying",
+            "B": "Secret",
+            "C": "Honest",
+            "D": "Fake"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Dull",
+        "synonym": "Boring",
+        "definition": "Lacking interest or excitement.",
+        "definition_marathi": "कंटाळवाणे, मंद.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Fun",
+            "B": "Boring",
+            "C": "Sharp",
+            "D": "Bright"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Eager",
+        "synonym": "Keen",
+        "definition": "Strongly wanting to do or have something.",
+        "definition_marathi": "उत्सुक.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Bored",
+            "B": "Keen",
+            "C": "Slow",
+            "D": "Calm"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Famous",
+        "synonym": "Well-known",
+        "definition": "Known about by many people.",
+        "definition_marathi": "प्रसिद्ध.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Unknown",
+            "B": "Hidden",
+            "C": "Well-known",
+            "D": "Secret"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Gigantic",
+        "synonym": "Huge",
+        "definition": "Of very great size or extent.",
+        "definition_marathi": "प्रचंड, अवाढव्य.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Tiny",
+            "B": "Small",
+            "C": "Huge",
+            "D": "Short"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Halt",
+        "synonym": "Stop",
+        "definition": "Bring or come to an abrupt stop.",
+        "definition_marathi": "थांबणे, विराम.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Go",
+            "B": "Run",
+            "C": "Stop",
+            "D": "Move"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Intelligent",
+        "synonym": "Smart",
+        "definition": "Having or showing intelligence.",
+        "definition_marathi": "बुद्धिमान.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Stupid",
+            "B": "Smart",
+            "C": "Silly",
+            "D": "Crazy"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Joy",
+        "synonym": "Happiness",
+        "definition": "A feeling of great pleasure and happiness.",
+        "definition_marathi": "आनंद, हर्ष.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Sadness",
+            "B": "Pain",
+            "C": "Happiness",
+            "D": "Fear"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Keep",
+        "synonym": "Hold",
+        "definition": "Have or retain possession of.",
+        "definition_marathi": "ठेवणे, बाळगणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Drop",
+            "B": "Hold",
+            "C": "Lose",
+            "D": "Throw"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Lucky",
+        "synonym": "Fortunate",
+        "definition": "Having, bringing, or resulting from good luck.",
+        "definition_marathi": "नशीबवान.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Sad",
+            "B": "Fortunate",
+            "C": "Bad",
+            "D": "Poor"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Modern",
+        "synonym": "New",
+        "definition": "Relating to the present or recent times.",
+        "definition_marathi": "आधुनिक, नवीन.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Old",
+            "B": "Ancient",
+            "C": "New",
+            "D": "Past"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Near",
+        "synonym": "Close",
+        "definition": "At or to a short distance away.",
+        "definition_marathi": "जवळ, नजीक.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Far",
+            "B": "Distant",
+            "C": "Close",
+            "D": "Away"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Odd",
+        "synonym": "Strange",
+        "definition": "Different from what is usual or expected.",
+        "definition_marathi": "विचित्र, वेगळा.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Normal",
+            "B": "Usual",
+            "C": "Strange",
+            "D": "Same"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Polite",
+        "synonym": "Respectful",
+        "definition": "Having or showing behavior that is respectful.",
+        "definition_marathi": "विनम्र, सभ्य.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Rude",
+            "B": "Respectful",
+            "C": "Mean",
+            "D": "Bad"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Quick",
+        "synonym": "Fast",
+        "definition": "Moving fast or doing something in a short time.",
+        "definition_marathi": "चपळ, जलद.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Slow",
+            "B": "Lazy",
+            "C": "Fast",
+            "D": "Late"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Rare",
+        "synonym": "Uncommon",
+        "definition": "Not occurring very often.",
+        "definition_marathi": "दुर्मिळ.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Common",
+            "B": "Uncommon",
+            "C": "Usual",
+            "D": "Daily"
+        },
+        "correct_answer": "B"
+    }
+]

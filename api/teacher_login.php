@@ -1,17 +1,18 @@
 <?php
 /**
  * Teacher Login API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: POST /api/teacher_login.php
  * Purpose: Authenticate teacher users
  */
 
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendResponse('error', 'Only POST requests are allowed', null, 405);
+    sendResponse('error', 'Only POST requests are allowed. Received: ' . $_SERVER['REQUEST_METHOD'], null, 405);
 }
 
 // Get JSON input

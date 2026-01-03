@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Configuration File - PRODUCTION
- * MCQ Project 2.0
+ * Veeru
  * 
  * UPDATE THESE VALUES WITH YOUR HOSTING CREDENTIALS
  */

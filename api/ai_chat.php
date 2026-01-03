@@ -1,66 +1,123 @@
 <?php
+// 1. Start Output Buffering (Prevents invisible whitespace from breaking React Native)
+ob_start();
+
+// 2. CORS & Headers
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-require_once '../config/ai_config.php';
+// Handle Preflight Request (OPTIONS)
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
-$data = json_decode(file_get_contents("php://input"));
+// 3. Load Configuration
+// Make sure this file exists and defines 'GEMINI_API_KEY'
+if (file_exists('../config/ai_config.php')) {
+    require_once '../config/ai_config.php';
+} else {
+    // Fallback if config file is missing (For testing)
+    if (!defined('GEMINI_API_KEY')) define('GEMINI_API_KEY', 'YOUR_API_KEY_HERE'); 
+}
 
-if (!empty($data->message)) {
+try {
+    // 4. Get Input Data
+    $inputJSON = file_get_contents("php://input");
+    $data = json_decode($inputJSON);
+
+    if (empty($data->message)) {
+        throw new Exception("No message provided.");
+    }
+
     $userMessage = $data->message;
-    
-    // Basic context for the AI to behave as a tutor
-    $systemInstruction = "You are a helpful and encouraging AI Tutor for students. 
-    Your goal is to help them learn by explaining concepts clearly, providing examples, and asking guiding questions. 
-    Do not just give the answers directly if it's a homework problem; instead, guide them to the solution. 
-    Keep responses concise and easy to read on a mobile screen.";
 
-    // Prepare the payload for Gemini
-    // Note: Gemini Pro API structure
+    // 5. System Instruction (The AI Persona)
+    $systemInstruction = "You are a helpful and encouraging AI Tutor. 
+    Explain concepts clearly to students. 
+    If asked a math problem, show the steps to solve it. 
+    Keep your answers concise and easy to read on a mobile screen.";
+
+    // 6. Gemini Configuration
+    // Use the URL defined in ai_config.php which has the working model (gemini-2.5-flash)
+    $apiUrl = GEMINI_API_URL . "?key=" . GEMINI_API_KEY;
+
+    // 7. Prepare Payload
     $payload = [
-        'contents' => [
+        "contents" => [
             [
-                'parts' => [
-                    ['text' => $systemInstruction . "\n\nUser: " . $userMessage]
+                "parts" => [
+                    // Combining system instruction + user query works best for Flash model
+                    ["text" => $systemInstruction . "\n\nStudent Question: " . $userMessage]
                 ]
             ]
+        ],
+        "generationConfig" => [
+            "temperature" => 0.7,      // Balance between creative and accurate
+            "maxOutputTokens" => 800   // Limit length for mobile UI
         ]
     ];
 
-    // If history exists, you would structure it here, but for now we'll do single turn or append context manually
-    
-    $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
+    // 8. Send Request via cURL
+    $ch = curl_init($apiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json'
-    ]);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    
+    // CRITICAL for XAMPP/Localhost: Disable SSL verification to prevent connection errors
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
-    if (curl_errno($ch)) {
-        echo json_encode(['status' => 'error', 'message' => 'Curl error: ' . curl_error($ch)]);
-    } else {
-        $decodedResponse = json_decode($response, true);
-        
-        if ($httpCode === 200 && isset($decodedResponse['candidates'][0]['content']['parts'][0]['text'])) {
-            $aiReply = $decodedResponse['candidates'][0]['content']['parts'][0]['text'];
-            echo json_encode(['status' => 'success', 'reply' => $aiReply]);
-        } else {
-            // Log the error for debugging
-            error_log("Gemini API Error: " . $response);
-            echo json_encode(['status' => 'error', 'message' => 'Failed to get response from AI.', 'debug' => $decodedResponse]);
-        }
-    }
+    $curlError = curl_error($ch);
     
     curl_close($ch);
 
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Incomplete data.']);
+    // 9. Error Handling
+    if ($curlError) {
+        throw new Exception("Connection Error: " . $curlError);
+    }
+
+    $decoded = json_decode($response, true);
+
+    // Check for API Logic Errors (like Invalid Key or Over Limit)
+    if (isset($decoded['error'])) {
+        $msg = $decoded['error']['message'];
+        
+        // Handle Quota Limit Specifically
+        if (strpos($msg, 'quota') !== false || strpos($msg, '429') !== false) {
+            throw new Exception("The AI is busy (Quota Limit Reached). Please wait 1 minute and try again.");
+        }
+        
+        throw new Exception("AI API Error: " . $msg);
+    }
+
+    // 10. Extract & Return Reply
+    if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
+        $aiReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
+
+        // Clean Output Buffer before echoing JSON
+        ob_clean();
+        
+        echo json_encode([
+            "status" => "success",
+            "reply" => $aiReply
+        ]);
+    } else {
+        throw new Exception("No response generated by AI.");
+    }
+
+} catch (Exception $e) {
+    // Clean Buffer and Return Error JSON
+    ob_clean();
+    // We send 200 OK even on error so the App handles it gracefully without crashing
+    echo json_encode([
+        "status" => "error",
+        "message" => $e->getMessage()
+    ]);
 }
 ?>

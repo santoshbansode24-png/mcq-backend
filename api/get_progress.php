@@ -1,7 +1,7 @@
 <?php
 /**
  * Get Student Progress API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: GET /api/get_progress.php?user_id=1
  * Purpose: Get student's quiz progress and statistics

@@ -1,7 +1,7 @@
 <?php
 /**
  * Get Notifications API (Teacher)
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: GET /api/teacher/get_notifications.php?teacher_id=1
  * Purpose: Get all notifications sent by a teacher

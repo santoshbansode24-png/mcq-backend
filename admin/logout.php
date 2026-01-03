@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin Logout
- * MCQ Project 2.0
+ * Veeru
  */
 session_start();
 

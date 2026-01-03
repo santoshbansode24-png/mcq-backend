@@ -1,12 +1,13 @@
 <?php
 /**
  * Get MCQs API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: GET /api/get_mcqs.php?chapter_id=1
  * Purpose: Get all MCQs for a specific chapter
  */
 
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
 // Only allow GET requests

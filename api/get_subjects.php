@@ -1,12 +1,13 @@
 <?php
 /**
  * Get Subjects API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: GET /api/get_subjects.php?class_id=1
  * Purpose: Get all subjects for a specific class
  */
 
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
 // Only allow GET requests

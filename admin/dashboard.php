@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin Dashboard
- * MCQ Project 2.0
+ * Veeru
  */
 session_start();
 
@@ -73,7 +73,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - MCQ Project 2.0</title>
+    <title>Admin Dashboard - Veeru</title>
     <style>
         * {
             margin: 0;
@@ -305,6 +305,8 @@ try {
             <li><a href="mcqs.php">MCQs</a></li>
             <li><a href="videos.php">Videos</a></li>
             <li><a href="notes.php">Notes</a></li>
+            <li><a href="flashcards.php">Flashcards</a></li>
+            <li><a href="quick_revision.php">Quick Revision</a></li>
         </ul>
     </nav>
     

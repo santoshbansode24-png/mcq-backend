@@ -1,7 +1,7 @@
 <?php
 /**
  * Users Management
- * MCQ Project 2.0
+ * Veeru
  */
 session_start();
 if (!isset($_SESSION['admin_logged_in'])) {
@@ -100,6 +100,8 @@ $classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
             <li><a href="mcqs.php">MCQs</a></li>
             <li><a href="videos.php">Videos</a></li>
             <li><a href="notes.php">Notes</a></li>
+            <li><a href="flashcards.php">Flashcards</a></li>
+            <li><a href="quick_revision.php">Quick Revision</a></li>
         </ul>
     </nav>
     

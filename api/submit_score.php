@@ -1,7 +1,7 @@
 <?php
 /**
  * Submit Score API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: POST /api/submit_score.php
  * Purpose: Submit quiz score and save to student progress

@@ -1,8 +1,8 @@
-# 🎉 SUCCESS! MCQ Project 2.0 Backend Files Created
+# 🎓 Veeru - Backend API
 
-## ✅ What I've Created for You
+## ✅ Educational Learning Platform
 
-I've successfully generated **12 complete backend files** for your MCQ Project 2.0!
+Complete backend system for **Veeru** - an educational learning platform with mobile apps for students and teachers.
 
 ---
 
@@ -105,7 +105,7 @@ It contains:
 
 ## 📊 Database Info
 
-**Database Name:** `edtech_app_v2`
+**Database Name:** `veeru_db`
 
 **Tables (10):**
 1. users - All users (admin, teacher, student)

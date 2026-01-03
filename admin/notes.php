@@ -1,7 +1,7 @@
 <?php
 /**
  * Notes Management
- * MCQ Project 2.0
+ * Veeru
  */
 session_start();
 if (!isset($_SESSION['admin_logged_in'])) {
@@ -30,19 +30,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Handle File Upload or Content
     if ($type == 'pdf') {
-        // In a real app, handle file upload here
-        // For now, we'll just store the path if provided or a placeholder
-        $file_path = 'uploads/notes/sample.pdf'; 
+        if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == 0) {
+            $allowed = ['pdf' => 'application/pdf'];
+            $filename = $_FILES['pdf_file']['name'];
+            $filetype = $_FILES['pdf_file']['type'];
+            $filesize = $_FILES['pdf_file']['size'];
+    
+            // Verify extension
+            $ext = pathinfo($filename, PATHINFO_EXTENSION);
+            if (!array_key_exists($ext, $allowed)) die("Error: Please select a valid file format.");
+    
+            // Verify size (50MB max)
+            $maxsize = 50 * 1024 * 1024;
+            if ($filesize > $maxsize) die("Error: File size is larger than the allowed limit (50MB).");
+            
+            // Check PHP system limit
+            $php_limit = ini_get('upload_max_filesize');
+            // Convert to bytes for comparison (rough check)
+            $php_limit_bytes = (int)$php_limit * 1024 * 1024; 
+            if (stripos($php_limit, 'G') !== false) $php_limit_bytes *= 1024;
+            if (stripos($php_limit, 'K') !== false) $php_limit_bytes /= 1024;
+            
+            if ($filesize > $php_limit_bytes) {
+                 die("Error: File exceeds server's upload_max_filesize setting ($php_limit). Please update php.ini.");
+            }
+    
+            // Verify MIME type (optional but good security)
+            // if(in_array($filetype, $allowed)){
+                // Check if file exists (rename if needed)
+                $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
+                $upload_dir = "../uploads/notes/";
+                
+                // Ensure directory exists
+                if (!file_exists($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+                
+                $destination = $upload_dir . $new_filename;
+                
+                if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
+                    // Save RELATIVE path for DB (without ../)
+                    $file_path = "uploads/notes/" . $new_filename;
+                } else {
+                    $message = "Error: Failed to move uploaded file.";
+                }
+            // } else {
+            //     $message = "Error: There was a problem uploading your file. Please try again."; 
+            // }
+        } else {
+            $message = "Error: No file uploaded or upload error code: " . $_FILES['pdf_file']['error'];
+        }
     } else {
         $content = $_POST['content'];
     }
     
-    try {
-        $stmt = $pdo->prepare("INSERT INTO notes (chapter_id, title, note_type, file_path, content) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$chapter_id, $title, $type, $file_path, $content]);
-        $message = "Note added successfully!";
-    } catch (PDOException $e) {
-        $message = "Error: Database error";
+    if (empty($message)) { // Proceed only if no upload errors
+        try {
+            $stmt = $pdo->prepare("INSERT INTO notes (chapter_id, title, note_type, file_path, content) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$chapter_id, $title, $type, $file_path, $content]);
+            $message = "Note added successfully!";
+        } catch (PDOException $e) {
+            $message = "Error: Database error - " . $e->getMessage();
+        }
     }
 }
 
@@ -152,6 +201,8 @@ $notes = $pdo->query("
             <li><a href="mcqs.php">MCQs</a></li>
             <li><a href="videos.php">Videos</a></li>
             <li><a href="notes.php" class="active">Notes</a></li>
+            <li><a href="flashcards.php">Flashcards</a></li>
+            <li><a href="quick_revision.php">Quick Revision</a></li>
         </ul>
     </nav>
     
@@ -180,20 +231,44 @@ $notes = $pdo->query("
                     </select>
 
                     <input type="text" name="title" placeholder="Note Title" required>
-                    <select name="note_type" onchange="this.value=='html'?document.getElementById('html_content').style.display='block':document.getElementById('html_content').style.display='none'">
+                    <select name="note_type" id="note_type_select" onchange="toggleNoteInputs()">
                         <option value="pdf">PDF File</option>
                         <option value="html">HTML Content</option>
                     </select>
                     
-                    <textarea name="content" id="html_content" placeholder="Enter HTML content here..." style="display:none; grid-column: span 2; height: 150px;"></textarea>
-                    
-                    <!-- File upload would go here for PDF -->
-                    <div style="grid-column: span 2; font-size: 13px; color: #666;">
-                        * File upload functionality requires server configuration. For now, PDF paths are simulated.
+                    <div id="pdf_input_container" style="grid-column: span 2;">
+                        <label style="display:block; margin-bottom:5px; font-weight:500;">Upload PDF:</label>
+                        <input type="file" name="pdf_file" accept="application/pdf">
+                        <small style="color:#666;">Max size: 50MB (Server limit: <?php echo ini_get('upload_max_filesize'); ?>)</small>
                     </div>
+
+                    <textarea name="content" id="html_content" placeholder="Enter HTML content here..." style="display:none; grid-column: span 2; height: 150px;"></textarea>
                 </div>
                 <button type="submit" class="btn-add">Add Note</button>
             </form>
+            
+            <script>
+                function toggleNoteInputs() {
+                    const type = document.getElementById('note_type_select').value;
+                    const pdfContainer = document.getElementById('pdf_input_container');
+                    const htmlContent = document.getElementById('html_content');
+                    
+                    if (type === 'pdf') {
+                        pdfContainer.style.display = 'block';
+                        htmlContent.style.display = 'none';
+                        document.querySelector('input[name="pdf_file"]').required = true;
+                        htmlContent.required = false;
+                    } else {
+                        pdfContainer.style.display = 'none';
+                        htmlContent.style.display = 'block';
+                        document.querySelector('input[name="pdf_file"]').required = false;
+                        htmlContent.required = true;
+                    }
+                }
+                // Initialize state
+                toggleNoteInputs();
+            </script>
+        </div>
         </div>
 
         <div class="card">

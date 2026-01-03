@@ -1,7 +1,7 @@
 <?php
 /**
  * Get Students in Class API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: POST /api/teacher/get_students.php
  * Purpose: Get all students in a specific class

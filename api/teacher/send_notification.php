@@ -1,7 +1,7 @@
 <?php
 /**
  * Send Notification API (Teacher)
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: POST /api/teacher/send_notification.php
  * Purpose: Allow teachers to send notifications to students

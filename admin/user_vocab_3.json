@@ -1,0 +1,702 @@
+[
+    {
+        "word": "Connect",
+        "synonym": "Join",
+        "definition": "Bring together or into contact so that a link is established.",
+        "definition_marathi": "जोडणे, एकत्र करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Separate",
+            "B": "Join",
+            "C": "Break",
+            "D": "Cut"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Construct",
+        "synonym": "Build",
+        "definition": "Build or erect (something, typically a building, road, or machine).",
+        "definition_marathi": "बांधकाम करणे, रचणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Destroy",
+            "B": "Build",
+            "C": "Demolish",
+            "D": "Ruin"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Copy",
+        "synonym": "Duplicate",
+        "definition": "A thing made to be similar or identical to another.",
+        "definition_marathi": "प्रत, नकल.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Original",
+            "B": "Duplicate",
+            "C": "Model",
+            "D": "Create"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Courage",
+        "synonym": "Bravery",
+        "definition": "The ability to do something that frightens one.",
+        "definition_marathi": "धैर्य, हिंमत.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Fear",
+            "B": "Cowardice",
+            "C": "Bravery",
+            "D": "Panic"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Crash",
+        "synonym": "Collision",
+        "definition": "Collide violently with an obstacle or another vehicle.",
+        "definition_marathi": "धडक, टक्कर.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Safety",
+            "B": "Collision",
+            "C": "Flight",
+            "D": "Repair"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Crazy",
+        "synonym": "Insane",
+        "definition": "Mentally deranged, especially as manifested in a wild or aggressive way.",
+        "definition_marathi": "वेडा, अस्ताव्यस्त.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Sane",
+            "B": "Wise",
+            "C": "Insane",
+            "D": "Calm"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Create",
+        "synonym": "Make",
+        "definition": "Bring (something) into existence.",
+        "definition_marathi": "निर्माण करणे, बनवणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Destroy",
+            "B": "Make",
+            "C": "Break",
+            "D": "Kill"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Crowd",
+        "synonym": "Group",
+        "definition": "A large number of people gathered together.",
+        "definition_marathi": "गर्दी, जमाव.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Individual",
+            "B": "Group",
+            "C": "Empty",
+            "D": "One"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Cruel",
+        "synonym": "Mean",
+        "definition": "Willfully causing pain or suffering to others.",
+        "definition_marathi": "क्रूर, दुष्ट.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Kind",
+            "B": "Mean",
+            "C": "Nice",
+            "D": "Gentle"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Cry",
+        "synonym": "Weep",
+        "definition": "Shed tears, especially as an expression of distress or pain.",
+        "definition_marathi": "रडणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Laugh",
+            "B": "Smile",
+            "C": "Weep",
+            "D": "Joke"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Cure",
+        "synonym": "Heal",
+        "definition": "Relieve (a person or animal) of the symptoms of a disease or condition.",
+        "definition_marathi": "बरा करणे, उपचार.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Infect",
+            "B": "Heal",
+            "C": "Hurt",
+            "D": "Injure"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Damage",
+        "synonym": "Harm",
+        "definition": "Physical harm caused to something in such a way as to impair its value.",
+        "definition_marathi": "नुकसान, हानी.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Repair",
+            "B": "Fix",
+            "C": "Harm",
+            "D": "Build"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Danger",
+        "synonym": "Peril",
+        "definition": "The possibility of suffering harm or injury.",
+        "definition_marathi": "धोका.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Safety",
+            "B": "Peril",
+            "C": "Secure",
+            "D": "Peace"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Dark",
+        "synonym": "Dim",
+        "definition": "With little or no light.",
+        "definition_marathi": "अंधार, काळोख.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Light",
+            "B": "Bright",
+            "C": "Dim",
+            "D": "White"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Dead",
+        "synonym": "Lifeless",
+        "definition": "No longer alive.",
+        "definition_marathi": "मृत, निर्जीव.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Alive",
+            "B": "Living",
+            "C": "Lifeless",
+            "D": "Active"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Decide",
+        "synonym": "Choose",
+        "definition": "Come to a resolution in the mind as a result of consideration.",
+        "definition_marathi": "निर्णय घेणे, ठरवणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Hesitate",
+            "B": "Choose",
+            "C": "Wait",
+            "D": "Delay"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Defeat",
+        "synonym": "Beat",
+        "definition": "Win a victory over (someone) in a battle or other contest.",
+        "definition_marathi": "पराभव करणे, हरवणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Lose",
+            "B": "Beat",
+            "C": "Surrender",
+            "D": "Fail"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Defend",
+        "synonym": "Protect",
+        "definition": "Resist an attack made on (someone or something).",
+        "definition_marathi": "रक्षण करणे, बचाव करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Attack",
+            "B": "Harm",
+            "C": "Protect",
+            "D": "Hit"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Delicious",
+        "synonym": "Tasty",
+        "definition": "Highly pleasant to the taste.",
+        "definition_marathi": "स्वादिष्ट, चवदार.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Bad",
+            "B": "Tasty",
+            "C": "Sour",
+            "D": "Bitter"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Describe",
+        "synonym": "Explain",
+        "definition": "Give an account in words of (someone or something).",
+        "definition_marathi": "वर्णन करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Hide",
+            "B": "Confuse",
+            "C": "Explain",
+            "D": "Ignore"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Destroy",
+        "synonym": "Ruin",
+        "definition": "Put an end to the existence of (something) by damaging or attacking it.",
+        "definition_marathi": "नाश करणे, उध्वस्त करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Create",
+            "B": "Build",
+            "C": "Ruin",
+            "D": "Fix"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Dirty",
+        "synonym": "Filthy",
+        "definition": "Covered or marked with an unclean substance.",
+        "definition_marathi": "घाणेरडा, अस्वच्छ.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Clean",
+            "B": "Pure",
+            "C": "Filthy",
+            "D": "Neat"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Disagree",
+        "synonym": "Differ",
+        "definition": "Have or express a different opinion.",
+        "definition_marathi": "असहमत असणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Agree",
+            "B": "Accept",
+            "C": "Differ",
+            "D": "Same"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Disappear",
+        "synonym": "Vanish",
+        "definition": "Cease to be visible.",
+        "definition_marathi": "गायब होणे, नाहीसे होणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Appear",
+            "B": "Vanish",
+            "C": "Show",
+            "D": "See"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Disaster",
+        "synonym": "Calamity",
+        "definition": "A sudden event, such as an accident or a natural catastrophe.",
+        "definition_marathi": "आपत्ती, संकट.",
+        "difficulty_level": "Hard",
+        "options": {
+            "A": "Success",
+            "B": "Calamity",
+            "C": "Luck",
+            "D": "Joy"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Divide",
+        "synonym": "Split",
+        "definition": "Separate or be separated into parts.",
+        "definition_marathi": "विभागणे, वाटणी करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Join",
+            "B": "Split",
+            "C": "Unite",
+            "D": "Mix"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Doubt",
+        "synonym": "Mistrust",
+        "definition": "A feeling of uncertainty or lack of conviction.",
+        "definition_marathi": "शंका, संशय.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Belief",
+            "B": "Trust",
+            "C": "Mistrust",
+            "D": "Faith"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Dream",
+        "synonym": "Fantasy",
+        "definition": "A series of thoughts, images, and sensations occurring in a person's mind during sleep.",
+        "definition_marathi": "स्वप्न.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Reality",
+            "B": "Fact",
+            "C": "Fantasy",
+            "D": "Truth"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Drop",
+        "synonym": "Fall",
+        "definition": "Let or make (something) fall vertically.",
+        "definition_marathi": "पडणे, खाली टाकणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Pick",
+            "B": "Lift",
+            "C": "Fall",
+            "D": "Hold"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Dry",
+        "synonym": "Arid",
+        "definition": "Free from moisture or liquid; not wet.",
+        "definition_marathi": "कोरडा, सुका.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Wet",
+            "B": "Soaked",
+            "C": "Arid",
+            "D": "Damp"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Early",
+        "synonym": "Soon",
+        "definition": "Happening or done before the usual or expected time.",
+        "definition_marathi": "लवकर.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Late",
+            "B": "Delayed",
+            "C": "Soon",
+            "D": "After"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Easy",
+        "synonym": "Simple",
+        "definition": "Achieved without great effort; presenting few difficulties.",
+        "definition_marathi": "सोपे, सुलभ.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Hard",
+            "B": "Difficult",
+            "C": "Simple",
+            "D": "Complex"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Eat",
+        "synonym": "Consume",
+        "definition": "Put (food) into the mouth and chew and swallow it.",
+        "definition_marathi": "खाणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Starve",
+            "B": "Consume",
+            "C": "Drink",
+            "D": "Cook"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Effect",
+        "synonym": "Result",
+        "definition": "A change that is a result or consequence of an action or other cause.",
+        "definition_marathi": "परिणाम.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Cause",
+            "B": "Start",
+            "C": "Result",
+            "D": "Origin"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Empty",
+        "synonym": "Vacant",
+        "definition": "Containing nothing; not filled or occupied.",
+        "definition_marathi": "रिकामे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Full",
+            "B": "Vacant",
+            "C": "Crowded",
+            "D": "Packed"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Enemy",
+        "synonym": "Foe",
+        "definition": "A person who is actively opposed or hostile to someone or something.",
+        "definition_marathi": "शत्रू.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Friend",
+            "B": "Ally",
+            "C": "Foe",
+            "D": "Partner"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Enjoy",
+        "synonym": "Like",
+        "definition": "Take delight or pleasure in (an activity or occasion).",
+        "definition_marathi": "आनंद घेणे, आवडणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Hate",
+            "B": "Like",
+            "C": "Dislike",
+            "D": "Bore"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Enormous",
+        "synonym": "Massive",
+        "definition": "Very large in size, quantity, or extent.",
+        "definition_marathi": "प्रचंड, अवाढव्य.",
+        "difficulty_level": "Hard",
+        "options": {
+            "A": "Tiny",
+            "B": "Small",
+            "C": "Massive",
+            "D": "Little"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Enough",
+        "synonym": "Sufficient",
+        "definition": "As much or as many as required.",
+        "definition_marathi": "पुरेसे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Lacking",
+            "B": "Sufficient",
+            "C": "Need",
+            "D": "Want"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Enter",
+        "synonym": "Access",
+        "definition": "Come or go into (a place).",
+        "definition_marathi": "प्रवेश करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Exit",
+            "B": "Access",
+            "C": "Leave",
+            "D": "Depart"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Entire",
+        "synonym": "Whole",
+        "definition": "With no part left out; whole.",
+        "definition_marathi": "संपूर्ण, सगळे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Part",
+            "B": "Piece",
+            "C": "Whole",
+            "D": "Half"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Equal",
+        "synonym": "Same",
+        "definition": "Being the same in quantity, size, degree, or value.",
+        "definition_marathi": "समान, सारखे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Different",
+            "B": "Same",
+            "C": "Uneven",
+            "D": "Varied"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Escape",
+        "synonym": "Flee",
+        "definition": "Break free from confinement or control.",
+        "definition_marathi": "सुटका होणे, पळून जाणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Stay",
+            "B": "Flee",
+            "C": "Wait",
+            "D": "Capture"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Event",
+        "synonym": "Incident",
+        "definition": "A thing that happens, especially one of importance.",
+        "definition_marathi": "घटना, प्रसंग.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Idea",
+            "B": "Incident",
+            "C": "Thought",
+            "D": "Dream"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Evil",
+        "synonym": "Wicked",
+        "definition": "Profoundly immoral and malevolent.",
+        "definition_marathi": "वाईट, दुष्ट.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Good",
+            "B": "Kind",
+            "C": "Wicked",
+            "D": "Holy"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Exact",
+        "synonym": "Precise",
+        "definition": "Not approximated in any way; accurate.",
+        "definition_marathi": "नेमका, तंतोतंत.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Guess",
+            "B": "Precise",
+            "C": "Rough",
+            "D": "Wrong"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Examine",
+        "synonym": "Inspect",
+        "definition": "Inspect (someone or something) in detail to determine their nature or condition.",
+        "definition_marathi": "तपासणी करणे, पाहणी करणे.",
+        "difficulty_level": "Hard",
+        "options": {
+            "A": "Ignore",
+            "B": "Inspect",
+            "C": "Miss",
+            "D": "Skip"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Excite",
+        "synonym": "Thrill",
+        "definition": "Cause very strong feelings of enthusiasm.",
+        "definition_marathi": "उत्तेजित करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Bore",
+            "B": "Calm",
+            "C": "Thrill",
+            "D": "Tire"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Exit",
+        "synonym": "Leave",
+        "definition": "Go out of or leave a place.",
+        "definition_marathi": "बाहेर पडणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Enter",
+            "B": "Leave",
+            "C": "Come",
+            "D": "Stay"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Expand",
+        "synonym": "Grow",
+        "definition": "Become or make larger or more extensive.",
+        "definition_marathi": "विस्तार करणे, वाढवणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Shrink",
+            "B": "Grow",
+            "C": "Reduce",
+            "D": "Small"
+        },
+        "correct_answer": "B"
+    }
+]

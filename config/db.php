@@ -1,29 +1,30 @@
 <?php
 /**
  * Database Configuration File
- * MCQ Project 2.0
+ * Veeru
  */
 
 // Enable error reporting
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Disable display to prevent JSON corruption
 
-// CORS Headers
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+// CORS Headers (Handled by cors_middleware.php)
+// header("Access-Control-Allow-Origin: *");
+// header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+// header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+// header("Access-Control-Allow-Private-Network: true");
 
 // Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+// if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+//    http_response_code(200);
+//    exit();
+// }
 
 // Database Credentials (Hardcoded for Production Stability)
 // Database Credentials
 // 1. Check for Environment Variables (Cloud)
 $db_host = getenv('DB_HOST') ?: 'localhost';
-$db_name = getenv('DB_NAME') ?: 'mcq_project_v2';
+$db_name = getenv('DB_NAME') ?: 'veeru_db';
 $db_user = getenv('DB_USER') ?: 'root';
 $db_pass = getenv('DB_PASSWORD');
 if ($db_pass === false) {
@@ -97,6 +98,6 @@ function validateRequired($data, $requiredFields) {
  * Helper function to sanitize input
  */
 function sanitizeInput($data) {
-    return htmlspecialchars(strip_tags(trim($data)));
+    return htmlspecialchars(strip_tags(trim($data ?? '')));
 }
 ?>

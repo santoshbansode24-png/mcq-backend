@@ -1,12 +1,12 @@
 -- ============================================
--- MCQ Project 2.0 - Database Schema
--- Database Name: mcq_project_v2
+-- Veeru - Database Schema
+-- Database Name: veeru_db
 -- Created: November 2025
 -- ============================================
 
 -- Create Database
-CREATE DATABASE IF NOT EXISTS `mcq_project_v2` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `mcq_project_v2`;
+CREATE DATABASE IF NOT EXISTS `veeru_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `veeru_db`;
 
 -- ============================================
 -- Table 1: Users (Admin, Teacher, Student)

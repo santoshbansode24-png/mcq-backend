@@ -1,7 +1,7 @@
 <?php
 /**
  * Get Teacher's Classes API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: POST /api/teacher/get_classes.php
  * Purpose: Get all classes assigned to a teacher

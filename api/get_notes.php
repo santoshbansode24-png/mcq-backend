@@ -1,12 +1,13 @@
 <?php
 /**
  * Get Notes API
- * MCQ Project 2.0
+ * Veeru
  * 
  * Endpoint: GET /api/get_notes.php?chapter_id=1
  * Purpose: Get all notes for a specific chapter
  */
 
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
 // Only allow GET requests
@@ -47,6 +48,37 @@ try {
     if (empty($notes)) {
         sendResponse('success', 'No notes found for this chapter', [], 200);
     }
+
+    // Prepare Base URL for files
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST']; // e.g., 192.168.1.5 or localhost
+    // Script is in /backend/api/get_notes.php -> dirname is /backend/api -> dirname again is /backend
+    $backend_path = dirname(dirname($_SERVER['PHP_SELF'])); 
+    $base_url = $protocol . "://" . $host . $backend_path . "/";
+
+    // Add file_url to each note
+    foreach ($notes as &$note) {
+        if ($note['note_type'] === 'pdf' && !empty($note['file_path'])) {
+            // Use serve_pdf.php proxy to bypass X-Frame-Options issues
+            // $backend_path points to /backend
+            // We need to point to /backend/api/serve_pdf.php
+            
+            // Construct proxy URL
+            // Current script: /backend/api/get_notes.php
+            // Target script: /backend/api/serve_pdf.php
+            
+            // Get path and encode it properly to handle spaces in folder names
+            $path_parts = explode('/', dirname($_SERVER['PHP_SELF']));
+            $encoded_path_parts = array_map('rawurlencode', $path_parts);
+            $encoded_path = implode('/', $encoded_path_parts);
+            
+            $current_dir_url = $protocol . "://" . $host . $encoded_path;
+            $note['file_url'] = $current_dir_url . "/serve_pdf.php?file=" . urlencode($note['file_path']);
+        } else {
+            $note['file_url'] = null;
+        }
+    }
+    unset($note); // Break reference
     
     // Success response
     sendResponse('success', 'Notes retrieved successfully', $notes, 200);

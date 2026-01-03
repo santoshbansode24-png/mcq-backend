@@ -2,5 +2,11 @@
     "require": {
         "smalot/pdfparser": "^2.12",
         "phpoffice/phpword": "^1.4"
+    },
+    "config": {
+        "platform": {
+            "ext-gd": "8.0",
+            "ext-zip": "1.0"
+        }
     }
 }

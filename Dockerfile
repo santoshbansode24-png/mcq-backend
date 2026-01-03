@@ -15,7 +15,12 @@ RUN a2enmod mpm_prefork
 # Copy source code
 COPY . /var/www/html/
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/
-
 # Configure Apache Document Root to be in the root folder (default)
+
+# Copy Entrypoint Script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Use Entrypoint to configure Port at runtime
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]

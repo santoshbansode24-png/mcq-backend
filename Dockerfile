@@ -8,9 +8,9 @@ RUN a2enmod rewrite
 
 # Fix for "More than one MPM loaded" error
 # Fix for "More than one MPM loaded" error
-# Manually remove conflicting MPMs to ensure only prefork is active
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_event.conf
-RUN rm -f /etc/apache2/mods-enabled/mpm_worker.load /etc/apache2/mods-enabled/mpm_worker.conf
+# Nuclear Option: Wipe ALL MPMs first, then enable only prefork
+# This handles any pre-installed MPMs regardless of name (event, worker, etc)
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
 RUN a2enmod mpm_prefork
 
 # Copy source code

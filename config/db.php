@@ -44,10 +44,11 @@ try {
         PDO::ATTR_EMULATE_PREPARES   => false,
     ];
 
-    // Enable SSL if running in Cloud (detected via DB_HOST not being localhost)
+    // SSL options removed to fix Railway internal network connection
+    // Railway internal network is secure, and 'true' was causing a crash.
     if ($db_host !== 'localhost') {
-        $options[PDO::MYSQL_ATTR_SSL_CA] = true;
-        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        // Optional: Add specific SSL config here IF Railway requires it later.
+        // For now, standard connection is safer.
     }
     
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);

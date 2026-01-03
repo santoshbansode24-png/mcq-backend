@@ -1,4 +1,4 @@
-FROM php:8.1-apache
+FROM php:8.2-apache
 
 # Install extensions
 RUN docker-php-ext-install pdo pdo_mysql
@@ -6,7 +6,6 @@ RUN docker-php-ext-install pdo pdo_mysql
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Fix for "More than one MPM loaded" error
 # Fix for "More than one MPM loaded" error
 # Nuclear Option: Wipe ALL MPMs first, then enable only prefork
 # This handles any pre-installed MPMs regardless of name (event, worker, etc)
@@ -20,4 +19,3 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html/
 
 # Configure Apache Document Root to be in the root folder (default)
-# (If your api is in /api subfolder, this is fine)

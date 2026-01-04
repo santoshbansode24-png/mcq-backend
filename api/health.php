@@ -7,6 +7,7 @@ header('Content-Type: application/json');
 echo json_encode([
     'status' => 'ok',
     'service' => 'Veeru Backend',
+    'version' => '2.1',
     'timestamp' => time(),
     'message' => 'Backend is reachable!'
 ]);

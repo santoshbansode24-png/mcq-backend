@@ -24,13 +24,24 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $chapter_id = intval($_POST['chapter_id']);
     $title = sanitizeInput($_POST['title']);
-    $type = $_POST['note_type'];
+    // Map User Selection to DB Type and Source
+    $raw_type = $_POST['note_type'];
+    if ($raw_type === 'pdf_upload') {
+        $type = 'pdf';
+        $source = 'upload';
+    } elseif ($raw_type === 'pdf_drive') {
+        $type = 'pdf';
+        $source = 'url';
+    } else {
+        $type = $raw_type; // e.g. 'html'
+        $source = '';
+    }
+
     $content = '';
     $file_path = '';
     
-    // Handle File Upload or Content
+    // Handle PDF Logic (Upload or URL)
     if ($type == 'pdf') {
-        $source = $_POST['pdf_source'] ?? 'upload';
         
         if ($source === 'url') {
             // Handle External URL
@@ -43,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             // Handle File Upload
             if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == 0) {
+                // ... (Existing upload logic remains same) ...
                 $allowed = ['pdf' => 'application/pdf'];
                 $filename = $_FILES['pdf_file']['name'];
                 $filetype = $_FILES['pdf_file']['type'];
@@ -58,37 +70,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 // Check PHP system limit
                 $php_limit = ini_get('upload_max_filesize');
-                // Convert to bytes for comparison (rough check)
                 $php_limit_bytes = (int)$php_limit * 1024 * 1024; 
                 if (stripos($php_limit, 'G') !== false) $php_limit_bytes *= 1024;
                 if (stripos($php_limit, 'K') !== false) $php_limit_bytes /= 1024;
                 
                 if ($filesize > $php_limit_bytes) {
-                     die("Error: File exceeds server's upload_max_filesize setting ($php_limit). Please update php.ini.");
+                     die("Error: File exceeds server setting ($php_limit).");
                 }
-        
-                // Verify MIME type (optional but good security)
-                // if(in_array($filetype, $allowed)){
-                    // Check if file exists (rename if needed)
-                    $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
-                    $upload_dir = "../uploads/notes/";
-                    
-                    // Ensure directory exists
-                    if (!file_exists($upload_dir)) {
-                        mkdir($upload_dir, 0777, true);
-                    }
-                    
-                    $destination = $upload_dir . $new_filename;
-                    
-                    if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
-                        // Save RELATIVE path for DB (without ../)
-                        $file_path = "uploads/notes/" . $new_filename;
-                    } else {
-                        $message = "Error: Failed to move uploaded file.";
-                    }
-                // } else {
-                //     $message = "Error: There was a problem uploading your file. Please try again."; 
-                // }
+    
+                $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
+                $upload_dir = "../uploads/notes/";
+                if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
+                
+                $destination = $upload_dir . $new_filename;
+                
+                if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
+                    $file_path = "uploads/notes/" . $new_filename;
+                } else {
+                    $message = "Error: Failed to move uploaded file.";
+                }
             } else {
                 $message = "Error: No file uploaded or upload error code: " . $_FILES['pdf_file']['error'];
             }
@@ -245,28 +245,21 @@ $notes = $pdo->query("
 
                     <input type="text" name="title" placeholder="Note Title" required>
                     <select name="note_type" id="note_type_select" onchange="toggleNoteInputs()">
-                        <option value="pdf">PDF File</option>
+                        <option value="pdf_upload">PDF (Upload File)</option>
+                        <option value="pdf_drive">PDF (Google Drive / Link)</option>
                         <option value="html">HTML Content</option>
                     </select>
                     
-                    <div id="pdf_input_container" style="grid-column: span 2;">
-                        <label style="display:block; margin-bottom:5px; font-weight:500;">PDF Source:</label>
-                        <div style="display:flex; gap:15px; margin-bottom:10px;">
-                            <label><input type="radio" name="pdf_source" value="upload" checked onchange="togglePdfSource()"> Upload File</label>
-                            <label><input type="radio" name="pdf_source" value="url" onchange="togglePdfSource()"> External URL (Drive/Link)</label>
-                        </div>
-                        
-                        <div id="source_upload">
-                            <label style="display:block; margin-bottom:5px; font-weight:500;">Upload PDF:</label>
-                            <input type="file" name="pdf_file" accept="application/pdf">
-                            <small style="color:#666;">Max size: 50MB</small>
-                        </div>
+                    <div id="source_upload" style="grid-column: span 2;">
+                        <label style="display:block; margin-bottom:5px; font-weight:500;">Upload PDF:</label>
+                        <input type="file" name="pdf_file" accept="application/pdf">
+                        <small style="color:#666;">Max size: 50MB</small>
+                    </div>
 
-                        <div id="source_url" style="display:none;">
-                            <label style="display:block; margin-bottom:5px; font-weight:500;">PDF Link (Google Drive / Web URL):</label>
-                            <input type="url" name="pdf_url" placeholder="https://drive.google.com/...">
-                            <small style="color:#666;">Make sure the link is publicly accessible (Anyone with link).</small>
-                        </div>
+                    <div id="source_url" style="display:none; grid-column: span 2;">
+                        <label style="display:block; margin-bottom:5px; font-weight:500;">PDF Link (Google Drive / Web URL):</label>
+                        <input type="url" name="pdf_url" placeholder="https://drive.google.com/...">
+                        <small style="color:#666;">Make sure the link is publicly accessible (Anyone with link).</small>
                     </div>
 
                     <textarea name="content" id="html_content" placeholder="Enter HTML content here..." style="display:none; grid-column: span 2; height: 150px;"></textarea>
@@ -277,40 +270,29 @@ $notes = $pdo->query("
             <script>
                 function toggleNoteInputs() {
                     const type = document.getElementById('note_type_select').value;
-                    const pdfContainer = document.getElementById('pdf_input_container');
-                    const htmlContent = document.getElementById('html_content');
-                    
-                    if (type === 'pdf') {
-                        pdfContainer.style.display = 'block';
-                        htmlContent.style.display = 'none';
-                        togglePdfSource(); // Re-apply source validation
-                        htmlContent.required = false;
-                    } else {
-                        pdfContainer.style.display = 'none';
-                        htmlContent.style.display = 'block';
-                        document.querySelector('input[name="pdf_file"]').required = false;
-                        document.querySelector('input[name="pdf_url"]').required = false;
-                        htmlContent.required = true;
-                    }
-                }
-
-                function togglePdfSource() {
-                    if (document.getElementById('note_type_select').value !== 'pdf') return;
-
-                    const source = document.querySelector('input[name="pdf_source"]:checked').value;
                     const uploadDiv = document.getElementById('source_upload');
                     const urlDiv = document.getElementById('source_url');
+                    const htmlContent = document.getElementById('html_content');
                     
-                    if (source === 'upload') {
+                    // Reset all
+                    uploadDiv.style.display = 'none';
+                    urlDiv.style.display = 'none';
+                    htmlContent.style.display = 'none';
+                    document.querySelector('input[name="pdf_file"]').required = false;
+                    document.querySelector('input[name="pdf_url"]').required = false;
+                    htmlContent.required = false;
+
+                    if (type === 'pdf_upload') {
                         uploadDiv.style.display = 'block';
-                        urlDiv.style.display = 'none';
                         document.querySelector('input[name="pdf_file"]').required = true;
-                        document.querySelector('input[name="pdf_url"]').required = false;
-                    } else {
-                        uploadDiv.style.display = 'none';
+                    } 
+                    else if (type === 'pdf_drive') {
                         urlDiv.style.display = 'block';
-                        document.querySelector('input[name="pdf_file"]').required = false;
                         document.querySelector('input[name="pdf_url"]').required = true;
+                    }
+                    else if (type === 'html') {
+                        htmlContent.style.display = 'block';
+                        htmlContent.required = true;
                     }
                 }
                 // Initialize state

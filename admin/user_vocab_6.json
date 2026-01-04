@@ -1,0 +1,652 @@
+[
+    {
+        "word": "Attach",
+        "question": "To fasten or join one thing to another is to...",
+        "options": [
+            "Separate",
+            "Attach",
+            "Cut",
+            "Divide"
+        ],
+        "correct_answer": "Attach",
+        "explanation_english": "Fasten or join one thing to another.",
+        "explanation_marathi": "जोडणे."
+    },
+    {
+        "word": "Attack",
+        "question": "To take aggressive action against is to...",
+        "options": [
+            "Defend",
+            "Attack",
+            "Protect",
+            "Save"
+        ],
+        "correct_answer": "Attack",
+        "explanation_english": "Take aggressive action against (a place or enemy forces) with weapons or armed force.",
+        "explanation_marathi": "हल्ला करणे."
+    },
+    {
+        "word": "Attempt",
+        "question": "To make an effort to achieve something is to...",
+        "options": [
+            "Quit",
+            "Attempt",
+            "Sleep",
+            "Stop"
+        ],
+        "correct_answer": "Attempt",
+        "explanation_english": "Make an effort to achieve or complete (something, typically a difficult task or action).",
+        "explanation_marathi": "प्रयत्न करणे."
+    },
+    {
+        "word": "Attend",
+        "question": "To be present at an event is to...",
+        "options": [
+            "Miss",
+            "Attend",
+            "Leave",
+            "Skip"
+        ],
+        "correct_answer": "Attend",
+        "explanation_english": "Be present at (an event, meeting, or function).",
+        "explanation_marathi": "हजर राहणे."
+    },
+    {
+        "word": "Attention",
+        "question": "Notice taken of someone or something is...",
+        "options": [
+            "Neglect",
+            "Attention",
+            "Ignore",
+            "Sleep"
+        ],
+        "correct_answer": "Attention",
+        "explanation_english": "Notice taken of someone or something; the regarding of someone or something as interesting or important.",
+        "explanation_marathi": "लक्ष."
+    },
+    {
+        "word": "Attitude",
+        "question": "A settled way of thinking or feeling is...",
+        "options": [
+            "Height",
+            "Attitude",
+            "Weight",
+            "Size"
+        ],
+        "correct_answer": "Attitude",
+        "explanation_english": "A settled way of thinking or feeling about someone or something.",
+        "explanation_marathi": "दृष्टिकोन किंवा वृत्ती."
+    },
+    {
+        "word": "Attract",
+        "question": "To cause to come to a place or participate is to...",
+        "options": [
+            "Repel",
+            "Attract",
+            "Push",
+            "Force"
+        ],
+        "correct_answer": "Attract",
+        "explanation_english": "Cause to come to a place or participate in a venture by offering something of interest or advantage.",
+        "explanation_marathi": "आकर्षित करणे."
+    },
+    {
+        "word": "Audience",
+        "question": "The assembled spectators or listeners represent the...",
+        "options": [
+            "Player",
+            "Audience",
+            "Actor",
+            "Leader"
+        ],
+        "correct_answer": "Audience",
+        "explanation_english": "The assembled spectators or listeners at a public event.",
+        "explanation_marathi": "प्रेक्षक किंवा श्रोते."
+    },
+    {
+        "word": "Author",
+        "question": "A writer of a book or article is an...",
+        "options": [
+            "Reader",
+            "Author",
+            "Seller",
+            "Buyer"
+        ],
+        "correct_answer": "Author",
+        "explanation_english": "A writer of a book, article, or report.",
+        "explanation_marathi": "लेखक."
+    },
+    {
+        "word": "Authority",
+        "question": "The power or right to give orders is...",
+        "options": [
+            "Weakness",
+            "Authority",
+            "Fear",
+            "Doubt"
+        ],
+        "correct_answer": "Authority",
+        "explanation_english": "The power or right to give orders, make decisions, and enforce obedience.",
+        "explanation_marathi": "अधिकार किंवा सत्ता."
+    },
+    {
+        "word": "Available",
+        "question": "Able to be used or obtained is...",
+        "options": [
+            "Taken",
+            "Available",
+            "Lost",
+            "Gone"
+        ],
+        "correct_answer": "Available",
+        "explanation_english": "Able to be used or obtained; at someone's disposal.",
+        "explanation_marathi": "उपलब्ध."
+    },
+    {
+        "word": "Average",
+        "question": "The usual or ordinary amount or standard is the...",
+        "options": [
+            "Extreme",
+            "Average",
+            "Best",
+            "Worst"
+        ],
+        "correct_answer": "Average",
+        "explanation_english": "The usual or ordinary amount, standard, level, or rate.",
+        "explanation_marathi": "सरासरी."
+    },
+    {
+        "word": "Award",
+        "question": "A prize or other mark of recognition is an...",
+        "options": [
+            "Fine",
+            "Award",
+            "Bill",
+            "Tax"
+        ],
+        "correct_answer": "Award",
+        "explanation_english": "A prize or other mark of recognition given in honor of an achievement.",
+        "explanation_marathi": "पुरस्कार."
+    },
+    {
+        "word": "Aware",
+        "question": "Having knowledge or perception of a situation is being...",
+        "options": [
+            "Ignorant",
+            "Aware",
+            "Blind",
+            "Lost"
+        ],
+        "correct_answer": "Aware",
+        "explanation_english": "Having knowledge or perception of a situation or fact.",
+        "explanation_marathi": "जागरूक किंवा जाणीव असलेला."
+    },
+    {
+        "word": "Awful",
+        "question": "Very bad or unpleasant is...",
+        "options": [
+            "Wonderful",
+            "Awful",
+            "Great",
+            "Nice"
+        ],
+        "correct_answer": "Awful",
+        "explanation_english": "Very bad or unpleasant.",
+        "explanation_marathi": "अतिशय वाईट किंवा भयंकर."
+    },
+    {
+        "word": "Background",
+        "question": "The part of a picture behind the main subject is the...",
+        "options": [
+            "Foreground",
+            "Background",
+            "Center",
+            "Top"
+        ],
+        "correct_answer": "Background",
+        "explanation_english": "The area or scenery behind the main object of contemplation.",
+        "explanation_marathi": "पार्श्वभूमी."
+    },
+    {
+        "word": "Balance",
+        "question": "An even distribution of weight enables...",
+        "options": [
+            "Fall",
+            "Balance",
+            "Trip",
+            "Slip"
+        ],
+        "correct_answer": "Balance",
+        "explanation_english": "An even distribution of weight enabling someone or something to remain upright and steady.",
+        "explanation_marathi": "समतोल."
+    },
+    {
+        "word": "Ban",
+        "question": "To officially or legally prohibit is to...",
+        "options": [
+            "Allow",
+            "Ban",
+            "Permit",
+            "Let"
+        ],
+        "correct_answer": "Ban",
+        "explanation_english": "Officially or legally prohibit.",
+        "explanation_marathi": "बंदी घालणे."
+    },
+    {
+        "word": "Barrier",
+        "question": "Something that prevents movement or access is a...",
+        "options": [
+            "Road",
+            "Barrier",
+            "Door",
+            "Path"
+        ],
+        "correct_answer": "Barrier",
+        "explanation_english": "A fence or other obstacle that prevents movement or access.",
+        "explanation_marathi": "अडथळा किंवा कुंपण."
+    },
+    {
+        "word": "Base",
+        "question": "The lowest part or edge of something is the...",
+        "options": [
+            "Top",
+            "Base",
+            "Peak",
+            "Side"
+        ],
+        "correct_answer": "Base",
+        "explanation_english": "The lowest part or edge of something, especially the part on which it rests or is supported.",
+        "explanation_marathi": "पाया किंवा तळ."
+    },
+    {
+        "word": "Basic",
+        "question": "Forming an essential foundation or starting point is...",
+        "options": [
+            "Complex",
+            "Basic",
+            "Hard",
+            "Advanced"
+        ],
+        "correct_answer": "Basic",
+        "explanation_english": "Forming an essential foundation or starting point; fundamental.",
+        "explanation_marathi": "मूळ किंवा पायाभूत."
+    },
+    {
+        "word": "Battle",
+        "question": "A sustained fight between large organized armed forces is a...",
+        "options": [
+            "Peace",
+            "Battle",
+            "Talk",
+            "Hug"
+        ],
+        "correct_answer": "Battle",
+        "explanation_english": "A sustained fight between large organized armed forces.",
+        "explanation_marathi": "लढाई."
+    },
+    {
+        "word": "Beauty",
+        "question": "A combination of qualities that pleases the sight is...",
+        "options": [
+            "Ugliness",
+            "Beauty",
+            "Dirt",
+            "Mess"
+        ],
+        "correct_answer": "Beauty",
+        "explanation_english": "A combination of qualities, such as shape, color, or form, that pleases the aesthetic senses, especially the sight.",
+        "explanation_marathi": "सौंदर्य."
+    },
+    {
+        "word": "Belief",
+        "question": "Trust, faith, or confidence in someone or something is...",
+        "options": [
+            "Doubt",
+            "Belief",
+            "Lies",
+            "Fear"
+        ],
+        "correct_answer": "Belief",
+        "explanation_english": "Trust, faith, or confidence in someone or something.",
+        "explanation_marathi": "विश्वास किंवा श्रद्धा."
+    },
+    {
+        "word": "Belong",
+        "question": "To be the property of is to...",
+        "options": [
+            "Lost",
+            "Belong",
+            "Sell",
+            "Give"
+        ],
+        "correct_answer": "Belong",
+        "explanation_english": "Be the property of.",
+        "explanation_marathi": "मालकीचे असणे."
+    },
+    {
+        "word": "Beneath",
+        "question": "Extending or directly underneath is...",
+        "options": [
+            "Above",
+            "Beneath",
+            "Over",
+            "Top"
+        ],
+        "correct_answer": "Beneath",
+        "explanation_english": "Extending or directly underneath.",
+        "explanation_marathi": "खाली."
+    },
+    {
+        "word": "Benefit",
+        "question": "An advantage or profit gained from something is a...",
+        "options": [
+            "Loss",
+            "Benefit",
+            "Cost",
+            "Fine"
+        ],
+        "correct_answer": "Benefit",
+        "explanation_english": "An advantage or profit gained from something.",
+        "explanation_marathi": "फायदा किंवा लाभ."
+    },
+    {
+        "word": "Beyond",
+        "question": "At or to the further side of is...",
+        "options": [
+            "Near",
+            "Beyond",
+            "Close",
+            "Here"
+        ],
+        "correct_answer": "Beyond",
+        "explanation_english": "At or to the further side of.",
+        "explanation_marathi": "पलीकडे."
+    },
+    {
+        "word": "Bill",
+        "question": "A statement of money owed for goods or services is a...",
+        "options": [
+            "Gift",
+            "Bill",
+            "Card",
+            "Note"
+        ],
+        "correct_answer": "Bill",
+        "explanation_english": "A printed or written statement of the money owed for goods or services.",
+        "explanation_marathi": "बिल किंवा देयक."
+    },
+    {
+        "word": "Bitter",
+        "question": "Having a sharp, pungent taste like coffee or lemon skin is...",
+        "options": [
+            "Sweet",
+            "Bitter",
+            "Salty",
+            "Bland"
+        ],
+        "correct_answer": "Bitter",
+        "explanation_english": "Having a sharp, pungent taste or smell; not sweet.",
+        "explanation_marathi": "कडू."
+    },
+    {
+        "word": "Blame",
+        "question": "To assign responsibility for a fault or wrong is to...",
+        "options": [
+            "Praise",
+            "Blame",
+            "Thank",
+            "Help"
+        ],
+        "correct_answer": "Blame",
+        "explanation_english": "Assign responsibility for a fault or wrong.",
+        "explanation_marathi": "दोष देणे."
+    },
+    {
+        "word": "Blank",
+        "question": "Bare, empty, or plain implies being...",
+        "options": [
+            "Full",
+            "Blank",
+            "Busy",
+            "Writing"
+        ],
+        "correct_answer": "Blank",
+        "explanation_english": "(of a surface or background) bare, empty, or plain.",
+        "explanation_marathi": "रिकामे किंवा कोरे."
+    },
+    {
+        "word": "Blind",
+        "question": "Unable to see implies being...",
+        "options": [
+            "Sighted",
+            "Blind",
+            "Deaf",
+            "Mute"
+        ],
+        "correct_answer": "Blind",
+        "explanation_english": "Unable to see because of injury, disease, or a congenital condition.",
+        "explanation_marathi": "आंधळा."
+    },
+    {
+        "word": "Block",
+        "question": "To make movement or flow difficult or impossible is to...",
+        "options": [
+            "Open",
+            "Block",
+            "Clear",
+            "Allow"
+        ],
+        "correct_answer": "Block",
+        "explanation_english": "Make the movement or flow in (a passage, pipe, road, etc.) difficult or impossible.",
+        "explanation_marathi": "अडवणे किंवा बंद करणे."
+    },
+    {
+        "word": "Blood",
+        "question": "The red liquid that circulates in the body is...",
+        "options": [
+            "Water",
+            "Blood",
+            "Oil",
+            "Ink"
+        ],
+        "correct_answer": "Blood",
+        "explanation_english": "The red liquid that circulates in the arteries and veins of humans and other vertebrate animals.",
+        "explanation_marathi": "रक्त."
+    },
+    {
+        "word": "Boil",
+        "question": "To heat a liquid until it bubbles is to...",
+        "options": [
+            "Freeze",
+            "Boil",
+            "Cool",
+            "Melt"
+        ],
+        "correct_answer": "Boil",
+        "explanation_english": "(with reference to a liquid) reach or cause to reach the temperature at which it bubbles and turns to vapor.",
+        "explanation_marathi": "उकळणे."
+    },
+    {
+        "word": "Bold",
+        "question": "Showing an ability to take risks represents being...",
+        "options": [
+            "Shy",
+            "Bold",
+            "Weak",
+            "Afraid"
+        ],
+        "correct_answer": "Bold",
+        "explanation_english": "(of a person, action, or idea) showing an ability to take risks; confident and courageous.",
+        "explanation_marathi": "धाडसी."
+    },
+    {
+        "word": "Bond",
+        "question": "A relationship between people or groups is a...",
+        "options": [
+            "Fight",
+            "Bond",
+            "Wall",
+            "Gap"
+        ],
+        "correct_answer": "Bond",
+        "explanation_english": "A relationship between people or groups based on shared feelings, interests, or experiences.",
+        "explanation_marathi": "बंध किंवा नाते."
+    },
+    {
+        "word": "Border",
+        "question": "A line separating two political or geographical areas is a...",
+        "options": [
+            "Center",
+            "Border",
+            "Middle",
+            "Heart"
+        ],
+        "correct_answer": "Border",
+        "explanation_english": "A line separating two political or geographical areas, especially countries.",
+        "explanation_marathi": "सीमा."
+    },
+    {
+        "word": "Bother",
+        "question": "To take the trouble to do something is to...",
+        "options": [
+            "Relax",
+            "Bother",
+            "Ignore",
+            "Sleep"
+        ],
+        "correct_answer": "Bother",
+        "explanation_english": "Take the trouble to do something.",
+        "explanation_marathi": "तसदी घेणे किंवा त्रास करून घेणे."
+    },
+    {
+        "word": "Brain",
+        "question": "An organ of soft nervous tissue in the skull is the...",
+        "options": [
+            "Heart",
+            "Brain",
+            "Lung",
+            "Stomach"
+        ],
+        "correct_answer": "Brain",
+        "explanation_english": "An organ of soft nervous tissue contained in the skull of vertebrates, functioning as the coordinating center of sensation and intellectual and nervous activity.",
+        "explanation_marathi": "मेंदू."
+    },
+    {
+        "word": "Branch",
+        "question": "A part of a tree which grows out from the trunk is a...",
+        "options": [
+            "Root",
+            "Branch",
+            "Leaf",
+            "Seed"
+        ],
+        "correct_answer": "Branch",
+        "explanation_english": "A part of a tree which grows out from the trunk or from a bough.",
+        "explanation_marathi": "फांदी."
+    },
+    {
+        "word": "Brand",
+        "question": "A type of product manufactured by a company is a...",
+        "options": [
+            "Copy",
+            "Brand",
+            "Fake",
+            "Generic"
+        ],
+        "correct_answer": "Brand",
+        "explanation_english": "A type of product manufactured by a particular company under a particular name.",
+        "explanation_marathi": "ब्रँड (उत्पादनाचा प्रकार)."
+    },
+    {
+        "word": "Brave",
+        "question": "Ready to face and endure danger or pain is being...",
+        "options": [
+            "Cowardly",
+            "Brave",
+            "Scared",
+            "Weak"
+        ],
+        "correct_answer": "Brave",
+        "explanation_english": "Ready to face and endure danger or pain; showing courage.",
+        "explanation_marathi": "शूर."
+    },
+    {
+        "word": "Breath",
+        "question": "The air taken into or expelled from the lungs is...",
+        "options": [
+            "Food",
+            "Breath",
+            "Water",
+            "Blood"
+        ],
+        "correct_answer": "Breath",
+        "explanation_english": "The air taken into or expelled from the lungs.",
+        "explanation_marathi": "श्वास."
+    },
+    {
+        "word": "Brief",
+        "question": "Lasting only a short time represents...",
+        "options": [
+            "Long",
+            "Brief",
+            "Forever",
+            "Endless"
+        ],
+        "correct_answer": "Brief",
+        "explanation_english": "Of short duration.",
+        "explanation_marathi": "संक्षिप्त किंवा थोडक्यात."
+    },
+    {
+        "word": "Brilliant",
+        "question": "Exceptionally clever or talented implies being...",
+        "options": [
+            "Stupid",
+            "Brilliant",
+            "Dull",
+            "Slow"
+        ],
+        "correct_answer": "Brilliant",
+        "explanation_english": "Exceptionally clever or talented.",
+        "explanation_marathi": "बुद्धिमान किंवा तेजस्वी."
+    },
+    {
+        "word": "Broad",
+        "question": "Having a distance larger than usual from side to side is...",
+        "options": [
+            "Narrow",
+            "Broad",
+            "Thin",
+            "Small"
+        ],
+        "correct_answer": "Broad",
+        "explanation_english": "Having an ample distance from side to side; wide.",
+        "explanation_marathi": "रुंद."
+    },
+    {
+        "word": "Budget",
+        "question": "An estimate of income and expenditure is a...",
+        "options": [
+            "Dream",
+            "Budget",
+            "Wish",
+            "Guess"
+        ],
+        "correct_answer": "Budget",
+        "explanation_english": "An estimate of income and expenditure for a set period of time.",
+        "explanation_marathi": "अर्थसंकल्प किंवा बजेट."
+    },
+    {
+        "word": "Burst",
+        "question": "To break open or apart suddenly is to...",
+        "options": [
+            "Fix",
+            "Burst",
+            "Close",
+            "Seal"
+        ],
+        "correct_answer": "Burst",
+        "explanation_english": "Break open or apart suddenly and violently, especially as a result of an impact or internal pressure.",
+        "explanation_marathi": "फुटणे किंवा स्फोट होणे."
+    }
+]

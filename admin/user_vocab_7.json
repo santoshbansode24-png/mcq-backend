@@ -1,0 +1,652 @@
+[
+    {
+        "word": "Calculate",
+        "question": "To determine the amount or number of something mathematically is to...",
+        "options": [
+            "Guess",
+            "Calculate",
+            "Write",
+            "Read"
+        ],
+        "correct_answer": "Calculate",
+        "explanation_english": "Determine (the amount or number of something) mathematically.",
+        "explanation_marathi": "गणित करणे किंवा हिशोब करणे."
+    },
+    {
+        "word": "Calm",
+        "question": "Not showing or feeling nervousness or anger is being...",
+        "options": [
+            "Angry",
+            "Calm",
+            "Excited",
+            "Scared"
+        ],
+        "correct_answer": "Calm",
+        "explanation_english": "Not showing or feeling nervousness, anger, or other strong emotions.",
+        "explanation_marathi": "शांत."
+    },
+    {
+        "word": "Campaign",
+        "question": "A series of military or political operations is a...",
+        "options": [
+            "Rest",
+            "Campaign",
+            "Sleep",
+            "Walk"
+        ],
+        "correct_answer": "Campaign",
+        "explanation_english": "A series of military or political operations intended to achieve a particular objective.",
+        "explanation_marathi": "मोहीम."
+    },
+    {
+        "word": "Cancel",
+        "question": "To decide that a planned event will not take place is to...",
+        "options": [
+            "Start",
+            "Cancel",
+            "Begin",
+            "Go"
+        ],
+        "correct_answer": "Cancel",
+        "explanation_english": "Decide that (a planned event) will not take place.",
+        "explanation_marathi": "रद्द करणे."
+    },
+    {
+        "word": "Candidate",
+        "question": "A person who applies for a job or is nominated for election is a...",
+        "options": [
+            "Voter",
+            "Candidate",
+            "Judge",
+            "Boss"
+        ],
+        "correct_answer": "Candidate",
+        "explanation_english": "A person who applies for a job or is nominated for election.",
+        "explanation_marathi": "उमेदवार."
+    },
+    {
+        "word": "Capacity",
+        "question": "The maximum amount that something can contain is its...",
+        "options": [
+            "Weight",
+            "Capacity",
+            "Height",
+            "Color"
+        ],
+        "correct_answer": "Capacity",
+        "explanation_english": "The maximum amount that something can contain.",
+        "explanation_marathi": "क्षमता."
+    },
+    {
+        "word": "Capture",
+        "question": "To take into one's possession or control by force is to...",
+        "options": [
+            "Release",
+            "Capture",
+            "Free",
+            "Drop"
+        ],
+        "correct_answer": "Capture",
+        "explanation_english": "Take into one's possession or control by force.",
+        "explanation_marathi": "पकडणे किंवा ताब्यात घेणे."
+    },
+    {
+        "word": "Careless",
+        "question": "Not giving sufficient attention to avoiding harm or errors is being...",
+        "options": [
+            "Careful",
+            "Careless",
+            "Safe",
+            "Wise"
+        ],
+        "correct_answer": "Careless",
+        "explanation_english": "Not giving sufficient attention or thought to avoiding harm or errors.",
+        "explanation_marathi": "निष्काळजी."
+    },
+    {
+        "word": "Category",
+        "question": "A class or division of people or things is a...",
+        "options": [
+            "Single",
+            "Category",
+            "Mess",
+            "Mix"
+        ],
+        "correct_answer": "Category",
+        "explanation_english": "A class or division of people or things regarded as having particular shared characteristics.",
+        "explanation_marathi": "वर्गवारी किंवा श्रेणी."
+    },
+    {
+        "word": "Cease",
+        "question": "To come to an end is to...",
+        "options": [
+            "Start",
+            "Cease",
+            "Begin",
+            "Grow"
+        ],
+        "correct_answer": "Cease",
+        "explanation_english": "Bring or come to an end.",
+        "explanation_marathi": "थांबणे किंवा बंद होणे."
+    },
+    {
+        "word": "Celebration",
+        "question": "The action of marking one's pleasure at an important event is a...",
+        "options": [
+            "Mourning",
+            "Celebration",
+            "Work",
+            "Test"
+        ],
+        "correct_answer": "Celebration",
+        "explanation_english": "The action of marking one's pleasure at an important event or occasion by engaging in enjoyable, typically social, activity.",
+        "explanation_marathi": "सण किंवा उत्सव साजरा करणे."
+    },
+    {
+        "word": "Cell",
+        "question": "The smallest structural and functional unit of an organism is a...",
+        "options": [
+            "Bone",
+            "Cell",
+            "Hair",
+            "Skin"
+        ],
+        "correct_answer": "Cell",
+        "explanation_english": "The smallest structural and functional unit of an organism.",
+        "explanation_marathi": "पेशी."
+    },
+    {
+        "word": "Ceremony",
+        "question": "A formal religious or public occasion is a...",
+        "options": [
+            "Game",
+            "Ceremony",
+            "Joke",
+            "Nap"
+        ],
+        "correct_answer": "Ceremony",
+        "explanation_english": "A formal religious or public occasion, typically one celebrating a particular event or achievement.",
+        "explanation_marathi": "समारंभ."
+    },
+    {
+        "word": "Certain",
+        "question": "Known for sure; established beyond doubt is...",
+        "options": [
+            "Unsure",
+            "Certain",
+            "Vague",
+            "Lost"
+        ],
+        "correct_answer": "Certain",
+        "explanation_english": "Known for sure; established beyond doubt.",
+        "explanation_marathi": "खात्रीशीर किंवा निश्चित."
+    },
+    {
+        "word": "Chain",
+        "question": "A connected flexible series of metal links is a...",
+        "options": [
+            "Rope",
+            "Chain",
+            "String",
+            "Wire"
+        ],
+        "correct_answer": "Chain",
+        "explanation_english": "A connected flexible series of metal links used for fastening or securing objects and pulling or supporting loads.",
+        "explanation_marathi": "साखळी."
+    },
+    {
+        "word": "Chairman",
+        "question": "A person chosen to preside over a meeting is a...",
+        "options": [
+            "Member",
+            "Chairman",
+            "Guest",
+            "Clerk"
+        ],
+        "correct_answer": "Chairman",
+        "explanation_english": "A person chosen to preside over a meeting.",
+        "explanation_marathi": "अध्यक्ष."
+    },
+    {
+        "word": "Challenge",
+        "question": "A call to take part in a contest or competition is a...",
+        "options": [
+            "Gift",
+            "Challenge",
+            "Help",
+            "Peace"
+        ],
+        "correct_answer": "Challenge",
+        "explanation_english": "A call to take part in a contest or competition, especially a duel.",
+        "explanation_marathi": "आव्हान."
+    },
+    {
+        "word": "Chamber",
+        "question": "A large room used for formal or public events is a...",
+        "options": [
+            "Hut",
+            "Chamber",
+            "Box",
+            "Cage"
+        ],
+        "correct_answer": "Chamber",
+        "explanation_english": "A large room used for formal or public events.",
+        "explanation_marathi": "दालन किंवा कक्ष."
+    },
+    {
+        "word": "Character",
+        "question": "The mental and moral qualities distinctive to an individual represent their...",
+        "options": [
+            "Clothes",
+            "Character",
+            "House",
+            "Car"
+        ],
+        "correct_answer": "Character",
+        "explanation_english": "The mental and moral qualities distinctive to an individual.",
+        "explanation_marathi": "चारित्र्य किंवा स्वभाव."
+    },
+    {
+        "word": "Charge",
+        "question": "To demand an amount as a price from someone is to...",
+        "options": [
+            "Pay",
+            "Charge",
+            "Give",
+            "Gift"
+        ],
+        "correct_answer": "Charge",
+        "explanation_english": "Demand (an amount) as a price from someone for a service rendered or goods supplied.",
+        "explanation_marathi": "आकारणी करणे (पैसे माघणे)."
+    },
+    {
+        "word": "Charity",
+        "question": "An organization set up to provide help and raise money for those in need is a...",
+        "options": [
+            "Bank",
+            "Charity",
+            "Shop",
+            "Mall"
+        ],
+        "correct_answer": "Charity",
+        "explanation_english": "An organization set up to provide help and raise money for those in need.",
+        "explanation_marathi": "धर्मादाय संस्था."
+    },
+    {
+        "word": "Chart",
+        "question": "A sheet of information in the form of a table, graph, or diagram is a...",
+        "options": [
+            "Book",
+            "Chart",
+            "Word",
+            "Song"
+        ],
+        "correct_answer": "Chart",
+        "explanation_english": "A sheet of information in the form of a table, graph, or diagram.",
+        "explanation_marathi": "तक्ता किंवा आलेख."
+    },
+    {
+        "word": "Chase",
+        "question": "To pursue in order to catch or catch up with is to...",
+        "options": [
+            "Run away",
+            "Chase",
+            "Wait",
+            "Sit"
+        ],
+        "correct_answer": "Chase",
+        "explanation_english": "Pursue in order to catch or catch up with.",
+        "explanation_marathi": "पाठलाग करणे."
+    },
+    {
+        "word": "Cheat",
+        "question": "To act dishonestly or unfairly in order to gain an advantage is to...",
+        "options": [
+            "Help",
+            "Cheat",
+            "Work",
+            "Play"
+        ],
+        "correct_answer": "Cheat",
+        "explanation_english": "Act dishonestly or unfairly in order to gain an advantage, especially in a game or examination.",
+        "explanation_marathi": "फसवणूक करणे."
+    },
+    {
+        "word": "Cheer",
+        "question": "To shout for joy or in praise or encouragement is to...",
+        "options": [
+            "Cry",
+            "Cheer",
+            "Boo",
+            "Sleep"
+        ],
+        "correct_answer": "Cheer",
+        "explanation_english": "Shout for joy or in praise or encouragement.",
+        "explanation_marathi": "जयघोष करणे किंवा उत्साह वाढवणे."
+    },
+    {
+        "word": "Chemical",
+        "question": "A substance obtained by a chemical process is a...",
+        "options": [
+            "Food",
+            "Chemical",
+            "Animal",
+            "Plant"
+        ],
+        "correct_answer": "Chemical",
+        "explanation_english": "A distinct compound or substance, especially one which has been artificially prepared or purified.",
+        "explanation_marathi": "रसायन."
+    },
+    {
+        "word": "Chest",
+        "question": "The front surface of a person's body between the neck and the abdomen is the...",
+        "options": [
+            "Back",
+            "Chest",
+            "Leg",
+            "Head"
+        ],
+        "correct_answer": "Chest",
+        "explanation_english": "The front surface of a person's body between the neck and the abdomen.",
+        "explanation_marathi": "छाती."
+    },
+    {
+        "word": "Chief",
+        "question": "A leader or ruler of a people or clan is a...",
+        "options": [
+            "Follower",
+            "Chief",
+            "Child",
+            "Servant"
+        ],
+        "correct_answer": "Chief",
+        "explanation_english": "A leader or ruler of a people or clan.",
+        "explanation_marathi": "प्रमुख किंवा मुख्य."
+    },
+    {
+        "word": "Childhood",
+        "question": "The state or period of being a child is...",
+        "options": [
+            "Adulthood",
+            "Childhood",
+            "Old age",
+            "Teenage"
+        ],
+        "correct_answer": "Childhood",
+        "explanation_english": "The state or period of being a child.",
+        "explanation_marathi": "बालपण."
+    },
+    {
+        "word": "Choice",
+        "question": "An act of selecting or making a decision when faced with two or more possibilities is a...",
+        "options": [
+            "Force",
+            "Choice",
+            "Rule",
+            "Law"
+        ],
+        "correct_answer": "Choice",
+        "explanation_english": "An act of selecting or making a decision when faced with two or more possibilities.",
+        "explanation_marathi": "निवड किंवा पसंती."
+    },
+    {
+        "word": "Choose",
+        "question": "To pick out or select as being the best or most appropriate is to...",
+        "options": [
+            "Reject",
+            "Choose",
+            "Ignore",
+            "Drop"
+        ],
+        "correct_answer": "Choose",
+        "explanation_english": "Pick out or select (someone or something) as being the best or most appropriate of two or more alternatives.",
+        "explanation_marathi": "निवडणे."
+    },
+    {
+        "word": "Church",
+        "question": "A building used for public Christian worship is a...",
+        "options": [
+            "School",
+            "Church",
+            "Bank",
+            "Park"
+        ],
+        "correct_answer": "Church",
+        "explanation_english": "A building used for public Christian worship.",
+        "explanation_marathi": "चर्च (ख्रिस्ती प्रार्थनास्थळ)."
+    },
+    {
+        "word": "Circle",
+        "question": "A round plane figure whose boundary consists of points equidistant from a fixed center is a...",
+        "options": [
+            "Square",
+            "Circle",
+            "Triangle",
+            "Line"
+        ],
+        "correct_answer": "Circle",
+        "explanation_english": "A round plane figure whose boundary consists of points equidistant from a fixed center.",
+        "explanation_marathi": "वर्तुळ."
+    },
+    {
+        "word": "Circumstance",
+        "question": "A fact or condition connected with or relevant to an event or action is a...",
+        "options": [
+            "Dream",
+            "Circumstance",
+            "Lie",
+            "Game"
+        ],
+        "correct_answer": "Circumstance",
+        "explanation_english": "A fact or condition connected with or relevant to an event or action.",
+        "explanation_marathi": "परिस्थिती."
+    },
+    {
+        "word": "Citizen",
+        "question": "A legally recognized subject or national of a state or commonwealth is a...",
+        "options": [
+            "Alien",
+            "Citizen",
+            "Tourist",
+            "Visitor"
+        ],
+        "correct_answer": "Citizen",
+        "explanation_english": "A legally recognized subject or national of a state or commonwealth, either native or naturalized.",
+        "explanation_marathi": "नागरिक."
+    },
+    {
+        "word": "Claim",
+        "question": "To state or assert that something is the case, typically without providing evidence is to...",
+        "options": [
+            "Deny",
+            "Claim",
+            "Ask",
+            "Hide"
+        ],
+        "correct_answer": "Claim",
+        "explanation_english": "State or assert that something is the case, typically without providing evidence or proof.",
+        "explanation_marathi": "दावा करणे."
+    },
+    {
+        "word": "Clarify",
+        "question": "To make a statement or situation less confused and more comprehensible is to...",
+        "options": [
+            "Confuse",
+            "Clarify",
+            "Mix",
+            "Hide"
+        ],
+        "correct_answer": "Clarify",
+        "explanation_english": "Make (a statement or situation) less confused and more comprehensible.",
+        "explanation_marathi": "स्पष्ट करणे."
+    },
+    {
+        "word": "Classic",
+        "question": "Judged over a period of time to be of the highest quality represents being...",
+        "options": [
+            "Modern",
+            "Classic",
+            "New",
+            "Cheap"
+        ],
+        "correct_answer": "Classic",
+        "explanation_english": "Judged over a period of time to be of the highest quality and outstanding of its kind.",
+        "explanation_marathi": "अभिजात किंवा उत्कृष्ट."
+    },
+    {
+        "word": "Clear",
+        "question": "Easy to perceive, understand, or interpret represents being...",
+        "options": [
+            "Dark",
+            "Clear",
+            "Cloudy",
+            "Muddy"
+        ],
+        "correct_answer": "Clear",
+        "explanation_english": "Easy to perceive, understand, or interpret.",
+        "explanation_marathi": "स्पष्ट किंवा साफ."
+    },
+    {
+        "word": "Clerk",
+        "question": "A person employed in an office or bank to keep records is a...",
+        "options": [
+            "Boss",
+            "Clerk",
+            "Guard",
+            "Cook"
+        ],
+        "correct_answer": "Clerk",
+        "explanation_english": "A person employed in an office or bank to keep records or accounts and to undertake other routine administrative duties.",
+        "explanation_marathi": "लिपिक."
+    },
+    {
+        "word": "Clever",
+        "question": "Quick to understand, learn, and devise or apply ideas represents being...",
+        "options": [
+            "Stupid",
+            "Clever",
+            "Slow",
+            "Dull"
+        ],
+        "correct_answer": "Clever",
+        "explanation_english": "Quick to understand, learn, and devise or apply ideas; intelligent.",
+        "explanation_marathi": "हुशार."
+    },
+    {
+        "word": "Client",
+        "question": "A person or organization using the services of a lawyer or other professional is a...",
+        "options": [
+            "Server",
+            "Client",
+            "Worker",
+            "Boss"
+        ],
+        "correct_answer": "Client",
+        "explanation_english": "A person or organization using the services of a lawyer or other professional person or company.",
+        "explanation_marathi": "अशील किंवा ग्राहक."
+    },
+    {
+        "word": "Climate",
+        "question": "The weather conditions prevailing in an area in general is the...",
+        "options": [
+            "Weather",
+            "Climate",
+            "Rain",
+            "Sun"
+        ],
+        "correct_answer": "Climate",
+        "explanation_english": "The weather conditions prevailing in an area in general or over a long period.",
+        "explanation_marathi": "हवामान."
+    },
+    {
+        "word": "Climb",
+        "question": "To go or come up, especially by using the feet and sometimes the hands is to...",
+        "options": [
+            "Fall",
+            "Climb",
+            "Drop",
+            "Sit"
+        ],
+        "correct_answer": "Climb",
+        "explanation_english": "Go or come up (a slope, incline, or staircase), especially by using the feet and sometimes the hands; ascend.",
+        "explanation_marathi": "चढणे."
+    },
+    {
+        "word": "Close",
+        "question": "Only a short distance away or apart in space or time represents being...",
+        "options": [
+            "Far",
+            "Close",
+            "Distant",
+            "Away"
+        ],
+        "correct_answer": "Close",
+        "explanation_english": "Only a short distance away or apart in space or time.",
+        "explanation_marathi": "जवळ."
+    },
+    {
+        "word": "Cloth",
+        "question": "Woven or felted fabric made from wool, cotton, or a similar fiber is...",
+        "options": [
+            "Paper",
+            "Cloth",
+            "Wood",
+            "Metal"
+        ],
+        "correct_answer": "Cloth",
+        "explanation_english": "Woven or felted fabric made from wool, cotton, or a similar fiber.",
+        "explanation_marathi": "कापड."
+    },
+    {
+        "word": "Clue",
+        "question": "A piece of evidence or information used in the detection of a crime is a...",
+        "options": [
+            "Answer",
+            "Clue",
+            "Lie",
+            "Question"
+        ],
+        "correct_answer": "Clue",
+        "explanation_english": "A piece of evidence or information used in the detection of a crime or solving of a mystery.",
+        "explanation_marathi": "सुगावा किंवा संकेत."
+    },
+    {
+        "word": "Coach",
+        "question": "An athletic instructor or trainer is a...",
+        "options": [
+            "Student",
+            "Coach",
+            "Player",
+            "Fan"
+        ],
+        "correct_answer": "Coach",
+        "explanation_english": "An athletic instructor or trainer.",
+        "explanation_marathi": "प्रशिक्षक (कोच)."
+    },
+    {
+        "word": "Coal",
+        "question": "A combustible black or dark brown rock consisting mainly of carbonized plant matter is...",
+        "options": [
+            "Gold",
+            "Coal",
+            "Silver",
+            "Iron"
+        ],
+        "correct_answer": "Coal",
+        "explanation_english": "A combustible black or dark brown rock consisting mainly of carbonized plant matter, found mainly in underground deposits and used as fuel.",
+        "explanation_marathi": "कोळसा."
+    },
+    {
+        "word": "Coast",
+        "question": "The part of the land near the sea is the...",
+        "options": [
+            "Desert",
+            "Coast",
+            "Mountain",
+            "Forest"
+        ],
+        "correct_answer": "Coast",
+        "explanation_english": "The part of the land near the sea; the edge of the land.",
+        "explanation_marathi": "किनारा (समुद्रकिनारा)."
+    }
+]

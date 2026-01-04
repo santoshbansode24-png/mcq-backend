@@ -1,0 +1,652 @@
+[
+    {
+        "word": "Protect",
+        "question": "To keep someone safe from harm is to...",
+        "options": [
+            "Attack",
+            "Protect",
+            "Ignore",
+            "Damage"
+        ],
+        "correct_answer": "Protect",
+        "explanation_english": "To keep safe from harm or injury.",
+        "explanation_marathi": "संरक्षण करणे."
+    },
+    {
+        "word": "Proud",
+        "question": "Feeling deep pleasure about your own achievements is being...",
+        "options": [
+            "Ashamed",
+            "Proud",
+            "Sad",
+            "Angry"
+        ],
+        "correct_answer": "Proud",
+        "explanation_english": "Feeling deep pleasure or satisfaction as a result of one's own achievements.",
+        "explanation_marathi": "अभिमान वाटणारा."
+    },
+    {
+        "word": "Prove",
+        "question": "To show that something is true with evidence is to...",
+        "options": [
+            "Guess",
+            "Prove",
+            "Hide",
+            "Doubt"
+        ],
+        "correct_answer": "Prove",
+        "explanation_english": "Demonstrate the truth or existence of (something) by evidence or argument.",
+        "explanation_marathi": "सिद्ध करणे."
+    },
+    {
+        "word": "Provide",
+        "question": "To give something that is needed is to...",
+        "options": [
+            "Take",
+            "Provide",
+            "Steal",
+            "Keep"
+        ],
+        "correct_answer": "Provide",
+        "explanation_english": "Make available for use; supply.",
+        "explanation_marathi": "पुरवणे."
+    },
+    {
+        "word": "Public",
+        "question": "Something open to everyone is...",
+        "options": [
+            "Private",
+            "Public",
+            "Secret",
+            "Hidden"
+        ],
+        "correct_answer": "Public",
+        "explanation_english": "Of or concerning the people as a whole.",
+        "explanation_marathi": "सार्वजनिक."
+    },
+    {
+        "word": "Publish",
+        "question": "To print a book and sell it is to...",
+        "options": [
+            "Read",
+            "Publish",
+            "Hide",
+            "Burn"
+        ],
+        "correct_answer": "Publish",
+        "explanation_english": "Prepare and issue (a book, journal, piece of music, etc.) for public sale.",
+        "explanation_marathi": "प्रकाशित करणे."
+    },
+    {
+        "word": "Punish",
+        "question": "To make someone suffer for doing something wrong is to...",
+        "options": [
+            "Reward",
+            "Punish",
+            "Help",
+            "Praise"
+        ],
+        "correct_answer": "Punish",
+        "explanation_english": "Inflict a penalty or sanction on (someone) as retribution for an offense.",
+        "explanation_marathi": "शिक्षा करणे."
+    },
+    {
+        "word": "Purpose",
+        "question": "The reason for which something is done is the...",
+        "options": [
+            "Mistake",
+            "Purpose",
+            "Accident",
+            "Time"
+        ],
+        "correct_answer": "Purpose",
+        "explanation_english": "The reason for which something is done or created or for which something exists.",
+        "explanation_marathi": "उद्देश किंवा हेतू."
+    },
+    {
+        "word": "Quality",
+        "question": "How good or bad something is refers to its...",
+        "options": [
+            "Size",
+            "Quality",
+            "Price",
+            "Name"
+        ],
+        "correct_answer": "Quality",
+        "explanation_english": "The standard of something as measured against other things of a similar kind.",
+        "explanation_marathi": "गुणवत्ता किंवा दर्जा."
+    },
+    {
+        "word": "Quantity",
+        "question": "The amount or number of something is the...",
+        "options": [
+            "Color",
+            "Quantity",
+            "Quality",
+            "Shape"
+        ],
+        "correct_answer": "Quantity",
+        "explanation_english": "The amount or number of a material or immaterial thing not usually estimated by spatial measurement.",
+        "explanation_marathi": "प्रमाण किंवा संख्या."
+    },
+    {
+        "word": "Raise",
+        "question": "To lift something up is to...",
+        "options": [
+            "Drop",
+            "Raise",
+            "Push",
+            "Fall"
+        ],
+        "correct_answer": "Raise",
+        "explanation_english": "Lift or move to a higher position or level.",
+        "explanation_marathi": "वर उचलणे किंवा वाढवणे."
+    },
+    {
+        "word": "Range",
+        "question": "The area of variation between upper and lower limits is the...",
+        "options": [
+            "Point",
+            "Range",
+            "Spot",
+            "Line"
+        ],
+        "correct_answer": "Range",
+        "explanation_english": "The area of variation between upper and lower limits on a particular scale.",
+        "explanation_marathi": "श्रेणी किंवा पल्ला."
+    },
+    {
+        "word": "Rare",
+        "question": "Something that is not found often is...",
+        "options": [
+            "Common",
+            "Rare",
+            "Usual",
+            "Regular"
+        ],
+        "correct_answer": "Rare",
+        "explanation_english": "(of an event, situation, or condition) not occurring very often.",
+        "explanation_marathi": "दुर्मिळ."
+    },
+    {
+        "word": "Rate",
+        "question": "A measure, quantity, or frequency involves a...",
+        "options": [
+            "Name",
+            "Rate",
+            "Shape",
+            "Color"
+        ],
+        "correct_answer": "Rate",
+        "explanation_english": "A measure, quantity, or frequency, typically one measured against some other quantity or measure.",
+        "explanation_marathi": "दर."
+    },
+    {
+        "word": "Reach",
+        "question": "To arrive at a place is to...",
+        "options": [
+            "Leave",
+            "Reach",
+            "Start",
+            "Miss"
+        ],
+        "correct_answer": "Reach",
+        "explanation_english": "Arrive at; get as far as.",
+        "explanation_marathi": "पोहोचणे."
+    },
+    {
+        "word": "React",
+        "question": "To act in response to something is to...",
+        "options": [
+            "Ignore",
+            "React",
+            "Sleep",
+            "Wait"
+        ],
+        "correct_answer": "React",
+        "explanation_english": "Respond or behave in a particular way in response to something.",
+        "explanation_marathi": "प्रतिक्रिया देणे."
+    },
+    {
+        "word": "Realize",
+        "question": "To become fully aware of something is to...",
+        "options": [
+            "Forget",
+            "Realize",
+            "Lose",
+            "Miss"
+        ],
+        "correct_answer": "Realize",
+        "explanation_english": "Become fully aware of (something) as a fact; understand clearly.",
+        "explanation_marathi": "जाणीव होणे."
+    },
+    {
+        "word": "Reason",
+        "question": "An explanation for an action is a...",
+        "options": [
+            "Result",
+            "Reason",
+            "Lie",
+            "Dream"
+        ],
+        "correct_answer": "Reason",
+        "explanation_english": "A cause, explanation, or justification for an action or event.",
+        "explanation_marathi": "कारण."
+    },
+    {
+        "word": "Receive",
+        "question": "To get or be given something is to...",
+        "options": [
+            "Give",
+            "Receive",
+            "Send",
+            "Throw"
+        ],
+        "correct_answer": "Receive",
+        "explanation_english": "Be given, presented with, or paid (something).",
+        "explanation_marathi": "मिळणे किंवा स्वीकारणे."
+    },
+    {
+        "word": "Recognize",
+        "question": "To identify someone you have seen before is to...",
+        "options": [
+            "Forget",
+            "Recognize",
+            "Ignore",
+            "Meet"
+        ],
+        "correct_answer": "Recognize",
+        "explanation_english": "Identify (someone or something) from having encountered them before.",
+        "explanation_marathi": "ओळखणे."
+    },
+    {
+        "word": "Recommend",
+        "question": "To suggest that something is good is to...",
+        "options": [
+            "Criticize",
+            "Recommend",
+            "Hate",
+            "Stop"
+        ],
+        "correct_answer": "Recommend",
+        "explanation_english": "Put forward (someone or something) with approval as being suitable for a particular purpose or role.",
+        "explanation_marathi": "शिफारस करणे."
+    },
+    {
+        "word": "Record",
+        "question": "To set down in writing for later reference is to...",
+        "options": [
+            "Erase",
+            "Record",
+            "Speak",
+            "Forget"
+        ],
+        "correct_answer": "Record",
+        "explanation_english": "Set down in writing or some other permanent form for later reference.",
+        "explanation_marathi": "नोंद करणे."
+    },
+    {
+        "word": "Recover",
+        "question": "To return to a normal state of health is to...",
+        "options": [
+            "Worsen",
+            "Recover",
+            "Sick",
+            "Die"
+        ],
+        "correct_answer": "Recover",
+        "explanation_english": "Return to a normal state of health, mind, or strength.",
+        "explanation_marathi": "बरे होणे."
+    },
+    {
+        "word": "Refuse",
+        "question": "To indicate unwillingness to do something is to...",
+        "options": [
+            "Agree",
+            "Refuse",
+            "Accept",
+            "Start"
+        ],
+        "correct_answer": "Refuse",
+        "explanation_english": "Indicate or show that one is not willing to do something.",
+        "explanation_marathi": "नकार देणे."
+    },
+    {
+        "word": "Regret",
+        "question": "To feel sad about something you did is to...",
+        "options": [
+            "Enjoy",
+            "Regret",
+            "Plan",
+            "Like"
+        ],
+        "correct_answer": "Regret",
+        "explanation_english": "Feel sad, repentant, or disappointed over (something that has happened or been done).",
+        "explanation_marathi": "पश्चात्ताप होणे."
+    },
+    {
+        "word": "Regular",
+        "question": "Done or happening frequently is...",
+        "options": [
+            "Rare",
+            "Regular",
+            "Never",
+            "Once"
+        ],
+        "correct_answer": "Regular",
+        "explanation_english": "Arranged in or constituting a constant or definite pattern, especially with the same space between individual instances.",
+        "explanation_marathi": "नियमित."
+    },
+    {
+        "word": "Reject",
+        "question": "To dismiss as inadequate or unacceptable is to...",
+        "options": [
+            "Accept",
+            "Reject",
+            "Keep",
+            "Love"
+        ],
+        "correct_answer": "Reject",
+        "explanation_english": "Dismiss as inadequate, inappropriate, or not to one's taste.",
+        "explanation_marathi": "नाकारणे."
+    },
+    {
+        "word": "Relate",
+        "question": "To make a connection between two things is to...",
+        "options": [
+            "Separate",
+            "Relate",
+            "Divide",
+            "Cut"
+        ],
+        "correct_answer": "Relate",
+        "explanation_english": "Make or show a connection between.",
+        "explanation_marathi": "संबंधित असणे."
+    },
+    {
+        "word": "Relax",
+        "question": "To make or become less tense represents...",
+        "options": [
+            "Stress",
+            "Relax",
+            "Work",
+            "Run"
+        ],
+        "correct_answer": "Relax",
+        "explanation_english": "Make or become less tense or anxious.",
+        "explanation_marathi": "आराम करणे."
+    },
+    {
+        "word": "Release",
+        "question": "To allow to escape from confinement is to...",
+        "options": [
+            "Capture",
+            "Release",
+            "Hold",
+            "Keep"
+        ],
+        "correct_answer": "Release",
+        "explanation_english": "Allow or enable to escape from confinement; set free.",
+        "explanation_marathi": "मुक्त करणे."
+    },
+    {
+        "word": "Rely",
+        "question": "To depend on with full trust is to...",
+        "options": [
+            "Doubt",
+            "Rely",
+            "Ignore",
+            "Leave"
+        ],
+        "correct_answer": "Rely",
+        "explanation_english": "Depend on with full trust or confidence.",
+        "explanation_marathi": "विसंबून राहणे."
+    },
+    {
+        "word": "Remain",
+        "question": "To stay in the place that one has been is to...",
+        "options": [
+            "Leave",
+            "Remain",
+            "Go",
+            "Move"
+        ],
+        "correct_answer": "Remain",
+        "explanation_english": "Continue to exist, especially after other similar or related people or things have ceased to do so.",
+        "explanation_marathi": "शिल्लक राहणे."
+    },
+    {
+        "word": "Remember",
+        "question": "To have in or be able to bring to one's mind is to...",
+        "options": [
+            "Forget",
+            "Remember",
+            "Lose",
+            "Miss"
+        ],
+        "correct_answer": "Remember",
+        "explanation_english": "Have in or be able to bring to one's mind an awareness of (someone or something that one has seen, known, or experienced in the past).",
+        "explanation_marathi": "आठवणे."
+    },
+    {
+        "word": "Remind",
+        "question": "To cause someone to remember something is to...",
+        "options": [
+            "Forget",
+            "Remind",
+            "Ignore",
+            "Hide"
+        ],
+        "correct_answer": "Remind",
+        "explanation_english": "Cause (someone) to remember someone or something.",
+        "explanation_marathi": "आठवण करून देणे."
+    },
+    {
+        "word": "Remove",
+        "question": "To take something away is to...",
+        "options": [
+            "Add",
+            "Remove",
+            "Keep",
+            "Stay"
+        ],
+        "correct_answer": "Remove",
+        "explanation_english": "Take (something) away or off from the position occupied.",
+        "explanation_marathi": "काढून टाकणे."
+    },
+    {
+        "word": "Repair",
+        "question": "To restore something damaged to a good condition is to...",
+        "options": [
+            "Break",
+            "Repair",
+            "Destroy",
+            "Lose"
+        ],
+        "correct_answer": "Repair",
+        "explanation_english": "Fix or mend a thing suffering from damage or a fault.",
+        "explanation_marathi": "दुरुस्त करणे."
+    },
+    {
+        "word": "Repeat",
+        "question": "To say something again is to...",
+        "options": [
+            "Stop",
+            "Repeat",
+            "Silence",
+            "End"
+        ],
+        "correct_answer": "Repeat",
+        "explanation_english": "Say something again.",
+        "explanation_marathi": "पुनरावृत्ती करणे."
+    },
+    {
+        "word": "Reply",
+        "question": "To say something in response is to...",
+        "options": [
+            "Ask",
+            "Reply",
+            "Listen",
+            "Ignore"
+        ],
+        "correct_answer": "Reply",
+        "explanation_english": "Say something in response to something someone has said.",
+        "explanation_marathi": "उत्तर देणे."
+    },
+    {
+        "word": "Report",
+        "question": "A document containing information is a...",
+        "options": [
+            "Blank",
+            "Report",
+            "Silence",
+            "Secret"
+        ],
+        "correct_answer": "Report",
+        "explanation_english": "An account given of a particular matter, especially in the form of an official document.",
+        "explanation_marathi": "अहवाल."
+    },
+    {
+        "word": "Request",
+        "question": "An act of asking politely is a...",
+        "options": [
+            "Command",
+            "Request",
+            "Order",
+            "Demand"
+        ],
+        "correct_answer": "Request",
+        "explanation_english": "An act of asking politely or formally for something.",
+        "explanation_marathi": "विनंती."
+    },
+    {
+        "word": "Require",
+        "question": "To need something for a purpose is to...",
+        "options": [
+            "Hate",
+            "Require",
+            "Give",
+            "Sell"
+        ],
+        "correct_answer": "Require",
+        "explanation_english": "Need for a particular purpose.",
+        "explanation_marathi": "आवश्यक असणे."
+    },
+    {
+        "word": "Rescue",
+        "question": "To save from a dangerous situation is to...",
+        "options": [
+            "Harm",
+            "Rescue",
+            "Leave",
+            "Trap"
+        ],
+        "correct_answer": "Rescue",
+        "explanation_english": "Save (someone) from a dangerous or distressing situation.",
+        "explanation_marathi": "सुटका करणे."
+    },
+    {
+        "word": "Respect",
+        "question": "Admiration for someone's qualities is...",
+        "options": [
+            "Disrespect",
+            "Respect",
+            "Insult",
+            "Joke"
+        ],
+        "correct_answer": "Respect",
+        "explanation_english": "A feeling of deep admiration for someone or something elicited by their abilities, qualities, or achievements.",
+        "explanation_marathi": "आदर."
+    },
+    {
+        "word": "Responsible",
+        "question": "Having an obligation to do something is being...",
+        "options": [
+            "Careless",
+            "Responsible",
+            "Lazy",
+            "Free"
+        ],
+        "correct_answer": "Responsible",
+        "explanation_english": "Having an obligation to do something, or having control over or care for someone, as part of one's job or role.",
+        "explanation_marathi": "जबाबदार."
+    },
+    {
+        "word": "Rest",
+        "question": "To cease work in order to relax is to...",
+        "options": [
+            "Work",
+            "Rest",
+            "Run",
+            "Stress"
+        ],
+        "correct_answer": "Rest",
+        "explanation_english": "Cease work or movement in order to relax, refresh oneself, or recover strength.",
+        "explanation_marathi": "विश्रांती घेणे."
+    },
+    {
+        "word": "Result",
+        "question": "A consequence or effect of an action is a...",
+        "options": [
+            "Cause",
+            "Result",
+            "Start",
+            "Origin"
+        ],
+        "correct_answer": "Result",
+        "explanation_english": "A consequence, effect, or outcome of something.",
+        "explanation_marathi": "निकाल."
+    },
+    {
+        "word": "Retire",
+        "question": "To stop working usually because of age is to...",
+        "options": [
+            "Start",
+            "Retire",
+            "Hire",
+            "Join"
+        ],
+        "correct_answer": "Retire",
+        "explanation_english": "Leave one's job and cease to work, typically upon reaching the normal age for leaving employment.",
+        "explanation_marathi": "निवृत्त होणे."
+    },
+    {
+        "word": "Return",
+        "question": "To come or go back to a place is to...",
+        "options": [
+            "Leave",
+            "Return",
+            "Exit",
+            "Stay"
+        ],
+        "correct_answer": "Return",
+        "explanation_english": "Come or go back to a place or person.",
+        "explanation_marathi": "परत येणे."
+    },
+    {
+        "word": "Reveal",
+        "question": "To make known to others is to...",
+        "options": [
+            "Hide",
+            "Reveal",
+            "Cover",
+            "Secret"
+        ],
+        "correct_answer": "Reveal",
+        "explanation_english": "Make (previously unknown or secret information) known to others.",
+        "explanation_marathi": "उघड करणे."
+    },
+    {
+        "word": "Revenge",
+        "question": "The action of hurting someone in return for an injury is...",
+        "options": [
+            "Forgiveness",
+            "Revenge",
+            "Love",
+            "Peace"
+        ],
+        "correct_answer": "Revenge",
+        "explanation_english": "The action of inflicting hurt or harm on someone for an injury or wrong suffered at their hands.",
+        "explanation_marathi": "बदला."
+    }
+]

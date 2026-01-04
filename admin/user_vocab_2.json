@@ -1,0 +1,702 @@
+[
+    {
+        "word": "Ability",
+        "synonym": "Skill",
+        "definition": "Possession of the means or skill to do something.",
+        "definition_marathi": "क्षमता, कौशल्य.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Lack",
+            "B": "Skill",
+            "C": "Fear",
+            "D": "Weakness"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Accurate",
+        "synonym": "Precise",
+        "definition": "Correct in all details; exact.",
+        "definition_marathi": "अचूक, नेमका.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Wrong",
+            "B": "Vague",
+            "C": "Precise",
+            "D": "False"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Action",
+        "synonym": "Deed",
+        "definition": "The fact or process of doing something.",
+        "definition_marathi": "कृती, कार्य.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Rest",
+            "B": "Sleep",
+            "C": "Deed",
+            "D": "Thought"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Active",
+        "synonym": "Busy",
+        "definition": "Engaging or ready to engage in physically energetic pursuits.",
+        "definition_marathi": "सक्रिय, कार्यमग्न.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Lazy",
+            "B": "Busy",
+            "C": "Idle",
+            "D": "Slow"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Admire",
+        "synonym": "Respect",
+        "definition": "Regard with respect or warm approval.",
+        "definition_marathi": "कौतुक करणे, आदर करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Hate",
+            "B": "Respect",
+            "C": "Ignore",
+            "D": "Mock"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Advice",
+        "synonym": "Guidance",
+        "definition": "Guidance or recommendations offered with regard to prudent future action.",
+        "definition_marathi": "सल्ला, मार्गदर्शन.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Guidance",
+            "B": "Silence",
+            "C": "Trick",
+            "D": "Lie"
+        },
+        "correct_answer": "A"
+    },
+    {
+        "word": "Alarm",
+        "synonym": "Warning",
+        "definition": "An anxious awareness of danger.",
+        "definition_marathi": "धोक्याची सूचना, इशारा.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Comfort",
+            "B": "Warning",
+            "C": "Gift",
+            "D": "Peace"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Allow",
+        "synonym": "Permit",
+        "definition": "Give (someone) permission to do something.",
+        "definition_marathi": "परवानगी देणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Ban",
+            "B": "Stop",
+            "C": "Permit",
+            "D": "Deny"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Amuse",
+        "synonym": "Entertain",
+        "definition": "Cause (someone) to find something funny or enjoyable.",
+        "definition_marathi": "करमणूक करणे, मनोरंजन करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Bore",
+            "B": "Anger",
+            "C": "Entertain",
+            "D": "Tire"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Anger",
+        "synonym": "Rage",
+        "definition": "A strong feeling of annoyance, displeasure, or hostility.",
+        "definition_marathi": "राग, क्रोध.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Joy",
+            "B": "Rage",
+            "C": "Love",
+            "D": "Calm"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Annoy",
+        "synonym": "Irritate",
+        "definition": "Irritate (someone); make (someone) a little angry.",
+        "definition_marathi": "त्रास देणे, चिडवणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Please",
+            "B": "Help",
+            "C": "Irritate",
+            "D": "Soothe"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Answer",
+        "synonym": "Reply",
+        "definition": "A thing said, written, or done to deal with or as a reaction to a question.",
+        "definition_marathi": "उत्तर, प्रतिसाद.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Ask",
+            "B": "Reply",
+            "C": "Question",
+            "D": "Doubt"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Argue",
+        "synonym": "Dispute",
+        "definition": "Give reasons or cite evidence in support of an idea, action, or theory.",
+        "definition_marathi": "वाद घालणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Agree",
+            "B": "Dispute",
+            "C": "Accept",
+            "D": "Nod"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Arrive",
+        "synonym": "Reach",
+        "definition": "Reach a place at the end of a journey or a stage in a journey.",
+        "definition_marathi": "पोहोचणे, आगमन होणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Leave",
+            "B": "Depart",
+            "C": "Reach",
+            "D": "Go"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Ask",
+        "synonym": "Inquire",
+        "definition": "Say something in order to obtain an answer or some information.",
+        "definition_marathi": "विचारणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Tell",
+            "B": "Inquire",
+            "C": "Answer",
+            "D": "Give"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Attack",
+        "synonym": "Assault",
+        "definition": "Take aggressive action against.",
+        "definition_marathi": "हल्ला करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Defend",
+            "B": "Assault",
+            "C": "Protect",
+            "D": "Guard"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Attempt",
+        "synonym": "Try",
+        "definition": "Make an effort to achieve or complete.",
+        "definition_marathi": "प्रयत्न करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Give up",
+            "B": "Quit",
+            "C": "Try",
+            "D": "Fail"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Awful",
+        "synonym": "Terrible",
+        "definition": "Very bad or unpleasant.",
+        "definition_marathi": "भयंकर, वाईट.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Good",
+            "B": "Terrible",
+            "C": "Nice",
+            "D": "Great"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Baggage",
+        "synonym": "Luggage",
+        "definition": "Personal belongings packed in suitcases for traveling.",
+        "definition_marathi": "सामान, ओझे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Luggage",
+            "B": "People",
+            "C": "Ticket",
+            "D": "Food"
+        },
+        "correct_answer": "A"
+    },
+    {
+        "word": "Basic",
+        "synonym": "Fundamental",
+        "definition": "Forming an essential foundation or starting point.",
+        "definition_marathi": "मूळ, पायाभूत.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Extra",
+            "B": "Complex",
+            "C": "Fundamental",
+            "D": "Advanced"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Battle",
+        "synonym": "Fight",
+        "definition": "A sustained fight between large, organized armed forces.",
+        "definition_marathi": "लढाई, युद्ध.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Peace",
+            "B": "Fight",
+            "C": "Hug",
+            "D": "Truce"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Behavior",
+        "synonym": "Conduct",
+        "definition": "The way in which one acts or conducts oneself.",
+        "definition_marathi": "वर्तन, वागणूक.",
+        "difficulty_level": "Hard",
+        "options": {
+            "A": "Thought",
+            "B": "Conduct",
+            "C": "Dream",
+            "D": "Speech"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Believe",
+        "synonym": "Trust",
+        "definition": "Accept (something) as true; feel sure of the truth of.",
+        "definition_marathi": "विश्वास ठेवणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Doubt",
+            "B": "Trust",
+            "C": "Deny",
+            "D": "Lie"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Blank",
+        "synonym": "Empty",
+        "definition": "Not filled or written on.",
+        "definition_marathi": "रिकामी, कोरे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Full",
+            "B": "Written",
+            "C": "Empty",
+            "D": "Busy"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Blend",
+        "synonym": "Mix",
+        "definition": "Mix (a substance) with another substance so that they combine together.",
+        "definition_marathi": "मिसळणे, एकजीव करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Separate",
+            "B": "Divide",
+            "C": "Mix",
+            "D": "Sort"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Bold",
+        "synonym": "Daring",
+        "definition": "Showing an ability to take risks; confident and courageous.",
+        "definition_marathi": "धाडसी, धीट.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Shy",
+            "B": "Daring",
+            "C": "Weak",
+            "D": "Afraid"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Brief",
+        "synonym": "Short",
+        "definition": "Of short duration.",
+        "definition_marathi": "संक्षिप्त, थोडक्यात.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Long",
+            "B": "Short",
+            "C": "Tall",
+            "D": "Huge"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Bright",
+        "synonym": "Shiny",
+        "definition": "Giving out or reflecting a lot of light.",
+        "definition_marathi": "तेजस्वी, चमकदार.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Dark",
+            "B": "Dull",
+            "C": "Shiny",
+            "D": "Dim"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Broad",
+        "synonym": "Wide",
+        "definition": "Having an ample distance from side to side.",
+        "definition_marathi": "रुंद, विस्तृत.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Narrow",
+            "B": "Wide",
+            "C": "Thin",
+            "D": "Tight"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Build",
+        "synonym": "Construct",
+        "definition": "Construct (something, typically something large) by putting parts together.",
+        "definition_marathi": "बांधणे, निर्माण करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Destroy",
+            "B": "Break",
+            "C": "Construct",
+            "D": "Ruins"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Busy",
+        "synonym": "Occupied",
+        "definition": "Having a great deal to do.",
+        "definition_marathi": "व्यस्त, कामात असलेला.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Free",
+            "B": "Occupied",
+            "C": "Idle",
+            "D": "Lazy"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Buy",
+        "synonym": "Purchase",
+        "definition": "Obtain in exchange for payment.",
+        "definition_marathi": "खरेदी करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Sell",
+            "B": "Give",
+            "C": "Purchase",
+            "D": "Lose"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Calm",
+        "synonym": "Peaceful",
+        "definition": "Not showing or feeling nervousness, anger, or other emotions.",
+        "definition_marathi": "शांत.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Wild",
+            "B": "Peaceful",
+            "C": "Angry",
+            "D": "Loud"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Careful",
+        "synonym": "Cautious",
+        "definition": "Making sure of avoiding potential danger, mishap, or harm.",
+        "definition_marathi": "सावध, काळजीपूर्वक.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Rash",
+            "B": "Cautious",
+            "C": "Fast",
+            "D": "Blind"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Center",
+        "synonym": "Middle",
+        "definition": "The middle point of a circle or sphere.",
+        "definition_marathi": "मध्य, केंद्र.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Edge",
+            "B": "Middle",
+            "C": "Side",
+            "D": "Corner"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Change",
+        "synonym": "Alter",
+        "definition": "Make or become different.",
+        "definition_marathi": "बदल, बदलणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Keep",
+            "B": "Stay",
+            "C": "Alter",
+            "D": "Hold"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Cheap",
+        "synonym": "Inexpensive",
+        "definition": "Costing little money or less than is usual or expected.",
+        "definition_marathi": "स्वस्त.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Costly",
+            "B": "Rich",
+            "C": "Inexpensive",
+            "D": "High"
+        },
+        "correct_answer": "C"
+    },
+    {
+        "word": "Cheat",
+        "synonym": "Deceive",
+        "definition": "Act dishonestly or unfairly in order to gain an advantage.",
+        "definition_marathi": "फसवणूक करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Help",
+            "B": "Deceive",
+            "C": "Trust",
+            "D": "Give"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Check",
+        "synonym": "Verify",
+        "definition": "Examine (something) in order to determine its accuracy.",
+        "definition_marathi": "तपासणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Guess",
+            "B": "Verify",
+            "C": "Ignore",
+            "D": "Miss"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Choice",
+        "synonym": "Option",
+        "definition": "An act of selecting or making a decision when faced with two or more possibilities.",
+        "definition_marathi": "निवड, पर्याय.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Force",
+            "B": "Option",
+            "C": "Rule",
+            "D": "Law"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Choose",
+        "synonym": "Select",
+        "definition": "Pick out or select (someone or something) as being the best.",
+        "definition_marathi": "निवडणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Reject",
+            "B": "Select",
+            "C": "Drop",
+            "D": "Lose"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Clear",
+        "synonym": "Transparent",
+        "definition": "Easy to perceive, understand, or interpret.",
+        "definition_marathi": "स्पष्ट, स्वच्छ.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Foggy",
+            "B": "Transparent",
+            "C": "Dark",
+            "D": "Muddy"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Close",
+        "synonym": "Shut",
+        "definition": "Move or cause to move so as to cover an opening.",
+        "definition_marathi": "बंद करणे.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Open",
+            "B": "Shut",
+            "C": "Start",
+            "D": "Free"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Collect",
+        "synonym": "Gather",
+        "definition": "Bring or gather together.",
+        "definition_marathi": "गोळा करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Scatter",
+            "B": "Gather",
+            "C": "Throw",
+            "D": "Lost"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Combine",
+        "synonym": "Unite",
+        "definition": "Unite; merge.",
+        "definition_marathi": "एकत्र करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Split",
+            "B": "Unite",
+            "C": "Break",
+            "D": "Cut"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Comfort",
+        "synonym": "Ease",
+        "definition": "A state of physical ease and freedom from pain or constraint.",
+        "definition_marathi": "आराम, सुख.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Pain",
+            "B": "Ease",
+            "C": "Stress",
+            "D": "Hurt"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Common",
+        "synonym": "Usual",
+        "definition": "Occurring, found, or done often; prevalent.",
+        "definition_marathi": "सामान्य, नेहमीचा.",
+        "difficulty_level": "Easy",
+        "options": {
+            "A": "Rare",
+            "B": "Usual",
+            "C": "Unique",
+            "D": "Odd"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Complain",
+        "synonym": "Grumble",
+        "definition": "Express dissatisfaction or annoyance about a state of affairs or an event.",
+        "definition_marathi": "तक्रार करणे.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Praise",
+            "B": "Grumble",
+            "C": "Clap",
+            "D": "Smile"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Complete",
+        "synonym": "Whole",
+        "definition": "Having all the necessary or appropriate parts.",
+        "definition_marathi": "पूर्ण, संपूर्ण.",
+        "difficulty_level": "Medium",
+        "options": {
+            "A": "Part",
+            "B": "Whole",
+            "C": "Half",
+            "D": "Broken"
+        },
+        "correct_answer": "B"
+    },
+    {
+        "word": "Confess",
+        "synonym": "Admit",
+        "definition": "Admit or state that one has committed a crime or is at fault in some way.",
+        "definition_marathi": "कबूल करणे.",
+        "difficulty_level": "Hard",
+        "options": {
+            "A": "Hide",
+            "B": "Admit",
+            "C": "Deny",
+            "D": "Lie"
+        },
+        "correct_answer": "B"
+    }
+]

@@ -1,0 +1,26 @@
+-- Update options for vocab words (Synonyms quiz)
+UPDATE vocab_words SET options = '{"A": "Sad", "B": "Angry", "C": "Joyful", "D": "Bored"}', correct_answer = 'C' WHERE word = 'Happy';
+UPDATE vocab_words SET options = '{"A": "Huge", "B": "Tiny", "C": "Short", "D": "Weak"}', correct_answer = 'A' WHERE word = 'Big';
+UPDATE vocab_words SET options = '{"A": "Huge", "B": "Tiny", "C": "Tall", "D": "Wide"}', correct_answer = 'B' WHERE word = 'Small';
+UPDATE vocab_words SET options = '{"A": "Bad", "B": "Evil", "C": "Excellent", "D": "Slow"}', correct_answer = 'C' WHERE word = 'Good';
+UPDATE vocab_words SET options = '{"A": "Good", "B": "Nice", "C": "Poor", "D": "Sweet"}', correct_answer = 'C' WHERE word = 'Bad';
+UPDATE vocab_words SET options = '{"A": "Slow", "B": "Rapid", "C": "Lazy", "D": "Weak"}', correct_answer = 'B' WHERE word = 'Fast';
+UPDATE vocab_words SET options = '{"A": "Quick", "B": "Fast", "C": "Sluggish", "D": "Bright"}', correct_answer = 'C' WHERE word = 'Slow';
+UPDATE vocab_words SET options = '{"A": "Cold", "B": "Warm", "C": "Cool", "D": "Icy"}', correct_answer = 'B' WHERE word = 'Hot';
+UPDATE vocab_words SET options = '{"A": "Hot", "B": "Warm", "C": "Chilly", "D": "Dry"}', correct_answer = 'C' WHERE word = 'Cold';
+UPDATE vocab_words SET options = '{"A": "Old", "B": "Fresh", "C": "Dirty", "D": "Bad"}', correct_answer = 'B' WHERE word = 'New';
+UPDATE vocab_words SET options = '{"A": "New", "B": "Fresh", "C": "Ancient", "D": "Young"}', correct_answer = 'C' WHERE word = 'Old';
+UPDATE vocab_words SET options = '{"A": "Dirty", "B": "Pure", "C": "Messy", "D": "Dark"}', correct_answer = 'B' WHERE word = 'Clean';
+UPDATE vocab_words SET options = '{"A": "Clean", "B": "Filthy", "C": "Pure", "D": "Bright"}', correct_answer = 'B' WHERE word = 'Dirty';
+UPDATE vocab_words SET options = '{"A": "Hard", "B": "Simple", "C": "Complex", "D": "Tough"}', correct_answer = 'B' WHERE word = 'Easy';
+UPDATE vocab_words SET options = '{"A": "Easy", "B": "Simple", "C": "Difficult", "D": "Soft"}', correct_answer = 'C' WHERE word = 'Hard';
+UPDATE vocab_words SET options = '{"A": "Dark", "B": "Dim", "C": "Shining", "D": "Dull"}', correct_answer = 'C' WHERE word = 'Bright';
+UPDATE vocab_words SET options = '{"A": "Bright", "B": "Gloomy", "C": "Shiny", "D": "Light"}', correct_answer = 'B' WHERE word = 'Dark';
+UPDATE vocab_words SET options = '{"A": "Weak", "B": "Powerful", "C": "Soft", "D": "Small"}', correct_answer = 'B' WHERE word = 'Strong';
+UPDATE vocab_words SET options = '{"A": "Strong", "B": "Frail", "C": "Hard", "D": "Big"}', correct_answer = 'B' WHERE word = 'Weak';
+UPDATE vocab_words SET options = '{"A": "Ugly", "B": "Pretty", "C": "Bad", "D": "Dirty"}', correct_answer = 'B' WHERE word = 'Beautiful';
+UPDATE vocab_words SET options = '{"A": "Short", "B": "High", "C": "Low", "D": "Tiny"}', correct_answer = 'B' WHERE word = 'Tall';
+UPDATE vocab_words SET options = '{"A": "Tall", "B": "Brief", "C": "Long", "D": "High"}', correct_answer = 'B' WHERE word = 'Short';
+UPDATE vocab_words SET options = '{"A": "Poor", "B": "Wealthy", "C": "Weak", "D": "Sad"}', correct_answer = 'B' WHERE word = 'Rich';
+UPDATE vocab_words SET options = '{"A": "Rich", "B": "Needy", "C": "Happy", "D": "Strong"}', correct_answer = 'B' WHERE word = 'Poor';
+UPDATE vocab_words SET options = '{"A": "Old", "B": "Juvenile", "C": "Ancient", "D": "Weak"}', correct_answer = 'B' WHERE word = 'Young';

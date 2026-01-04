@@ -50,7 +50,9 @@ try {
     }
 
     // Prepare Base URL for files
-    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+    // Force HTTPS on Railway (reverse proxy doesn't set HTTPS variable correctly)
+    $is_railway = strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false;
+    $protocol = ($is_railway || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) ? "https" : "http";
     $host = $_SERVER['HTTP_HOST']; // e.g., 192.168.1.5 or localhost
     // Script is in /backend/api/get_notes.php -> dirname is /backend/api -> dirname again is /backend
     $backend_path = dirname(dirname($_SERVER['PHP_SELF'])); 
@@ -59,21 +61,21 @@ try {
     // Add file_url to each note
     foreach ($notes as &$note) {
         if ($note['note_type'] === 'pdf' && !empty($note['file_path'])) {
-            // Use serve_pdf.php proxy to bypass X-Frame-Options issues
-            // $backend_path points to /backend
-            // We need to point to /backend/api/serve_pdf.php
-            
-            // Construct proxy URL
-            // Current script: /backend/api/get_notes.php
-            // Target script: /backend/api/serve_pdf.php
-            
-            // Get path and encode it properly to handle spaces in folder names
-            $path_parts = explode('/', dirname($_SERVER['PHP_SELF']));
-            $encoded_path_parts = array_map('rawurlencode', $path_parts);
-            $encoded_path = implode('/', $encoded_path_parts);
-            
-            $current_dir_url = $protocol . "://" . $host . $encoded_path;
-            $note['file_url'] = $current_dir_url . "/serve_pdf.php?file=" . urlencode($note['file_path']);
+            // Check if it's an external URL (e.g. Google Drive)
+            if (strpos($note['file_path'], 'http') === 0) {
+                $note['file_url'] = $note['file_path'];
+            } else {
+                // It's a local file, use serve_pdf.php proxy
+                
+                // Get path and encode it properly to handle spaces in folder names
+                $path_parts = explode('/', dirname($_SERVER['PHP_SELF']));
+                $encoded_path_parts = array_map('rawurlencode', $path_parts);
+                $encoded_path = implode('/', $encoded_path_parts);
+                
+                // Use same protocol detection as above
+                $current_dir_url = $protocol . "://" . $host . $encoded_path;
+                $note['file_url'] = $current_dir_url . "/serve_pdf.php?file=" . urlencode($note['file_path']);
+            }
         } else {
             $note['file_url'] = null;
         }

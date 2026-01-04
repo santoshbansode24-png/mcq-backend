@@ -30,55 +30,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Handle File Upload or Content
     if ($type == 'pdf') {
-        if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == 0) {
-            $allowed = ['pdf' => 'application/pdf'];
-            $filename = $_FILES['pdf_file']['name'];
-            $filetype = $_FILES['pdf_file']['type'];
-            $filesize = $_FILES['pdf_file']['size'];
-    
-            // Verify extension
-            $ext = pathinfo($filename, PATHINFO_EXTENSION);
-            if (!array_key_exists($ext, $allowed)) die("Error: Please select a valid file format.");
-    
-            // Verify size (50MB max)
-            $maxsize = 50 * 1024 * 1024;
-            if ($filesize > $maxsize) die("Error: File size is larger than the allowed limit (50MB).");
-            
-            // Check PHP system limit
-            $php_limit = ini_get('upload_max_filesize');
-            // Convert to bytes for comparison (rough check)
-            $php_limit_bytes = (int)$php_limit * 1024 * 1024; 
-            if (stripos($php_limit, 'G') !== false) $php_limit_bytes *= 1024;
-            if (stripos($php_limit, 'K') !== false) $php_limit_bytes /= 1024;
-            
-            if ($filesize > $php_limit_bytes) {
-                 die("Error: File exceeds server's upload_max_filesize setting ($php_limit). Please update php.ini.");
+        $source = $_POST['pdf_source'] ?? 'upload';
+        
+        if ($source === 'url') {
+            // Handle External URL
+            $url = trim($_POST['pdf_url']);
+            if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+                $message = "Error: Please enter a valid URL.";
+            } else {
+                $file_path = $url;
             }
-    
-            // Verify MIME type (optional but good security)
-            // if(in_array($filetype, $allowed)){
-                // Check if file exists (rename if needed)
-                $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
-                $upload_dir = "../uploads/notes/";
-                
-                // Ensure directory exists
-                if (!file_exists($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-                
-                $destination = $upload_dir . $new_filename;
-                
-                if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
-                    // Save RELATIVE path for DB (without ../)
-                    $file_path = "uploads/notes/" . $new_filename;
-                } else {
-                    $message = "Error: Failed to move uploaded file.";
-                }
-            // } else {
-            //     $message = "Error: There was a problem uploading your file. Please try again."; 
-            // }
         } else {
-            $message = "Error: No file uploaded or upload error code: " . $_FILES['pdf_file']['error'];
+            // Handle File Upload
+            if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == 0) {
+                $allowed = ['pdf' => 'application/pdf'];
+                $filename = $_FILES['pdf_file']['name'];
+                $filetype = $_FILES['pdf_file']['type'];
+                $filesize = $_FILES['pdf_file']['size'];
+        
+                // Verify extension
+                $ext = pathinfo($filename, PATHINFO_EXTENSION);
+                if (!array_key_exists($ext, $allowed)) die("Error: Please select a valid file format.");
+        
+                // Verify size (50MB max)
+                $maxsize = 50 * 1024 * 1024;
+                if ($filesize > $maxsize) die("Error: File size is larger than the allowed limit (50MB).");
+                
+                // Check PHP system limit
+                $php_limit = ini_get('upload_max_filesize');
+                // Convert to bytes for comparison (rough check)
+                $php_limit_bytes = (int)$php_limit * 1024 * 1024; 
+                if (stripos($php_limit, 'G') !== false) $php_limit_bytes *= 1024;
+                if (stripos($php_limit, 'K') !== false) $php_limit_bytes /= 1024;
+                
+                if ($filesize > $php_limit_bytes) {
+                     die("Error: File exceeds server's upload_max_filesize setting ($php_limit). Please update php.ini.");
+                }
+        
+                // Verify MIME type (optional but good security)
+                // if(in_array($filetype, $allowed)){
+                    // Check if file exists (rename if needed)
+                    $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
+                    $upload_dir = "../uploads/notes/";
+                    
+                    // Ensure directory exists
+                    if (!file_exists($upload_dir)) {
+                        mkdir($upload_dir, 0777, true);
+                    }
+                    
+                    $destination = $upload_dir . $new_filename;
+                    
+                    if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
+                        // Save RELATIVE path for DB (without ../)
+                        $file_path = "uploads/notes/" . $new_filename;
+                    } else {
+                        $message = "Error: Failed to move uploaded file.";
+                    }
+                // } else {
+                //     $message = "Error: There was a problem uploading your file. Please try again."; 
+                // }
+            } else {
+                $message = "Error: No file uploaded or upload error code: " . $_FILES['pdf_file']['error'];
+            }
         }
     } else {
         $content = $_POST['content'];
@@ -237,9 +250,23 @@ $notes = $pdo->query("
                     </select>
                     
                     <div id="pdf_input_container" style="grid-column: span 2;">
-                        <label style="display:block; margin-bottom:5px; font-weight:500;">Upload PDF:</label>
-                        <input type="file" name="pdf_file" accept="application/pdf">
-                        <small style="color:#666;">Max size: 50MB (Server limit: <?php echo ini_get('upload_max_filesize'); ?>)</small>
+                        <label style="display:block; margin-bottom:5px; font-weight:500;">PDF Source:</label>
+                        <div style="display:flex; gap:15px; margin-bottom:10px;">
+                            <label><input type="radio" name="pdf_source" value="upload" checked onchange="togglePdfSource()"> Upload File</label>
+                            <label><input type="radio" name="pdf_source" value="url" onchange="togglePdfSource()"> External URL (Drive/Link)</label>
+                        </div>
+                        
+                        <div id="source_upload">
+                            <label style="display:block; margin-bottom:5px; font-weight:500;">Upload PDF:</label>
+                            <input type="file" name="pdf_file" accept="application/pdf">
+                            <small style="color:#666;">Max size: 50MB</small>
+                        </div>
+
+                        <div id="source_url" style="display:none;">
+                            <label style="display:block; margin-bottom:5px; font-weight:500;">PDF Link (Google Drive / Web URL):</label>
+                            <input type="url" name="pdf_url" placeholder="https://drive.google.com/...">
+                            <small style="color:#666;">Make sure the link is publicly accessible (Anyone with link).</small>
+                        </div>
                     </div>
 
                     <textarea name="content" id="html_content" placeholder="Enter HTML content here..." style="display:none; grid-column: span 2; height: 150px;"></textarea>
@@ -256,13 +283,34 @@ $notes = $pdo->query("
                     if (type === 'pdf') {
                         pdfContainer.style.display = 'block';
                         htmlContent.style.display = 'none';
-                        document.querySelector('input[name="pdf_file"]').required = true;
+                        togglePdfSource(); // Re-apply source validation
                         htmlContent.required = false;
                     } else {
                         pdfContainer.style.display = 'none';
                         htmlContent.style.display = 'block';
                         document.querySelector('input[name="pdf_file"]').required = false;
+                        document.querySelector('input[name="pdf_url"]').required = false;
                         htmlContent.required = true;
+                    }
+                }
+
+                function togglePdfSource() {
+                    if (document.getElementById('note_type_select').value !== 'pdf') return;
+
+                    const source = document.querySelector('input[name="pdf_source"]:checked').value;
+                    const uploadDiv = document.getElementById('source_upload');
+                    const urlDiv = document.getElementById('source_url');
+                    
+                    if (source === 'upload') {
+                        uploadDiv.style.display = 'block';
+                        urlDiv.style.display = 'none';
+                        document.querySelector('input[name="pdf_file"]').required = true;
+                        document.querySelector('input[name="pdf_url"]').required = false;
+                    } else {
+                        uploadDiv.style.display = 'none';
+                        urlDiv.style.display = 'block';
+                        document.querySelector('input[name="pdf_file"]').required = false;
+                        document.querySelector('input[name="pdf_url"]').required = true;
                     }
                 }
                 // Initialize state

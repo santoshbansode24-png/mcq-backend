@@ -329,6 +329,9 @@ $notes = $pdo->query("
                 </tbody>
             </table>
         </div>
+        <div style="text-align: center; margin-top: 30px; color: #888; font-size: 12px;">
+            Veeru Admin v2.1 • Google Drive Support Added 🚀
+        </div>
     </div>
 </body>
 </html>

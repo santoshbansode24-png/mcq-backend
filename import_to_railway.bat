@@ -1,20 +1,15 @@
 @echo off
-setlocal
-title Veeru Database Importer (PHP Method)
-
-echo ========================================================
-echo   VEERU DATABASE IMPORTER (PHP Method)
-echo   We are using PHP to bypass the Plugin Error.
-echo ========================================================
-echo.
-
-"C:\xampp\php\php.exe" "C:\xampp\htdocs\veeru\backend\cloud_importer.php"
-
-if %errorlevel% neq 0 (
+echo Importing database to Railway MySQL...
+C:\xampp\mysql\bin\mysql.exe -h yemanotc.proxy.rlwy.net -P 24548 -u root -pMvvImvVmcEUnrvMncVtVDbyYhqdcTuu7 railway < c:\xampp\htdocs\veeru\railway_database_export.sql
+if %ERRORLEVEL% EQU 0 (
     echo.
-    echo [ERROR] Something went wrong.
-    pause
-    exit /b %errorlevel%
+    echo ========================================
+    echo SUCCESS! Database imported to Railway!
+    echo ========================================
+) else (
+    echo.
+    echo ========================================
+    echo ERROR! Import failed. Error code: %ERRORLEVEL%
+    echo ========================================
 )
-
 pause

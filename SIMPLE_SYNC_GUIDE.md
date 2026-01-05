@@ -23,10 +23,14 @@ Every time you make changes on your PC and want them on the real app, you must d
 *   **Command to AI:** _"I have finished testing on local. Please deploy the latest code to Railway."_
 *   **What happens:** The AI will send your files to GitHub, and Railway will automatically pick them up.
 
-### Move 2: The Data Sync (For new Chapters/MCQs)
-*   **Why:** If you added Chapter 5 in your PC's Admin Panel, Railway's database is still empty. They are separate databases!
-*   **Command to AI:** _"I added new data locally. Please help me export my local database and import it to the Railway database."_
-*   **What happens:** The AI will help you take a "snapshot" of your local data and upload it to the cloud.
+### Move 2: The Data Sync (One-Click Method)
+*   **Why:** To send your new Chapters/MCQs to the cloud.
+*   **How to do it:**
+    1.  Make sure your local XAMPP Apache/MySQL is running.
+    2.  **Click this link:** [Sync Database Now](http://localhost/veeru/force_import_to_railway.php)
+    3.  Wait for the green **"SUCCESS!"** message.
+
+> **Note:** This tool (`force_import_to_railway.php`) allows you to push data without typing any commands!
 
 ### Move 3: The Config Switch (The "Bridge")
 *   **Why:** Your mobile app needs to know which house to visit.

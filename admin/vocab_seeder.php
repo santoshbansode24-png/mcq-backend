@@ -95,11 +95,21 @@ try {
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
     echo "🧹 Wiped existing vocabulary tables.\n";
 
+    // FORCE TABLE AND COLUMNS TO UTF8MB4 (Implicit Commit, so do outside transaction)
+    $pdo->exec("ALTER TABLE vocab_words CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    echo "🔧 Converted table to UTF8MB4.\n";
+
     $pdo->beginTransaction();
+    $pdo->exec("SET NAMES utf8mb4"); // FORCE UTF-8
+
+    // DEBUG: Check Connection Charset
+    // $res = $pdo->query("SHOW VARIABLES LIKE 'character_set_client'")->fetch(PDO::FETCH_ASSOC);
+    // echo "🧐 DEBUG Client Charset: " . ($res['Value'] ?? 'N/A') . "\n";
 
     // Prepare Categories
     $catStmt = $pdo->prepare("INSERT IGNORE INTO vocab_categories (category_name, access_level) VALUES (:name, 'Free')");
     $getCatId = $pdo->prepare("SELECT category_id FROM vocab_categories WHERE category_name = :name");
+
 
     // Prepare Word Insert
     $wordStmt = $pdo->prepare("

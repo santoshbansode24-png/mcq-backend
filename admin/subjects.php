@@ -94,6 +94,7 @@ $classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
             <li><a href="notes.php">Notes</a></li>
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php">Quick Revision</a></li>
+            <li><a href="content_manager.php">Content Manager</a></li>
         </ul>
     </nav>
     

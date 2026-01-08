@@ -216,6 +216,7 @@ $revisions = $pdo->query("
             <li><a href="notes.php">Notes</a></li>
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php" class="active">Quick Revision</a></li>
+            <li><a href="content_manager.php">Content Manager</a></li>
         </ul>
     </nav>
     

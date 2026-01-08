@@ -26,9 +26,20 @@ function flush_buffers() {
     echo(str_repeat(' ', 4096)); // Force flush padding
     if (ob_get_length()) { @ob_flush(); }
     @flush();
-}
+}echo "<h1>🚀 Veeru Database Syncer v5 (Auto-Export)</h1>";
+flush_buffers();
 
-echo "<h1>🚀 Veeru Database Syncer v4 (Real-time)</h1>";
+// 0. AUTO-EXPORT LOCAL DATABASE
+echo "<p>📦 Exporting local database (veeru_db)...</p>";
+flush_buffers();
+
+$dumpCommand = 'c:\\xampp\\mysql\\bin\\mysqldump -u root --default-character-set=utf8mb4 veeru_db > ' . __DIR__ . '\\railway_export.sql';
+exec($dumpCommand, $output, $returnVar);
+
+if ($returnVar !== 0) {
+    die("<h2 style='color:red'>❌ Export Failed! Error code: $returnVar</h2>");
+}
+echo "<p style='color:green'>✅ Export successful!</p>";
 flush_buffers();
 
 echo "<p>⏳ Connecting to Railway...</p>";
@@ -38,6 +49,7 @@ $conn = new mysqli($host, $user, $pass, $dbname, $port);
 if ($conn->connect_error) {
     die("<h2 style='color:red'>❌ Connection Failed: " . $conn->connect_error . "</h2>");
 }
+$conn->set_charset("utf8mb4"); // FIX: Ensure Marathi/Hindi chars are not corrupted
 echo "<p style='color:green'>✅ Connected!</p>";
 
 $file_path = __DIR__ . '/railway_export.sql';

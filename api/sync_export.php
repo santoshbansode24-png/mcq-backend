@@ -15,8 +15,8 @@ if ($key !== $SECRET_KEY) {
     sendResponse('error', 'Unauthorized: Invalid Sync Key', null, 403);
 }
 
-// 1. Get List of Tables Dynamically
-$stmt = $pdo->query("SHOW TABLES");
+// 1. Get List of Tables Dynamically (Exclude Views)
+$stmt = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'");
 $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $export_data = [];

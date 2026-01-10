@@ -3,10 +3,10 @@
 // This script imports videos and vocab_words tables to Railway MySQL
 
 // Railway MySQL Credentials
-$railway_host = 'yemanotc.proxy.rlwy.net';
-$railway_port = 24548;
+$railway_host = 'yamanote.proxy.rlwy.net';
+$railway_port = 24540;
 $railway_user = 'root';
-$railway_pass = 'MvvImvVmcEUnrvMncVtVDbyYhqdcTuu7';
+$railway_pass = 'NvVlnnYmCEUTnMhcVHJVbDyYhqdcTuuf';
 $railway_db = 'railway';
 
 echo "<h1>Railway Database Import Tool</h1>";
@@ -47,22 +47,15 @@ function importSQL($conn, $filename, $tableName) {
     }
 }
 
-// Import videos table
-$videosImported = importSQL($conn, __DIR__ . '/videos_export.sql', 'videos');
-
-// Import vocab_words table
-$vocabImported = importSQL($conn, __DIR__ . '/vocab_export.sql', 'vocab_words');
+// Import FULL database dump
+$fullDumpImported = importSQL($conn, __DIR__ . '/railway_database_export.sql', 'Full Database Dump');
 
 $conn->close();
 
 echo "<hr>";
-if ($videosImported && $vocabImported) {
-    echo "<h2 style='color:green'>🎉 SUCCESS! All tables imported to Railway!</h2>";
-    echo "<p>Your Railway database now has:</p>";
-    echo "<ul>";
-    echo "<li>✅ Videos data</li>";
-    echo "<li>✅ Quick Revision (vocab_words) data</li>";
-    echo "</ul>";
+if ($fullDumpImported) {
+    echo "<h2 style='color:green'>🎉 SUCCESS! Full Database imported to Railway!</h2>";
+    echo "<p>Your Railway database has been synced with your local data.</p>";
     echo "<p><strong>Next step:</strong> Switch your student app config to RAILWAY_CONFIG and test!</p>";
 } else {
     echo "<h2 style='color:red'>⚠️ Some imports failed. Check the errors above.</h2>";

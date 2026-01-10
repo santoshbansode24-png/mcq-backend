@@ -1,6 +1,9 @@
 @echo off
-echo Importing database to Railway MySQL...
-C:\xampp\mysql\bin\mysql.exe -h yemanotc.proxy.rlwy.net -P 24548 -u root -pMvvImvVmcEUnrvMncVtVDbyYhqdcTuu7 railway < c:\xampp\htdocs\veeru\railway_database_export.sql
+echo Exporting local database to file...
+C:\xampp\mysql\bin\mysqldump.exe -u root --skip-triggers --skip-routines --hex-blob veeru_db > c:\xampp\htdocs\veeru\railway_database_export.sql
+
+echo Importing database to Railway via PHP...
+C:\xampp\php\php.exe c:\xampp\htdocs\veeru\import_to_railway.php
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ========================================

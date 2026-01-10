@@ -9,11 +9,11 @@ $LOCAL_DB_USER = 'root';
 $LOCAL_DB_PASS = '';
 $LOCAL_DB_NAME = 'veeru_db';
 
-// Railway Credentials
-$REMOTE_HOST = 'roundhouse.proxy.rlwy.net';
+// Railway Credentials (Updated from force_import)
+$REMOTE_HOST = 'yamanote.proxy.rlwy.net';
 $REMOTE_USER = 'root';
-$REMOTE_PASS = 'yKkZtHDrgSmkKMvKjZlWwXWqPzOqIuJq';
-$REMOTE_PORT = 59560;
+$REMOTE_PASS = 'NvVlnnYmCEUTnMhcVHJVbDyYhqdcTuuf';
+$REMOTE_PORT = 24540;
 $REMOTE_DB   = 'railway';
 
 echo "<h1>🚀 Veeru Cloud-to-Local Backup Tool</h1>";

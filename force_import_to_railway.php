@@ -29,7 +29,26 @@ function flush_buffers() {
 }echo "<h1>🚀 Veeru Database Syncer v5 (Auto-Export)</h1>";
 flush_buffers();
 
-// 0. AUTO-EXPORT LOCAL DATABASE
+// 0. AUTO-BACKUP REMOTE DATABASE (SAFETY NET) 🛡️
+echo "<p>🛡️ Creating safety backup of REMOTE Railway DB...</p>";
+flush_buffers();
+
+$timestamp = date('Y-m-d_H-i-s');
+if (!is_dir(__DIR__ . '/backups')) mkdir(__DIR__ . '/backups');
+$backup_file = __DIR__ . "/backups/railway_safety_backup_$timestamp.sql";
+
+// Use credentials from top of file
+$dumpCmd = "c:\\xampp\\mysql\\bin\\mysqldump -h $host -P $port -u $user -p$pass --column-statistics=0 $dbname > \"$backup_file\"";
+exec($dumpCmd, $output, $returnVar);
+
+if ($returnVar === 0 && filesize($backup_file) > 1000) {
+    echo "<p style='color:green'>✅ Safety backup saved: " . basename($backup_file) . "</p>";
+} else {
+    echo "<p style='color:orange'>⚠️ Safety backup warning: Could not backup remote DB (Size: " . (filesize($backup_file) ?? 0) . " bytes). Proceeding with caution...</p>";
+}
+flush_buffers();
+
+// 1. AUTO-EXPORT LOCAL DATABASE
 echo "<p>📦 Exporting local database (veeru_db)...</p>";
 flush_buffers();
 

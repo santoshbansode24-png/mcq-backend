@@ -23,12 +23,19 @@ $export_data = [];
 
 try {
     foreach ($tables as $table) {
-        // Skip internal tables if any (optional)
-        
-        $stmt = $pdo->prepare("SELECT * FROM `$table`");
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $export_data[$table] = $rows;
+        try {
+            // Skip views or internal tables if needed
+            
+            $stmt = $pdo->prepare("SELECT * FROM `$table`");
+            $stmt->execute();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $export_data[$table] = $rows;
+        } catch (Exception $e) {
+            // If a table fails, just skip it and log/continue
+            // This prevents one bad table from stopping the whole backup
+            // We could add a warning to the response if needed
+            continue;
+        }
     }
 
     echo json_encode([

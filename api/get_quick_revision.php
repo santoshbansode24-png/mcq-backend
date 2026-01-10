@@ -40,7 +40,20 @@ try {
     
     // Process JSON fields
     foreach ($revisions as &$row) {
-        $row['key_points'] = json_decode($row['key_points'], true);
+        $key_points = json_decode($row['key_points'], true);
+        
+        // Function to recursively decode HTML entities
+        $decodeFunc = function(&$item) {
+            if (is_string($item)) {
+                $item = html_entity_decode($item, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+        };
+        
+        if (is_array($key_points)) {
+            array_walk_recursive($key_points, $decodeFunc);
+        }
+        
+        $row['key_points'] = $key_points;
     }
     
     sendResponse('success', 'Quick revision fetched successfully', $revisions);

@@ -15,14 +15,17 @@ if ($key !== $SECRET_KEY) {
     sendResponse('error', 'Unauthorized: Invalid Sync Key', null, 403);
 }
 
-// Tables to sync
-$tables = ['videos', 'notes', 'mcqs', 'chapters', 'subjects', 'vocab_words',  'flashcards', 'quick_revision', 'classes', 'board'];
+// 1. Get List of Tables Dynamically
+$stmt = $pdo->query("SHOW TABLES");
+$tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $export_data = [];
 
 try {
     foreach ($tables as $table) {
-        $stmt = $pdo->prepare("SELECT * FROM $table");
+        // Skip internal tables if any (optional)
+        
+        $stmt = $pdo->prepare("SELECT * FROM `$table`");
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $export_data[$table] = $rows;

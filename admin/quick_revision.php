@@ -50,17 +50,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Parse CSV line
             $data = str_getcsv($line);
 
-            // Expecting Format: [Question, Answer]
+            // Expecting Format: [Question, Answer, Explanation (Optional)]
             if (count($data) >= 2) {
                 // Sanitize and ensure UTF-8 strings
                 $q = trim($data[0]);
                 $a = trim($data[1]);
+                $e = isset($data[2]) ? trim($data[2]) : ''; // Explanation
                 
                 // Skip header row usually having "Question" or "Answer"
                 if (strtolower($q) == 'question' && strtolower($a) == 'answer') continue;
                 
                 if (!empty($q) && !empty($a)) {
-                    $key_points[] = ['q' => sanitizeInput($q), 'a' => sanitizeInput($a)];
+                    $key_points[] = [
+                        'q' => sanitizeInput($q), 
+                        'a' => sanitizeInput($a),
+                        'e' => sanitizeInput($e)
+                    ];
                 }
             }
         }
@@ -69,12 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // 2. Handle Manual Inputs (Merge with CSV data if any)
     $questions = $_POST['questions'] ?? [];
     $answers = $_POST['answers'] ?? [];
+    $explanations = $_POST['explanations'] ?? [];
     
     for ($i = 0; $i < count($questions); $i++) {
         if (!empty(trim($questions[$i])) && !empty(trim($answers[$i]))) {
             $key_points[] = [
                 'q' => sanitizeInput($questions[$i]),
-                'a' => sanitizeInput($answers[$i])
+                'a' => sanitizeInput($answers[$i]),
+                'e' => isset($explanations[$i]) ? sanitizeInput($explanations[$i]) : ''
             ];
         }
     }
@@ -138,10 +145,10 @@ $revisions = $pdo->query("
 
         /* Q&A Styles */
         .qa-container { margin-top: 15px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
-        .qa-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: start; }
-        .qa-row input { flex: 1; }
+        .qa-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: start; flex-wrap: wrap; }
+        .qa-row input { flex: 1; min-width: 200px; }
         .btn-small { padding: 5px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; }
-        .btn-remove { background: #ff4444; color: white; }
+        .btn-remove { background: #ff4444; color: white; height: 38px;}
         .btn-plus { background: #28a745; color: white; margin-top: 10px; }
         
         .csv-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #ccc; }
@@ -192,6 +199,7 @@ $revisions = $pdo->query("
             div.innerHTML = `
                 <input type="text" name="questions[]" placeholder="Question" required>
                 <input type="text" name="answers[]" placeholder="Answer" required>
+                <input type="text" name="explanations[]" placeholder="Explanation (Optional)">
                 <button type="button" class="btn-small btn-remove" onclick="this.parentElement.remove()">X</button>
             `;
             container.appendChild(div);
@@ -249,10 +257,10 @@ $revisions = $pdo->query("
 
                 <div class="csv-section">
                     <h3>📂 Option 1: Upload CSV (Bulk Import)</h3>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer</code> (2 Columns). First row header ignores "Question"/"Answer".</p>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer, Explanation</code> (3 Columns). Explanation is optional.</p>
                     <input type="file" name="csv_file" accept=".csv" style="background: white;">
                     <br><br>
-                    <a href="sample_quick_revision.csv" download style="font-size: 13px; color: #667eea;">⬇️ Download Sample CSV</a>
+                    <a href="sample_quick_revision_v2.csv" download style="font-size: 13px; color: #667eea;">⬇️ Download Sample CSV (Updated)</a>
                 </div>
 
                 <div class="qa-container">
@@ -261,6 +269,7 @@ $revisions = $pdo->query("
                         <div class="qa-row">
                             <input type="text" name="questions[]" placeholder="Question">
                             <input type="text" name="answers[]" placeholder="Answer">
+                            <input type="text" name="explanations[]" placeholder="Explanation (Optional)">
                             <button type="button" class="btn-small btn-remove" onclick="this.parentElement.remove()">X</button>
                         </div>
                     </div>

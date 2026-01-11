@@ -139,6 +139,7 @@ $classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
                     <tr>
                         <th>Name</th>
                         <th>Email</th>
+                        <th>Phone</th>
                         <th>Type</th>
                         <th>Class</th>
                         <th>Joined</th>
@@ -150,6 +151,7 @@ $classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
                     <tr>
                         <td><?php echo htmlspecialchars($user['name']); ?></td>
                         <td><?php echo htmlspecialchars($user['email']); ?></td>
+                        <td><?php echo htmlspecialchars($user['mobile'] ?? '-'); ?></td>
                         <td>
                             <span class="badge badge-<?php echo $user['user_type']; ?>">
                                 <?php echo ucfirst($user['user_type']); ?>

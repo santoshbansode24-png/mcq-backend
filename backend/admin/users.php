@@ -133,7 +133,7 @@ $classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
 
         <!-- Users List -->
         <div class="card">
-            <h2>All Users</h2>
+            <h2>All Users (Updated)</h2>
             <table>
                 <thead>
                     <tr>

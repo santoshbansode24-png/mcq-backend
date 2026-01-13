@@ -8,6 +8,15 @@ if (!isset($_SESSION['admin_logged_in'])) {
     header('Location: index.php');
     exit();
 }
+
+// Check for Board Selection
+if (!isset($_SESSION['admin_selected_board'])) {
+    header('Location: select_board.php');
+    exit();
+}
+$selected_board = $_SESSION['admin_selected_board'];
+$board_name = $_SESSION['board_name'];
+
 require_once '../config/db.php';
 
 // Handle Sample CSV Download
@@ -26,8 +35,20 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_sample') {
 // Handle Delete
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    $stmt = $pdo->prepare("DELETE FROM flashcards WHERE id = ?");
-    $stmt->execute([$id]);
+    // Verify flashcard belongs to current board
+    $check = $pdo->prepare("
+        SELECT f.id FROM flashcards f 
+        JOIN chapters c ON f.chapter_id = c.chapter_id 
+        JOIN subjects s ON c.subject_id = s.subject_id 
+        JOIN classes cls ON s.class_id = cls.class_id 
+        WHERE f.id = ? AND cls.board_type = ?
+    ");
+    $check->execute([$id, $selected_board]);
+    
+    if ($check->fetch()) {
+        $stmt = $pdo->prepare("DELETE FROM flashcards WHERE id = ?");
+        $stmt->execute([$id]);
+    }
     header('Location: flashcards.php');
     exit();
 }
@@ -119,18 +140,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 }
 
 // Get Dropdown Data
-$classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
-$all_subjects = $pdo->query("SELECT * FROM subjects ORDER BY subject_name")->fetchAll();
-$all_chapters = $pdo->query("SELECT * FROM chapters ORDER BY chapter_order")->fetchAll();
+$classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_id");
+$classes_query->execute([$selected_board]);
+$classes = $classes_query->fetchAll();
+
+$all_subjects_query = $pdo->prepare("
+    SELECT s.* FROM subjects s 
+    JOIN classes c ON s.class_id = c.class_id 
+    WHERE c.board_type = ? 
+    ORDER BY s.subject_name
+");
+$all_subjects_query->execute([$selected_board]);
+$all_subjects = $all_subjects_query->fetchAll();
+
+$all_chapters_query = $pdo->prepare("
+    SELECT ch.* FROM chapters ch 
+    JOIN subjects s ON ch.subject_id = s.subject_id 
+    JOIN classes c ON s.class_id = c.class_id 
+    WHERE c.board_type = ? 
+    ORDER BY ch.chapter_order
+");
+$all_chapters_query->execute([$selected_board]);
+$all_chapters = $all_chapters_query->fetchAll();
 
 // Get Flashcards List (Joined with Chapter/Subject for display)
-$flashcards = $pdo->query("
+$flashcards_query = $pdo->prepare("
     SELECT f.*, c.chapter_name, s.subject_name 
     FROM flashcards f 
     LEFT JOIN chapters c ON f.chapter_id = c.chapter_id 
     LEFT JOIN subjects s ON c.subject_id = s.subject_id 
+    LEFT JOIN classes cls ON s.class_id = cls.class_id 
+    WHERE cls.board_type = ?
     ORDER BY f.id DESC LIMIT 50
-")->fetchAll();
+");
+$flashcards_query->execute([$selected_board]);
+$flashcards = $flashcards_query->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -170,6 +214,37 @@ $flashcards = $pdo->query("
         .tab-content.active { display: block; }
         
         .btn-download { background: #28a745; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; display: inline-block; margin-bottom: 15px; font-size: 14px; }
+        
+        /* Centered Switch Board Button */
+        .header { position: relative; }
+        .center-actions {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .btn-switch-board {
+            background: #ff9f43; /* Bright Orange */
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-switch-board:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: #ffcd19; /* Lighter Orange */
+            color: #333;
+        }
     </style>
     <script>
         const subjects = <?php echo json_encode($all_subjects); ?>;
@@ -221,7 +296,26 @@ $flashcards = $pdo->query("
 <body>
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
-        <a href="logout.php" style="color: white; text-decoration: none;">Logout</a>
+        
+        <!-- Centered Switch Button -->
+        <div class="center-actions">
+            <a href="select_board.php" class="btn-switch-board">
+                🔁 Switch Board
+            </a>
+        </div>
+
+        <div class="header-right">
+            <div class="admin-info">
+                <div class="name" style="margin-bottom: 3px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                        <?php echo htmlspecialchars($board_name); ?>
+                    </span>
+                    &nbsp; <?php echo htmlspecialchars($_SESSION['admin_name']); ?>
+                </div>
+                <div class="email"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></div>
+            </div>
+            <a href="logout.php" class="btn-logout">Logout</a>
+        </div>
     </div>
     
     <nav class="nav">
@@ -259,7 +353,9 @@ $flashcards = $pdo->query("
                         <select id="single_class_select" onchange="filterSubjects('single_')" required style="grid-column: span 2;">
                             <option value="">Select Class</option>
                             <?php foreach($classes as $class): ?>
-                                <option value="<?php echo $class['class_id']; ?>"><?php echo $class['class_name']; ?></option>
+                                <option value="<?php echo $class['class_id']; ?>">
+                                    <?php echo htmlspecialchars($class['class_name']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
 
@@ -292,7 +388,9 @@ $flashcards = $pdo->query("
                         <select id="bulk_class_select" onchange="filterSubjects('bulk_')" required style="grid-column: span 2;">
                             <option value="">Select Class</option>
                             <?php foreach($classes as $class): ?>
-                                <option value="<?php echo $class['class_id']; ?>"><?php echo $class['class_name']; ?></option>
+                                <option value="<?php echo $class['class_id']; ?>">
+                                    <?php echo htmlspecialchars($class['class_name']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
 

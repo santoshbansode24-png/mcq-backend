@@ -18,16 +18,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    // Query all classes
-    $stmt = $pdo->prepare("
+    // Check for board filter
+    $boardInfo = isset($_GET['board']) ? $_GET['board'] : null;
+    $sql = "
         SELECT 
             class_id,
-            class_name
+            class_name,
+            board_type
         FROM classes
-        ORDER BY class_id ASC
-    ");
+    ";
     
-    $stmt->execute();
+    $params = [];
+    if ($boardInfo) {
+        $sql .= " WHERE board_type = ? ";
+        $params[] = $boardInfo;
+    }
+    
+    $sql .= " ORDER BY class_id ASC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $classes = $stmt->fetchAll();
     
     // Check if classes exist

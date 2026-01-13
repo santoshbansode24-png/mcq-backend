@@ -19,8 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Validate required fields
-$required = ['name', 'email', 'mobile', 'password', 'school_name', 'class_id', 'board'];
+// Validate required fields
+$required = ['name', 'email', 'mobile', 'password', 'school_name', 'class_id'];
 $missing = validateRequired($input, $required);
+
+// Check board (accept board_type or board)
+if (isset($input['board']) && !isset($input['board_type'])) {
+    $input['board_type'] = $input['board'];
+}
+
+if (!isset($input['board_type']) || empty($input['board_type'])) {
+    $missing[] = 'board_type';
+}
 
 if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
@@ -33,10 +43,10 @@ $mobile = sanitizeInput($input['mobile']);
 $password = $input['password'];
 $school_name = sanitizeInput($input['school_name']);
 $class_id = filter_var($input['class_id'], FILTER_VALIDATE_INT);
-$board = sanitizeInput($input['board']);
+$board_type = sanitizeInput($input['board_type']);
 
 // Validate Board
-if (!in_array($board, ['CBSE', 'State Board'])) {
+if (!in_array($board_type, ['CBSE', 'STATE_MARATHI', 'STATE_SEMI'])) {
     sendResponse('error', 'Invalid board selection', null, 400);
 }
 
@@ -63,7 +73,7 @@ try {
     
     // Insert new user
     $insertStmt = $pdo->prepare("
-        INSERT INTO users (name, email, mobile, password, user_type, subscription_status, subscription_expiry, school_name, class_id, board, created_at)
+        INSERT INTO users (name, email, mobile, password, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
 
@@ -77,7 +87,7 @@ try {
         $subscription_expiry,
         $school_name,
         $class_id,
-        $board
+        $board_type
     ]);
 
     $user_id = $pdo->lastInsertId();

@@ -11,48 +11,67 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit();
 }
 
+// Check for Board Selection
+if (!isset($_SESSION['admin_selected_board'])) {
+    header('Location: select_board.php');
+    exit();
+}
+
+$selected_board = $_SESSION['admin_selected_board'];
+$board_name = $_SESSION['board_name'];
+
 require_once '../config/db.php';
 
-// Get statistics
+// Get statistics filtered by board
 try {
-    // Total counts
-    $stats = [];
+    // 1. Get Valid Class IDs for this board
+    $stmtC = $pdo->prepare("SELECT class_id FROM classes WHERE board_type = ?");
+    $stmtC->execute([$selected_board]);
+    $valid_classes = $stmtC->fetchAll(PDO::FETCH_COLUMN);
+    $class_ids_str = implode(',', $valid_classes);
     
-    // Total users by type
-    $stmt = $pdo->query("SELECT user_type, COUNT(*) as count FROM users GROUP BY user_type");
-    while ($row = $stmt->fetch()) {
-        $stats[$row['user_type']] = $row['count'];
+    // If no classes exist for this board, stats are 0
+    if (empty($valid_classes)) {
+        $stats = [
+            'classes' => 0, 'subjects' => 0, 'chapters' => 0, 
+            'mcqs' => 0, 'videos' => 0, 'notes' => 0
+        ];
+    } else {
+        // Statistics Queries (Filtered)
+        $stats['classes'] = count($valid_classes);
+        
+        $stats['subjects'] = $pdo->query("SELECT COUNT(*) FROM subjects WHERE class_id IN ($class_ids_str)")->fetchColumn();
+        
+        // Use JOINs for deeper hierarchies
+        $stats['chapters'] = $pdo->query("
+            SELECT COUNT(*) FROM chapters ch 
+            JOIN subjects s ON ch.subject_id = s.subject_id 
+            WHERE s.class_id IN ($class_ids_str)
+        ")->fetchColumn();
+        
+        $stats['mcqs'] = $pdo->query("
+            SELECT COUNT(*) FROM mcqs m 
+            JOIN chapters ch ON m.chapter_id = ch.chapter_id 
+            JOIN subjects s ON ch.subject_id = s.subject_id 
+            WHERE s.class_id IN ($class_ids_str)
+        ")->fetchColumn();
+        
+        $stats['videos'] = $pdo->query("
+            SELECT COUNT(*) FROM videos v 
+            JOIN chapters ch ON v.chapter_id = ch.chapter_id 
+            JOIN subjects s ON ch.subject_id = s.subject_id 
+            WHERE s.class_id IN ($class_ids_str)
+        ")->fetchColumn();
+        
+        $stats['notes'] = $pdo->query("
+            SELECT COUNT(*) FROM notes n 
+            JOIN chapters ch ON n.chapter_id = ch.chapter_id 
+            JOIN subjects s ON ch.subject_id = s.subject_id 
+            WHERE s.class_id IN ($class_ids_str)
+        ")->fetchColumn();
     }
     
-    // Total classes
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM classes");
-    $stats['classes'] = $stmt->fetch()['count'];
-    
-    // Total subjects
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM subjects");
-    $stats['subjects'] = $stmt->fetch()['count'];
-    
-    // Total chapters
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM chapters");
-    $stats['chapters'] = $stmt->fetch()['count'];
-    
-    // Total MCQs
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM mcqs");
-    $stats['mcqs'] = $stmt->fetch()['count'];
-    
-    // Total videos
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM videos");
-    $stats['videos'] = $stmt->fetch()['count'];
-    
-    // Total notes
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM notes");
-    $stats['notes'] = $stmt->fetch()['count'];
-    
-    // Total quiz attempts
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM student_progress");
-    $stats['attempts'] = $stmt->fetch()['count'];
-    
-    // Recent activities
+    // Recent activities (Global for now, or filter if we tracked student board)
     $recentStmt = $pdo->query("
         SELECT sp.*, u.name as student_name, ch.chapter_name, s.subject_name
         FROM student_progress sp
@@ -87,6 +106,7 @@ try {
         }
         
         /* Header */
+        /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -95,11 +115,44 @@ try {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
         
         .header h1 {
             font-size: 24px;
             font-weight: 600;
+        }
+
+        /* Centered Switch Board Button */
+        .center-actions {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .btn-switch-board {
+            background: #ff9f43; /* Bright Orange */
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-switch-board:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: #ffcd19; /* Lighter Orange */
+            color: #333;
         }
         
         .header-right {
@@ -285,9 +338,22 @@ try {
     <!-- Header -->
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
+        
+        <!-- Centered Switch Button -->
+        <div class="center-actions">
+            <a href="select_board.php" class="btn-switch-board">
+                🔁 Switch Board
+            </a>
+        </div>
+
         <div class="header-right">
             <div class="admin-info">
-                <div class="name"><?php echo htmlspecialchars($_SESSION['admin_name']); ?></div>
+                <div class="name" style="margin-bottom: 3px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                        <?php echo htmlspecialchars($board_name); ?>
+                    </span>
+                    &nbsp; <?php echo htmlspecialchars($_SESSION['admin_name']); ?>
+                </div>
                 <div class="email"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></div>
             </div>
             <a href="logout.php" class="btn-logout">Logout</a>

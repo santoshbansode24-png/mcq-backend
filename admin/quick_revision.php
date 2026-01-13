@@ -8,13 +8,34 @@ if (!isset($_SESSION['admin_logged_in'])) {
     header('Location: index.php');
     exit();
 }
+
+// Check for Board Selection
+if (!isset($_SESSION['admin_selected_board'])) {
+    header('Location: select_board.php');
+    exit();
+}
+$selected_board = $_SESSION['admin_selected_board'];
+$board_name = $_SESSION['board_name'];
+
 require_once '../config/db.php';
 
 // Handle Delete
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    $stmt = $pdo->prepare("DELETE FROM quick_revision WHERE revision_id = ?");
-    $stmt->execute([$id]);
+    // Verify revision belongs to current board
+    $check = $pdo->prepare("
+        SELECT qr.revision_id FROM quick_revision qr
+        JOIN chapters ch ON qr.chapter_id = ch.chapter_id
+        JOIN subjects s ON ch.subject_id = s.subject_id
+        JOIN classes c ON s.class_id = c.class_id
+        WHERE qr.revision_id = ? AND c.board_type = ?
+    ");
+    $check->execute([$id, $selected_board]);
+    
+    if ($check->fetch()) {
+        $stmt = $pdo->prepare("DELETE FROM quick_revision WHERE revision_id = ?");
+        $stmt->execute([$id]);
+    }
     header('Location: quick_revision.php');
     exit();
 }
@@ -50,14 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Parse CSV line
             $data = str_getcsv($line);
 
-            // Expecting Format: [Question, Answer, Explanation (Optional)]
+            // Expecting Format: [Question, Answer]
             if (count($data) >= 2) {
                 // Sanitize and ensure UTF-8 strings
                 $q = trim($data[0]);
                 $a = trim($data[1]);
-                $e = isset($data[2]) ? trim($data[2]) : ''; // Explanation
+                $e = isset($data[2]) ? trim($data[2]) : ''; // Handle Explanation
                 
-                // Skip header row usually having "Question" or "Answer"
+                // Skip header row
                 if (strtolower($q) == 'question' && strtolower($a) == 'answer') continue;
                 
                 if (!empty($q) && !empty($a)) {
@@ -71,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
-    // 2. Handle Manual Inputs (Merge with CSV data if any)
+    // 2. Handle Manual Inputs
     $questions = $_POST['questions'] ?? [];
     $answers = $_POST['answers'] ?? [];
     $explanations = $_POST['explanations'] ?? [];
@@ -102,18 +123,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Get Classes for Initial Dropdown
-$classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
-$all_subjects = $pdo->query("SELECT * FROM subjects ORDER BY subject_name")->fetchAll();
-$all_chapters = $pdo->query("SELECT * FROM chapters ORDER BY chapter_order")->fetchAll();
+$classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_id");
+$classes_query->execute([$selected_board]);
+$classes = $classes_query->fetchAll();
+
+$all_subjects_query = $pdo->prepare("
+    SELECT s.* FROM subjects s 
+    JOIN classes c ON s.class_id = c.class_id 
+    WHERE c.board_type = ? 
+    ORDER BY s.subject_name
+");
+$all_subjects_query->execute([$selected_board]);
+$all_subjects = $all_subjects_query->fetchAll();
+
+$all_chapters_query = $pdo->prepare("
+    SELECT ch.* FROM chapters ch 
+    JOIN subjects s ON ch.subject_id = s.subject_id 
+    JOIN classes c ON s.class_id = c.class_id 
+    WHERE c.board_type = ? 
+    ORDER BY ch.chapter_order
+");
+$all_chapters_query->execute([$selected_board]);
+$all_chapters = $all_chapters_query->fetchAll();
 
 // Get Revisions List
-$revisions = $pdo->query("
+$revisions_query = $pdo->prepare("
     SELECT qr.*, ch.chapter_name, s.subject_name
     FROM quick_revision qr
     JOIN chapters ch ON qr.chapter_id = ch.chapter_id
     JOIN subjects s ON ch.subject_id = s.subject_id
+    JOIN classes c ON s.class_id = c.class_id
+    WHERE c.board_type = ?
     ORDER BY qr.created_at DESC
-")->fetchAll();
+");
+$revisions_query->execute([$selected_board]);
+$revisions = $revisions_query->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -146,12 +190,44 @@ $revisions = $pdo->query("
         /* Q&A Styles */
         .qa-container { margin-top: 15px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
         .qa-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: start; flex-wrap: wrap; }
-        .qa-row input { flex: 1; min-width: 200px; }
-        .btn-small { padding: 5px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; }
-        .btn-remove { background: #ff4444; color: white; height: 38px;}
+        .qa-row input, .qa-row textarea { flex: 1; min-width: 200px; }
+        .qa-row textarea { height: 38px; padding: 8px; resize: vertical; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; }
+        .btn-small { padding: 5px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; height: 38px; }
+        .btn-remove { background: #ff4444; color: white; }
         .btn-plus { background: #28a745; color: white; margin-top: 10px; }
         
         .csv-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #ccc; }
+        
+        /* Centered Switch Board Button */
+        .header { position: relative; }
+        .center-actions {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .btn-switch-board {
+            background: #ff9f43; /* Bright Orange */
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-switch-board:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: #ffcd19; /* Lighter Orange */
+            color: #333;
+        }
     </style>
     <script>
         // Pass PHP data to JS
@@ -199,7 +275,7 @@ $revisions = $pdo->query("
             div.innerHTML = `
                 <input type="text" name="questions[]" placeholder="Question" required>
                 <input type="text" name="answers[]" placeholder="Answer" required>
-                <input type="text" name="explanations[]" placeholder="Explanation (Optional)">
+                <textarea name="explanations[]" placeholder="Explanation (Optional)"></textarea>
                 <button type="button" class="btn-small btn-remove" onclick="this.parentElement.remove()">X</button>
             `;
             container.appendChild(div);
@@ -209,7 +285,26 @@ $revisions = $pdo->query("
 <body>
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
-        <a href="logout.php" style="color: white; text-decoration: none;">Logout</a>
+        
+        <!-- Centered Switch Button -->
+        <div class="center-actions">
+            <a href="select_board.php" class="btn-switch-board">
+                🔁 Switch Board
+            </a>
+        </div>
+
+        <div class="header-right">
+            <div class="admin-info">
+                <div class="name" style="margin-bottom: 3px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                        <?php echo htmlspecialchars($board_name); ?>
+                    </span>
+                    &nbsp; <?php echo htmlspecialchars($_SESSION['admin_name']); ?>
+                </div>
+                <div class="email"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></div>
+            </div>
+            <a href="logout.php" class="btn-logout">Logout</a>
+        </div>
     </div>
     
     <nav class="nav">
@@ -238,7 +333,9 @@ $revisions = $pdo->query("
                     <select id="class_select" onchange="filterSubjects()" required>
                         <option value="">Select Class</option>
                         <?php foreach($classes as $class): ?>
-                            <option value="<?php echo $class['class_id']; ?>"><?php echo $class['class_name']; ?></option>
+                            <option value="<?php echo $class['class_id']; ?>">
+                                <?php echo htmlspecialchars($class['class_name']); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
 
@@ -257,10 +354,10 @@ $revisions = $pdo->query("
 
                 <div class="csv-section">
                     <h3>📂 Option 1: Upload CSV (Bulk Import)</h3>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer, Explanation</code> (3 Columns). Explanation is optional.</p>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer, Explanation</code> (3 Columns). First row header ignored.</p>
                     <input type="file" name="csv_file" accept=".csv" style="background: white;">
                     <br><br>
-                    <a href="sample_quick_revision_v2.csv" download style="font-size: 13px; color: #667eea;">⬇️ Download Sample CSV (Updated)</a>
+                    <a href="sample_quick_revision.csv" download style="font-size: 13px; color: #667eea;">⬇️ Download Sample CSV</a>
                 </div>
 
                 <div class="qa-container">
@@ -269,7 +366,7 @@ $revisions = $pdo->query("
                         <div class="qa-row">
                             <input type="text" name="questions[]" placeholder="Question">
                             <input type="text" name="answers[]" placeholder="Answer">
-                            <input type="text" name="explanations[]" placeholder="Explanation (Optional)">
+                            <textarea name="explanations[]" placeholder="Explanation (Optional)"></textarea>
                             <button type="button" class="btn-small btn-remove" onclick="this.parentElement.remove()">X</button>
                         </div>
                     </div>

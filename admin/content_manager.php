@@ -8,6 +8,15 @@ if (!isset($_SESSION['admin_logged_in'])) {
     header('Location: index.php');
     exit();
 }
+
+// Check for Board Selection
+if (!isset($_SESSION['admin_selected_board'])) {
+    header('Location: select_board.php');
+    exit();
+}
+$selected_board = $_SESSION['admin_selected_board'];
+$board_name = $_SESSION['board_name'];
+
 require_once '../config/db.php';
 
 // ==========================================
@@ -56,9 +65,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_content') {
 }
 
 // 2. DELETE CONTENT
+// 2. DELETE CONTENT
 if (isset($_POST['action']) && $_POST['action'] == 'delete_content') {
     $id = intval($_POST['id']);
     $type = $_POST['type'];
+    
+    // Check for Board Selection (Ajax Context)
+    if (!isset($_SESSION['admin_selected_board'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Board not selected']);
+        exit();
+    }
+    $selected_board = $_SESSION['admin_selected_board'];
     
     $table_map = [
         'mcqs' => 'mcqs',
@@ -81,10 +98,27 @@ if (isset($_POST['action']) && $_POST['action'] == 'delete_content') {
             $table = $table_map[$type];
             $id_col = $id_col_map[$type];
             
-            $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col = ?");
-            $stmt->execute([$id]);
+            // Verify ownership via joins
+            // Structure: content -> chapters -> subjects -> classes -> board_type
+            $verify_sql = "
+                SELECT t.$id_col 
+                FROM $table t
+                JOIN chapters ch ON t.chapter_id = ch.chapter_id
+                JOIN subjects s ON ch.subject_id = s.subject_id
+                JOIN classes c ON s.class_id = c.class_id
+                WHERE t.$id_col = ? AND c.board_type = ?
+            ";
             
-            echo json_encode(['status' => 'success']);
+            $check = $pdo->prepare($verify_sql);
+            $check->execute([$id, $selected_board]);
+            
+            if ($check->fetch()) {
+                $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col = ?");
+                $stmt->execute([$id]);
+                echo json_encode(['status' => 'success']);
+            } else {
+                 echo json_encode(['status' => 'error', 'message' => 'Item not found or belongs to another board']);
+            }
         } catch (PDOException $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
@@ -97,9 +131,28 @@ if (isset($_POST['action']) && $_POST['action'] == 'delete_content') {
 // ==========================================
 // INITIAL DATA LOADING
 // ==========================================
-$classes = $pdo->query("SELECT * FROM classes ORDER BY class_id")->fetchAll();
-$all_subjects = $pdo->query("SELECT * FROM subjects ORDER BY subject_name")->fetchAll();
-$all_chapters = $pdo->query("SELECT * FROM chapters ORDER BY chapter_order")->fetchAll();
+$classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_id");
+$classes_query->execute([$selected_board]);
+$classes = $classes_query->fetchAll();
+
+$all_subjects_query = $pdo->prepare("
+    SELECT s.* FROM subjects s 
+    JOIN classes c ON s.class_id = c.class_id 
+    WHERE c.board_type = ? 
+    ORDER BY s.subject_name
+");
+$all_subjects_query->execute([$selected_board]);
+$all_subjects = $all_subjects_query->fetchAll();
+
+$all_chapters_query = $pdo->prepare("
+    SELECT ch.* FROM chapters ch 
+    JOIN subjects s ON ch.subject_id = s.subject_id 
+    JOIN classes c ON s.class_id = c.class_id 
+    WHERE c.board_type = ? 
+    ORDER BY ch.chapter_order
+");
+$all_chapters_query->execute([$selected_board]);
+$all_chapters = $all_chapters_query->fetchAll();
 
 ?>
 <!DOCTYPE html>
@@ -188,13 +241,63 @@ $all_chapters = $pdo->query("SELECT * FROM chapters ORDER BY chapter_order")->fe
         /* Toast */
         .toast { position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #2d3748; color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transform: translateY(100px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000; }
         .toast.show { transform: translateY(0); }
+        
+        /* Centered Switch Board Button */
+        .header { position: relative; }
+        .center-actions {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .btn-switch-board {
+            background: #ff9f43; /* Bright Orange */
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-switch-board:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: #ffcd19; /* Lighter Orange */
+            color: #333;
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>📑 Content Manager</h1>
-        <a href="logout.php" style="color: white; text-decoration: none; font-weight: 500;">Logout</a>
+        
+        <!-- Centered Switch Button -->
+        <div class="center-actions">
+            <a href="select_board.php" class="btn-switch-board">
+                🔁 Switch Board
+            </a>
+        </div>
+
+        <div class="header-right">
+            <div class="admin-info">
+                <div class="name" style="margin-bottom: 3px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                        <?php echo htmlspecialchars($board_name); ?>
+                    </span>
+                    &nbsp; <?php echo htmlspecialchars($_SESSION['admin_name']); ?>
+                </div>
+                <div class="email"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></div>
+            </div>
+            <a href="logout.php" class="btn-logout">Logout</a>
+        </div>
     </div>
     
     <nav class="nav">
@@ -224,7 +327,9 @@ $all_chapters = $pdo->query("SELECT * FROM chapters ORDER BY chapter_order")->fe
                     <select id="class_select">
                         <option value="">Select Class</option>
                         <?php foreach($classes as $class): ?>
-                            <option value="<?php echo $class['class_id']; ?>"><?php echo htmlspecialchars($class['class_name']); ?></option>
+                            <option value="<?php echo $class['class_id']; ?>">
+                                <?php echo htmlspecialchars($class['class_name']); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>

@@ -39,7 +39,7 @@ try {
             difficulty
         FROM mcqs
         WHERE chapter_id = ?
-        ORDER BY RAND()
+        ORDER BY mcq_id ASC
     ");
     
     $stmt->execute([$chapter_id]);

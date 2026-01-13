@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $_SESSION['admin_name'] = $admin['name'];
                 $_SESSION['admin_email'] = $admin['email'];
                 
-                header('Location: dashboard.php');
+                header('Location: select_board.php');
                 exit();
             } else {
                 $error = 'Invalid email or password';

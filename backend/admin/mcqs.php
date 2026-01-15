@@ -98,14 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             // Validate row has enough columns (at least 6)
             if (count($data) < 6) { $errors++; continue; }
             
-            $question = sanitizeInput($data[0]);
-            $opt_a = sanitizeInput($data[1]);
-            $opt_b = sanitizeInput($data[2]);
-            $opt_c = sanitizeInput($data[3]);
-            $opt_d = sanitizeInput($data[4]);
-            $correct = strtolower(trim($data[5])); // a, b, c, d
-            $explanation = isset($data[6]) ? sanitizeInput($data[6]) : '';
-            $difficulty = isset($data[7]) ? strtolower(trim($data[7])) : 'medium';
+            $question = sanitizeInput(convertUtf8($data[0]));
+            $opt_a = sanitizeInput(convertUtf8($data[1]));
+            $opt_b = sanitizeInput(convertUtf8($data[2]));
+            $opt_c = sanitizeInput(convertUtf8($data[3]));
+            $opt_d = sanitizeInput(convertUtf8($data[4]));
+            $correct = strtolower(trim(convertUtf8($data[5]))); // a, b, c, d
+            $explanation = isset($data[6]) ? sanitizeInput(convertUtf8($data[6])) : '';
+            $difficulty = isset($data[7]) ? strtolower(trim(convertUtf8($data[7]))) : 'medium';
             
             // Validate correct answer format
             if (!in_array($correct, ['a', 'b', 'c', 'd'])) { $errors++; continue; }

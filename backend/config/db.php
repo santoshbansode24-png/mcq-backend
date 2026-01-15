@@ -96,6 +96,24 @@ function validateRequired($data, $requiredFields) {
 }
 
 /**
+ * Helper function to convert encoding to UTF-8
+ * Handles Windows-1252 (common in Excel CSVs) to UTF-8
+ */
+function convertUtf8($data) {
+    if (is_array($data)) {
+        return array_map('convertUtf8', $data);
+    }
+    
+    // If it's already valid UTF-8, return it
+    if (mb_check_encoding($data, 'UTF-8')) {
+        return $data;
+    }
+    
+    // Otherwise, assume it's Windows-1252 (or ISO-8859-1) and convert
+    return mb_convert_encoding($data, 'UTF-8', 'Windows-1252');
+}
+
+/**
  * Helper function to sanitize input
  */
 function sanitizeInput($data) {

@@ -128,6 +128,113 @@ if (isset($_POST['action']) && $_POST['action'] == 'delete_content') {
     exit();
 }
 
+// 3. DOWNLOAD SELECTED CONTENT
+if (isset($_POST['action']) && $_POST['action'] == 'download_selected') {
+    $ids = isset($_POST['ids']) ? explode(',', $_POST['ids']) : [];
+    $type = $_POST['type'];
+    
+    if (empty($ids)) {
+        echo json_encode(['status' => 'error', 'message' => 'No items selected']);
+        exit();
+    }
+    
+    // Check for Board Selection
+    if (!isset($_SESSION['admin_selected_board'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Board not selected']);
+        exit();
+    }
+    $selected_board = $_SESSION['admin_selected_board'];
+    
+    // Map types to tables and columns
+    $config = [
+        'mcqs' => [
+            'table' => 'mcqs', 'id_col' => 'mcq_id', 
+            'columns' => ['mcq_id', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'explanation', 'difficulty'],
+            'headers' => ['ID', 'Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer', 'Explanation', 'Difficulty']
+        ],
+        'notes' => [
+            'table' => 'notes', 'id_col' => 'note_id',
+            'columns' => ['note_id', 'title', 'file_path', 'description'],
+            'headers' => ['ID', 'Title', 'File/Link', 'Description']
+        ],
+        'videos' => [
+            'table' => 'videos', 'id_col' => 'video_id',
+            'columns' => ['video_id', 'title', 'url', 'thumbnail', 'duration', 'description'],
+            'headers' => ['ID', 'Title', 'Video URL', 'Thumbnail', 'Duration', 'Description']
+        ],
+        'flashcards' => [
+            'table' => 'flashcards', 'id_col' => 'id',
+            'columns' => ['id', 'question_front', 'answer_back'],
+            'headers' => ['ID', 'Question (Front)', 'Answer (Back)']
+        ],
+        'quick_revision' => [
+            'table' => 'quick_revision', 'id_col' => 'revision_id',
+            'columns' => ['revision_id', 'title', 'summary', 'point_1', 'point_2', 'point_3', 'point_4', 'point_5'],
+            'headers' => ['ID', 'Title', 'Summary', 'Point 1', 'Point 2', 'Point 3', 'Point 4', 'Point 5']
+        ]
+    ];
+    
+    if (!isset($config[$type])) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid Type']);
+        exit();
+    }
+    
+    $cfg = $config[$type];
+    $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+    
+    // Fetch Data
+    // We join to ensure board ownership is respected
+    $sql = "
+        SELECT t.* 
+        FROM {$cfg['table']} t
+        JOIN chapters ch ON t.chapter_id = ch.chapter_id
+        JOIN subjects s ON ch.subject_id = s.subject_id
+        JOIN classes c ON s.class_id = c.class_id
+        WHERE t.{$cfg['id_col']} IN ($placeholders) AND c.board_type = ?
+    ";
+    
+    $params = array_merge($ids, [$selected_board]);
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($rows)) {
+            echo json_encode(['status' => 'error', 'message' => 'No valid data found']);
+            exit();
+        }
+        
+        // Generate CSV
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=veeru_' . $type . '_' . date('Y-m-d') . '.csv');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Add BOM for Excel compatibility
+        fputs($output, "\xEF\xBB\xBF");
+        
+        // Headers
+        fputcsv($output, $cfg['headers']);
+        
+        // Rows
+        foreach ($rows as $row) {
+            $csvRow = [];
+            foreach ($cfg['columns'] as $col) {
+                $csvRow[] = $row[$col] ?? '';
+            }
+            fputcsv($output, $csvRow);
+        }
+        
+        fclose($output);
+        exit();
+        
+    } catch (PDOException $e) {
+        // Can't return JSON here easily as headers might be sent, but we'll try
+        die('Database Error: ' . $e->getMessage());
+    }
+}
+
 // ==========================================
 // INITIAL DATA LOADING
 // ==========================================
@@ -350,7 +457,6 @@ $all_chapters = $all_chapters_query->fetchAll();
             </div>
         </div>
         
-        <!-- Content Area (Hidden initially) -->
         <div id="content_area" class="card" style="display: none;">
             
             <div class="content-types-wrapper">
@@ -363,11 +469,29 @@ $all_chapters = $all_chapters_query->fetchAll();
                 </div>
             </div>
             
-            <h3 id="list_title" style="margin-bottom: 20px; font-size: 18px; color: #4a5568; border-bottom: 2px solid #edf2f7; padding-bottom: 10px;">
-                Managed Items
-            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px;">
+                <h3 id="list_title" style="margin: 0; font-size: 18px; color: #4a5568;">
+                    Managed Items
+                </h3>
+                <div class="actions">
+                    <label style="margin-right: 15px; cursor: pointer; font-weight: 600; color: #4a5568;">
+                        <input type="checkbox" id="select_all" onchange="toggleSelectAll()"> Select All
+                    </label>
+                    <button onclick="downloadSelected()" style="background: #48bb78; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        ⬇️ Download CSV
+                    </button>
+                </div>
+            </div>
             
             <div id="loading_indicator" class="loading" style="display: none;">Loading content...</div>
+            
+            <!-- Hidden form for download -->
+            <form id="download_form" method="POST" action="content_manager.php" target="_blank" style="display:none;">
+                <input type="hidden" name="action" value="download_selected">
+                <input type="hidden" name="type" id="download_type">
+                <input type="hidden" name="ids" id="download_ids">
+            </form>
+            
             <div id="content_list" class="content-list"></div>
             
         </div>
@@ -475,6 +599,9 @@ $all_chapters = $all_chapters_query->fetchAll();
             };
             document.getElementById('list_title').textContent = titles[type];
             
+            // Uncheck select all
+            document.getElementById('select_all').checked = false;
+            
             loadContent();
         }
         
@@ -512,6 +639,9 @@ $all_chapters = $all_chapters_query->fetchAll();
             
             elList.innerHTML = items.map(item => `
                 <div class="content-item" id="item-${item.id}">
+                    <div style="margin-right: 15px;">
+                        <input type="checkbox" class="item-checkbox" value="${item.id}" style="transform: scale(1.2);">
+                    </div>
                     <div class="item-info">
                         <div class="item-title">${escapeHtml(item.title)}</div>
                         <span class="item-subtitle">${escapeHtml(item.subtitle || '')}</span>
@@ -519,6 +649,30 @@ $all_chapters = $all_chapters_query->fetchAll();
                     <button class="btn-delete" onclick="deleteItem(${item.id})">Delete</button>
                 </div>
             `).join('');
+        }
+        
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('select_all').checked;
+            document.querySelectorAll('.item-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+            });
+        }
+        
+        function downloadSelected() {
+            const selected = [];
+            document.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+                selected.push(cb.value);
+            });
+            
+            if (selected.length === 0) {
+                showToast('Please select at least one item');
+                return;
+            }
+            
+            // Use hidden form to submit post request
+            document.getElementById('download_type').value = currentType;
+            document.getElementById('download_ids').value = selected.join(',');
+            document.getElementById('download_form').submit();
         }
         
         // ==========================

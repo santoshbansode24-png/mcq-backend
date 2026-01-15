@@ -117,8 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             // Need at least 2 columns now (Question, Answer)
             if (count($data) < 2) { $errors++; continue; }
             
-            $front = sanitizeTop($data[0]);
-            $back = sanitizeTop($data[1]);
+            $front = sanitizeTop(convertUtf8($data[0]));
+            $back = sanitizeTop(convertUtf8($data[1]));
             
             if (empty($front) || empty($back)) { $errors++; continue; }
             

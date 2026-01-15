@@ -127,7 +127,12 @@ try {
         .center-actions {
             position: absolute;
             left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
         }
         
         .btn-switch-board {
@@ -344,6 +349,9 @@ try {
             <a href="select_board.php" class="btn-switch-board">
                 🔁 Switch Board
             </a>
+            <div style="margin-top: 10px; font-weight: 800; color: #fff; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap;">
+                Running: <span style="color: #667eea; background: #fff; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><?php echo htmlspecialchars($board_name); ?></span>
+            </div>
         </div>
 
         <div class="header-right">

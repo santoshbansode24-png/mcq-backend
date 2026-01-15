@@ -15,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Get JSON input
 $input = getJsonInput();
 
+// Debug Log
+file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Input: " . json_encode($input) . "\n", FILE_APPEND);
+
 // Validate required fields
 $required = ['email', 'password'];
 $missing = validateRequired($input, $required);

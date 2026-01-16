@@ -1,0 +1,13 @@
+0000000000000000000000000000000000000000 d1ca03b2c4e595719e49537c91bfe28f30539547 Santosh Bansode <santoshbansode@example.com> 1764441119 +0530	commit (initial): Initial commit
+d1ca03b2c4e595719e49537c91bfe28f30539547 37bdde08cbe9f81b6ff6fad155b51ef391a94e7a Santosh Bansode <santoshbansode@example.com> 1767899558 +0530	commit: Update Frontend: Multi-Subject Exam, Video Player Revert, UI Polish
+37bdde08cbe9f81b6ff6fad155b51ef391a94e7a 03527e6455e9a3dcaadf52da3bc895e880f70fdb Santosh Bansode <santoshbansode@example.com> 1767900023 +0530	commit: Update API Config: Switch to Production (veeruapp.in)
+03527e6455e9a3dcaadf52da3bc895e880f70fdb 4b28d85eb25aeb241d1716cf1e28e6463fc8dad4 Santosh Bansode <santoshbansode@example.com> 1767984678 +0530	commit: Feat: Registration UI, Mobile Login, Splash Screen
+4b28d85eb25aeb241d1716cf1e28e6463fc8dad4 83cb800859f9a61a849275fbe09d0224ef2f59f3 Santosh Bansode <santoshbansode@example.com> 1767985807 +0530	commit: Deploy: Final config set to Production
+83cb800859f9a61a849275fbe09d0224ef2f59f3 4ea9ea29a5f965cf12b97bad7e25e23402436081 Santosh Bansode <santoshbansode@example.com> 1767987343 +0530	commit: Assets: Added new logo and app icons
+4ea9ea29a5f965cf12b97bad7e25e23402436081 14ce86d6c48efb21a3bb78868186e4d8718d7108 Santosh Bansode <santoshbansode@example.com> 1768244048 +0530	commit: UI: Update My Exam, Chapter MCQ, and Flashcard styles
+14ce86d6c48efb21a3bb78868186e4d8718d7108 9d3e5ab624960c076dda342a3f28566f7b5dc703 Santosh Bansode <santoshbansode@example.com> 1768245262 +0530	commit: UI: Finalize Video, Note, Revision styles and Tabs
+9d3e5ab624960c076dda342a3f28566f7b5dc703 cf5602ffbf5ca2f79c47108f06bf1b4e7ebdcded Santosh Bansode <santoshbansode@example.com> 1768246353 +0530	commit: Feat: Multi-language Support & Full Screen Notes
+cf5602ffbf5ca2f79c47108f06bf1b4e7ebdcded 86f6abacad3f4c13ab16c92b71b1d8a86ac7a83f Santosh Bansode <santoshbansode@example.com> 1768247086 +0530	commit: Feat: Revert Full Screen Notes & Add PDF Download
+86f6abacad3f4c13ab16c92b71b1d8a86ac7a83f ba949cadc3ca86ac5c11f32865e509a7df3e3cc8 Santosh Bansode <santoshbansode@example.com> 1768323558 +0530	commit: Fix Registration Render Error (Android Modal), add Board Selection, add SetupScreen
+ba949cadc3ca86ac5c11f32865e509a7df3e3cc8 49e8b4556e76fc6f28748059db1ad831c9b392b0 Santosh Bansode <santoshbansode@example.com> 1768326025 +0530	commit: Set default board to CBSE in frontend
+49e8b4556e76fc6f28748059db1ad831c9b392b0 786d9b69f03558743951c1d0a611751d8ab50c89 Santosh Bansode <santoshbansode@example.com> 1768504842 +0530	commit: Update: Remove progress bars, add question shuffling, update flashcard sets

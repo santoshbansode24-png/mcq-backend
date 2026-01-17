@@ -16,6 +16,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate }) => {
     const [profilePic, setProfilePic] = useState(user?.profile_picture);
     const [uploading, setUploading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [helpModalVisible, setHelpModalVisible] = useState(false); // State for Help Modal
     const [classes, setClasses] = useState([]);
     const [currentClassId, setCurrentClassId] = useState(user?.class_id);
     const [currentClassName, setCurrentClassName] = useState(user?.class_name);
@@ -298,7 +299,10 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate }) => {
                     <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]}>
                         <Text style={[styles.menuText, { color: theme.text }]}>{t('subscription')}: {user?.subscription_status || 'Active'}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]}>
+                    <TouchableOpacity
+                        style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                        onPress={() => setHelpModalVisible(true)}
+                    >
                         <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')}</Text>
                     </TouchableOpacity>
                 </View>
@@ -356,6 +360,51 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate }) => {
                             onPress={() => setModalVisible(false)}
                         >
                             <Text style={{ color: theme.text }}>{t('cancel')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Help & Support Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={helpModalVisible}
+                onRequestClose={() => setHelpModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalView, { backgroundColor: theme.card }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>Help & Support</Text>
+
+                        <View style={{ width: '100%', marginBottom: 20 }}>
+                            <Text style={{ color: theme.text, fontSize: 16, marginBottom: 8 }}>Need assistance? Contact us:</Text>
+
+                            <View style={[styles.infoRow, { backgroundColor: theme.background }]}>
+                                <Text style={{ fontSize: 20, marginRight: 10 }}>📧</Text>
+                                <View>
+                                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
+                                    <Text style={[styles.infoValue, { color: theme.primary }]}>veeruappmcq@gmail.com</Text>
+                                </View>
+                            </View>
+
+                            <View style={[styles.infoRow, { backgroundColor: theme.background }]}>
+                                <Text style={{ fontSize: 20, marginRight: 10 }}>📞</Text>
+                                <View>
+                                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone</Text>
+                                    <Text style={[styles.infoValue, { color: theme.primary }]}>+91 77559 52198</Text>
+                                </View>
+                            </View>
+
+                            <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 10 }}>
+                                Available: Mon - Fri, 9:00 AM - 6:00 PM
+                            </Text>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.closeButton, { backgroundColor: theme.primary }]}
+                            onPress={() => setHelpModalVisible(false)}
+                        >
+                            <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -532,6 +581,21 @@ const styles = StyleSheet.create({
         fontSize: 12,
         textAlign: 'center',
         opacity: 0.7,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 10,
+    },
+    infoLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    infoValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
     }
 });
 

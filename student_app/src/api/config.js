@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 // LOCAL XAMPP CONFIGURATION
 // ========================================
 const LOCAL_CONFIG = {
-    SERVER_IP: '10.231.90.239',
+    SERVER_IP: '10.231.90.239:8080',
     DOMAIN: 'localhost',
     get API_URL() {
         return Platform.OS === 'web'

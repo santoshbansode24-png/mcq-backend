@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchMCQs, fetchNotes, fetchVideos, recordMCQAttempt, fetchFlashcards, fetchQuickRevision } from '../api/content';
@@ -438,6 +439,34 @@ const ChapterContentScreen = ({ navigation, route }) => {
         { border: '#facc15', shadow: '#facc15' }, // Neon Yellow
     ];
 
+    // Gradient Palette for Videos (10 Attractive Gradients)
+    const videoGradients = [
+        ['#f97316', '#ef4444'], // Sunset (Orange -> Red)
+        ['#06b6d4', '#3b82f6'], // Ocean (Cyan -> Blue)
+        ['#ec4899', '#8b5cf6'], // Berry (Pink -> Purple)
+        ['#84cc16', '#10b981'], // Nature (Lime -> Green)
+        ['#3b82f6', '#4f46e5'], // Midnight (Blue -> Indigo)
+        ['#ec4899', '#facc15'], // Candy (Pink -> Gold)
+        ['#8b5cf6', '#eab308'], // Royal (Purple -> Gold)
+        ['#14b8a6', '#06b6d4'], // Mint (Teal -> Cyan)
+        ['#facc15', '#ef4444'], // Fire (Yellow -> Red)
+        ['#6366f1', '#ec4899'], // Galaxy (Indigo -> Pink)
+    ];
+
+    // Gradient Palette for Notes (Reordered for variety)
+    const noteGradients = [
+        ['#84cc16', '#10b981'], // Nature (Lime -> Green)
+        ['#3b82f6', '#4f46e5'], // Midnight (Blue -> Indigo)
+        ['#ec4899', '#facc15'], // Candy (Pink -> Gold)
+        ['#f97316', '#ef4444'], // Sunset (Orange -> Red)
+        ['#14b8a6', '#06b6d4'], // Mint (Teal -> Cyan)
+        ['#8b5cf6', '#eab308'], // Royal (Purple -> Gold)
+        ['#06b6d4', '#3b82f6'], // Ocean (Cyan -> Blue)
+        ['#ec4899', '#8b5cf6'], // Berry (Pink -> Purple)
+        ['#6366f1', '#ec4899'], // Galaxy (Indigo -> Pink)
+        ['#facc15', '#ef4444'], // Fire (Yellow -> Red)
+    ];
+
     // Color Palette for Revision Points (User Requested: Different Soft Colors)
     const revisionColors = [
         '#fff1f2', // Soft Rose
@@ -449,54 +478,50 @@ const ChapterContentScreen = ({ navigation, route }) => {
     ];
 
     const renderNoteItem = ({ item, index }) => {
-        const color = itemColors[index % itemColors.length];
+        const gradient = noteGradients[index % noteGradients.length];
         return (
             <TouchableOpacity
-                style={[styles.card, {
-                    backgroundColor: '#ffffff',
-                    borderColor: color.border,
-                    borderWidth: 2,
-                    shadowColor: color.shadow,
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 5
-                }]}
+                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6 }]}
                 onPress={() => navigation.navigate('PDFViewer', { url: item.file_url, title: item.title })}
             >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={[styles.iconContainer, { backgroundColor: color.border + '20' }]}>
+                <LinearGradient
+                    colors={gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ padding: 16, width: '100%', height: '100%', flexDirection: 'row', alignItems: 'center' }}
+                >
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                         <Text style={{ fontSize: 20 }}>📄</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.cardTitle}>{item.title}</Text>
-                        <Text style={[styles.cardSubtitle, { color: color.border, fontWeight: 'bold' }]}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
+                        <Text style={[styles.cardTitle, { color: 'white' }]}>{item.title}</Text>
+                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold' }]}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
                     </View>
                     <TouchableOpacity onPress={() => navigation.navigate('PDFViewer', { url: item.file_url, title: item.title })}>
-                        <Text style={{ fontSize: 24, color: color.border }}>⬇️</Text>
+                        <Text style={{ fontSize: 24, color: 'white' }}>⬇️</Text>
                     </TouchableOpacity>
-                </View>
+                </LinearGradient>
             </TouchableOpacity>
         );
     };
 
     const renderVideoItem = ({ item, index }) => {
-        const color = itemColors[index % itemColors.length];
+        const gradient = videoGradients[index % videoGradients.length];
         return (
             <TouchableOpacity
-                style={[styles.card, {
-                    backgroundColor: '#ffffff', // White Background (Light Theme)
-                    borderColor: color.border,
-                    borderWidth: 2,
-                    shadowColor: color.shadow,
-                    shadowOpacity: 0.3, // Slightly reduced shadow opacity for light mode
-                    shadowRadius: 8,
-                    elevation: 5
-                }]}
                 onPress={() => navigation.navigate('VideoPlayer', { videoUrl: item.url, title: item.title })}
+                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6 }]} // Remove default padding for gradient
             >
-                <Text style={[styles.cardTitle, { color: '#0f172a' }]}>🎥 {item.title}</Text>
-                <Text style={[styles.cardSubtitle, { color: '#475569' }]}>{item.description || 'Click to watch video'}</Text>
-                <Text style={[styles.duration, { color: color.border, fontWeight: 'bold' }]}>Duration: {item.duration || 'N/A'}</Text>
+                <LinearGradient
+                    colors={gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ padding: 16, width: '100%', height: '100%' }}
+                >
+                    <Text style={[styles.cardTitle, { color: 'white' }]}>🎥 {item.title}</Text>
+                    <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)' }]}>{item.description || 'Click to watch video'}</Text>
+                    <Text style={[styles.duration, { color: 'white', fontWeight: 'bold', opacity: 0.9 }]}>Duration: {item.duration || 'N/A'}</Text>
+                </LinearGradient>
             </TouchableOpacity>
         );
     };
@@ -512,11 +537,18 @@ const ChapterContentScreen = ({ navigation, route }) => {
     ];
 
     // Color Palette for MCQ Sets (Option 3: Warm Sunset)
+    // Color Palette for MCQ Sets (10 Vivid Soft Colors)
     const mcqColors = [
-        { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' }, // Peach (Orange)
-        { bg: '#fef3c7', border: '#fcd34d', text: '#b45309' }, // Gold (Amber)
-        { bg: '#ffe4e6', border: '#fda4af', text: '#e11d48' }, // Coral (Rose)
-        { bg: '#fce7f3', border: '#f9a8d4', text: '#db2777' }, // Rose (Pink)
+        { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' }, // Red
+        { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' }, // Orange
+        { bg: '#fef9c3', border: '#fde047', text: '#a16207' }, // Yellow
+        { bg: '#ecfccb', border: '#bef264', text: '#4d7c0f' }, // Lime
+        { bg: '#d1fae5', border: '#6ee7b7', text: '#047857' }, // Emerald
+        { bg: '#ccfbf1', border: '#5eead4', text: '#0f766e' }, // Teal
+        { bg: '#e0f2fe', border: '#7dd3fc', text: '#0369a1' }, // Sky
+        { bg: '#e0e7ff', border: '#a5b4fc', text: '#4338ca' }, // Indigo
+        { bg: '#fae8ff', border: '#f0abfc', text: '#a21caf' }, // Fuchsia
+        { bg: '#ffe4e6', border: '#fda4af', text: '#be123c' }, // Rose
     ];
 
     const renderContent = () => {

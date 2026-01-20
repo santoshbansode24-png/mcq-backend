@@ -12,7 +12,7 @@ if (!isset($_SESSION['admin_logged_in'])) {
 // Handle Selection
 if (isset($_GET['board'])) {
     $board = $_GET['board'];
-    $valid_boards = ['CBSE', 'STATE_MARATHI', 'STATE_SEMI'];
+    $valid_boards = ['CBSE', 'STATE_MARATHI', 'STATE_SEMI', 'Scholarship'];
     
     if (in_array($board, $valid_boards)) {
         $_SESSION['admin_selected_board'] = $board;
@@ -21,6 +21,7 @@ if (isset($_GET['board'])) {
             case 'CBSE': $_SESSION['board_name'] = 'CBSE Board'; break;
             case 'STATE_MARATHI': $_SESSION['board_name'] = 'State Board (Marathi)'; break;
             case 'STATE_SEMI': $_SESSION['board_name'] = 'State Board (Semi)'; break;
+            case 'Scholarship': $_SESSION['board_name'] = 'Scholarship & Olympiad'; break;
         }
         header('Location: dashboard.php');
         exit();
@@ -85,6 +86,7 @@ if (isset($_GET['board'])) {
         .card.cbse:hover .title { color: #1976d2; }
         .card.marathi:hover .title { color: #388e3c; }
         .card.semi:hover .title { color: #f57c00; }
+        .card.scholarship:hover .title { color: #8E2DE2; }
         
         .logout {
             margin-top: 30px;
@@ -115,6 +117,11 @@ if (isset($_GET['board'])) {
             <a href="?board=STATE_SEMI" class="card semi">
                 <span class="icon">🇬🇧</span>
                 <span class="title">State Board<br>(Semi English)</span>
+            </a>
+
+            <a href="?board=Scholarship" class="card scholarship">
+                <span class="icon">🏆</span>
+                <span class="title">Scholarship &<br>Olympiad</span>
             </a>
         </div>
         

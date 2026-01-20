@@ -22,6 +22,47 @@ $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
 
+// Handle Scholarship Setup
+$setupMessage = '';
+if (isset($_GET['setup_scholarship'])) {
+    try {
+        // Create 3 Scholarship Classes
+        $pdo->exec("
+            INSERT INTO classes (class_id, class_name, board_type) VALUES 
+            (38, 'Scholarship - Primary Level (1-4)', 'Scholarship'),
+            (39, 'Scholarship - Upper Primary Level (5-7)', 'Scholarship'),
+            (40, 'Scholarship - Secondary Level (8-10)', 'Scholarship')
+            ON DUPLICATE KEY UPDATE class_name = VALUES(class_name)
+        ");
+        
+        // Subjects for Primary (38)
+        $pdo->exec("
+            INSERT INTO subjects (subject_name, class_id) VALUES 
+            ('English', 38), ('Mathematics', 38), ('Mental Ability', 38), ('General Knowledge', 38), ('Mock Tests', 38)
+            ON DUPLICATE KEY UPDATE subject_name = subject_name
+        ");
+        
+        // Subjects for Upper Primary (39)
+        $pdo->exec("
+            INSERT INTO subjects (subject_name, class_id) VALUES 
+            ('English', 39), ('Mathematics', 39), ('Science', 39), ('Mental Ability', 39), ('General Knowledge', 39), ('Mock Tests', 39)
+            ON DUPLICATE KEY UPDATE subject_name = subject_name
+        ");
+        
+        // Subjects for Secondary (40)
+        $pdo->exec("
+            INSERT INTO subjects (subject_name, class_id) VALUES 
+            ('English', 40), ('Mathematics', 40), ('Science', 40), ('Mental Ability', 40), ('General Knowledge', 40), ('Social Science', 40), ('Mock Tests', 40)
+            ON DUPLICATE KEY UPDATE subject_name = subject_name
+        ");
+        
+        $setupMessage = '<div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin: 20px 40px; border: 1px solid #c3e6cb;">✅ Scholarship & Olympiad classes and subjects created successfully!</div>';
+    } catch (Exception $e) {
+        $setupMessage = '<div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin: 20px 40px; border: 1px solid #f5c6cb;">❌ Error: ' . $e->getMessage() . '</div>';
+    }
+}
+
+
 // Get statistics filtered by board
 try {
     // 1. Get Valid Class IDs for this board
@@ -387,6 +428,19 @@ try {
     
     <!-- Main Content -->
     <div class="container">
+        <?php echo $setupMessage; ?>
+        
+        <!-- Setup Scholarship Button (only show if Scholarship board is selected) -->
+        <?php if ($selected_board === 'Scholarship'): ?>
+        <div style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); padding: 20px; border-radius: 15px; margin-bottom: 30px; text-align: center;">
+            <h3 style="color: white; margin-bottom: 10px;">🏆 Scholarship & Olympiad Setup</h3>
+            <p style="color: rgba(255,255,255,0.9); margin-bottom: 15px; font-size: 14px;">Click below to create the 3 Scholarship levels and all subjects in the database</p>
+            <a href="?setup_scholarship=1" onclick="return confirm('This will create Scholarship classes (Primary, Upper Primary, Secondary) and their subjects. Continue?')" style="background: white; color: #4A00E0; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                ⚡ Setup Scholarship Data
+            </a>
+        </div>
+        <?php endif; ?>
+        
         <!-- Statistics -->
         <div class="stats-grid">
             <div class="stat-card">

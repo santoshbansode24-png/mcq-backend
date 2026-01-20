@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useNavigation } from '@react-navigation/native';
 import { fetchSubjects } from '../api/subjects';
 import { fetchChapters } from '../api/chapters';
@@ -24,7 +26,11 @@ import { Alert } from 'react-native';
 // Hardcoded ID for the Scholarship Class created in DB
 const SCHOLARSHIP_CLASS_ID = 37;
 
-const ScholarshipSubjectsScreen = ({ navigation }) => {
+const ScholarshipSubjectsScreen = ({ navigation, route }) => {
+    // Get dynamic class ID and Title from route params, fallback to default (e.g. Primary)
+    // Default to 38 (Primary) if not provided
+    const scholarshipClassId = route.params?.scholarshipClassId || 38;
+    const levelTitle = route.params?.levelTitle || "Scholarship & Olympiad";
     // const navigation = useNavigation(); // Using prop instead
     const [subjects, setSubjects] = useState([]);
     const [mockTests, setMockTests] = useState([]);
@@ -55,7 +61,7 @@ const ScholarshipSubjectsScreen = ({ navigation }) => {
     const loadSubjects = async () => {
         try {
             // Force refresh to bypass stale cache from previous environment
-            const response = await fetchSubjects(SCHOLARSHIP_CLASS_ID, true);
+            const response = await fetchSubjects(scholarshipClassId, true);
             if (response.status === 'success') {
                 const allData = response.data;
 
@@ -175,6 +181,112 @@ const ScholarshipSubjectsScreen = ({ navigation }) => {
         }
     };
 
+    const generatePDF = async () => {
+        if (selectedSubjects.length === 0) {
+            Alert.alert('Error', 'Please select at least one subject');
+            return;
+        }
+        if (selectedChapters.length === 0) {
+            Alert.alert('Error', 'Please select at least one chapter');
+            return;
+        }
+        const limit = parseInt(questionLimit);
+
+        setLoading(true);
+        try {
+            // Fetch questions (reuse same API)
+            const response = await axios.post(`${API_URL}/generate_custom_test.php`, {
+                chapter_ids: selectedChapters.join(','),
+                limit: limit
+            });
+
+            if (response.data.status === 'success') {
+                const questions = response.data.data;
+                const date = new Date().toLocaleDateString();
+
+                // Generate HTML for PDF
+                const html = `
+                    <html>
+                        <head>
+                            <style>
+                                body { font-family: 'Helvetica', sans-serif; padding: 40px; }
+                                .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #8E2DE2; padding-bottom: 20px; }
+                                .title { font-size: 24px; font-weight: bold; color: #4A00E0; margin: 0; }
+                                .subtitle { font-size: 16px; color: #666; margin-top: 5px; }
+                                .meta { margin-top: 10px; font-size: 14px; color: #333; }
+                                .question-container { margin-bottom: 25px; page-break-inside: avoid; }
+                                .question-text { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+                                .options { margin-left: 20px; }
+                                .option { margin-bottom: 5px; font-size: 14px; }
+                                .page-footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 12px; color: #aaa; }
+                                .answer-key { page-break-before: always; }
+                                .key-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                .key-table th, .key-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                                .key-table th { background-color: #f3f3f3; font-weight: bold; }
+                                .correct-opt { font-weight: bold; color: #4A00E0; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1 class="title">Veeru Learning App</h1>
+                                <div class="subtitle">Scholarship & Olympiad Mock Test</div>
+                                <div class="meta">Date: ${date} | Questions: ${questions.length}</div>
+                            </div>
+
+                            <div class="questions">
+                                ${questions.map((q, index) => `
+                                    <div class="question-container">
+                                        <div class="question-text">Q${index + 1}. ${q.question}</div>
+                                        <div class="options">
+                                            <div class="option">A) ${q.option_a}</div>
+                                            <div class="option">B) ${q.option_b}</div>
+                                            <div class="option">C) ${q.option_c}</div>
+                                            <div class="option">D) ${q.option_d}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="answer-key">
+                                <h2 style="color: #4A00E0;">Answer Key & Explanations</h2>
+                                <table class="key-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 10%;">Q.No</th>
+                                            <th style="width: 15%;">Answer</th>
+                                            <th>Explanation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${questions.map((q, index) => `
+                                            <tr>
+                                                <td>${index + 1}</td>
+                                                <td class="correct-opt">${q.correct_answer.toUpperCase()}</td>
+                                                <td>${q.explanation || 'No explanation available.'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </body>
+                    </html>
+                `;
+
+                // Generate PDF
+                const { uri } = await Print.printToFileAsync({ html });
+                await Sharing.shareAsync(uri);
+
+            } else {
+                Alert.alert('Error', response.data.message || 'Failed to generate PDF');
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Failed to generate PDF. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const renderItem = ({ item, index }) => {
         const gradients = [
             ['#DA22FF', '#9733EE'], // Magenta -> Purple
@@ -235,7 +347,7 @@ const ScholarshipSubjectsScreen = ({ navigation }) => {
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
                         <View>
-                            <Text style={styles.headerTitle}>Scholarship & Olympiad</Text>
+                            <Text style={styles.headerTitle}>{levelTitle}</Text>
                             <Text style={styles.headerSubtitle}>Prepare for Excellence</Text>
                         </View>
                     </View>
@@ -375,6 +487,21 @@ const ScholarshipSubjectsScreen = ({ navigation }) => {
                                         <LinearGradient colors={['#8E2DE2', '#4A00E0']} style={styles.startGradient}>
                                             {loading ? <ActivityIndicator color="white" /> : (
                                                 <Text style={styles.startButtonText}>Start My Test</Text>
+                                            )}
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.startButton, { marginTop: 15 }]}
+                                        onPress={generatePDF}
+                                        disabled={loading}
+                                    >
+                                        <LinearGradient colors={['#11998e', '#38ef7d']} style={styles.startGradient}>
+                                            {loading ? <ActivityIndicator color="white" /> : (
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                    <Ionicons name="document-text-outline" size={24} color="white" />
+                                                    <Text style={styles.startButtonText}>Download PDF</Text>
+                                                </View>
                                             )}
                                         </LinearGradient>
                                     </TouchableOpacity>

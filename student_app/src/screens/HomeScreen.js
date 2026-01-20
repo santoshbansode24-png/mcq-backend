@@ -106,7 +106,27 @@ const HomeScreen = ({ user, navigation }) => {
                 </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('ScholarshipSubjects')}>
+            <TouchableOpacity style={styles.fullWidthCard} onPress={() => {
+                const studentClass = parseInt(user?.class_id);
+                let scholarshipClassId = 38; // Default to Primary (38)
+
+                if (studentClass >= 1 && studentClass <= 4) {
+                    scholarshipClassId = 38; // Primary
+                } else if (studentClass >= 5 && studentClass <= 7) {
+                    scholarshipClassId = 39; // Upper Primary
+                } else if (studentClass >= 8 && studentClass <= 10) {
+                    scholarshipClassId = 40; // Secondary
+                }
+                // Determine title for better UX
+                let title = "Scholarship (Primary)";
+                if (scholarshipClassId === 39) title = "Scholarship (Upper Primary)";
+                if (scholarshipClassId === 40) title = "Scholarship (Secondary)";
+
+                navigation.navigate('ScholarshipSubjects', {
+                    scholarshipClassId,
+                    levelTitle: title
+                });
+            }}>
                 <LinearGradient colors={['#8E2DE2', '#4A00E0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
                     <View style={styles.bannerContent}>
                         <View>

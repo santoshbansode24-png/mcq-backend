@@ -12,6 +12,7 @@ import { fetchSetStatus } from '../api/content'; // Import new API
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ensure imported
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { downloadFile } from '../utils/downloadUtils';
 
 const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
@@ -101,9 +102,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
             } else if (activeTab === 'Videos') {
                 response = await fetchVideos(chapter.chapter_id, force);
             } else if (activeTab === 'Flashcards') {
-                response = await fetchFlashcards(chapter.chapter_id);
+                response = await fetchFlashcards(chapter.chapter_id, force);
             } else if (activeTab === 'QuickRevision') {
-                response = await fetchQuickRevision(chapter.chapter_id);
+                response = await fetchQuickRevision(chapter.chapter_id, force);
             }
 
             if (response && response.status === 'success') {
@@ -497,9 +498,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         <Text style={[styles.cardTitle, { color: 'white' }]}>{item.title}</Text>
                         <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold' }]}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => navigation.navigate('PDFViewer', { url: item.file_url, title: item.title })}>
-                        <Text style={{ fontSize: 24, color: 'white' }}>⬇️</Text>
-                    </TouchableOpacity>
+
                 </LinearGradient>
             </TouchableOpacity>
         );

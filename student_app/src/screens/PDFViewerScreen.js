@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text, StatusBar, ActivityIndicator,
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { downloadFile } from '../utils/downloadUtils';
 import { Ionicons } from '@expo/vector-icons'; // Assuming Ionicons is available, if not use Text emoji
 
 const PDFViewerScreen = ({ navigation, route }) => {
@@ -23,41 +24,7 @@ const PDFViewerScreen = ({ navigation, route }) => {
     };
 
     const handleDownload = async () => {
-        setDownloading(true);
-        try {
-            // Determine Download URL
-            let downloadUrl = url;
-            if (url.includes('drive.google.com')) {
-                const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                    downloadUrl = `https://drive.google.com/uc?id=${match[1]}&export=download`;
-                }
-            }
-
-            // Sanitize filename
-            const cleanTitle = (title || 'document').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const fileUri = `${FileSystem.documentDirectory}${cleanTitle}.pdf`;
-
-            // Download
-            const downloadRes = await FileSystem.downloadAsync(downloadUrl, fileUri);
-
-            if (downloadRes.status === 200) {
-                // Share / Save
-                if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(downloadRes.uri);
-                } else {
-                    Alert.alert("Success", "File downloaded but sharing is not available on this device.");
-                }
-            } else {
-                throw new Error("Download failed");
-            }
-
-        } catch (error) {
-            console.error("Download error:", error);
-            Alert.alert("Download Failed", "Could not download the file. Please try again.");
-        } finally {
-            setDownloading(false);
-        }
+        downloadFile(url, title, setDownloading);
     };
 
     return (
@@ -69,17 +36,7 @@ const PDFViewerScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{title || 'Document'}</Text>
 
-                <TouchableOpacity
-                    onPress={handleDownload}
-                    style={styles.downloadButton}
-                    disabled={downloading}
-                >
-                    {downloading ? (
-                        <ActivityIndicator size="small" color="#4f46e5" />
-                    ) : (
-                        <Text style={{ fontSize: 24 }}>📥</Text>
-                    )}
-                </TouchableOpacity>
+
             </View>
 
             <View style={styles.contentContainer}>

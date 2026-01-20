@@ -19,7 +19,14 @@ import axios from 'axios';
 import { API_URL } from '../api/config';
 
 const MyExamScreen = ({ navigation, route, user }) => {
-    const classId = user?.class_id;
+    // Use params if provided, otherwise fallback to user defaults
+    const { overrideClassId, themeColors, title, subtitle } = route.params || {};
+    const classId = overrideClassId || user?.class_id;
+
+    // Theme configurations
+    const currentThemeColors = themeColors || ['#00c6ff', '#0072ff'];
+    const screenTitle = title || 'My Exam';
+    const screenSubtitle = subtitle || 'Create Your Custom Test';
 
     const [subjects, setSubjects] = useState([]);
     const [chapters, setChapters] = useState([]); // Array of { subjectName, data: [] }
@@ -171,15 +178,15 @@ const MyExamScreen = ({ navigation, route, user }) => {
         <View style={styles.mainWrapper}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
-            <LinearGradient colors={['#00c6ff', '#0072ff']} style={styles.headerGradient}>
+            <LinearGradient colors={currentThemeColors} style={styles.headerGradient}>
                 <SafeAreaView edges={['top']} style={styles.headerSafe}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                             <Text style={styles.backButtonText}>←</Text>
                         </TouchableOpacity>
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.headerTitle}>My Exam</Text>
-                            <Text style={styles.headerSubtitle}>Create Your Custom Test</Text>
+                            <Text style={styles.headerTitle}>{screenTitle}</Text>
+                            <Text style={styles.headerSubtitle}>{screenSubtitle}</Text>
                         </View>
                     </View>
                 </SafeAreaView>

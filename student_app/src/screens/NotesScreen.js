@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { API_URL } from '../api/config';
+import { downloadFile } from '../utils/downloadUtils';
 
 const NotesScreen = () => {
     const navigation = useNavigation();
@@ -64,12 +65,7 @@ const NotesScreen = () => {
                 <Text style={styles.noteTitle}>{item.title}</Text>
                 <Text style={styles.noteType}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
             </View>
-            <TouchableOpacity
-                style={styles.downloadButton}
-                onPress={() => openNote(item)}
-            >
-                <Ionicons name="cloud-download-outline" size={24} color="#4f46e5" />
-            </TouchableOpacity>
+
         </TouchableOpacity>
     );
 

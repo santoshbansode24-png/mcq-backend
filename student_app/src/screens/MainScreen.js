@@ -34,6 +34,9 @@ import QuickRevisionScreen from './QuickRevisionScreen';
 import MyExamScreen from './MyExamScreen';
 import MyExamTestScreen from './MyExamTestScreen';
 import ForgotPasswordScreen from './ForgotPasswordScreen';
+import ScholarshipSubjectsScreen from './ScholarshipSubjectsScreen';
+import ScholarshipChaptersScreen from './ScholarshipChaptersScreen';
+import ScholarshipSetsScreen from './ScholarshipSetsScreen';
 
 // --- Tab Button Component ---
 const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
@@ -118,7 +121,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     // Determine Active Tab
     const activeTab = useMemo(() => {
         const mapping = {
-            'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest'],
+            'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision'],
             'AI': ['AI', 'AITutor', 'HomeworkSolver', 'EnglishTutor', 'QuizGenerator']
         };
@@ -233,6 +236,9 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'MyExam': return <MyExamScreen {...commonProps} />;
             case 'MyExamTest': return <MyExamTestScreen {...commonProps} />;
             case 'ForgotPassword': return <ForgotPasswordScreen {...commonProps} />;
+            case 'ScholarshipSubjects': return <ScholarshipSubjectsScreen {...commonProps} />;
+            case 'ScholarshipChapters': return <ScholarshipChaptersScreen {...commonProps} />;
+            case 'ScholarshipSets': return <ScholarshipSetsScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };

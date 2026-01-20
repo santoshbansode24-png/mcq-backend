@@ -106,6 +106,20 @@ const HomeScreen = ({ user, navigation }) => {
                 </TouchableOpacity>
             </View>
 
+            <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('ScholarshipSubjects')}>
+                <LinearGradient colors={['#8E2DE2', '#4A00E0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
+                    <View style={styles.bannerContent}>
+                        <View>
+                            <Text style={styles.bannerTitle}>Scholarship & Olympiad Corner</Text>
+                            <Text style={styles.bannerSubtitle}>Ace your competitive exams! 🏆</Text>
+                        </View>
+                        <View style={styles.bannerIconContainer}>
+                            <MaterialCommunityIcons name="trophy-award" size={24} color="white" />
+                        </View>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('Notifications')}>
                 <LinearGradient colors={['#4facfe', '#00f2fe']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
                     <View style={styles.bannerContent}>

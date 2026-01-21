@@ -23,6 +23,8 @@ import { fetchChapters } from '../api/chapters';
 import axios from 'axios';
 import { API_URL } from '../api/config';
 import { Alert } from 'react-native';
+import LanguageToggle from '../components/LanguageToggle';
+import { getLanguagePreference, saveLanguagePreference } from '../utils/languageStorage';
 
 // Hardcoded ID for the Scholarship Class created in DB
 const SCHOLARSHIP_CLASS_ID = 37;
@@ -39,6 +41,9 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' or 'mocks'
 
+    // Language Toggle State
+    const [selectedLanguage, setSelectedLanguage] = useState('english');
+
     // Custom Test Logic State
     const [chapters, setChapters] = useState([]);
     const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -47,8 +52,21 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const [loadingChapters, setLoadingChapters] = useState(false);
 
     useEffect(() => {
+        loadLanguagePreference();
         loadSubjects();
     }, []);
+
+    // Load saved language preference
+    const loadLanguagePreference = async () => {
+        const savedLanguage = await getLanguagePreference();
+        setSelectedLanguage(savedLanguage);
+    };
+
+    // Handle language change
+    const handleLanguageChange = async (language) => {
+        setSelectedLanguage(language);
+        await saveLanguagePreference(language);
+    };
 
     // Effect to load chapters when selected subjects change
     useEffect(() => {
@@ -315,7 +333,8 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                 style={styles.card}
                 onPress={() => navigation.navigate('ScholarshipChapters', {
                     subjectId: item.subject_id,
-                    subjectName: item.subject_name
+                    subjectName: item.subject_name,
+                    selectedLanguage: selectedLanguage
                 })}
             >
                 <LinearGradient colors={colors} style={styles.cardGradient}>
@@ -359,10 +378,15 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
-                        <View>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.headerTitle}>{levelTitle}</Text>
                             <Text style={styles.headerSubtitle}>Prepare for Excellence</Text>
                         </View>
+                        {/* Language Toggle - Only for Scholarship Board */}
+                        <LanguageToggle
+                            selectedLanguage={selectedLanguage}
+                            onLanguageChange={handleLanguageChange}
+                        />
                     </View>
 
                     {/* Tabs */}

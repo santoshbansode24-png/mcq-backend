@@ -13,15 +13,24 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchChapters } from '../api/chapters';
+import LanguageToggle from '../components/LanguageToggle';
+import { saveLanguagePreference } from '../utils/languageStorage';
 
 const ScholarshipChaptersScreen = ({ route, navigation }) => {
-    const { subjectId, subjectName } = route.params;
+    const { subjectId, subjectName, selectedLanguage: initialLanguage } = route.params;
     const [chapters, setChapters] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || 'english');
 
     useEffect(() => {
         loadChapters();
     }, []);
+
+    // Handle language change
+    const handleLanguageChange = async (language) => {
+        setSelectedLanguage(language);
+        await saveLanguagePreference(language);
+    };
 
     const loadChapters = async () => {
         try {
@@ -43,7 +52,8 @@ const ScholarshipChaptersScreen = ({ route, navigation }) => {
                 onPress={() => navigation.navigate('ScholarshipSets', {
                     chapterId: item.chapter_id,
                     chapterName: item.chapter_name,
-                    subjectName: subjectName
+                    subjectName: subjectName,
+                    selectedLanguage: selectedLanguage
                 })}
             >
                 <View style={styles.cardContent}>
@@ -69,10 +79,15 @@ const ScholarshipChaptersScreen = ({ route, navigation }) => {
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
-                        <View>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.headerTitle}>{subjectName}</Text>
                             <Text style={styles.headerSubtitle}>Select a Chapter</Text>
                         </View>
+                        {/* Language Toggle */}
+                        <LanguageToggle
+                            selectedLanguage={selectedLanguage}
+                            onLanguageChange={handleLanguageChange}
+                        />
                     </View>
                 </SafeAreaView>
             </LinearGradient>

@@ -15,27 +15,38 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { API_URL } from '../api/config';
+import LanguageToggle from '../components/LanguageToggle';
+import { saveLanguagePreference } from '../utils/languageStorage';
 
 const ScholarshipSetsScreen = ({ route, navigation }) => {
     // const navigation = useNavigation();
-    const { chapterId, chapterName, subjectName } = route.params;
+    const { chapterId, chapterName, subjectName, selectedLanguage: initialLanguage } = route.params;
     const [sets, setSets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || 'english');
 
     useEffect(() => {
         fetchMCQs();
-    }, []);
+    }, [selectedLanguage]); // Refetch when language changes
+
+    // Handle language change
+    const handleLanguageChange = async (language) => {
+        setSelectedLanguage(language);
+        await saveLanguagePreference(language);
+    };
 
     const fetchMCQs = async () => {
+        setLoading(true);
         try {
             // Using existing API to get all MCQs for the chapter
+            // TODO: Update API to accept medium parameter when backend is ready
             const response = await fetch(`${API_URL}/get_mcqs.php?chapter_id=${chapterId}`);
             const data = await response.json();
 
             if (data.status === 'success') {
-                // Group MCQs into sets of 25 (or fewer for the last set)
+                // Group MCQs into sets of 20
                 const allMcqs = data.data;
-                const setSize = 25;
+                const setSize = 20;
                 const setsData = [];
 
                 for (let i = 0; i < allMcqs.length; i += setSize) {
@@ -50,10 +61,12 @@ const ScholarshipSetsScreen = ({ route, navigation }) => {
                 setSets(setsData);
             } else {
                 // If no MCQs found, sets remains empty
+                setSets([]);
             }
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to load practice sets.');
+            setSets([]);
         } finally {
             setLoading(false);
         }
@@ -98,6 +111,11 @@ const ScholarshipSetsScreen = ({ route, navigation }) => {
                                 {sets.length} Practice Sets Available
                             </Text>
                         </View>
+                        {/* Language Toggle */}
+                        <LanguageToggle
+                            selectedLanguage={selectedLanguage}
+                            onLanguageChange={handleLanguageChange}
+                        />
                     </View>
                 </SafeAreaView>
             </LinearGradient>
@@ -114,7 +132,14 @@ const ScholarshipSetsScreen = ({ route, navigation }) => {
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Ionicons name="file-tray-outline" size={64} color="#CBD5E1" />
-                                <Text style={styles.emptyText}>No practice sets found for this chapter yet.</Text>
+                                <Text style={styles.emptyText}>
+                                    No {selectedLanguage === 'marathi' ? 'Marathi' : 'English'} practice sets found for this chapter yet.
+                                </Text>
+                                {selectedLanguage === 'marathi' && (
+                                    <Text style={styles.emptyHint}>
+                                        Try switching to English or check back later.
+                                    </Text>
+                                )}
                             </View>
                         }
                     />
@@ -214,13 +239,21 @@ const styles = StyleSheet.create({
     emptyContainer: {
         alignItems: 'center',
         marginTop: 50,
-        opacity: 0.8
+        opacity: 0.8,
+        paddingHorizontal: 20,
     },
     emptyText: {
         marginTop: 15,
         color: '#64748B',
         fontSize: 16,
         textAlign: 'center'
+    },
+    emptyHint: {
+        marginTop: 10,
+        color: '#8E2DE2',
+        fontSize: 14,
+        textAlign: 'center',
+        fontWeight: '600',
     }
 });
 

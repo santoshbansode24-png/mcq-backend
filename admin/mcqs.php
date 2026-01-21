@@ -66,10 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $correct = $_POST['correct_answer'];
     $explanation = sanitizeInput($_POST['explanation']);
     $difficulty = $_POST['difficulty'];
+    $medium = isset($_POST['medium']) ? $_POST['medium'] : 'english';
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty]);
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
         $message = "MCQ added successfully!";
         $messageType = "success";
     } catch (PDOException $e) {
@@ -92,7 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $count = 0;
         $errors = 0;
         
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // Get medium from form
+        $medium = isset($_POST['medium']) ? $_POST['medium'] : 'english';
+        
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
             // Validate row has enough columns (at least 6)
@@ -111,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             if (!in_array($correct, ['a', 'b', 'c', 'd'])) { $errors++; continue; }
             
             try {
-                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty]);
+                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
                 $count++;
             } catch (Exception $e) {
                 $errors++;
@@ -377,6 +381,11 @@ $mcqs = $mcqs_query->fetchAll();
                             <option value="hard">Hard</option>
                         </select>
                         
+                        <select name="medium" style="background: #fff3cd; border: 2px solid #ffc107;">
+                            <option value="english">🇬🇧 English</option>
+                            <option value="marathi">🇮🇳 Marathi (मराठी)</option>
+                        </select>
+                        
                         <textarea name="explanation" placeholder="Explanation (Optional)" style="grid-column: span 2;"></textarea>
                     </div>
                     <button type="submit" class="btn-add">Add MCQ</button>
@@ -410,6 +419,11 @@ $mcqs = $mcqs_query->fetchAll();
                         <select name="chapter_id" id="bulk_chapter_select" required>
                             <option value="">Select Chapter</option>
                         </select>
+                        
+                        <select name="medium" required style="background: #fff3cd; border: 2px solid #ffc107; grid-column: span 2;">
+                            <option value="english">🇬🇧 English Medium</option>
+                            <option value="marathi">🇮🇳 Marathi Medium (मराठी)</option>
+                        </select>
 
                         <div style="grid-column: span 2;">
                             <label style="display: block; margin-bottom: 5px; font-weight: 600;">Upload CSV File:</label>
@@ -430,6 +444,7 @@ $mcqs = $mcqs_query->fetchAll();
                         <th>Chapter</th>
                         <th>Answer</th>
                         <th>Difficulty</th>
+                        <th>Medium</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -443,6 +458,12 @@ $mcqs = $mcqs_query->fetchAll();
                         </td>
                         <td><strong><?php echo strtoupper($mcq['correct_answer']); ?></strong></td>
                         <td><?php echo ucfirst($mcq['difficulty']); ?></td>
+                        <td>
+                            <?php 
+                            $medium = isset($mcq['medium']) ? $mcq['medium'] : 'english';
+                            echo $medium == 'marathi' ? '🇮🇳 MR' : '🇬🇧 EN';
+                            ?>
+                        </td>
                         <td>
                             <a href="?delete=<?php echo $mcq['mcq_id']; ?>" class="btn-delete" onclick="return confirm('Delete this MCQ?')">Delete</a>
                         </td>

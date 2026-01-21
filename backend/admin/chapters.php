@@ -102,21 +102,16 @@ $chapters = $chapters_query->fetchAll();
         .nav li a:hover, .nav li a.active { color: #667eea; border-bottom-color: #667eea; }
         .container { max-width: 1200px; margin: 30px auto; padding: 0 40px; }
         
-        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { color: #666; font-weight: 600; background: #f9f9f9; }
-        .btn-logout { background: rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; }
-        
-        /* Centered Switch Board Button */
+        /* Header Styles */
         .header { position: relative; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; }
         .center-actions {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
         }
         .btn-switch-board {
-            background: #ff9f43; /* Bright Orange */
+            background: #ff9f43;
             color: white;
             padding: 10px 25px;
             border-radius: 50px;
@@ -135,88 +130,296 @@ $chapters = $chapters_query->fetchAll();
         .btn-switch-board:hover {
             transform: translateY(-2px) scale(1.05);
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-            background: #ffcd19; /* Lighter Orange */
+            background: #ffcd19;
             color: #333;
         }
         
-        /* Form Styling */
-        .form-grid {
+        /* Card Enhancements */
+        .card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 0; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            margin-bottom: 30px;
+            overflow: hidden;
+            border: 1px solid #e8ecf1;
+        }
+        
+        .add-chapter-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 35px;
+            color: white;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .icon-wrapper {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .card-header h2 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .card-header h2::before {
+            display: none;
+        }
+        
+        .subtitle {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: rgba(255,255,255,0.9);
+            font-weight: 400;
+        }
+        
+        /* Modern Form Styling */
+        .modern-form {
+            padding: 35px;
+        }
+        
+        .form-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+        
+        .label-icon {
+            font-size: 18px;
+        }
+        
+        .label-text {
+            flex: 1;
+        }
+        
+        .required {
+            color: #e53e3e;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .optional {
+            color: #a0aec0;
+            font-weight: 400;
+            font-size: 13px;
+            font-style: italic;
+        }
+        
+        .input-wrapper {
+            position: relative;
         }
         
         input, select, textarea {
             width: 100%;
-            padding: 12px 15px;
+            padding: 15px 18px;
             border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 12px;
+            font-size: 15px;
             font-family: 'Segoe UI', sans-serif;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             background: white;
+            color: #2d3748;
+        }
+        
+        input:hover, select:hover, textarea:hover {
+            border-color: #cbd5e0;
         }
         
         input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            transform: translateY(-1px);
         }
         
         select {
             cursor: pointer;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 12px center;
-            padding-right: 35px;
+            background-position: right 18px center;
+            padding-right: 50px;
+            font-weight: 500;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.6;
+        }
+        
+        input::placeholder, select::placeholder, textarea::placeholder {
+            color: #a0aec0;
+        }
+        
+        /* Form Actions */
+        .form-actions {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px solid #f0f4f8;
+            display: flex;
+            justify-content: flex-end;
         }
         
         .btn-add {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .btn-add:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+        }
+        
+        .btn-add:active {
+            transform: translateY(-1px);
+        }
+        
+        .btn-icon {
+            font-size: 18px;
         }
         
         .alert {
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            background: #d4edda;
+            padding: 18px 25px;
+            border-radius: 12px;
+            margin: 25px 35px;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
-            border: 1px solid #c3e6cb;
+            border: 2px solid #28a745;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.2);
+        }
+        
+        .alert::before {
+            content: '✓';
+            background: #28a745;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            flex-shrink: 0;
         }
         
         .btn-delete {
             color: #e53e3e;
             text-decoration: none;
             font-weight: 600;
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
             transition: all 0.3s;
+            display: inline-block;
         }
         
         .btn-delete:hover {
             background: #fff5f5;
+            transform: scale(1.05);
         }
         
         h2 {
             color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 22px;
+            margin-bottom: 25px;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+        
+        /* Table Styling */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        
+        th, td { 
+            padding: 18px; 
+            text-align: left; 
+            border-bottom: 1px solid #eee; 
+        }
+        
+        th { 
+            color: #4a5568; 
+            font-weight: 600; 
+            background: #f8f9fa;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        tbody tr {
+            transition: all 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9ff;
         }
     </style>
     <script>
@@ -284,31 +487,97 @@ $chapters = $chapters_query->fetchAll();
     </nav>
     
     <div class="container">
-        <div class="card">
-            <h2>Add New Chapter</h2>
-            <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
-            <form method="POST">
-                <div class="form-grid">
-                    <!-- Step 1: Select Class -->
-                    <select id="class_select" onchange="filterSubjects()" required>
-                        <option value="">Select Class</option>
-                        <?php foreach($classes as $class): ?>
-                            <option value="<?php echo $class['class_id']; ?>">
-                                <?php echo htmlspecialchars($class['class_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-
-                    <!-- Step 2: Select Subject (Filtered) -->
-                    <select name="subject_id" id="subject_select" required>
-                        <option value="">Select Subject (Choose Class First)</option>
-                    </select>
-
-                    <input type="text" name="chapter_name" placeholder="Chapter Name" required>
-                    <input type="number" name="chapter_order" placeholder="Order (e.g. 1)" value="1" required>
-                    <input type="text" name="description" placeholder="Description (Optional)">
+        <!-- Add New Chapter Card -->
+        <div class="card add-chapter-card">
+            <div class="card-header">
+                <div class="header-content">
+                    <div class="icon-wrapper">📚</div>
+                    <div>
+                        <h2>Add New Chapter</h2>
+                        <p class="subtitle">Create a new chapter for your selected board</p>
+                    </div>
                 </div>
-                <button type="submit" class="btn-add">Add Chapter</button>
+            </div>
+            
+            <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
+            
+            <form method="POST" class="modern-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <span class="label-icon">🎓</span>
+                            <span class="label-text">Select Class</span>
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <select id="class_select" onchange="filterSubjects()" required>
+                                <option value="">Choose a class...</option>
+                                <?php foreach($classes as $class): ?>
+                                    <option value="<?php echo $class['class_id']; ?>">
+                                        <?php echo htmlspecialchars($class['class_name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <span class="label-icon">📖</span>
+                            <span class="label-text">Select Subject</span>
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <select name="subject_id" id="subject_select" required>
+                                <option value="">First select a class...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <span class="label-icon">📝</span>
+                            <span class="label-text">Chapter Name</span>
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="text" name="chapter_name" placeholder="e.g., Introduction to Algebra" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <span class="label-icon">🔢</span>
+                            <span class="label-text">Chapter Order</span>
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" name="chapter_order" placeholder="1" value="1" min="1" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>
+                            <span class="label-icon">💬</span>
+                            <span class="label-text">Description</span>
+                            <span class="optional">(Optional)</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea name="description" rows="3" placeholder="Brief description of the chapter..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-add">
+                        <span class="btn-icon">✨</span>
+                        <span>Add Chapter</span>
+                    </button>
+                </div>
             </form>
         </div>
 

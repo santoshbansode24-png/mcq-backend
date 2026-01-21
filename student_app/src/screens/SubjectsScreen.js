@@ -9,7 +9,8 @@ import {
     Alert,
     SafeAreaView,
     StatusBar,
-    Platform
+    Platform,
+    RefreshControl
 } from 'react-native';
 import { fetchSubjects } from '../api/subjects';
 import { useTheme } from '../context/ThemeContext';
@@ -28,15 +29,21 @@ const SubjectsScreen = ({ user, navigation }) => {
     const classId = user?.class_id;
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         if (classId) loadSubjects();
     }, [classId]);
 
-    const loadSubjects = async () => {
-        setLoading(true);
+    const loadSubjects = async (forceRefresh = false) => {
+        if (forceRefresh) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
+
         try {
-            const response = await fetchSubjects(classId);
+            const response = await fetchSubjects(classId, forceRefresh);
             if (response.status === 'success') {
                 setSubjects(response.data);
             } else if (response.message !== 'No subjects found for this class') {
@@ -46,8 +53,13 @@ const SubjectsScreen = ({ user, navigation }) => {
             Alert.alert('Error', 'Failed to load subjects');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
+
+    const onRefresh = useCallback(() => {
+        loadSubjects(true);
+    }, [classId]);
 
     const renderSubjectItem = useCallback(({ item, index }) => {
         const theme = SUBJECT_THEMES[index % SUBJECT_THEMES.length];
@@ -106,6 +118,14 @@ const SubjectsScreen = ({ user, navigation }) => {
                         numColumns={2}
                         columnWrapperStyle={styles.columnWrapper}
                         showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={['#4F46E5']}
+                                tintColor="#4F46E5"
+                            />
+                        }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No subjects available.</Text>

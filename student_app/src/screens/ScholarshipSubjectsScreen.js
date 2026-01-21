@@ -10,7 +10,8 @@ import {
     SafeAreaView,
     Platform,
     ScrollView,
-    TextInput
+    TextInput,
+    RefreshControl
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +36,7 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const [subjects, setSubjects] = useState([]);
     const [mockTests, setMockTests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' or 'mocks'
 
     // Custom Test Logic State
@@ -58,9 +60,15 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         }
     }, [selectedSubjects]);
 
-    const loadSubjects = async () => {
+    const loadSubjects = async (forceRefresh = false) => {
+        if (forceRefresh) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
+
         try {
-            // Force refresh to bypass stale cache from previous environment
+            // Force refresh to bypass stale cache
             const response = await fetchSubjects(scholarshipClassId, true);
             if (response.status === 'success') {
                 const allData = response.data;
@@ -76,7 +84,12 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
             console.error(error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        loadSubjects(true);
     };
 
     const loadChapters = async () => {
@@ -383,6 +396,14 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                             numColumns={2}
                             columnWrapperStyle={styles.row}
                             contentContainerStyle={styles.listContent}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    colors={['#8E2DE2']}
+                                    tintColor="#8E2DE2"
+                                />
+                            }
                             ListEmptyComponent={
                                 <Text style={styles.emptyText}>No subjects found.</Text>
                             }

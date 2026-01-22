@@ -22,8 +22,8 @@ const LOCAL_CONFIG = {
 // RAILWAY PRODUCTION CONFIGURATION
 // ========================================
 const RAILWAY_CONFIG = {
-    API_URL: 'https://api.veeruapp.in/api',
-    BASE_URL: 'https://api.veeruapp.in'
+    API_URL: 'https://api.veeruapp.in/backend/api',
+    BASE_URL: 'https://api.veeruapp.in/backend'
 };
 
 // ========================================
@@ -31,7 +31,7 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-const config = RAILWAY_CONFIG; // Changed to RAILWAY_CONFIG for live deployment
+const config = RAILWAY_CONFIG; // Using RAILWAY_CONFIG for production build
 
 export default config;
 

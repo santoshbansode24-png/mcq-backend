@@ -67,9 +67,9 @@ const HomeScreen = ({ user, navigation }) => {
     const ListHeader = () => (
         <View>
             <View style={styles.header}>
-                <View>
+                <View style={{ flex: 1, marginRight: 12 }}>
                     <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t('welcome')},</Text>
-                    <Text style={[styles.userName, { color: theme.text }]}>{userName} 👋</Text>
+                    <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                     <View style={[styles.avatarContainer, { borderColor: theme.primary }]}>

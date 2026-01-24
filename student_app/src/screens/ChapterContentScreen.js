@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // Ensure 
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { downloadFile } from '../utils/downloadUtils';
+import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
 
 const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
@@ -42,6 +43,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [userAnswers, setUserAnswers] = useState({}); // Stores user answers for current quiz { 0: 'a', 1: 'b' }
 
     const [refreshing, setRefreshing] = useState(false);
+    const [voiceModalVisible, setVoiceModalVisible] = useState(false); // State for Voice Modal
 
     useEffect(() => {
         // Refresh status whenever the screen comes into focus
@@ -702,9 +704,18 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     contentContainerStyle={styles.listContainer}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
-                    <View style={{ marginBottom: 20 }}>
-                        <Text style={styles.quizTitle}>Quick Revision</Text>
-                        <Text style={styles.quizSubtitle}>Key points for {chapter.chapter_name}</Text>
+                    <View style={{ marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <View>
+                            <Text style={styles.quizTitle}>Quick Revision</Text>
+                            <Text style={styles.quizSubtitle}>Key points for {chapter.chapter_name}</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setVoiceModalVisible(true)}
+                            style={{ backgroundColor: '#e0e7ff', padding: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center' }}
+                        >
+                            <Text style={{ fontSize: 16 }}>🗣️</Text>
+                            <Text style={{ marginLeft: 5, color: '#4f46e5', fontWeight: 'bold', fontSize: 12 }}>VOICE</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {revisionData.map((item, index) => {
@@ -825,6 +836,16 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 </View>
 
                 {renderContent()}
+
+                <VoiceSelectorModal
+                    visible={voiceModalVisible}
+                    onClose={() => setVoiceModalVisible(false)}
+                    onVoiceSelected={() => {
+                        // Optional: Ensure current playback stops or restarts with new voice
+                        stopTTS();
+                    }}
+                />
+
             </SafeAreaView>
         </View>
     );

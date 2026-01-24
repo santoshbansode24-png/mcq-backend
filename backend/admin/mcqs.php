@@ -24,9 +24,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_sample') {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="mcq_sample.csv"');
     $output = fopen('php://output', 'w');
-    fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)']);
-    fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy']);
-    fputcsv($output, ['Capital of France?', 'London', 'Berlin', 'Paris', 'Madrid', 'c', 'Paris is the capital', 'medium']);
+    fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)', 'Image File (e.g. q1.jpg)']);
+    fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy', '']);
+    fputcsv($output, ['Identify this shape', 'Circle', 'Square', 'Triangle', 'Rectangle', 'c', 'It has 3 sides', 'medium', 'triangle.jpg']);
     fclose($output);
     exit();
 }
@@ -67,13 +67,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $explanation = sanitizeInput($_POST['explanation']);
     $difficulty = $_POST['difficulty'];
     
+    // Handle Image Upload
+    $image_url = null;
+    if (isset($_FILES['question_image']) && $_FILES['question_image']['error'] == 0) {
+        $upload_dir = '../uploads/mcq_images/';
+        if (!file_exists($upload_dir)) { mkdir($upload_dir, 0777, true); }
+        
+        $file_ext = strtolower(pathinfo($_FILES['question_image']['name'], PATHINFO_EXTENSION));
+        $allowed_ext = ['jpg', 'jpeg', 'png', 'gif'];
+        
+        if (in_array($file_ext, $allowed_ext)) {
+            $new_name = uniqid('mcq_') . '.' . $file_ext;
+            if (hash_file('sha256', $_FILES['question_image']['tmp_name']) === false) {
+                 $message = "Error: Invalid file content.";
+                 $messageType = "error";
+            } else {
+                 if (move_uploaded_file($_FILES['question_image']['tmp_name'], $upload_dir . $new_name)) {
+                     $image_url = 'mcq_images/' . $new_name;
+                 }
+            }
+        }
+    }
+    
     try {
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty]);
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $image_url]);
         $message = "MCQ added successfully!";
         $messageType = "success";
     } catch (PDOException $e) {
-        $message = "Error: Database error";
+        $message = "Error: Database error - " . $e->getMessage();
         $messageType = "error";
     }
 }
@@ -92,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $count = 0;
         $errors = 0;
         
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
             // Validate row has enough columns (at least 6)
@@ -106,12 +128,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $correct = strtolower(trim(convertUtf8($data[5]))); // a, b, c, d
             $explanation = isset($data[6]) ? sanitizeInput(convertUtf8($data[6])) : '';
             $difficulty = isset($data[7]) ? strtolower(trim(convertUtf8($data[7]))) : 'medium';
+            // Column 9 (Index 8) is Image Filename
+            $image_filename = isset($data[8]) ? trim(convertUtf8($data[8])) : null;
+            $image_subpath = null;
+            
+            // If filename provided, check if it exists in uploads/mcq_images/
+            if ($image_filename) {
+                // Security check: Only allow basename to prevent directory traversal
+                $clean_name = basename($image_filename);
+                if (file_exists('../uploads/mcq_images/' . $clean_name)) {
+                    $image_subpath = 'mcq_images/' . $clean_name;
+                }
+            }
             
             // Validate correct answer format
             if (!in_array($correct, ['a', 'b', 'c', 'd'])) { $errors++; continue; }
             
             try {
-                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty]);
+                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $image_subpath]);
                 $count++;
             } catch (Exception $e) {
                 $errors++;
@@ -336,7 +370,7 @@ $mcqs = $mcqs_query->fetchAll();
 
             <!-- Single Add Form -->
             <div id="single-content" class="tab-content active">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="add_single">
                     <div class="form-grid">
                         <select id="single_class_select" onchange="filterSubjects('single_')" required style="grid-column: span 2;">
@@ -356,9 +390,18 @@ $mcqs = $mcqs_query->fetchAll();
                             <option value="">Select Chapter</option>
                         </select>
                         
-                        <textarea name="question" placeholder="Question Text" required style="grid-column: span 2; height: 80px;"></textarea>
+                        <div style="grid-column: span 2;">
+                             <label style="display:block; margin-bottom:5px; font-weight:600;">Question Text:</label>
+                             <textarea name="question" placeholder="Enter question here (or use LaTeX like \sqrt{x})" required style="width:100%; height: 80px;"></textarea>
+                        </div>
+
+                        <div style="grid-column: span 2; background: #fff; padding: 10px; border: 1px dashed #ccc; border-radius: 8px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Upload Diagram/Image (Optional):</label>
+                            <input type="file" name="question_image" accept="image/*">
+                            <small style="color: #666; display: block; margin-top: 5px;">Supported: JPG, PNG. Max 2MB.</small>
+                        </div>
                         
-                        <input type="text" name="option_a" placeholder="Option A" required>
+                        <input type="text" name="option_a" placeholder="Option A (e.g. \frac{1}{2})" required>
                         <input type="text" name="option_b" placeholder="Option B" required>
                         <input type="text" name="option_c" placeholder="Option C" required>
                         <input type="text" name="option_d" placeholder="Option D" required>

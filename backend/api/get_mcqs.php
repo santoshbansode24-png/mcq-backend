@@ -48,8 +48,10 @@ try {
             option_d,
             correct_answer,
             explanation,
+            explanation,
             difficulty,
-            medium
+            medium,
+            image_url
         FROM mcqs
         WHERE chapter_id = ? AND medium = ?
         ORDER BY mcq_id ASC

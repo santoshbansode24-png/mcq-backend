@@ -9,13 +9,13 @@ export const fetchSubjects = async (classId, forceRefresh = false) => {
     if (!forceRefresh) {
         const cached = await dataCache.get(cacheKey, 'subjects');
         if (cached) {
-            console.log(`[API] Using cached subjects for class ${classId}`);
+            // console.log(`[API] Using cached subjects for class ${classId}`);
             return cached;
         }
     }
 
     try {
-        console.log(`[API] Fetching subjects from server for class ${classId}...`);
+        // console.log(`[API] Fetching subjects from server for class ${classId}...`);
         const response = await axios.get(`${API_URL}/get_subjects.php?class_id=${classId}`);
 
         // Cache successful responses

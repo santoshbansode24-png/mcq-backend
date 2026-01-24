@@ -193,6 +193,10 @@ const HomeScreen = ({ user, navigation }) => {
                     ListHeaderComponent={ListHeader}
                     contentContainerStyle={styles.scrollPadding}
                     showsVerticalScrollIndicator={false}
+                    initialNumToRender={8}
+                    maxToRenderPerBatch={4}
+                    windowSize={5}
+                    removeClippedSubviews={true}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
                     }

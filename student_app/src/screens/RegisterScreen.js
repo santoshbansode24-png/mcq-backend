@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, ScrollView, Modal, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, ScrollView, Modal, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { registerUser } from '../api/auth';
 import { fetchClasses } from '../api/classes';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,8 @@ const RegisterScreen = ({ navigation }) => {
     const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // New Fields
     const [schoolName, setSchoolName] = useState('');
@@ -125,127 +127,142 @@ const RegisterScreen = ({ navigation }) => {
 
     return (
         <View style={{ flex: 1, backgroundColor: '#f5f7fa' }}>
-            <ScrollView contentContainerStyle={styles.container}>
-                <StatusBar barStyle="light-content" />
-                <View style={[styles.header, { backgroundColor: '#4f46e5' }]}>
-                    <Text style={styles.headerTitle}>Create Account</Text>
-                    <Text style={styles.headerSubtitle}>Join Veeru and Learn Smarter</Text>
-                </View>
-
-                <View style={styles.formContainer}>
-                    <View style={styles.form}>
-                        <Text style={styles.label}>Full Name</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="John Doe"
-                            value={name}
-                            onChangeText={setName}
-                            autoCapitalize="words"
-                        />
-
-                        <Text style={styles.label}>Email Address</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="student@example.com"
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                        />
-
-                        <Text style={styles.label}>Mobile Number</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="9876543210"
-                            value={mobile}
-                            onChangeText={setMobile}
-                            keyboardType="phone-pad"
-                            maxLength={10}
-                        />
-
-                        <Text style={styles.label}>School Name</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enter your school name"
-                            value={schoolName}
-                            onChangeText={setSchoolName}
-                        />
-
-                        {/* Board Selection */}
-                        <Text style={styles.label}>Select Board / Medium</Text>
-                        <View style={styles.boardContainer}>
-                            {[
-                                { id: 'CBSE', label: 'CBSE' },
-                                { id: 'STATE_MARATHI', label: 'State (Marathi)' },
-                                { id: 'STATE_SEMI', label: 'State (Semi)' }
-                            ].map((board) => (
-                                <TouchableOpacity
-                                    key={board.id}
-                                    style={[styles.boardBtn, selectedBoard === board.id && styles.boardBtnActive]}
-                                    onPress={() => setSelectedBoard(board.id)}
-                                >
-                                    <Text style={[styles.boardText, selectedBoard === board.id && styles.boardTextActive, { textAlign: 'center', fontSize: 12 }]}>
-                                        {board.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        {/* Class Selection */}
-                        <Text style={styles.label}>Class</Text>
-                        <TouchableOpacity
-                            style={[styles.dropdownBtn, !selectedBoard && { opacity: 0.5, backgroundColor: '#f3f4f6' }]}
-                            onPress={() => {
-                                if (!selectedBoard) {
-                                    Alert.alert("Select Board First", "Please select a board to see available classes.");
-                                    return;
-                                }
-                                setShowClassModal(true);
-                            }}
-                            disabled={!selectedBoard}
-                        >
-                            <Text style={[styles.dropdownText, !selectedClass && { color: '#9ca3af' }]}>
-                                {selectedClass ? selectedClass.class_name : (selectedBoard ? "Select your class" : "Select Board first")}
-                            </Text>
-                            <Ionicons name="chevron-down" size={20} color="#6b7280" />
-                        </TouchableOpacity>
-
-                        <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Create a password"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={true}
-                        />
-
-                        <Text style={styles.label}>Confirm Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Confirm password"
-                            value={confirmPassword}
-                            onChangeText={setConfirmPassword}
-                            secureTextEntry={true}
-                        />
-
-                        <TouchableOpacity
-                            style={styles.button}
-                            onPress={handleRegister}
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.buttonText}>Register</Text>
-                            )}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
-                            <Text style={styles.loginText}>Already have an account? <Text style={styles.loginHighlight}>Login</Text></Text>
-                        </TouchableOpacity>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+            >
+                <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+                    <StatusBar barStyle="light-content" />
+                    <View style={[styles.header, { backgroundColor: '#4f46e5' }]}>
+                        <Text style={styles.headerTitle}>Create Account</Text>
+                        <Text style={styles.headerSubtitle}>Join Veeru and Learn Smarter</Text>
                     </View>
-                </View>
-            </ScrollView>
+
+                    <View style={styles.formContainer}>
+                        <View style={styles.form}>
+                            <Text style={styles.label}>Full Name</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="John Doe"
+                                value={name}
+                                onChangeText={setName}
+                                autoCapitalize="words"
+                            />
+
+                            <Text style={styles.label}>Email Address</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="student@example.com"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+
+                            <Text style={styles.label}>Mobile Number</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="9876543210"
+                                value={mobile}
+                                onChangeText={setMobile}
+                                keyboardType="phone-pad"
+                                maxLength={10}
+                            />
+
+                            <Text style={styles.label}>School Name</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter your school name"
+                                value={schoolName}
+                                onChangeText={setSchoolName}
+                            />
+
+                            {/* Board Selection */}
+                            <Text style={styles.label}>Select Board / Medium</Text>
+                            <View style={styles.boardContainer}>
+                                {[
+                                    { id: 'CBSE', label: 'CBSE' },
+                                    { id: 'STATE_MARATHI', label: 'State (Marathi)' },
+                                    { id: 'STATE_SEMI', label: 'State (Semi)' }
+                                ].map((board) => (
+                                    <TouchableOpacity
+                                        key={board.id}
+                                        style={[styles.boardBtn, selectedBoard === board.id && styles.boardBtnActive]}
+                                        onPress={() => setSelectedBoard(board.id)}
+                                    >
+                                        <Text style={[styles.boardText, selectedBoard === board.id && styles.boardTextActive, { textAlign: 'center', fontSize: 12 }]}>
+                                            {board.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Class Selection */}
+                            <Text style={styles.label}>Class</Text>
+                            <TouchableOpacity
+                                style={[styles.dropdownBtn, !selectedBoard && { opacity: 0.5, backgroundColor: '#f3f4f6' }]}
+                                onPress={() => {
+                                    if (!selectedBoard) {
+                                        Alert.alert("Select Board First", "Please select a board to see available classes.");
+                                        return;
+                                    }
+                                    setShowClassModal(true);
+                                }}
+                                disabled={!selectedBoard}
+                            >
+                                <Text style={[styles.dropdownText, !selectedClass && { color: '#9ca3af' }]}>
+                                    {selectedClass ? selectedClass.class_name : (selectedBoard ? "Select your class" : "Select Board first")}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#6b7280" />
+                            </TouchableOpacity>
+
+                            <Text style={styles.label}>Password</Text>
+                            <View style={styles.passwordContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="Create a password"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                                    <Ionicons name={showPassword ? "eye" : "eye-off"} size={22} color="#6b7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={styles.label}>Confirm Password</Text>
+                            <View style={styles.passwordContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="Confirm password"
+                                    value={confirmPassword}
+                                    onChangeText={setConfirmPassword}
+                                    secureTextEntry={!showConfirmPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                                    <Ionicons name={showConfirmPassword ? "eye" : "eye-off"} size={22} color="#6b7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.button}
+                                onPress={handleRegister}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.buttonText}>Register</Text>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
+                                <Text style={styles.loginText}>Already have an account? <Text style={styles.loginHighlight}>Login</Text></Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             {/* Class Selection Modal - Moved Outside ScrollView */}
             <Modal
@@ -330,6 +347,26 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 16,
         color: '#1f2937',
+        fontSize: 16,
+        color: '#1f2937',
+    },
+    passwordContainer: {
+        backgroundColor: '#f9fafb',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: 12,
+    },
+    passwordInput: {
+        flex: 1,
+        padding: 16,
+        fontSize: 16,
+        color: '#1f2937',
+    },
+    eyeIcon: {
+        padding: 4,
     },
     boardContainer: {
         flexDirection: 'row',

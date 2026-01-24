@@ -10,12 +10,15 @@ import {
     StatusBar,
     Platform,
     Alert,
+    RefreshControl, // Added
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Speech from 'expo-speech';
+import { Audio } from 'expo-av'; // Added import for setAudioModeAsync
+// import * as Speech from 'expo-speech'; // Removed Expo Speech
 import { useTheme } from '../context/ThemeContext';
 import { fetchQuickRevision } from '../api/content'; // Import from content.js for caching
+import { playGoogleTTS } from '../api/googleTTS'; // Import Google TTS
 
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? StatusBar.currentHeight : 0;
 
@@ -27,6 +30,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const [revisionData, setRevisionData] = useState([]);
     const [error, setError] = useState(null);
     const [playingIndex, setPlayingIndex] = useState(null);
+    const [sound, setSound] = useState(null); // State for audio sound object
 
     // Use a ref to store the language to avoid re-fetching on every click
     const preferredLanguage = useRef('en-IN');
@@ -35,6 +39,19 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         const prepareScreen = async () => {
+            // Configure Audio to play even in silent mode
+            try {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: false,
+                    playsInSilentModeIOS: true,
+                    shouldDuckAndroid: true,
+                    playThroughEarpieceAndroid: false,
+                    staysActiveInBackground: false,
+                });
+            } catch (e) {
+                console.warn("Audio Mode Setup Error:", e);
+            }
+
             await loadRevision();
             await setupVoices();
         };
@@ -42,7 +59,9 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         prepareScreen();
 
         return () => {
-            Speech.stop();
+            if (sound) {
+                sound.unloadAsync();
+            }
         };
     }, [chapterId]);
 
@@ -50,13 +69,8 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
     const setupVoices = async () => {
         try {
-            const voices = await Speech.getVoicesAsync();
-            if (voices && voices.length > 0) {
-                const lang = voices.find(v => v.language.startsWith('mr'))?.language ||
-                    voices.find(v => v.language.startsWith('hi'))?.language ||
-                    'en-IN';
-                preferredLanguage.current = lang;
-            }
+            // User requested Indian Marathi accent
+            preferredLanguage.current = 'mr-IN';
         } catch (e) {
             console.log('Voice setup error:', e);
         }
@@ -64,7 +78,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
     /* ---------------- LOAD API DATA ---------------- */
 
-    const loadRevision = async () => {
+    const loadRevision = async (forceReconnect = false) => {
         if (!chapterId) {
             setError('No chapter selected');
             setLoading(false);
@@ -73,7 +87,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         try {
             setLoading(true);
-            const response = await fetchQuickRevision(chapterId);
+            const response = await fetchQuickRevision(chapterId, forceReconnect);
 
             if (response?.status === 'success' && response?.data?.length) {
                 const points = response.data[0]?.key_points || [];
@@ -93,13 +107,18 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     /* ---------------- STOP TTS ---------------- */
 
     const stopTTS = async () => {
-        await Speech.stop();
+        if (sound) {
+            await sound.stopAsync();
+            await sound.unloadAsync();
+            setSound(null);
+        }
         setPlayingIndex(null);
     };
 
     /* ---------------- PLAY TTS ---------------- */
 
     const playTTS = async (item, index) => {
+        console.log("TTS Item Data:", JSON.stringify(item)); // DEBUG LOG
         // 1. If clicking the one currently playing, stop it.
         if (playingIndex === index) {
             await stopTTS();
@@ -111,8 +130,15 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const a = item.a || item.Answer || '';
         const e = item.e || item.Explanation || ''; // Get explanation
 
-        // Speak Q, then A, then Explanation if exists
-        const textToSpeak = `${q}. ${a}. ${e ? `Explanation: ${e}` : ''}`.trim();
+        if (!e) {
+            console.log("DEBUG: Explanation missing in item:", item);
+            // Alert.alert("Debug", "No explanation found in data for this point.");
+        } else {
+            console.log("DEBUG: Explanation found:", e);
+        }
+
+        // Speak Q, then A, then Explanation (without "Explanation" prefix for better flow in Marathi)
+        const textToSpeak = `${q}. ${a}. ${e || ''}`.trim();
 
         if (!textToSpeak) {
             Alert.alert("Error", "No text found to read for this point.");
@@ -121,24 +147,27 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         try {
             // 3. Always stop current speech first
-            await Speech.stop();
-            setPlayingIndex(null);
+            await stopTTS();
 
-            // 4. Short delay allows the hardware to reset (Fixes Android "silence" bug)
-            setTimeout(() => {
+            // 4. Play using Google TTS
+            const newSound = await playGoogleTTS(textToSpeak, preferredLanguage.current);
+
+            if (newSound) {
+                setSound(newSound);
                 setPlayingIndex(index);
-                Speech.speak(textToSpeak, {
-                    language: preferredLanguage.current,
-                    rate: Platform.OS === 'android' ? 0.6 : 0.5, // Slower pace: 0.6 is good for Android, 0.5 for iOS
-                    pitch: 1.0,
-                    onDone: () => setPlayingIndex(null),
-                    onStopped: () => setPlayingIndex(null),
-                    onError: () => {
-                        Alert.alert('TTS Error', 'Please ensure Google Speech Services is active.');
+
+                // Handle completion
+                newSound.setOnPlaybackStatusUpdate((status) => {
+                    if (status.didJustFinish) {
                         setPlayingIndex(null);
-                    },
+                        setSound(null); // Clear sound state on finish
+                        newSound.unloadAsync(); // Unload memory
+                    }
                 });
-            }, 150);
+            } else {
+                Alert.alert('TTS Error', 'Could not fetch audio. Check internet or API Key.');
+                setPlayingIndex(null);
+            }
 
         } catch (err) {
             console.log('TTS execution error:', err);
@@ -202,7 +231,13 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 </View>
 
                 {/* CONTENT */}
-                <ScrollView contentContainerStyle={styles.scrollArea} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    contentContainerStyle={styles.scrollArea}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={loading} onRefresh={() => loadRevision(true)} colors={[theme.primary]} />
+                    }
+                >
                     {revisionData.map((item, index) => {
                         const q = item.q || item.Question || '';
                         const a = item.a || item.Answer || '';
@@ -248,7 +283,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                         <>
                                             <View style={[styles.line, { marginVertical: 10 }]} />
                                             <Text style={[styles.label, { color: theme.textSecondary || '#666', fontStyle: 'italic' }]}>EXPLANATION</Text>
-                                            <Text style={[styles.mainText, { color: theme.textSecondary || '#555', fontSize: 14, fontStyle: 'italic' }]}>
+                                            <Text style={[styles.mainText, { color: theme.textSecondary || '#555', fontSize: 14, fontStyle: 'italic', backgroundColor: '#fff3cd', padding: 5 }]}>
                                                 {item.e || item.Explanation}
                                             </Text>
                                         </>

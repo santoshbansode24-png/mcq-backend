@@ -27,390 +27,395 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate }) => {
         loadClasses(currentBoard);
     }, [currentBoard]);
 
-    const loadClasses = async (board) => {
-        try {
-            // Fetch classes filtered by board
-            const response = await axios.get(`${API_URL}/get_classes.php?board=${board}`);
-            if (response.data && response.data.status === 'success') {
-                setClasses(response.data.data);
-            } else {
-                setClasses([]);
+    try {
+        // Fetch classes filtered by board
+        // console.log(`Fetching classes for board: ${board}`);
+        const response = await axios.get(`${API_URL}/get_classes.php?board=${board}`);
+        if (response.data && response.data.status === 'success') {
+            setClasses(response.data.data);
+            if (response.data.data.length === 0) {
+                // Alert.alert("Debug", `No classes found for board: ${board}`);
             }
-        } catch (error) {
-            console.error("Failed to load classes:", error);
+        } else {
             setClasses([]);
+            Alert.alert("Error", response.data.message || "Failed to load classes");
         }
-    };
+    } catch (error) {
+        console.error("Failed to load classes:", error);
+        Alert.alert("Connection Error", `Could not load classes.\n${error.message}`);
+        setClasses([]);
+    }
+};
 
-    const handleBoardChange = (board) => {
-        if (board === currentBoard) return;
-        setCurrentBoard(board);
-        // We don't automatically clear class here, we wait for user to select a new one
-        // or we could force a reset if the current class isn't in the new board 
-        // (logic handled by backend usually, but for UI we just show available classes)
-    };
+const handleBoardChange = (board) => {
+    if (board === currentBoard) return;
+    setCurrentBoard(board);
+    // We don't automatically clear class here, we wait for user to select a new one
+    // or we could force a reset if the current class isn't in the new board 
+    // (logic handled by backend usually, but for UI we just show available classes)
+};
 
-    const handleClassChange = async (newClass) => {
-        if (newClass.class_id === currentClassId) return;
+const handleClassChange = async (newClass) => {
+    if (newClass.class_id === currentClassId) return;
 
-        Alert.alert(
-            "Change Class",
-            `Are you sure you want to change your class to ${newClass.class_name}?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Yes, Change",
-                    onPress: async () => {
-                        try {
-                            setLoadingClasses(true);
-                            // Assuming we want to save the board selection along with the class
-                            const response = await updateStudentClass(user.user_id, newClass.class_id, currentBoard);
+    Alert.alert(
+        "Change Class",
+        `Are you sure you want to change your class to ${newClass.class_name}?`,
+        [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: "Yes, Change",
+                onPress: async () => {
+                    try {
+                        setLoadingClasses(true);
+                        // Assuming we want to save the board selection along with the class
+                        const response = await updateStudentClass(user.user_id, newClass.class_id, currentBoard);
 
-                            if (response.status === 'success') {
-                                setCurrentClassId(newClass.class_id);
-                                setCurrentClassName(newClass.class_name);
+                        if (response.status === 'success') {
+                            setCurrentClassId(newClass.class_id);
+                            setCurrentClassName(newClass.class_name);
 
-                                // Update Async Storage
-                                const storedUser = await AsyncStorage.getItem('user_data');
-                                if (storedUser) {
-                                    const parsedUser = JSON.parse(storedUser);
-                                    parsedUser.class_id = newClass.class_id;
-                                    parsedUser.class_name = newClass.class_name;
-                                    parsedUser.board_type = currentBoard; // Save the board too
-                                    await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
-                                }
-
-                                // Update MainScreen state to trigger re-renders in Home/Subjects
-                                if (onUserUpdate) {
-                                    onUserUpdate({
-                                        class_id: newClass.class_id,
-                                        class_name: newClass.class_name
-                                    });
-                                }
-
-                                Alert.alert("Success", "Class updated successfully!");
-                            } else {
-                                Alert.alert("Error", "Failed to update class.");
+                            // Update Async Storage
+                            const storedUser = await AsyncStorage.getItem('user_data');
+                            if (storedUser) {
+                                const parsedUser = JSON.parse(storedUser);
+                                parsedUser.class_id = newClass.class_id;
+                                parsedUser.class_name = newClass.class_name;
+                                parsedUser.board_type = currentBoard; // Save the board too
+                                await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
                             }
-                        } catch (error) {
-                            Alert.alert("Error", "Something went wrong.");
-                        } finally {
-                            setLoadingClasses(false);
+
+                            // Update MainScreen state to trigger re-renders in Home/Subjects
+                            if (onUserUpdate) {
+                                onUserUpdate({
+                                    class_id: newClass.class_id,
+                                    class_name: newClass.class_name
+                                });
+                            }
+
+                            Alert.alert("Success", "Class updated successfully!");
+                        } else {
+                            Alert.alert("Error", "Failed to update class.");
                         }
+                    } catch (error) {
+                        Alert.alert("Error", "Something went wrong.");
+                    } finally {
+                        setLoadingClasses(false);
                     }
                 }
-            ]
-        );
-    };
-
-    const languages = [
-        { code: 'en', name: 'English', icon: '🇬🇧' },
-        { code: 'hi', name: 'हिंदी', icon: '🇮🇳' },
-        { code: 'mr', name: 'मराठी', icon: '🚩' },
-    ];
-
-    const pickImage = async () => {
-        // Request permissions
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        if (permissionResult.granted === false) {
-            Alert.alert("Permission Required", "You need to grant camera roll permissions to change your profile picture.");
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.5,
-        });
-
-        if (!result.canceled) {
-            uploadImage(result.assets[0].uri);
-        }
-    };
-
-    const uploadImage = async (uri) => {
-        if (!user?.user_id) return;
-
-        setUploading(true);
-        const formData = new FormData();
-        formData.append('user_id', user.user_id);
-        formData.append('profile_picture', {
-            uri: uri,
-            type: 'image/jpeg',
-            name: 'profile.jpg',
-        });
-
-        try {
-            const response = await axios.post(`${API_URL}/upload_profile_picture.php`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            if (response.data.status === 'success') {
-                setProfilePic(response.data.data.profile_picture);
-                Alert.alert('Success', 'Profile picture updated!');
-            } else {
-                Alert.alert('Error', response.data.message || 'Failed to upload image');
             }
-        } catch (error) {
-            console.error('Upload error:', error);
-            Alert.alert('Error', 'Failed to upload image. Please try again.');
-        } finally {
-            setUploading(false);
+        ]
+    );
+};
+
+const languages = [
+    { code: 'en', name: 'English', icon: '🇬🇧' },
+    { code: 'hi', name: 'हिंदी', icon: '🇮🇳' },
+    { code: 'mr', name: 'मराठी', icon: '🚩' },
+];
+
+const pickImage = async () => {
+    // Request permissions
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+        Alert.alert("Permission Required", "You need to grant camera roll permissions to change your profile picture.");
+        return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+    });
+
+    if (!result.canceled) {
+        uploadImage(result.assets[0].uri);
+    }
+};
+
+const uploadImage = async (uri) => {
+    if (!user?.user_id) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('user_id', user.user_id);
+    formData.append('profile_picture', {
+        uri: uri,
+        type: 'image/jpeg',
+        name: 'profile.jpg',
+    });
+
+    try {
+        const response = await axios.post(`${API_URL}/upload_profile_picture.php`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+
+        if (response.data.status === 'success') {
+            setProfilePic(response.data.data.profile_picture);
+            Alert.alert('Success', 'Profile picture updated!');
+        } else {
+            Alert.alert('Error', response.data.message || 'Failed to upload image');
         }
-    };
+    } catch (error) {
+        console.error('Upload error:', error);
+        Alert.alert('Error', 'Failed to upload image. Please try again.');
+    } finally {
+        setUploading(false);
+    }
+};
 
-    const getImageUrl = (path) => {
-        if (!path) return null;
-        if (path.startsWith('http')) return path;
-        return `${BASE_URL}/${path}`;
-    };
+const getImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${BASE_URL}/${path}`;
+};
 
-    return (
-        <View style={{ flex: 1, backgroundColor: theme.background }}>
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-            >
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={pickImage} disabled={uploading}>
-                        <View style={[styles.avatarContainer, { backgroundColor: theme.primary }]}>
-                            {uploading ? (
-                                <ActivityIndicator size="large" color="white" />
-                            ) : profilePic ? (
-                                <Image
-                                    source={{ uri: getImageUrl(profilePic) }}
-                                    style={styles.avatarImage}
-                                />
-                            ) : (
-                                <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'S'}</Text>
-                            )}
-                            <View style={[styles.editIconContainer, { backgroundColor: theme.card }]}>
-                                <Text style={styles.editIcon}>📷</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                    <Text style={[styles.name, { color: theme.text }]}>{user?.name || 'Student Name'}</Text>
-                    <Text style={[styles.email, { color: theme.textSecondary }]}>{user?.email || 'student@example.com'}</Text>
-                    <View style={[styles.badge, { backgroundColor: isDarkMode ? '#374151' : '#e0e7ff' }]}>
-                        <Text style={[styles.badgeText, { color: theme.primary }]}>{currentClassName || 'Class 10'}</Text>
-                    </View>
-
-                    {/* Board Selection Tab */}
-                    <View style={styles.classSelectorContainer}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Select Board / Medium</Text>
-                        <View style={{ flexDirection: 'row', paddingHorizontal: 5 }}>
-                            {[
-                                { id: 'CBSE', label: 'CBSE' },
-                                { id: 'STATE_MARATHI', label: 'State (Marathi)' },
-                                { id: 'STATE_SEMI', label: 'State (Semi)' }
-                            ].map((board) => (
-                                <TouchableOpacity
-                                    key={board.id}
-                                    style={[
-                                        styles.boardItem,
-                                        {
-                                            backgroundColor: currentBoard === board.id ? theme.primary : theme.card,
-                                            borderColor: theme.border,
-                                            borderWidth: currentBoard === board.id ? 0 : 1
-                                        }
-                                    ]}
-                                    onPress={() => handleBoardChange(board.id)}
-                                >
-                                    <Text style={{
-                                        color: currentBoard === board.id ? '#fff' : theme.text,
-                                        fontWeight: '600',
-                                        fontSize: 12
-                                    }}>
-                                        {board.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+return (
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+        <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        >
+            <View style={styles.header}>
+                <TouchableOpacity onPress={pickImage} disabled={uploading}>
+                    <View style={[styles.avatarContainer, { backgroundColor: theme.primary }]}>
+                        {uploading ? (
+                            <ActivityIndicator size="large" color="white" />
+                        ) : profilePic ? (
+                            <Image
+                                source={{ uri: getImageUrl(profilePic) }}
+                                style={styles.avatarImage}
+                            />
+                        ) : (
+                            <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'S'}</Text>
+                        )}
+                        <View style={[styles.editIconContainer, { backgroundColor: theme.card }]}>
+                            <Text style={styles.editIcon}>📷</Text>
                         </View>
                     </View>
-
-                    {/* Class Scroll Tab */}
-                    <View style={styles.classSelectorContainer}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('selectClass') || 'Select Class'}</Text>
-                        <FlatList
-                            data={classes}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            keyExtractor={(item) => item.class_id.toString()}
-                            contentContainerStyle={styles.classList}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.classItem,
-                                        {
-                                            backgroundColor: item.class_id === currentClassId ? theme.primary : theme.card,
-                                            borderColor: theme.border,
-                                            borderWidth: item.class_id === currentClassId ? 0 : 1
-                                        }
-                                    ]}
-                                    onPress={() => handleClassChange(item)}
-                                    disabled={loadingClasses}
-                                >
-                                    <Text style={[
-                                        styles.classItemText,
-                                        { color: item.class_id === currentClassId ? '#fff' : theme.text }
-                                    ]}>
-                                        {item.class_name}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </View>
-                </View>
-
-                <BadgesSection user={user} />
-
-                <View style={[styles.menu, { backgroundColor: theme.card }]}>
-                    <View style={[styles.menuItem, { borderBottomColor: theme.border }]}>
-                        <Text style={[styles.menuText, { color: theme.text }]}>{t('darkMode')}</Text>
-                        <Switch
-                            trackColor={{ false: "#767577", true: theme.primary }}
-                            thumbColor={isDarkMode ? "#f4f3f4" : "#f4f3f4"}
-                            ios_backgroundColor="#3e3e3e"
-                            onValueChange={toggleTheme}
-                            value={isDarkMode}
-                        />
-                    </View>
-                    <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]} onPress={pickImage}>
-                        <Text style={[styles.menuText, { color: theme.text }]}>{t('changeProfilePic')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.menuItem, { borderBottomColor: theme.border }]}
-                        onPress={() => setModalVisible(true)}
-                    >
-                        <Text style={[styles.menuText, { color: theme.text }]}>{t('appLanguage')}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={{ color: theme.textSecondary, marginRight: 8 }}>
-                                {languages.find(l => l.code === language)?.name}
-                            </Text>
-                            <Text style={{ color: theme.textSecondary }}>›</Text>
-                        </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]}>
-                        <Text style={[styles.menuText, { color: theme.text }]}>{t('subscription')}: {user?.subscription_status || 'Active'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.menuItem, { borderBottomColor: theme.border }]}
-                        onPress={() => setHelpModalVisible(true)}
-                    >
-                        <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-                    <Text style={styles.logoutText}>{t('logout')}</Text>
                 </TouchableOpacity>
-
-                <View style={styles.copyrightContainer}>
-                    <Text style={[styles.copyrightText, { color: theme.textSecondary }]}>
-                        {t('copyright')}
-                    </Text>
+                <Text style={[styles.name, { color: theme.text }]}>{user?.name || 'Student Name'}</Text>
+                <Text style={[styles.email, { color: theme.textSecondary }]}>{user?.email || 'student@example.com'}</Text>
+                <View style={[styles.badge, { backgroundColor: isDarkMode ? '#374151' : '#e0e7ff' }]}>
+                    <Text style={[styles.badgeText, { color: theme.primary }]}>{currentClassName || 'Class 10'}</Text>
                 </View>
 
-            </ScrollView>
-
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalView, { backgroundColor: theme.card }]}>
-                        <Text style={[styles.modalTitle, { color: theme.text }]}>{t('selectLanguage')}</Text>
-
-                        {languages.map((lang) => (
+                {/* Board Selection Tab */}
+                <View style={styles.classSelectorContainer}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Select Board / Medium</Text>
+                    <View style={{ flexDirection: 'row', paddingHorizontal: 5 }}>
+                        {[
+                            { id: 'CBSE', label: 'CBSE' },
+                            { id: 'STATE_MARATHI', label: 'State (Marathi)' },
+                            { id: 'STATE_SEMI', label: 'State (Semi)' }
+                        ].map((board) => (
                             <TouchableOpacity
-                                key={lang.code}
+                                key={board.id}
                                 style={[
-                                    styles.languageOption,
-                                    language === lang.code && { backgroundColor: theme.primary + '20' }
+                                    styles.boardItem,
+                                    {
+                                        backgroundColor: currentBoard === board.id ? theme.primary : theme.card,
+                                        borderColor: theme.border,
+                                        borderWidth: currentBoard === board.id ? 0 : 1
+                                    }
                                 ]}
-                                onPress={() => {
-                                    changeLanguage(lang.code);
-                                    setModalVisible(false);
-                                }}
+                                onPress={() => handleBoardChange(board.id)}
                             >
-                                <Text style={{ fontSize: 24, marginRight: 12 }}>{lang.icon}</Text>
-                                <Text style={[
-                                    styles.languageText,
-                                    { color: theme.text },
-                                    language === lang.code && { color: theme.primary, fontWeight: 'bold' }
-                                ]}>
-                                    {lang.name}
+                                <Text style={{
+                                    color: currentBoard === board.id ? '#fff' : theme.text,
+                                    fontWeight: '600',
+                                    fontSize: 12
+                                }}>
+                                    {board.label}
                                 </Text>
-                                {language === lang.code && (
-                                    <Text style={{ marginLeft: 'auto', color: theme.primary, fontWeight: 'bold' }}>✓</Text>
-                                )}
                             </TouchableOpacity>
                         ))}
-
-                        <TouchableOpacity
-                            style={[styles.closeButton, { backgroundColor: theme.border }]}
-                            onPress={() => setModalVisible(false)}
-                        >
-                            <Text style={{ color: theme.text }}>{t('cancel')}</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
-            </Modal>
 
-            {/* Help & Support Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={helpModalVisible}
-                onRequestClose={() => setHelpModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalView, { backgroundColor: theme.card }]}>
-                        <Text style={[styles.modalTitle, { color: theme.text }]}>Help & Support</Text>
+                {/* Class Scroll Tab */}
+                <View style={styles.classSelectorContainer}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('selectClass') || 'Select Class'}</Text>
+                    <FlatList
+                        data={classes}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(item) => item.class_id.toString()}
+                        contentContainerStyle={styles.classList}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                style={[
+                                    styles.classItem,
+                                    {
+                                        backgroundColor: item.class_id === currentClassId ? theme.primary : theme.card,
+                                        borderColor: theme.border,
+                                        borderWidth: item.class_id === currentClassId ? 0 : 1
+                                    }
+                                ]}
+                                onPress={() => handleClassChange(item)}
+                                disabled={loadingClasses}
+                            >
+                                <Text style={[
+                                    styles.classItemText,
+                                    { color: item.class_id === currentClassId ? '#fff' : theme.text }
+                                ]}>
+                                    {item.class_name}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    />
+                </View>
+            </View>
 
-                        <View style={{ width: '100%', marginBottom: 20 }}>
-                            <Text style={{ color: theme.text, fontSize: 16, marginBottom: 8 }}>Need assistance? Contact us:</Text>
+            <BadgesSection user={user} />
 
-                            <View style={[styles.infoRow, { backgroundColor: theme.background }]}>
-                                <Text style={{ fontSize: 20, marginRight: 10 }}>📧</Text>
-                                <View>
-                                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
-                                    <Text style={[styles.infoValue, { color: theme.primary }]}>veeruappmcq@gmail.com</Text>
-                                </View>
-                            </View>
+            <View style={[styles.menu, { backgroundColor: theme.card }]}>
+                <View style={[styles.menuItem, { borderBottomColor: theme.border }]}>
+                    <Text style={[styles.menuText, { color: theme.text }]}>{t('darkMode')}</Text>
+                    <Switch
+                        trackColor={{ false: "#767577", true: theme.primary }}
+                        thumbColor={isDarkMode ? "#f4f3f4" : "#f4f3f4"}
+                        ios_backgroundColor="#3e3e3e"
+                        onValueChange={toggleTheme}
+                        value={isDarkMode}
+                    />
+                </View>
+                <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]} onPress={pickImage}>
+                    <Text style={[styles.menuText, { color: theme.text }]}>{t('changeProfilePic')}</Text>
+                </TouchableOpacity>
 
-                            <View style={[styles.infoRow, { backgroundColor: theme.background }]}>
-                                <Text style={{ fontSize: 20, marginRight: 10 }}>📞</Text>
-                                <View>
-                                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone</Text>
-                                    <Text style={[styles.infoValue, { color: theme.primary }]}>+91 77559 52198</Text>
-                                </View>
-                            </View>
+                <TouchableOpacity
+                    style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                    onPress={() => setModalVisible(true)}
+                >
+                    <Text style={[styles.menuText, { color: theme.text }]}>{t('appLanguage')}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ color: theme.textSecondary, marginRight: 8 }}>
+                            {languages.find(l => l.code === language)?.name}
+                        </Text>
+                        <Text style={{ color: theme.textSecondary }}>›</Text>
+                    </View>
+                </TouchableOpacity>
 
-                            <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 10 }}>
-                                Available: Mon - Fri, 9:00 AM - 6:00 PM
+                <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]}>
+                    <Text style={[styles.menuText, { color: theme.text }]}>{t('subscription')}: {user?.subscription_status || 'Active'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                    onPress={() => setHelpModalVisible(true)}
+                >
+                    <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')}</Text>
+                </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+                <Text style={styles.logoutText}>{t('logout')}</Text>
+            </TouchableOpacity>
+
+            <View style={styles.copyrightContainer}>
+                <Text style={[styles.copyrightText, { color: theme.textSecondary }]}>
+                    {t('copyright')}
+                </Text>
+            </View>
+
+        </ScrollView>
+
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={[styles.modalView, { backgroundColor: theme.card }]}>
+                    <Text style={[styles.modalTitle, { color: theme.text }]}>{t('selectLanguage')}</Text>
+
+                    {languages.map((lang) => (
+                        <TouchableOpacity
+                            key={lang.code}
+                            style={[
+                                styles.languageOption,
+                                language === lang.code && { backgroundColor: theme.primary + '20' }
+                            ]}
+                            onPress={() => {
+                                changeLanguage(lang.code);
+                                setModalVisible(false);
+                            }}
+                        >
+                            <Text style={{ fontSize: 24, marginRight: 12 }}>{lang.icon}</Text>
+                            <Text style={[
+                                styles.languageText,
+                                { color: theme.text },
+                                language === lang.code && { color: theme.primary, fontWeight: 'bold' }
+                            ]}>
+                                {lang.name}
                             </Text>
+                            {language === lang.code && (
+                                <Text style={{ marginLeft: 'auto', color: theme.primary, fontWeight: 'bold' }}>✓</Text>
+                            )}
+                        </TouchableOpacity>
+                    ))}
+
+                    <TouchableOpacity
+                        style={[styles.closeButton, { backgroundColor: theme.border }]}
+                        onPress={() => setModalVisible(false)}
+                    >
+                        <Text style={{ color: theme.text }}>{t('cancel')}</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+
+        {/* Help & Support Modal */}
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={helpModalVisible}
+            onRequestClose={() => setHelpModalVisible(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={[styles.modalView, { backgroundColor: theme.card }]}>
+                    <Text style={[styles.modalTitle, { color: theme.text }]}>Help & Support</Text>
+
+                    <View style={{ width: '100%', marginBottom: 20 }}>
+                        <Text style={{ color: theme.text, fontSize: 16, marginBottom: 8 }}>Need assistance? Contact us:</Text>
+
+                        <View style={[styles.infoRow, { backgroundColor: theme.background }]}>
+                            <Text style={{ fontSize: 20, marginRight: 10 }}>📧</Text>
+                            <View>
+                                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
+                                <Text style={[styles.infoValue, { color: theme.primary }]}>veeruappmcq@gmail.com</Text>
+                            </View>
                         </View>
 
-                        <TouchableOpacity
-                            style={[styles.closeButton, { backgroundColor: theme.primary }]}
-                            onPress={() => setHelpModalVisible(false)}
-                        >
-                            <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
-                        </TouchableOpacity>
+                        <View style={[styles.infoRow, { backgroundColor: theme.background }]}>
+                            <Text style={{ fontSize: 20, marginRight: 10 }}>📞</Text>
+                            <View>
+                                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone</Text>
+                                <Text style={[styles.infoValue, { color: theme.primary }]}>+91 77559 52198</Text>
+                            </View>
+                        </View>
+
+                        <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 10 }}>
+                            Available: Mon - Fri, 9:00 AM - 6:00 PM
+                        </Text>
                     </View>
+
+                    <TouchableOpacity
+                        style={[styles.closeButton, { backgroundColor: theme.primary }]}
+                        onPress={() => setHelpModalVisible(false)}
+                    >
+                        <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
+                    </TouchableOpacity>
                 </View>
-            </Modal>
-        </View>
-    );
+            </View>
+        </Modal>
+    </View>
+);
 };
 
 const styles = StyleSheet.create({

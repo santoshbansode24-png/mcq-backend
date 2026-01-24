@@ -11,7 +11,11 @@ import {
     BackHandler
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
+import { BASE_URL } from '../api/config';
+import MathJaxWebView from '../components/MathJaxWebView';
 
 const MyExamTestScreen = ({ navigation, route }) => {
     const { questions, totalQuestions, subjectName } = route.params;
@@ -266,7 +270,21 @@ const MyExamTestScreen = ({ navigation, route }) => {
 
             <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.questionCard}>
-                    <Text style={styles.questionText}>{decodeHtml(currentQuestion.question)}</Text>
+                    {/* Render Image if exists */}
+                    {currentQuestion.image_url ? (
+                        <Image
+                            source={{ uri: `${BASE_URL}/uploads/${currentQuestion.image_url}` }}
+                            style={styles.questionImage}
+                            resizeMode="contain"
+                        />
+                    ) : null}
+
+                    {/* Render Question Text using MathJax if it might contain math */}
+                    <MathJaxWebView
+                        content={decodeHtml(currentQuestion.question)}
+                        textColor="#4c1d95"
+                        fontSize="18px"
+                    />
                 </View>
 
                 <View style={styles.optionsList}>
@@ -277,12 +295,22 @@ const MyExamTestScreen = ({ navigation, route }) => {
                             onPress={() => handleAnswer(opt)}
                             disabled={!!selectedAnswers[currentIndex]}
                         >
-                            <Text style={[
-                                styles.optionText,
-                                selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) && styles.optionTextSelected
-                            ]}>
-                                {opt.toUpperCase()}. {decodeHtml(currentQuestion[`option_${opt}`])}
-                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }} pointerEvents="none">
+                                <Text style={[
+                                    styles.optionText,
+                                    selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) && styles.optionTextSelected,
+                                    { marginRight: 8 }
+                                ]}>
+                                    {opt.toUpperCase()}.
+                                </Text>
+                                <View style={{ flex: 1 }}>
+                                    <MathJaxWebView
+                                        content={decodeHtml(currentQuestion[`option_${opt}`])}
+                                        textColor={selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) ? '#0f172a' : '#475569'}
+                                        fontSize="15px"
+                                    />
+                                </View>
+                            </View>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -413,6 +441,12 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#4c1d95', // Deep Purple Text for contrast
         lineHeight: 28,
+    },
+    questionImage: {
+        width: '100%',
+        height: 200,
+        marginBottom: 16,
+        borderRadius: 8,
     },
     optionsList: {
         gap: 12,

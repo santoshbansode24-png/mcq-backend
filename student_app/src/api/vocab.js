@@ -9,7 +9,7 @@ import { dataCache } from '../utils/dataCache';
  */
 const executeRequest = async (method, endpoint, data = {}, label = 'API') => {
     try {
-        console.log(`[API] ${label}...`);
+        // console.log(`[API] ${label}...`);
 
         const config = {
             method,

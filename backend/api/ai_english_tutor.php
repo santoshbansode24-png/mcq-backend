@@ -42,6 +42,7 @@ function uploadToGemini($filePath, $mimeType) {
     curl_close($ch);
     
     if (!$uploadUrl) {
+        error_log("Gemini Upload Failed: No Upload URL. Response: " . $response);
         return null;
     }
     
@@ -70,13 +71,11 @@ function uploadToGemini($filePath, $mimeType) {
 // Check if it's a file upload (Audio) or text message
 $inputData = json_decode(file_get_contents("php://input"), true);
 $userMessage = $inputData['message'] ?? '';
+$scenario = $_POST['scenario'] ?? $inputData['scenario'] ?? 'Casual Chat'; // Default to Casual
 $audioUri = null;
 
 if (isset($_FILES['audio'])) {
     $tempPath = $_FILES['audio']['tmp_name'];
-    // Gemini supports various audio formats. We'll assume the app sends a compatible one (e.g., m4a/mp3/wav).
-    // Expo AV usually records to .m4a (audio/mp4) or .caf.
-    // Let's try to upload it.
     $audioUri = uploadToGemini($tempPath, $_FILES['audio']['type']);
 }
 
@@ -85,21 +84,31 @@ if (empty($userMessage) && empty($audioUri)) {
     exit;
 }
 
-$promptText = "You are a friendly and helpful English Tutor. You are having a spoken conversation with a student.
-Analyze the student's input (which may be text or audio).
+// Dynamic Persona based on Scenario
+$persona = "You are a friendly friend.";
+if ($scenario === 'Job Interview') $persona = "You are a professional hiring manager conducting a job interview.";
+if ($scenario === 'Ordering Coffee') $persona = "You are a barista at a busy coffee shop.";
+if ($scenario === 'Travel') $persona = "You are an immigration officer at the airport.";
+if ($scenario === 'First Date') $persona = "You are meeting the user for the first time on a date. Be charming.";
 
-1. Check for grammatical errors, awkward phrasing, or unnatural English.
-2. If there are errors, provide the corrected version and a very brief explanation (max 1 sentence).
-3. If the input is correct, just set correction to null.
-4. Generate a natural, conversational response to keep the chat going.
+$promptText = "$persona You are having a spoken conversation with the user.
+SCENARIO: $scenario.
 
-Return ONLY a raw JSON object with this structure:
+TASK:
+1. Analyze the user's input (text or audio).
+2. Rate their 'Fluency Score' from 0-100 based heavily on grammar, pronunciation (if audio), and vocabulary.
+3. Check for errors. If there are errors, correct them.
+4. ROLEPLAY: specific to the scenario. Do NOT break character.
+5. Keep your response spoken-style (short, natural, no emojis if acting professional).
+
+Return ONLY a raw JSON object:
 {
     \"has_error\": true/false,
-    \"correction\": \"The corrected sentence (or null if perfect)\",
-    \"feedback\": \"Brief explanation of the error (or 'Perfect!' if correct)\",
-    \"reply\": \"Your conversational response\",
-    \"transcription\": \"(If audio was provided, put the transcribed text here, otherwise null)\"
+    \"correction\": \"Corrected sentence or null\",
+    \"feedback\": \"Brief explanation of error\",
+    \"reply\": \"Your conversational response in character\",
+    \"transcription\": \"User's text\",
+    \"fluency_score\": 85
 }";
 
 $contents = [];

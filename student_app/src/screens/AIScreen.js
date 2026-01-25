@@ -52,7 +52,7 @@ const AIScreen = ({ navigation }) => {
         },
         {
             id: 'english',
-            title: 'English Coach',
+            title: 'English Speaking',
             subtitle: 'Improve Fluency',
             description: 'Practice conversation and grammar with an AI native speaker.',
             icon: 'chatbubbles',

@@ -18,7 +18,7 @@ export const checkApiKey = () => {
  * @param {string} languageCode - Language code (e.g., 'en-IN', 'mr-IN', 'hi-IN')
  * @returns {Promise<Audio.Sound|null>} - The loaded sound object or null
  */
-export const playGoogleTTS = async (text, languageCode = 'en-IN') => {
+export const playGoogleTTS = async (text, languageCode = 'en-IN', speed = 0.75) => {
     try {
         if (!checkApiKey()) {
             console.warn('Google TTS: API Key not set.');
@@ -56,7 +56,7 @@ export const playGoogleTTS = async (text, languageCode = 'en-IN') => {
             },
             audioConfig: {
                 audioEncoding: 'MP3',
-                speakingRate: 0.9 // Slightly slower for better clarity
+                speakingRate: speed // Use the requested speed (default 0.75)
             }
         };
 

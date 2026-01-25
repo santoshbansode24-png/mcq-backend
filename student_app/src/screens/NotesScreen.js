@@ -65,7 +65,18 @@ const NotesScreen = () => {
                 <Text style={styles.noteTitle}>{item.title}</Text>
                 <Text style={styles.noteType}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
             </View>
-
+            <TouchableOpacity
+                style={styles.downloadButton}
+                onPress={() => {
+                    if (item.file_url) {
+                        downloadFile(item.file_url, item.title, setLoading);
+                    } else {
+                        Alert.alert("Error", "No file URL available");
+                    }
+                }}
+            >
+                <Ionicons name="download-outline" size={24} color="#4f46e5" />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, StatusBar, ActivityIndicator, Platform, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system';
+
 import * as Sharing from 'expo-sharing';
 import { downloadFile } from '../utils/downloadUtils';
 import { Ionicons } from '@expo/vector-icons'; // Assuming Ionicons is available, if not use Text emoji
@@ -36,7 +36,13 @@ const PDFViewerScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{title || 'Document'}</Text>
 
-
+                <TouchableOpacity onPress={handleDownload} style={styles.downloadButton} disabled={downloading}>
+                    {downloading ? (
+                        <ActivityIndicator size="small" color="#4f46e5" />
+                    ) : (
+                        <Ionicons name="download-outline" size={24} color="#4f46e5" />
+                    )}
+                </TouchableOpacity>
             </View>
 
             <View style={styles.contentContainer}>

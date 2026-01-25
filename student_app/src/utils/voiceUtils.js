@@ -92,6 +92,13 @@ export const getBestVoice = async () => {
 
         if (!voices || voices.length === 0) return null;
 
+        // 0. SPECIFIC USER REQUEST: Prioritize 'mr-in-x-mrc-local'
+        const specificDefault = voices.find(v => v.identifier === 'mr-in-x-mrc-local');
+        if (specificDefault) {
+            console.log('✅ Using Requested Default Voice:', specificDefault.name);
+            return specificDefault.identifier;
+        }
+
         // Helper to check for female attributes
         const isFemale = (v) => {
             const id = v.identifier.toLowerCase();

@@ -8,7 +8,7 @@
 if (!defined('GEMINI_API_KEY')) {
     // Try environment variable first, then fallback to hardcoded
     $envKey = getenv('GEMINI_API_KEY');
-    define('GEMINI_API_KEY', $envKey ? $envKey : 'AIzaSyCHHQqiOifU2KUpenX39imsL3qQ99wIFuw');
+    define('GEMINI_API_KEY', $envKey ? $envKey : 'AIzaSyAAzHANyBr35zSIRPoPL2W8oJT2Wl3lpUc');
 }
 
 // 2. Define API URL (Corrected Model Name)

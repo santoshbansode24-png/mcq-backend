@@ -14,7 +14,14 @@ if (!isset($_FILES['image'])) {
 }
 
 $file = $_FILES['image'];
-$prompt = $_POST['prompt'] ?? "Solve this homework problem step-by-step. Explain the concepts clearly.";
+$language = $_POST['language'] ?? "English";
+$prompt = $_POST['prompt'] ?? "Solve this homework problem.";
+
+// Append Language & Style Instruction
+$prompt .= "\n\nOUTPUT INSTRUCTIONS:\n";
+$prompt .= "1. Language: Provide the solution ENTIRELY in " . $language . ". (Use Devanagari for Hindi/Marathi).\n";
+$prompt .= "2. Style: Be SHORT, CLEAR, and CONCISE. Avoid unnecessary introductions or fluff. Go straight to the solution.\n";
+$prompt .= "3. Format: Use bullet points or steps if needed, but keep them brief.";
 
 // Read image data and convert to base64
 $imageData = file_get_contents($file['tmp_name']);

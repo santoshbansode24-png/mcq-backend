@@ -105,8 +105,8 @@ const AITutorScreen = ({ navigation }) => {
     return (
         <KeyboardAvoidingView
             style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 30}
         >
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 

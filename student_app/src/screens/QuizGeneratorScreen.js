@@ -11,21 +11,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 const { width } = Dimensions.get('window');
 
 const QuizGeneratorScreen = ({ navigation, user }) => {
     const { theme } = useTheme();
 
-    // Steps: 1 = Input (Text/Photo/File), 2 = Playing Quiz, 3 = Result
+    // Steps: 1 = Input (Text/Photo/File), 2 = Playing Quiz
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     // Input State
     const [inputType, setInputType] = useState('text'); // 'text', 'camera', 'file'
     const [inputText, setInputText] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
+    const [difficulty, setDifficulty] = useState('Medium'); // Easy, Medium, Hard
+    const [language, setLanguage] = useState('English'); // English, Hindi, Marathi
+    const [extractedText, setExtractedText] = useState(''); // To store text for "Load More"
 
     // Quiz State
     const [quiz, setQuiz] = useState([]);
@@ -81,43 +87,55 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
 
     // --- API Logic ---
 
-    const handleGenerateQuiz = async () => {
-        // Validation
-        if (inputType === 'text' && !inputText.trim()) {
-            Alert.alert("Empty Input", "Please write some text to generate a quiz.");
-            return;
+    const handleGenerateQuiz = async (isLoadMore = false) => {
+        // Validation (only for new quiz)
+        if (!isLoadMore) {
+            if (inputType === 'text' && !inputText.trim()) {
+                Alert.alert("Empty Input", "Please write some text to generate a quiz.");
+                return;
+            }
+            if (inputType === 'camera' && !selectedImage) {
+                Alert.alert("No Image", "Please take a photo first.");
+                return;
+            }
+            if (inputType === 'file' && !selectedFile) {
+                Alert.alert("No File", "Please upload a document first.");
+                return;
+            }
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
         }
-        if (inputType === 'camera' && !selectedImage) {
-            Alert.alert("No Image", "Please take a photo first.");
-            return;
-        }
-        if (inputType === 'file' && !selectedFile) {
-            Alert.alert("No File", "Please upload a document first.");
-            return;
-        }
-
-        setLoading(true);
 
         try {
             const formData = new FormData();
             formData.append('input_type', inputType);
+            formData.append('difficulty', difficulty);
+            formData.append('language', language);
 
-            if (inputType === 'text') {
-                formData.append('content', inputText);
-            } else if (inputType === 'camera') {
-                const uri = selectedImage.uri;
-                const fileType = uri.substring(uri.lastIndexOf('.') + 1);
-                formData.append('file', {
-                    uri: uri,
-                    name: `photo.${fileType}`,
-                    type: `image/${fileType}`,
-                });
-            } else if (inputType === 'file') {
-                formData.append('file', {
-                    uri: selectedFile.uri,
-                    name: selectedFile.name,
-                    type: selectedFile.mimeType || 'application/octet-stream',
-                });
+            // If loading more, use the extracted text to skip visual processing
+            if (isLoadMore && extractedText) {
+                formData.append('existing_text', extractedText);
+            }
+            // Otherwise process standard inputs
+            else {
+                if (inputType === 'text') {
+                    formData.append('content', inputText);
+                } else if (inputType === 'camera') {
+                    const uri = selectedImage.uri;
+                    const fileType = uri.substring(uri.lastIndexOf('.') + 1);
+                    formData.append('file', {
+                        uri: uri,
+                        name: `photo.${fileType}`,
+                        type: `image/${fileType}`,
+                    });
+                } else if (inputType === 'file') {
+                    formData.append('file', {
+                        uri: selectedFile.uri,
+                        name: selectedFile.name,
+                        type: selectedFile.mimeType || 'application/octet-stream',
+                    });
+                }
             }
 
             // Call the custom PHP endpoint we created
@@ -126,13 +144,34 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             });
 
             if (response.data.status === 'success') {
-                setQuiz(response.data.data);
-                setStep(2); // Start Quiz
-                setScore(0);
-                setCurrentQuestionIndex(0);
-                setQuizFinished(false);
-                setSelectedOption(null);
-                setShowExplanation(false);
+                const newQuestions = response.data.data;
+
+                // Store extracted text for future "Load More" calls
+                if (response.data.extracted_text) {
+                    setExtractedText(response.data.extracted_text);
+                }
+
+                if (isLoadMore) {
+                    // Append new questions
+                    setQuiz(prev => [...prev, ...newQuestions]);
+                    setQuizFinished(false);
+                    // Stay on current index, user will just click "Next" from result view logic if we change it?
+                    // Actually, if we are at result view, we should move to the next question index (which corresponds to start of new batch)
+                    // The 'Next' button on result screen will effectively be just closing the result view and showing the question.
+                    // But wait, our 'step 2' logic shows result if quizFinished is true.
+                    // So we just need to set quizFinished to false, and since currentQuestionIndex is at the end, nextQuestion() handles logic?
+                    // No, currentQuestionIndex is at last index. We need to increment it to show the newly added question.
+                    setCurrentQuestionIndex(prev => prev + 1);
+                } else {
+                    // New Quiz
+                    setQuiz(newQuestions);
+                    setStep(2); // Start Quiz
+                    setScore(0);
+                    setCurrentQuestionIndex(0);
+                    setQuizFinished(false);
+                    setSelectedOption(null);
+                    setShowExplanation(false);
+                }
             } else {
                 Alert.alert('Error', response.data.message || 'Failed to generate quiz');
             }
@@ -141,6 +180,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             Alert.alert('Connection Error', 'Failed to connect to AI service. Please check your internet.');
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     };
 
@@ -161,6 +201,66 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             setShowExplanation(false);
         } else {
             setQuizFinished(true);
+        }
+    };
+
+    const generatePDF = async () => {
+        try {
+            const htmlContent = `
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+                    <style>
+                        body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; }
+                        h1 { color: #7c3aed; text-align: center; }
+                        .question { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+                        .q-text { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+                        .options { margin-left: 15px; }
+                        .option { margin-bottom: 5px; }
+                        .answer-key { margin-top: 50px; page-break-before: always; }
+                        .key-item { margin-bottom: 5px; }
+                        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #888; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Veeru AI Quiz</h1>
+                    <p style="text-align: center; color: #666;">Generated on ${new Date().toLocaleDateString()}</p>
+                    <hr/>
+                    
+                    ${quiz.map((q, index) => `
+                        <div class="question">
+                            <div class="q-text">${index + 1}. ${q.question}</div>
+                            <div class="options">
+                                <div class="option">A) ${q.option_a}</div>
+                                <div class="option">B) ${q.option_b}</div>
+                                <div class="option">C) ${q.option_c}</div>
+                                <div class="option">D) ${q.option_d}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    <div class="answer-key">
+                        <h1>Answer Key & Explanations</h1>
+                        ${quiz.map((q, index) => `
+                            <div class="key-item">
+                                <strong>${index + 1}: ${q.correct_answer.toUpperCase()}</strong> - ${q.explanation}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="footer">
+                        Generated by Veeru Student App
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const { uri } = await Print.printToFileAsync({ html: htmlContent });
+            await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Error", "Could not generate PDF.");
         }
     };
 
@@ -195,7 +295,35 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
 
     const renderInputSection = () => (
         <ScrollView style={styles.inputScroll} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>How do you want to learn?</Text>
+            {/* Language Selector */}
+            <Text style={styles.sectionTitle}>Language</Text>
+            <View style={styles.difficultyContainer}>
+                {['English', 'Hindi', 'Marathi'].map((lang) => (
+                    <TouchableOpacity
+                        key={lang}
+                        style={[styles.diffButton, language === lang && styles.activeDiffButton]}
+                        onPress={() => setLanguage(lang)}
+                    >
+                        <Text style={[styles.diffText, language === lang && styles.activeDiffText]}>{lang}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            {/* Difficulty Selector */}
+            <Text style={[styles.sectionTitle, { marginTop: 15 }]}>Difficulty Level</Text>
+            <View style={styles.difficultyContainer}>
+                {['Easy', 'Medium', 'Hard'].map((level) => (
+                    <TouchableOpacity
+                        key={level}
+                        style={[styles.diffButton, difficulty === level && styles.activeDiffButton]}
+                        onPress={() => setDifficulty(level)}
+                    >
+                        <Text style={[styles.diffText, difficulty === level && styles.activeDiffText]}>{level}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>How do you want to learn?</Text>
 
             {/* Input Type Tabs */}
             <View style={styles.tabContainer}>
@@ -279,7 +407,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                 )}
             </View>
 
-            <TouchableOpacity style={styles.generateButton} onPress={handleGenerateQuiz}>
+            <TouchableOpacity style={styles.generateButton} onPress={() => handleGenerateQuiz(false)}>
                 <LinearGradient
                     colors={['#7c3aed', '#6d28d9']}
                     style={styles.generateGradient}
@@ -380,6 +508,31 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                             <Text style={styles.finalScore}>{score} / {quiz.length}</Text>
                             <Text style={styles.resultMessage}>{score > quiz.length / 2 ? 'Great job!' : 'Keep Practicing!'}</Text>
                         </LinearGradient>
+
+                        <View style={styles.actionButtons}>
+                            {/* Load More Button */}
+                            <TouchableOpacity
+                                style={[styles.actionButton, styles.loadMoreButton]}
+                                onPress={() => handleGenerateQuiz(true)}
+                                disabled={loadingMore}
+                            >
+                                {loadingMore ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="add-circle-outline" size={24} color="#fff" />
+                                        <Text style={styles.actionButtonText}>Load 5 More</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            {/* PDF Button */}
+                            <TouchableOpacity style={[styles.actionButton, styles.pdfButton]} onPress={generatePDF}>
+                                <Ionicons name="download-outline" size={24} color="#fff" />
+                                <Text style={styles.actionButtonText}>Save PDF</Text>
+                            </TouchableOpacity>
+                        </View>
+
                         <TouchableOpacity style={styles.restartButton} onPress={() => { setStep(1); setInputText(''); setSelectedImage(null); setSelectedFile(null); }}>
                             <Text style={styles.restartButtonText}>Create New Quiz</Text>
                         </TouchableOpacity>
@@ -406,6 +559,14 @@ const styles = StyleSheet.create({
     // Input Section Styles
     inputScroll: { padding: 20 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 15 },
+
+    // Difficulty
+    difficultyContainer: { flexDirection: 'row', gap: 10, marginBottom: 5 },
+    diffButton: { flex: 1, paddingVertical: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
+    activeDiffButton: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
+    diffText: { fontWeight: '600', color: '#64748b' },
+    activeDiffText: { color: '#fff' },
+
     tabContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
     tabButton: { flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 4, borderWidth: 1, borderColor: '#e2e8f0' },
     activeTab: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
@@ -428,7 +589,7 @@ const styles = StyleSheet.create({
     generateGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
     generateButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 
-    // Quiz Styles (Recycled from your code)
+    // Quiz Styles
     quizScroll: { padding: 20, paddingBottom: 40 },
     questionCard: { backgroundColor: '#fff', padding: 24, borderRadius: 24, marginBottom: 24, elevation: 3 },
     questionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
@@ -453,11 +614,18 @@ const styles = StyleSheet.create({
     nextButton: { backgroundColor: '#7c3aed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16 },
     nextButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginRight: 8 },
     resultView: { padding: 20, alignItems: 'center', justifyContent: 'center', flex: 1 },
-    resultCard: { width: '100%', padding: 40, borderRadius: 30, alignItems: 'center', marginBottom: 40 },
+    resultCard: { width: '100%', padding: 40, borderRadius: 30, alignItems: 'center', marginBottom: 20 },
     resultEmoji: { fontSize: 80, marginBottom: 20 },
     resultTitle: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 10 },
     finalScore: { fontSize: 48, fontWeight: 'bold', color: '#fff', marginBottom: 10 },
     resultMessage: { fontSize: 18, color: 'rgba(255,255,255,0.9)' },
+
+    actionButtons: { flexDirection: 'row', gap: 15, marginBottom: 20, width: '100%' },
+    actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, gap: 8 },
+    loadMoreButton: { backgroundColor: '#059669' },
+    pdfButton: { backgroundColor: '#2563eb' },
+    actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+
     restartButton: { width: '100%', backgroundColor: '#fff', padding: 20, borderRadius: 20, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
     restartButtonText: { color: '#7c3aed', fontSize: 18, fontWeight: 'bold' },
 });

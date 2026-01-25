@@ -45,7 +45,7 @@ export const sendMessageToAI = async (message) => {
 /**
  * Upload Homework Image to AI
  */
-export const uploadHomeworkImage = async (imageUri, prompt) => {
+export const uploadHomeworkImage = async (imageUri, prompt, language = 'English') => {
     try {
         // 1. Detect File Type dynamically (JPG vs PNG)
         const fileExtension = imageUri.split('.').pop().toLowerCase();
@@ -59,6 +59,7 @@ export const uploadHomeworkImage = async (imageUri, prompt) => {
             type: mimeType,
             name: fileName,
         });
+        formData.append('language', language);
         formData.append('prompt', prompt || "Solve this problem step-by-step.");
 
         // 3. Send Request (Longer timeout for images)

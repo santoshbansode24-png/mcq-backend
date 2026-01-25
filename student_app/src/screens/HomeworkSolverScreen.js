@@ -13,6 +13,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
     const [image, setImage] = useState(null);
     const [solution, setSolution] = useState('');
     const [loading, setLoading] = useState(false);
+    const [language, setLanguage] = useState('English');
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -55,7 +56,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
         if (!image) return;
 
         setLoading(true);
-        const response = await uploadHomeworkImage(image);
+        const response = await uploadHomeworkImage(image, null, language);
         setLoading(false);
 
         if (response.status === 'success') {
@@ -126,6 +127,24 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         </View>
                     )}
                 </View>
+
+                {/* Language Selector */}
+                {image && (
+                    <View style={styles.languageContainer}>
+                        <Text style={styles.languageTitle}>Answer Language:</Text>
+                        <View style={styles.languageRow}>
+                            {['English', 'Hindi', 'Marathi'].map((lang) => (
+                                <TouchableOpacity
+                                    key={lang}
+                                    style={[styles.langButton, language === lang && styles.activeLangButton]}
+                                    onPress={() => setLanguage(lang)}
+                                >
+                                    <Text style={[styles.langText, language === lang && styles.activeLangText]}>{lang}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
                 {/* Solve Button */}
                 {image && (
@@ -330,6 +349,44 @@ const styles = StyleSheet.create({
         lineHeight: 26,
         color: '#334155',
     },
+    languageContainer: {
+        marginBottom: 20,
+        backgroundColor: '#fff',
+        padding: 15,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#fce7f3',
+    },
+    languageTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#be185d',
+        marginBottom: 10,
+    },
+    languageRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    langButton: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#fce7f3',
+        alignItems: 'center',
+        backgroundColor: '#fff9fc',
+    },
+    activeLangButton: {
+        backgroundColor: '#be185d',
+        borderColor: '#be185d',
+    },
+    langText: {
+        color: '#be185d',
+        fontWeight: '600',
+    },
+    activeLangText: {
+        color: '#fff',
+    }
 });
 
 export default HomeworkSolverScreen;

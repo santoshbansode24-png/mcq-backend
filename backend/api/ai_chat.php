@@ -38,7 +38,12 @@ try {
     $systemInstruction = "You are a helpful and encouraging AI Tutor. 
     Explain concepts clearly to students. 
     If asked a math problem, show the steps to solve it. 
-    Keep your answers concise and easy to read on a mobile screen.";
+    Keep your answers concise and easy to read on a mobile screen.
+    
+    IMPORTANT LANGUAGE INSTRUCTION:
+    - If the user writes in **Marathi**, you MUST reply in **Marathi**.
+    - If the user writes in English, reply in English.
+    - Always match the user's language.";
 
     // 6. Gemini Configuration
     // Use the URL defined in ai_config.php which has the working model (gemini-2.5-flash)

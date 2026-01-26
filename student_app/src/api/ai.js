@@ -28,11 +28,37 @@ const handleError = (error, context) => {
 /**
  * Send Message to AI Tutor
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ... (existing code)
+
+/**
+ * Get current user ID from storage
+ */
+const getUserId = async () => {
+    try {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+            const user = JSON.parse(userData);
+            return user.user_id;
+        }
+    } catch (e) {
+        console.warn("Failed to get user ID for AI tracking", e);
+    }
+    return null;
+};
+
+/**
+ * Send Message to AI Tutor
+ */
 export const sendMessageToAI = async (message) => {
     try {
+        const userId = await getUserId();
+
         // Using production endpoint
         const response = await aiClient.post('/ai_chat.php', {
-            message: message
+            message: message,
+            user_id: userId // Add user_id for tracking
         }, {
             headers: { 'Content-Type': 'application/json' }
         });
@@ -47,6 +73,8 @@ export const sendMessageToAI = async (message) => {
  */
 export const uploadHomeworkImage = async (imageUri, prompt, language = 'English') => {
     try {
+        const userId = await getUserId();
+
         // 1. Detect File Type dynamically (JPG vs PNG)
         const fileExtension = imageUri.split('.').pop().toLowerCase();
         const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
@@ -61,6 +89,7 @@ export const uploadHomeworkImage = async (imageUri, prompt, language = 'English'
         });
         formData.append('language', language);
         formData.append('prompt', prompt || "Solve this problem step-by-step.");
+        if (userId) formData.append('user_id', userId); // Add user_id
 
         // 3. Send Request (Longer timeout for images)
         const response = await aiClient.post('/ai_homework.php', formData, {

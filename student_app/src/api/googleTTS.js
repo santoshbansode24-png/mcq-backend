@@ -1,8 +1,10 @@
 import { Audio } from 'expo-av';
 import { Alert } from 'react-native';
 
+import { GOOGLE_API_KEY } from '../config/secrets';
+
 // TODO: Replace with your actual Google Cloud API Key
-const GOOGLE_API_KEY = 'AIzaSyD_44YkJIddsiIF_l78-8WR2BeWUFGcuV0';
+// const GOOGLE_API_KEY = 'AIzaSyD_44YkJIddsiIF_l78-8WR2BeWUFGcuV0'; // Moved to secrets.js
 const API_URL = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
 
 /**

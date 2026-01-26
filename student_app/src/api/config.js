@@ -31,7 +31,7 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-const config = LOCAL_CONFIG; // Using LOCAL_CONFIG for local development
+const config = RAILWAY_CONFIG; // Using LOCAL_CONFIG for local development
 
 export default config;
 
@@ -70,3 +70,10 @@ export const checkServerConnection = async () => {
         return true;
     }
 };
+
+// ========================================
+// PAYMENT CONFIGURATION
+// ========================================
+// Set this to TRUE only when ready to launch payments
+export const ENABLE_PAYMENTS = false;
+

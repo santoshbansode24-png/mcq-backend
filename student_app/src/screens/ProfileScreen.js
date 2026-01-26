@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import { API_URL, BASE_URL } from '../api/config';
+import { API_URL, BASE_URL, ENABLE_PAYMENTS } from '../api/config';
 import { fetchClasses, updateStudentClass } from '../api/classes';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import BadgesSection from '../components/BadgesSection';
 import { Modal, Pressable, FlatList } from 'react-native';
 
-const ProfileScreen = ({ user, onLogout, onUserUpdate }) => {
+const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
     const { theme, isDarkMode, toggleTheme } = useTheme();
     const { language, changeLanguage, t } = useLanguage();
     const [profilePic, setProfilePic] = useState(user?.profile_picture);
@@ -305,6 +307,19 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate }) => {
                     <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.border }]}>
                         <Text style={[styles.menuText, { color: theme.text }]}>{t('subscription')}: {user?.subscription_status || 'Active'}</Text>
                     </TouchableOpacity>
+
+                    {ENABLE_PAYMENTS && (
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                            onPress={() => navigation.navigate('Subscription')}
+                        >
+                            <Text style={[styles.menuText, { color: theme.primary, fontWeight: 'bold' }]}>
+                                💎 {t('upgradePremium') || 'Upgrade to Premium'}
+                            </Text>
+                            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                        </TouchableOpacity>
+                    )}
+
                     <TouchableOpacity
                         style={[styles.menuItem, { borderBottomColor: theme.border }]}
                         onPress={() => setHelpModalVisible(true)}

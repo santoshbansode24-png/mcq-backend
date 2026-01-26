@@ -396,8 +396,8 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
 
-    cardArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 20, paddingTop: 40 },
-    cardContainer: { width: '100%', maxWidth: 400, aspectRatio: 0.8 },
+    cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+    cardContainer: { width: '100%', maxWidth: 400, height: '100%', maxHeight: 600, flexShrink: 1 },
     card: {
         width: '100%',
         height: '100%',

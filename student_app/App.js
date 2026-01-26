@@ -19,6 +19,7 @@ import ClassSelectionScreen from './src/screens/ClassSelectionScreen';
 import MainScreen from './src/screens/MainScreen';
 import VideoPlayerScreen from './src/screens/VideoPlayerScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import SubscriptionScreen from './src/screens/SubscriptionScreen';
 
 // Server Config
 import { checkServerConnection } from './src/api/config';
@@ -91,6 +92,7 @@ export default function App() {
               <Stack.Screen name="Main" component={MainScreen} />
               <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="Subscription" component={SubscriptionScreen} />
 
             </Stack.Navigator>
           </NavigationContainer>

@@ -132,7 +132,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     }, [currentView]);
 
     const handleNavigate = useCallback((screen, params = {}) => {
-        if (screen === 'VideoPlayer') {
+        if (screen === 'VideoPlayer' || screen === 'Subscription') {
             parentNavigation.navigate(screen, params);
             return;
         }

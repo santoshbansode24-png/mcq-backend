@@ -24,7 +24,7 @@ import { dataCache } from '../utils/dataCache';
 const HomeScreen = ({ user, navigation }) => {
     const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
-    const userName = user?.name || 'Student';
+    const userName = (user?.name || 'Student').split(' ')[0];
     const classId = user?.class_id;
 
     const [subjects, setSubjects] = useState([]);

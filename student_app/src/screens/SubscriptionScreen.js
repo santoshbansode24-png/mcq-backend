@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import RazorpayCheckout from 'react-native-razorpay';
 import { useTheme } from '../context/ThemeContext';
@@ -156,7 +156,11 @@ const FeatureItem = ({ text, theme }) => (
 );
 
 const styles = StyleSheet.create({
-    container: { flexGrow: 1, padding: 20 },
+    container: {
+        flexGrow: 1,
+        padding: 20,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 20 : 60
+    },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
     headerTitle: { fontSize: 20, fontWeight: 'bold' },
     title: { fontSize: 24, fontWeight: 'bold' },

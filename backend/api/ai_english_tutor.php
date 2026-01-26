@@ -5,7 +5,7 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-require_once '../config/ai_config.php';
+require_once __DIR__ . '/../config/ai_config.php';
 
 // Function to upload file to Gemini
 function uploadToGemini($filePath, $mimeType) {
@@ -71,8 +71,10 @@ function uploadToGemini($filePath, $mimeType) {
 // Check if it's a file upload (Audio) or text message
 $inputData = json_decode(file_get_contents("php://input"), true);
 $userMessage = $inputData['message'] ?? '';
-$scenario = $_POST['scenario'] ?? $inputData['scenario'] ?? 'Casual Chat'; // Default to Casual
+$levelId = $_POST['level_id'] ?? $inputData['level_id'] ?? 1; // Default to Level 1
 $audioUri = null;
+
+require_once __DIR__ . '/../config/db.php'; // Need DB connection to fetch mission
 
 if (isset($_FILES['audio'])) {
     $tempPath = $_FILES['audio']['tmp_name'];
@@ -84,31 +86,45 @@ if (empty($userMessage) && empty($audioUri)) {
     exit;
 }
 
-// Dynamic Persona based on Scenario
-$persona = "You are a friendly friend.";
-if ($scenario === 'Job Interview') $persona = "You are a professional hiring manager conducting a job interview.";
-if ($scenario === 'Ordering Coffee') $persona = "You are a barista at a busy coffee shop.";
-if ($scenario === 'Travel') $persona = "You are an immigration officer at the airport.";
-if ($scenario === 'First Date') $persona = "You are meeting the user for the first time on a date. Be charming.";
+// Fetch Mission Data from DB
+try {
+    $stmt = $pdo->prepare("SELECT title, role, system_prompt FROM english_missions WHERE level_id = ?");
+    $stmt->execute([$levelId]);
+    $mission = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$promptText = "$persona You are having a spoken conversation with the user.
-SCENARIO: $scenario.
+    if (!$mission) {
+        $mission = [
+            'title' => 'Unknown Mission',
+            'role' => 'Tutor',
+            'system_prompt' => 'Role: Tutor. Objective: Chat with student.'
+        ];
+    }
+} catch (Exception $e) {
+    // Fallback if DB fails
+    $mission = ['title' => 'Error', 'role' => 'Tutor', 'system_prompt' => 'Role: Tutor.'];
+}
+
+$promptText = "{$mission['system_prompt']}
+
+SCENARIO: {$mission['title']} ({$mission['role']}).
 
 TASK:
 1. Analyze the user's input (text or audio).
-2. Rate their 'Fluency Score' from 0-100 based heavily on grammar, pronunciation (if audio), and vocabulary.
-3. Check for errors. If there are errors, correct them.
-4. ROLEPLAY: specific to the scenario. Do NOT break character.
-5. Keep your response spoken-style (short, natural, no emojis if acting professional).
+2. Rate their 'Fluency Score' from 0-100 based on the target vocabulary.
+3. Check for errors. If there are errors, correct them mentally but reply gently.
+4. ROLEPLAY: specific to the mission. Do NOT break character.
+5. SCAFFOLDING: Use the specific hints defined in the prompt if the student struggles.
+6. SUCCESS: If the user meets the prompt's success condition, set is_goal_achieved to true.
 
 Return ONLY a raw JSON object:
 {
     \"has_error\": true/false,
-    \"correction\": \"Corrected sentence or null\",
-    \"feedback\": \"Brief explanation of error\",
-    \"reply\": \"Your conversational response in character\",
+    \"correction\": \"Implicit correction or null\",
+    \"tutor_speech\": \"Your spoken response in character\",
+    \"on_screen_hint\": \"Short text for the student to read (e.g. 'Say: I want water')\",
     \"transcription\": \"User's text\",
-    \"fluency_score\": 85
+    \"fluency_score\": 85,
+    \"is_goal_achieved\": false
 }";
 
 $contents = [];
@@ -161,7 +177,20 @@ if (curl_errno($ch)) {
         $aiJson = json_decode($aiText, true);
 
         if ($aiJson) {
-            echo json_encode(['status' => 'success', 'data' => $aiJson]);
+            // Map old 'reply' to 'tutor_speech' for backward compatibility if needed, using the new format
+            $output = [
+                'status' => 'success',
+                'data' => [
+                    'reply' => $aiJson['tutor_speech'], // Frontend uses 'reply' mostly
+                    'tutor_speech' => $aiJson['tutor_speech'],
+                    'on_screen_hint' => $aiJson['on_screen_hint'] ?? '',
+                    'fluency_score' => $aiJson['fluency_score'] ?? 0,
+                    'is_goal_achieved' => $aiJson['is_goal_achieved'] ?? false,
+                    'transcription' => $aiJson['transcription'] ?? '',
+                    'correction' => $aiJson['correction'] ?? null
+                ]
+            ];
+            echo json_encode($output);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Failed to parse AI response', 'raw' => $aiText]);
         }

@@ -16,13 +16,13 @@ export const fetchChapterProgress = async (userId, subjectId, forceRefresh = fal
     if (!forceRefresh) {
         const cached = await cacheManager.get(cacheKey, 'progress', 30);
         if (cached) {
-            console.log(`[API] Using cached chapter progress for subject ${subjectId}`);
+            // console.log(`[API] Using cached chapter progress for subject ${subjectId}`);
             return cached;
         }
     }
 
     try {
-        console.log(`[API] Fetching chapter progress from server for subject ${subjectId}...`);
+        // console.log(`[API] Fetching chapter progress from server for subject ${subjectId}...`);
         const response = await axios.get(
             `${API_URL}/get_chapter_progress.php?user_id=${userId}&subject_id=${subjectId}`
         );

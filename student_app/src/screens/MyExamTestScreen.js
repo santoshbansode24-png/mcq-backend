@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 20,
-        paddingBottom: 100,
+        paddingBottom: 150,
     },
     questionCard: {
         backgroundColor: '#f3e8ff', // Lavender Background

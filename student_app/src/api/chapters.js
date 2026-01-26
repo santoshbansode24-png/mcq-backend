@@ -9,13 +9,13 @@ export const fetchChapters = async (subjectId, forceRefresh = false) => {
     if (!forceRefresh) {
         const cached = await dataCache.get(cacheKey, 'chapters');
         if (cached) {
-            console.log(`[API] Using cached chapters for subject ${subjectId}`);
+            // console.log(`[API] Using cached chapters for subject ${subjectId}`);
             return cached;
         }
     }
 
     try {
-        console.log(`[API] Fetching chapters from server for subject ${subjectId}...`);
+        // console.log(`[API] Fetching chapters from server for subject ${subjectId}...`);
         const response = await axios.get(`${API_URL}/get_chapters.php?subject_id=${subjectId}`);
 
         // Cache successful responses

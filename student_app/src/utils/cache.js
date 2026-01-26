@@ -31,7 +31,7 @@ export const cacheManager = {
         try {
             const cached = await AsyncStorage.getItem(`${CACHE_PREFIX}${key}`);
             if (!cached) {
-                console.log(`[Cache MISS] ${key} - not found`);
+
                 return null;
             }
 
@@ -41,12 +41,12 @@ export const cacheManager = {
             const isExpired = age > maxAge;
 
             if (isExpired) {
-                console.log(`[Cache EXPIRED] ${key} - ${Math.round(age / 1000)}s old (max: ${Math.round(maxAge / 1000)}s)`);
+                // console.log(`[Cache EXPIRED] ${key}`);
                 await this.clear(key);
                 return null;
             }
 
-            console.log(`[Cache HIT] ${key} - ${Math.round(age / 1000)}s old`);
+
             return data;
         } catch (error) {
             console.error('[Cache] Get error:', error);
@@ -68,7 +68,7 @@ export const cacheManager = {
                 type
             };
             await AsyncStorage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify(cacheData));
-            console.log(`[Cache SET] ${key} (type: ${type})`);
+
         } catch (error) {
             console.error('[Cache] Set error:', error);
         }

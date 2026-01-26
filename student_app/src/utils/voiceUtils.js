@@ -18,7 +18,7 @@ const VOICE_PREF_KEY = 'user_voice_preference';
 export const setVoicePreference = async (identifier) => {
     try {
         await AsyncStorage.setItem(VOICE_PREF_KEY, identifier);
-        console.log('Voice preference saved:', identifier);
+
     } catch (error) {
         console.error('Failed to save voice preference:', error);
     }
@@ -83,7 +83,7 @@ export const getBestVoice = async () => {
             const voices = await Speech.getAvailableVoicesAsync();
             const exists = voices.find(v => v.identifier === preferredId);
             if (exists) {
-                console.log('✅ Using User Preferred Voice:', exists.name);
+                // console.log('✅ Using User Preferred Voice:', exists.name);
                 return exists.identifier;
             }
         }
@@ -95,7 +95,7 @@ export const getBestVoice = async () => {
         // 0. SPECIFIC USER REQUEST: Prioritize 'mr-in-x-mrc-local'
         const specificDefault = voices.find(v => v.identifier === 'mr-in-x-mrc-local');
         if (specificDefault) {
-            console.log('✅ Using Requested Default Voice:', specificDefault.name);
+            // console.log('✅ Using Requested Default Voice:', specificDefault.name);
             return specificDefault.identifier;
         }
 
@@ -135,7 +135,7 @@ export const getBestVoice = async () => {
             if (matches.length > 0) {
                 // Try to find high quality match first
                 const best = matches.find(isHighQuality) || matches[0];
-                console.log(`✅ Selected Voice (${priority.lang} | ${priority.gender}): ${best.name} (${best.identifier})`);
+                // console.log(`✅ Selected Voice (${priority.lang} | ${priority.gender}): ${best.name} (${best.identifier})`);
                 return best.identifier;
             }
         }
@@ -143,11 +143,11 @@ export const getBestVoice = async () => {
         // Ultimate Fallback: Any voice with 'IN' (India)
         const fallback = voices.find(v => v.language.includes('IN'));
         if (fallback) {
-            console.log("⚠️ Fallback to generic Indian voice:", fallback.identifier);
+            // console.log("⚠️ Fallback to generic Indian voice:", fallback.identifier);
             return fallback.identifier;
         }
 
-        console.log("⚠️ No Indian voice found. Using system default.");
+        // console.log("⚠️ No Indian voice found. Using system default.");
         return null;
 
     } catch (error) {

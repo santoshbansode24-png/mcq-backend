@@ -72,7 +72,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
             // User requested Indian Marathi accent
             preferredLanguage.current = 'mr-IN';
         } catch (e) {
-            console.log('Voice setup error:', e);
+            // console.log('Voice setup error:', e);
         }
     };
 
@@ -118,7 +118,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     /* ---------------- PLAY TTS ---------------- */
 
     const playTTS = async (item, index) => {
-        console.log("TTS Item Data:", JSON.stringify(item)); // DEBUG LOG
+        // console.log("TTS Item Data:", JSON.stringify(item)); // DEBUG LOG
         // 1. If clicking the one currently playing, stop it.
         if (playingIndex === index) {
             await stopTTS();
@@ -131,10 +131,10 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const e = item.e || item.Explanation || ''; // Get explanation
 
         if (!e) {
-            console.log("DEBUG: Explanation missing in item:", item);
+            // console.log("DEBUG: Explanation missing in item:", item);
             // Alert.alert("Debug", "No explanation found in data for this point.");
         } else {
-            console.log("DEBUG: Explanation found:", e);
+            // console.log("DEBUG: Explanation found:", e);
         }
 
         // Speak Q, then A, then Explanation (without "Explanation" prefix for better flow in Marathi)
@@ -170,7 +170,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
             }
 
         } catch (err) {
-            console.log('TTS execution error:', err);
+            // console.log('TTS execution error:', err);
             setPlayingIndex(null);
         }
     };

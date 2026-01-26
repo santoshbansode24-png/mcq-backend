@@ -54,8 +54,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
     }, [isFocused, activeTab]);
 
     useEffect(() => {
-        console.log('[ChapterContent] Route Params:', route.params);
-        console.log('[ChapterContent] Chapter Object:', chapter);
+        // console.log('[ChapterContent] Route Params:', route.params);
+        // console.log('[ChapterContent] Chapter Object:', chapter);
         if (chapter?.chapter_id) {
             loadContent();
         } else {
@@ -166,7 +166,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     setSetStatuses(statusData.data);
                 }
             }
-        } catch (e) { console.log('Status Load Error', e); }
+        } catch (e) { /* console.log('Status Load Error', e); */ }
     };
 
     const onRefresh = () => {
@@ -335,7 +335,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
             // Get the best available voice (Prioritizes Marathi -> Hindi -> English)
             const bestVoice = await getBestVoice();
-            console.log('Using Voice:', bestVoice);
+            // console.log('Using Voice:', bestVoice);
 
             Speech.speak(textToSpeak, {
                 language: 'en-IN', // Base language (fallback)
@@ -345,7 +345,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 onDone: () => setPlayingIndex(null),
                 onStopped: () => setPlayingIndex(null),
                 onError: (e) => {
-                    console.log('TTS Error', e);
+                    // console.log('TTS Error', e);
                     setPlayingIndex(null);
                 }
             });

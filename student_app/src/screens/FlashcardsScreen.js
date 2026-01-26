@@ -39,6 +39,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
 
     const [loading, setLoading] = useState(true);
     const [cards, setCards] = useState([]);
+    const [shuffledGradients, setShuffledGradients] = useState(CARD_GRADIENTS); // Store shuffled gradients
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const isFlippedRef = useRef(false); // Ref to track valid state inside PanResponder closure
@@ -55,6 +56,9 @@ const FlashcardsScreen = ({ navigation, route }) => {
     const flipAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // Shuffle colors once on mount
+        setShuffledGradients([...CARD_GRADIENTS].sort(() => Math.random() - 0.5));
+
         if (flashcardsData && flashcardsData.length > 0) {
             setCards(flashcardsData);
             setLoading(false);
@@ -212,7 +216,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
 
     // Get gradient colors for current card
     const getCardGradient = (index) => {
-        return CARD_GRADIENTS[index % CARD_GRADIENTS.length];
+        return shuffledGradients[index % shuffledGradients.length];
     };
 
     if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={theme.primary} /></View>;

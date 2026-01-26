@@ -20,16 +20,7 @@ const AIScreen = ({ navigation }) => {
     const { theme } = useTheme();
 
     const features = [
-        {
-            id: 'tutor',
-            title: 'AI Tutor',
-            subtitle: '24/7 Study Companion',
-            description: 'Ask precise questions and get instant, detailed explanations.',
-            icon: 'school',
-            color1: '#4f46e5',
-            color2: '#818cf8',
-            screen: 'AITutor'
-        },
+
         {
             id: 'quiz',
             title: 'Quiz Generator',
@@ -58,7 +49,7 @@ const AIScreen = ({ navigation }) => {
             icon: 'chatbubbles',
             color1: '#f43f5e',
             color2: '#fb7185',
-            screen: 'EnglishTutor'
+            screen: 'EnglishMissionMap'
         }
     ];
 

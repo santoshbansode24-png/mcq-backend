@@ -501,7 +501,11 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                 )}
 
                 {step === 2 && quizFinished && (
-                    <View style={styles.resultView}>
+                    <ScrollView
+                        style={styles.resultScrollView}
+                        contentContainerStyle={styles.resultView}
+                        showsVerticalScrollIndicator={false}
+                    >
                         <LinearGradient colors={['#7c3aed', '#6d28d9']} style={styles.resultCard}>
                             <Text style={styles.resultEmoji}>🏆</Text>
                             <Text style={styles.resultTitle}>Quiz Complete!</Text>
@@ -536,7 +540,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                         <TouchableOpacity style={styles.restartButton} onPress={() => { setStep(1); setInputText(''); setSelectedImage(null); setSelectedFile(null); }}>
                             <Text style={styles.restartButtonText}>Create New Quiz</Text>
                         </TouchableOpacity>
-                    </View>
+                    </ScrollView>
                 )}
             </KeyboardAvoidingView>
         </View>
@@ -613,7 +617,9 @@ const styles = StyleSheet.create({
     explanationText: { fontSize: 15, color: '#475569', marginBottom: 20 },
     nextButton: { backgroundColor: '#7c3aed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16 },
     nextButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginRight: 8 },
-    resultView: { padding: 20, alignItems: 'center', justifyContent: 'center', flex: 1 },
+    nextButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginRight: 8 },
+    resultScrollView: { flex: 1 },
+    resultView: { padding: 20, alignItems: 'center', justifyContent: 'center', flexGrow: 1 },
     resultCard: { width: '100%', padding: 40, borderRadius: 30, alignItems: 'center', marginBottom: 20 },
     resultEmoji: { fontSize: 80, marginBottom: 20 },
     resultTitle: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 10 },

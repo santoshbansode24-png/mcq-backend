@@ -9,7 +9,7 @@ import { dataCache } from '../utils/dataCache';
  */
 const executeRequest = async (method, endpoint, data = {}, label = 'API') => {
     try {
-        // console.log(`[API] ${label}...`);
+
 
         const config = {
             method,
@@ -33,12 +33,21 @@ const executeRequest = async (method, endpoint, data = {}, label = 'API') => {
 /**
  * centralized cache clearing for user-specific data
  */
-const clearUserCache = async (userId) => {
-    await Promise.all([
+const clearUserCache = async (userId, setNumber = null) => {
+    const promises = [
         dataCache.remove(`vocab_review_${userId}`),
         dataCache.remove(`vocab_stats_${userId}`)
-    ]);
-    console.log(`[API] Cache cleared for user ${userId}`);
+    ];
+
+    if (setNumber) {
+        promises.push(dataCache.remove(`vocab_set_${userId}_${setNumber}`));
+    } else {
+        // If we don't know the set, we might want to clear all sets? 
+        // For now, let's rely on expiration or specific invalidation.
+        // Or we could implement a clearByType with prefix pattern if needed later.
+    }
+
+    await Promise.all(promises);
 };
 
 // --- exported functions ---
@@ -53,7 +62,7 @@ export const fetchReviewList = async (userId, limit = 20, forceRefresh = false) 
     if (!forceRefresh) {
         const cached = await dataCache.get(cacheKey, 'analytics');
         if (cached) {
-            console.log(`[API] Using cached review list for user ${userId}`);
+
             return cached;
         }
     }
@@ -110,7 +119,7 @@ export const fetchVocabStats = async (userId, forceRefresh = false) => {
     if (!forceRefresh) {
         const cached = await dataCache.get(cacheKey, 'analytics');
         if (cached) {
-            console.log(`[API] Using cached stats for user ${userId}`);
+
             return cached;
         }
     }
@@ -148,10 +157,24 @@ export const fetchWordDetails = async (wordId, userId = 0) => {
  * Get words for a specific set
  */
 export const fetchVocabSet = async (userId, setNumber = 0) => {
-    return executeRequest('get', '/vocab_get_set.php', {
+    const cacheKey = `vocab_set_${userId}_${setNumber}`;
+
+    const cached = await dataCache.get(cacheKey, 'mcqs'); // Use 'mcqs' duration (15m) or similar
+    if (cached) {
+        // console.log(`[API] Using cached set ${setNumber} for user ${userId}`);
+        return cached;
+    }
+
+    const data = await executeRequest('get', '/vocab_get_set.php', {
         user_id: userId,
         set_number: setNumber
     }, `Fetching set ${setNumber}`);
+
+    if (data && data.status === 'success') {
+        await dataCache.set(cacheKey, data, 'mcqs');
+    }
+
+    return data;
 };
 
 /**
@@ -166,7 +189,7 @@ export const completeVocabSet = async (userId, setNumber, score, totalQuestions 
     }, `Completing set ${setNumber}`);
 
     if (data && data.status === 'success') {
-        await clearUserCache(userId);
+        await clearUserCache(userId, setNumber);
     }
 
     return data;

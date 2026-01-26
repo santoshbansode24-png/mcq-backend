@@ -41,10 +41,11 @@ const ChaptersScreen = ({ navigation, route, user }) => {
         if (!isRefreshing) setLoading(true);
         try {
             // Load chapters
-            const chaptersResponse = await fetchChapters(subject.subject_id);
-
-            // Load progress data
-            const progressResponse = await fetchChapterProgress(user.user_id, subject.subject_id);
+            // Load chapters and progress in parallel for speed
+            const [chaptersResponse, progressResponse] = await Promise.all([
+                fetchChapters(subject.subject_id),
+                fetchChapterProgress(user.user_id, subject.subject_id)
+            ]);
 
             if (chaptersResponse.status === 'success') {
                 setChapters(chaptersResponse.data);

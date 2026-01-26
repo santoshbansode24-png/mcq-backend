@@ -21,9 +21,10 @@ import ChapterContentScreen from './ChapterContentScreen';
 import PDFViewerScreen from './PDFViewerScreen';
 import NotificationsScreen from './NotificationsScreen';
 import AIScreen from './AIScreen';
-import AITutorScreen from './AITutorScreen';
+
 import HomeworkSolverScreen from './HomeworkSolverScreen';
 import EnglishTutorScreen from './EnglishTutorScreen';
+import EnglishMissionMapScreen from './EnglishMissionMapScreen';
 import QuizGeneratorScreen from './QuizGeneratorScreen';
 import VocabBoosterScreen from './VocabBoosterScreen';
 import VocabDashboardScreen from './VocabDashboardScreen';
@@ -123,7 +124,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision'],
-            'AI': ['AI', 'AITutor', 'HomeworkSolver', 'EnglishTutor', 'QuizGenerator']
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'QuizGenerator']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -224,9 +225,10 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'ChapterContent': return <ChapterContentScreen {...commonProps} />;
             case 'PDFViewer': return <PDFViewerScreen {...commonProps} />;
             case 'Notes': return <NotesScreen {...commonProps} />;
-            case 'AITutor': return <AITutorScreen {...commonProps} />;
+
             case 'HomeworkSolver': return <HomeworkSolverScreen {...commonProps} />;
             case 'EnglishTutor': return <EnglishTutorScreen {...commonProps} />;
+            case 'EnglishMissionMap': return <EnglishMissionMapScreen {...commonProps} />;
             case 'VocabDashboard': return <VocabDashboardScreen {...commonProps} />;
             case 'VocabBooster': return <VocabBoosterScreen {...commonProps} />;
             case 'MentalMaths': return <MentalMathsScreen {...commonProps} />;

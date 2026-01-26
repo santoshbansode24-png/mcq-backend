@@ -75,5 +75,5 @@ export const checkServerConnection = async () => {
 // PAYMENT CONFIGURATION
 // ========================================
 // Set this to TRUE only when ready to launch payments
-export const ENABLE_PAYMENTS = false;
+export const ENABLE_PAYMENTS = true;
 

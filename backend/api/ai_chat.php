@@ -32,6 +32,21 @@ try {
         throw new Exception("No message provided.");
     }
 
+    // AUTH & TRAFFIC CONTROL
+    require_once 'AiUsageManager.php';
+    $userId = isset($data->user_id) ? (int)$data->user_id : 0;
+    
+    // Only enforce limits if we have a valid user ID. 
+    // If user_id is missing (old app version), you might want to block or allow with strict limit.
+    // For now, let's block or track on user 0 (Guest) if needed, but per plan we block.
+    if ($userId > 0) {
+        $aiManager = new AiUsageManager($userId);
+        $canProceed = $aiManager->canMakeRequest();
+        if ($canProceed !== true) {
+            throw new Exception($canProceed); // Return the block message
+        }
+    }
+
     $userMessage = $data->message;
 
     // 5. System Instruction (The AI Persona)
@@ -104,6 +119,12 @@ try {
     // 10. Extract & Return Reply
     if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
         $aiReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
+
+        // TRACK USAGE
+        if ($userId > 0 && isset($decoded['usageMetadata']['totalTokenCount'])) {
+            $tokensUsed = $decoded['usageMetadata']['totalTokenCount'];
+            $aiManager->logUsage($tokensUsed);
+        }
 
         // Clean Output Buffer before echoing JSON
         ob_clean();

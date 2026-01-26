@@ -423,6 +423,7 @@ try {
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php">Quick Revision</a></li>
             <li><a href="content_manager.php">Content Manager</a></li>
+            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
         </ul>
     </nav>
     
@@ -490,6 +491,13 @@ try {
                 <div class="label">Quiz Attempts</div>
                 <div class="value"><?php echo $stats['attempts'] ?? 0; ?></div>
             </div>
+
+            <!-- New AI Settings Card -->
+            <a href="ai_settings.php" class="stat-card" style="text-decoration: none; border: 2px solid #667eea; background: #eef2ff;">
+                <div class="icon">🤖</div>
+                <div class="label" style="color: #4338ca; font-weight: bold;">AI Settings</div>
+                <div class="value" style="font-size: 20px; color: #667eea;">Manage Limits</div>
+            </a>
         </div>
         
         <!-- Recent Activity -->

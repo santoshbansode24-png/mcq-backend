@@ -320,6 +320,7 @@ $revisions = $revisions_query->fetchAll();
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php" class="active">Quick Revision</a></li>
             <li><a href="content_manager.php">Content Manager</a></li>
+            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
         </ul>
     </nav>
     

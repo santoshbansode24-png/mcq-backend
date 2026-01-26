@@ -13,6 +13,20 @@ if (!isset($_FILES['image'])) {
     exit;
 }
 
+// AUTH & TRAFFIC CONTROL
+require_once 'AiUsageManager.php';
+$userId = isset($_POST['user_id']) ? (int)$$_POST['user_id'] : 0; // Fix: $_POST['user_id']
+
+// Only enforce limits if we have a valid user ID. 
+if ($userId > 0) {
+    $aiManager = new AiUsageManager($userId);
+    $canProceed = $aiManager->canMakeRequest();
+    if ($canProceed !== true) {
+         echo json_encode(['status' => 'error', 'message' => $canProceed]);
+         exit;
+    }
+}
+
 $file = $_FILES['image'];
 $language = $_POST['language'] ?? "English";
 $prompt = $_POST['prompt'] ?? "Solve this homework problem.";
@@ -55,6 +69,10 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
 
+// CRITICAL for XAMPP: Disable SSL verify
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
@@ -65,6 +83,13 @@ if (curl_errno($ch)) {
     
     if ($httpCode === 200 && isset($decodedResponse['candidates'][0]['content']['parts'][0]['text'])) {
         $aiReply = $decodedResponse['candidates'][0]['content']['parts'][0]['text'];
+        
+        // TRACK USAGE
+        if ($userId > 0 && isset($decodedResponse['usageMetadata']['totalTokenCount'])) {
+            $tokensUsed = $decodedResponse['usageMetadata']['totalTokenCount'];
+            $aiManager->logUsage($tokensUsed);
+        }
+
         echo json_encode(['status' => 'success', 'reply' => $aiReply]);
     } else {
         error_log("Gemini Vision Error: " . $response);

@@ -420,6 +420,7 @@ $all_chapters = $all_chapters_query->fetchAll();
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php">Quick Revision</a></li>
             <li><a href="content_manager.php" class="active">Content Manager</a></li>
+            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
         </ul>
     </nav>
     

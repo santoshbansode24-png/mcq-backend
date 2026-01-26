@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 // 3. API Key
-define('GEMINI_API_KEY', 'AIzaSyCHHQqiOifU2KUpenX39imsL3qQ99wIFuw');
+define('GEMINI_API_KEY', 'YOUR_API_KEY_HERE');
 
 // 4. Helper Function to Call AI
 function tryGeminiModel($modelName, $userMessage) {

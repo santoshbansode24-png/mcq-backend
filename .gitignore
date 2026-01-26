@@ -8,6 +8,9 @@ vendor/
 
 # API Keys and Secrets
 backend/config/ai_config.php
+backend/config/secrets.php
+secrets.php
+config/secrets.php
 
 # IDE
 .vscode/

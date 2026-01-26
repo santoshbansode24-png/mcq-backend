@@ -32,6 +32,7 @@ const RAILWAY_CONFIG = {
 
 // Export the configuration you want to use
 const config = RAILWAY_CONFIG; // Using LOCAL_CONFIG for local development
+// const config = LOCAL_CONFIG;
 
 export default config;
 

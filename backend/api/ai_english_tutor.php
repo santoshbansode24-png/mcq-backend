@@ -5,83 +5,40 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-require_once __DIR__ . '/../config/ai_config.php';
-
-// Function to upload file to Gemini
-function uploadToGemini($filePath, $mimeType) {
-    $url = "https://generativelanguage.googleapis.com/upload/v1beta/files?key=" . GEMINI_API_KEY;
-    $fileSize = filesize($filePath);
-    
-    // 1. Initial Resumable Request
-    $headers = [
-        "X-Goog-Upload-Protocol: resumable",
-        "X-Goog-Upload-Command: start",
-        "X-Goog-Upload-Header-Content-Length: $fileSize",
-        "X-Goog-Upload-Header-Content-Type: $mimeType",
-        "Content-Type: application/json"
-    ];
-    
-    $metadata = json_encode(["file" => ["display_name" => "audio_input"]]);
-    
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $metadata);
-    curl_setopt($ch, CURLOPT_HEADER, true); // To get response headers
-    
-    $response = curl_exec($ch);
-    
-    // Extract upload URL from headers
-    $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-    $responseHeaders = substr($response, 0, $headerSize);
-    
-    preg_match('/x-goog-upload-url: (.*)\r\n/i', $responseHeaders, $matches);
-    $uploadUrl = isset($matches[1]) ? trim($matches[1]) : '';
-    
-    curl_close($ch);
-    
-    if (!$uploadUrl) {
-        error_log("Gemini Upload Failed: No Upload URL. Response: " . $response);
-        return null;
-    }
-    
-    // 2. Upload the actual file bytes
-    $fileData = file_get_contents($filePath);
-    
-    $headers = [
-        "Content-Length: $fileSize",
-        "X-Goog-Upload-Offset: 0",
-        "X-Goog-Upload-Command: upload, finalize"
-    ];
-    
-    $ch = curl_init($uploadUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $fileData);
-    
-    $response = curl_exec($ch);
-    $json = json_decode($response, true);
-    curl_close($ch);
-    
-    return $json['file']['uri'] ?? null;
+if (file_exists(__DIR__ . '/../config/ai_config.php')) {
+    require_once __DIR__ . '/../config/ai_config.php';
 }
+
+if (!defined('GEMINI_API_KEY')) {
+    $envKey = getenv('GEMINI_API_KEY');
+    if ($envKey) define('GEMINI_API_KEY', $envKey);
+}
+
+if (!defined('GEMINI_API_URL')) {
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+}
+
+// uploadToGemini removed for optimization
 
 // Check if it's a file upload (Audio) or text message
 $inputData = json_decode(file_get_contents("php://input"), true);
 $userMessage = $inputData['message'] ?? '';
-$levelId = $_POST['level_id'] ?? $inputData['level_id'] ?? 1; // Default to Level 1
+$levelId = $_POST['level_id'] ?? $inputData['level_id'] ?? 1; 
+$userId = $_POST['user_id'] ?? $inputData['user_id'] ?? 0;
 $audioUri = null;
 
 require_once __DIR__ . '/../config/db.php'; // Need DB connection to fetch mission
+$audioData = null;
+$mimeType = null;
 
 if (isset($_FILES['audio'])) {
     $tempPath = $_FILES['audio']['tmp_name'];
-    $audioUri = uploadToGemini($tempPath, $_FILES['audio']['type']);
+    // OPTIMIZATION: Inline Base64
+    $audioData = base64_encode(file_get_contents($tempPath));
+    $mimeType = $_FILES['audio']['type'];
 }
 
-if (empty($userMessage) && empty($audioUri)) {
+if (empty($userMessage) && empty($audioData)) {
     echo json_encode(['status' => 'error', 'message' => 'No input provided.']);
     exit;
 }
@@ -129,11 +86,16 @@ Return ONLY a raw JSON object:
 
 $contents = [];
 
-if ($audioUri) {
+if ($audioData) {
     $contents[] = [
         'role' => 'user',
         'parts' => [
-            ['file_data' => ['file_uri' => $audioUri, 'mime_type' => $_FILES['audio']['type']]],
+            [
+                'inline_data' => [
+                    'mime_type' => $mimeType,
+                    'data' => $audioData
+                ]
+            ],
             ['text' => $promptText]
         ]
     ];
@@ -157,14 +119,25 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
+// SSL FIX for XAMPP
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 if (curl_errno($ch)) {
-    echo json_encode(['status' => 'error', 'message' => 'Curl error: ' . curl_error($ch)]);
+    $errorMsg = curl_error($ch);
+    file_put_contents('ai_error.log', date('[Y-m-d H:i:s] ') . "Curl Error: $errorMsg\n", FILE_APPEND);
+    echo json_encode(['status' => 'error', 'message' => 'Curl error: ' . $errorMsg]);
 } else {
     $decodedResponse = json_decode($response, true);
+    
+    // Log unexpected non-200 responses
+    if ($httpCode !== 200) {
+        file_put_contents('ai_error.log', date('[Y-m-d H:i:s] ') . "HTTP $httpCode Error: " . $response . "\n", FILE_APPEND);
+    }
     
     if ($httpCode === 200 && isset($decodedResponse['candidates'][0]['content']['parts'][0]['text'])) {
         $aiText = $decodedResponse['candidates'][0]['content']['parts'][0]['text'];
@@ -177,7 +150,25 @@ if (curl_errno($ch)) {
         $aiJson = json_decode($aiText, true);
 
         if ($aiJson) {
-            // Map old 'reply' to 'tutor_speech' for backward compatibility if needed, using the new format
+            $isGoalAchieved = $aiJson['is_goal_achieved'] ?? false;
+            $fluencyScore = $aiJson['fluency_score'] ?? 0;
+
+            // SAVE PROGRESS if goal achieved
+            if ($isGoalAchieved && $userId > 0) {
+                try {
+                    $insertStmt = $pdo->prepare("INSERT INTO user_english_progress 
+                        (user_id, level_id, is_completed, fluency_score, stars) 
+                        VALUES (?, ?, 1, ?, 3) 
+                        ON DUPLICATE KEY UPDATE 
+                        is_completed = 1, 
+                        fluency_score = GREATEST(fluency_score, VALUES(fluency_score))");
+                    $insertStmt->execute([$userId, $levelId, $fluencyScore]);
+                } catch (Exception $e) {
+                    error_log("DB Save Error: " . $e->getMessage());
+                }
+            }
+
+            // Map old 'reply' to 'tutor_speech'
             $output = [
                 'status' => 'success',
                 'data' => [

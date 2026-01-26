@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image, RefreshControl } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,10 +12,21 @@ const EnglishMissionMapScreen = ({ navigation, user }) => {
     const [missions, setMissions] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        fetchMissions().then(() => setRefreshing(false));
+    }, [user]);
+
     useFocusEffect(
         useCallback(() => {
-            fetchMissions();
-        }, [])
+            if (user?.user_id) {
+                fetchMissions();
+            } else {
+                console.log("Waiting for user_id to load missions");
+            }
+        }, [user])
     );
 
     const fetchMissions = async () => {
@@ -57,7 +68,12 @@ const EnglishMissionMapScreen = ({ navigation, user }) => {
                 <Text style={styles.headerTitle}>English Missions 🗺️</Text>
             </LinearGradient>
 
-            <ScrollView contentContainerStyle={styles.mapContainer}>
+            <ScrollView
+                contentContainerStyle={styles.mapContainer}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
+                }
+            >
                 <View style={styles.pathLine} />
                 {missions.map((mission, index) => {
                     // Zig-zag pattern

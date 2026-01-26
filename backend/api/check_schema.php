@@ -1,11 +1,10 @@
 <?php
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 try {
-    $tables = ['users', 'chapters'];
-    foreach($tables as $t) {
-        echo "DESCRIBE $t:\n";
-        $stmt = $pdo->query("DESCRIBE $t");
-        print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
-    }
-} catch(Exception $e) { echo $e->getMessage(); }
+    $stmt = $pdo->query("DESCRIBE user_english_progress");
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    print_r($rows);
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage();
+}
 ?>

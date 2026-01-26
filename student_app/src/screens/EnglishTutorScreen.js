@@ -9,7 +9,7 @@ import HapticManager from '../utils/HapticManager';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-const EnglishTutorScreen = ({ navigation, route }) => {
+const EnglishTutorScreen = ({ navigation, route, user }) => {
     const { theme } = useTheme();
     const { mission } = route.params || {};
 
@@ -96,7 +96,32 @@ const EnglishTutorScreen = ({ navigation, route }) => {
                 recordingRef.current = null;
             }
             await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-            const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+            // OPTIMIZATION: Use lower quality for faster upload (AAC, 16kHz, Mono)
+            const recordingOptions = {
+                android: {
+                    extension: '.m4a',
+                    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+                    audioEncoder: Audio.AndroidAudioEncoder.AAC,
+                    sampleRate: 16000,
+                    numberOfChannels: 1,
+                    bitRate: 32000,
+                },
+                ios: {
+                    extension: '.m4a',
+                    audioQuality: Audio.IOSAudioQuality.MEDIUM,
+                    sampleRate: 16000,
+                    numberOfChannels: 1,
+                    bitRate: 32000,
+                    linearPCMBitDepth: 16,
+                    linearPCMIsBigEndian: false,
+                    linearPCMIsFloat: false,
+                },
+                web: {
+                    mimeType: 'audio/webm',
+                    bitsPerSecond: 128000,
+                },
+            };
+            const { recording } = await Audio.Recording.createAsync(recordingOptions);
             recordingRef.current = recording;
             setIsRecording(true);
             HapticManager.triggerSuccess();
@@ -127,6 +152,9 @@ const EnglishTutorScreen = ({ navigation, route }) => {
         const formData = new FormData();
         formData.append('audio', { uri, type: 'audio/mp4', name: 'recording.m4a' });
         formData.append('level_id', mission.level_id);
+        if (user && user.id) {
+            formData.append('user_id', user.id);
+        }
 
         try {
             const response = await axios.post(`${API_URL}/ai_english_tutor.php`, formData, {

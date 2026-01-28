@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 // LOCAL XAMPP CONFIGURATION
 // ========================================
 const LOCAL_CONFIG = {
-    SERVER_IP: '10.86.200.239',
+    SERVER_IP: '10.43.229.239',
     DOMAIN: 'localhost',
     get API_URL() {
         return Platform.OS === 'web'
@@ -31,8 +31,8 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-const config = RAILWAY_CONFIG; // Using LOCAL_CONFIG for local development
-// const config = LOCAL_CONFIG;
+// const config = RAILWAY_CONFIG; // Using LOCAL_CONFIG for local development
+const config = LOCAL_CONFIG;
 
 export default config;
 

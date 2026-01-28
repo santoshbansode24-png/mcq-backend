@@ -86,24 +86,37 @@ const HomeScreen = ({ user, navigation }) => {
 
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('dailyBoosters')}</Text>
             <View style={styles.gridContainer}>
-                <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('VocabDashboard')}>
-                    <LinearGradient colors={['#f093fb', '#f5576c']} style={styles.gridGradient}>
-                        <MaterialCommunityIcons name="book-open-page-variant" size={32} color="white" style={{ marginBottom: 8 }} />
-                        <Text style={styles.gridTitle}>{t('vocab')}</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.gridItem, { marginHorizontal: 3 }]} onPress={() => navigation.navigate('MentalMaths')}>
-                    <LinearGradient colors={['#FF512F', '#F09819']} style={styles.gridGradient}>
-                        <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
-                        <Text style={styles.gridTitle}>{t('maths')}</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MyExam')}>
-                    <LinearGradient colors={['#00F260', '#0575E6']} style={styles.gridGradient}>
-                        <MaterialCommunityIcons name="file-document-edit-outline" size={32} color="white" style={{ marginBottom: 8 }} />
-                        <Text style={styles.gridTitle}>{t('myExam')}</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
+                {/* Row 1 */}
+                <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                    <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('VocabDashboard')}>
+                        <LinearGradient colors={['#f093fb', '#f5576c']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="book-open-page-variant" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>{t('vocab')}</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MentalMaths')}>
+                        <LinearGradient colors={['#FF512F', '#F09819']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>{t('maths')}</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Row 2 */}
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('MyExam')}>
+                        <LinearGradient colors={['#00F260', '#0575E6']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="file-document-edit-outline" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>{t('myExam')}</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
+                        <LinearGradient colors={['#A855F7', '#C026D3']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="printer-outline" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>Worksheet</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <TouchableOpacity style={styles.fullWidthCard} onPress={() => {
@@ -231,7 +244,7 @@ const styles = StyleSheet.create({
     avatarPlaceholder: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
     avatarText: { fontSize: 22, fontWeight: 'bold', color: 'white' },
     sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 15 },
-    gridContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+    gridContainer: { marginBottom: 25 },
     gridItem: { flex: 1, height: 140, borderRadius: 24, overflow: 'hidden', elevation: 4, shadowOpacity: 0.2, shadowRadius: 5 },
     gridGradient: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
     gridIcon: { fontSize: 32, marginBottom: 8 },

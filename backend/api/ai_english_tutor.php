@@ -15,7 +15,7 @@ if (!defined('GEMINI_API_KEY')) {
 }
 
 if (!defined('GEMINI_API_URL')) {
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
 }
 
 // uploadToGemini removed for optimization
@@ -33,12 +33,20 @@ $mimeType = null;
 
 if (isset($_FILES['audio'])) {
     $tempPath = $_FILES['audio']['tmp_name'];
+    $fileSize = $_FILES['audio']['size'];
+    $fileType = $_FILES['audio']['type'];
+    
+    file_put_contents('ai_error.log', date('[Y-m-d H:i:s] ') . "Audio Upload: Size=$fileSize, Type=$fileType, Path=$tempPath\n", FILE_APPEND);
+
     // OPTIMIZATION: Inline Base64
     $audioData = base64_encode(file_get_contents($tempPath));
     $mimeType = $_FILES['audio']['type'];
+} else {
+     file_put_contents('ai_error.log', date('[Y-m-d H:i:s] ') . "No audio file received in \$_FILES\n", FILE_APPEND);
 }
 
 if (empty($userMessage) && empty($audioData)) {
+    file_put_contents('ai_error.log', date('[Y-m-d H:i:s] ') . "Empty input (No message or audio)\n", FILE_APPEND);
     echo json_encode(['status' => 'error', 'message' => 'No input provided.']);
     exit;
 }

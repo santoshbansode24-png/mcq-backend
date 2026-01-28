@@ -3,7 +3,7 @@ import {
     View, Text, TouchableOpacity, StyleSheet,
     StatusBar, Platform, Animated, Vibration, BackHandler
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -38,6 +38,7 @@ import ForgotPasswordScreen from './ForgotPasswordScreen';
 import ScholarshipSubjectsScreen from './ScholarshipSubjectsScreen';
 import ScholarshipChaptersScreen from './ScholarshipChaptersScreen';
 import ScholarshipSetsScreen from './ScholarshipSetsScreen';
+import WorksheetGeneratorScreen from './WorksheetGeneratorScreen';
 
 // --- Tab Button Component ---
 const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
@@ -93,6 +94,8 @@ const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
 const MainScreen = ({ navigation: parentNavigation, route }) => {
     const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
+    const insets = useSafeAreaInsets();
+
     // Navigation History Stack
     const [historyStack, setHistoryStack] = useState([{ screen: 'Home', params: {} }]);
     const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
@@ -275,6 +278,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'ScholarshipSubjects': return <ScholarshipSubjectsScreen {...commonProps} />;
             case 'ScholarshipChapters': return <ScholarshipChaptersScreen {...commonProps} />;
             case 'ScholarshipSets': return <ScholarshipSetsScreen {...commonProps} />;
+            case 'WorksheetGenerator': return <WorksheetGeneratorScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };
@@ -290,7 +294,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
             <SafeAreaView style={styles.safeAreaTop} edges={['top']}>
-                <View style={styles.content}>
+                <View style={[styles.content, { paddingBottom: 60 + insets.bottom }]}>
                     {renderContent()}
                 </View>
             </SafeAreaView>

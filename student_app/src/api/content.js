@@ -15,6 +15,23 @@ export const fetchSetStatus = async (userId, chapterId, type) => {
     }
 };
 
+export const markSetCompleted = async (userId, chapterId, setIndex, type, score = 0, total = 0) => {
+    try {
+        const response = await axios.post(`${API_URL}/mark_set_completed.php`, {
+            user_id: userId,
+            chapter_id: chapterId,
+            set_index: setIndex,
+            type,
+            score,
+            total
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Mark Set Completed Error:', error);
+        return { status: 'error', message: 'Network error' };
+    }
+};
+
 export const recordMCQAttempt = async (userId, mcqId, chapterId, selectedAnswer, correctAnswer, isCorrect) => {
     try {
         const response = await axios.post(`${API_URL}/record_mcq_attempt.php`, {

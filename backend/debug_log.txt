@@ -1,0 +1,80 @@
+2026-01-28 18:49:30 [MARK_SET] Input: {
+    "score":  10,
+    "chapter_id":  888,
+    "total":  10,
+    "type":  "mcq",
+    "set_index":  0,
+    "user_id":  999
+}
+2026-01-28 18:49:30 [GET_STATUS] User: 999, Chapter: 888, Type: mcq
+2026-01-28 18:49:42 [MARK_SET] Input: {
+    "score":  10,
+    "chapter_id":  888,
+    "total":  10,
+    "type":  "mcq",
+    "set_index":  0,
+    "user_id":  999
+}
+2026-01-28 18:49:42 [GET_STATUS] User: 999, Chapter: 888, Type: mcq
+2026-01-28 19:22:25 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:22:25 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:22:36 [MARK_SET] Input: {"user_id":5,"chapter_id":80,"set_index":0,"type":"flashcard","score":0,"total":10}
+2026-01-28 19:22:36 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:22:36 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:22:56 [MARK_SET] Input: {"user_id":5,"chapter_id":80,"set_index":0,"type":"flashcard","score":0,"total":10}
+2026-01-28 19:22:56 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:22:57 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:25:46 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:26:04 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:05 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:15 [MARK_SET] Input: {"user_id":5,"chapter_id":79,"set_index":0,"type":"flashcard","score":0,"total":10}
+2026-01-28 19:26:15 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:15 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:29 [MARK_SET] Input: {"user_id":5,"chapter_id":79,"set_index":1,"type":"flashcard","score":0,"total":10}
+2026-01-28 19:26:29 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:30 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:35 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:26:35 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:26:35 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:35 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:26:36 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:26:37 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:28:59 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:28:59 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:29:01 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:29:01 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:30:12 [MARK_SET] Input: {"user_id":5,"chapter_id":79,"set_index":0,"type":"mcq","score":8,"total":10}
+2026-01-28 19:30:12 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:30:18 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:30:18 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:30:20 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:30:20 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:30:52 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:30:52 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:30:53 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:30:53 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:31:31 [MARK_SET] Input: {"user_id":5,"chapter_id":79,"set_index":1,"type":"mcq","score":7,"total":10}
+2026-01-28 19:31:31 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 19:47:06 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:53:58 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:53:58 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:54:33 [GET_STATUS] User: 5, Chapter: 83, Type: flashcard
+2026-01-28 19:54:33 [GET_STATUS] User: 5, Chapter: 83, Type: flashcard
+2026-01-28 19:57:14 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:57:14 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 19:57:30 [GET_STATUS] User: 5, Chapter: 77, Type: flashcard
+2026-01-28 19:57:30 [GET_STATUS] User: 5, Chapter: 77, Type: flashcard
+2026-01-28 19:57:39 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:57:39 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:57:43 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:57:43 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:57:58 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:57:58 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:58:27 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:58:27 [GET_STATUS] User: 5, Chapter: 80, Type: flashcard
+2026-01-28 19:58:29 [GET_STATUS] User: 5, Chapter: 80, Type: mcq
+2026-01-28 19:58:29 [GET_STATUS] User: 5, Chapter: 80, Type: mcq
+2026-01-28 20:18:29 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 20:18:29 [GET_STATUS] User: 5, Chapter: 79, Type: flashcard
+2026-01-28 20:18:32 [GET_STATUS] User: 5, Chapter: 79, Type: mcq
+2026-01-28 20:18:32 [GET_STATUS] User: 5, Chapter: 79, Type: mcq

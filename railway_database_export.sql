@@ -740,7 +740,7 @@ CREATE TABLE `user_english_progress` (
   `completed_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`progress_id`),
   UNIQUE KEY `user_level` (`user_id`,`level_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -749,6 +749,7 @@ CREATE TABLE `user_english_progress` (
 
 LOCK TABLES `user_english_progress` WRITE;
 /*!40000 ALTER TABLE `user_english_progress` DISABLE KEYS */;
+INSERT INTO `user_english_progress` VALUES (1,1,1,100,1,3,'2026-01-26 18:57:35');
 /*!40000 ALTER TABLE `user_english_progress` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1132,4 +1133,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-01-26 23:47:42
+-- Dump completed on 2026-01-27  0:29:03

@@ -23,10 +23,8 @@ const EnglishMissionMapScreen = ({ navigation, user }) => {
         useCallback(() => {
             if (user?.user_id) {
                 fetchMissions();
-            } else {
-                console.log("Waiting for user_id to load missions");
             }
-        }, [user])
+        }, [user?.user_id]) // Only depend on user_id, not the whole object
     );
 
     const fetchMissions = async () => {

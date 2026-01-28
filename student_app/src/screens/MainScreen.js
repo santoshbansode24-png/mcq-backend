@@ -93,13 +93,46 @@ const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
 const MainScreen = ({ navigation: parentNavigation, route }) => {
     const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
-    // Navigation History Stack: Array of { screen, params }
-    // Navigation History Stack: Array of { screen, params }
+    // Navigation History Stack
     const [historyStack, setHistoryStack] = useState([{ screen: 'Home', params: {} }]);
+    const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
 
-    // Restore user variable
-    // Use local state to manage user updates (e.g., class change)
+    // User State
     const [userState, setUserState] = useState(route.params?.user);
+
+    // Load navigation history on mount
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                const savedHistory = await AsyncStorage.getItem('nav_history');
+                if (savedHistory) {
+                    const parsed = JSON.parse(savedHistory);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setHistoryStack(parsed);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load nav history", e);
+            } finally {
+                setIsHistoryLoaded(true); // Allow saving only after load attempt
+            }
+        };
+        loadHistory();
+    }, []);
+
+    // Save navigation history whenever it changes
+    useEffect(() => {
+        if (!isHistoryLoaded) return; // Prevent overwriting with default state before load
+
+        const saveHistory = async () => {
+            try {
+                await AsyncStorage.setItem('nav_history', JSON.stringify(historyStack));
+            } catch (e) {
+                console.error("Failed to save nav history", e);
+            }
+        };
+        saveHistory();
+    }, [historyStack, isHistoryLoaded]);
 
     // Update user state handler
     const handleUpdateUser = useCallback(async (updates) => {
@@ -185,6 +218,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             // Clear all data
             await cacheManager.clearAll();
             await AsyncStorage.removeItem('user_data');
+            await AsyncStorage.removeItem('nav_history');
 
             // Navigate to Login
             parentNavigation.reset({

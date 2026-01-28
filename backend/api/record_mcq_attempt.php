@@ -19,8 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Validate required fields
-$required = ['user_id', 'mcq_id', 'chapter_id', 'selected_answer', 'correct_answer', 'is_correct'];
+$required = ['user_id', 'mcq_id', 'chapter_id', 'selected_answer', 'correct_answer'];
 $missing = validateRequired($input, $required);
+
+// Check is_correct separately because false is treated as empty
+if (!isset($input['is_correct'])) {
+    $missing[] = 'is_correct';
+}
 
 if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);

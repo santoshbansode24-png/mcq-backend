@@ -23,7 +23,7 @@ ini_set('display_errors', 0); // Disable display to prevent JSON corruption
 // Database Credentials (Hardcoded for Production Stability)
 // Database Credentials
 // 1. Check for Environment Variables (Cloud)
-$db_host = getenv('DB_HOST') ?: 'localhost';
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
 $db_name = getenv('DB_NAME') ?: 'veeru_db';
 $db_user = getenv('DB_USER') ?: 'root';
 $db_pass = getenv('DB_PASSWORD');

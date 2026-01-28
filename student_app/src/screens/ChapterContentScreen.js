@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchMCQs, fetchNotes, fetchVideos, recordMCQAttempt, fetchFlashcards, fetchQuickRevision } from '../api/content';
+import { fetchMCQs, fetchNotes, fetchVideos, recordMCQAttempt, fetchFlashcards, fetchQuickRevision, markSetCompleted } from '../api/content';
 import axios from 'axios';
 import { API_URL } from '../api/config';
 import * as Speech from 'expo-speech';
@@ -159,14 +159,19 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     const loadSetStatus = async (type) => {
         try {
-            const userId = await AsyncStorage.getItem('user_id');
+            // Fix: Retrieve user_data object instead of user_id string
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            const userData = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = userData?.user_id || userData?.id;
             if (userId && chapter.chapter_id) {
+                console.log(`[ChapterContent] Fetching status for ${type}...`);
                 const statusData = await fetchSetStatus(userId, chapter.chapter_id, type);
+                console.log(`[ChapterContent] Status result for ${type}:`, statusData);
                 if (statusData.status === 'success') {
                     setSetStatuses(statusData.data);
                 }
             }
-        } catch (e) { /* console.log('Status Load Error', e); */ }
+        } catch (e) { console.log('Status Load Error', e); }
     };
 
     const onRefresh = () => {
@@ -236,7 +241,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
         const currentQuestion = quizQuestions[currentQuestionIndex];
 
         // Record Attempt
-        AsyncStorage.getItem('user_id').then(userId => {
+        AsyncStorage.getItem('user_data').then(userDataStr => {
+            const userData = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = userData?.user_id || userData?.id;
             if (userId) {
                 const isCorrect = optionKey === currentQuestion.correct_answer;
                 recordMCQAttempt(
@@ -268,6 +275,29 @@ const ChapterContentScreen = ({ navigation, route }) => {
             }
         } else {
             setQuizFinished(true);
+            // Mark as Completed
+            // Mark as Completed
+            AsyncStorage.getItem('user_data').then(userDataStr => {
+                const userData = userDataStr ? JSON.parse(userDataStr) : null;
+                const userId = userData?.user_id || userData?.id;
+
+                // Alert.alert('Debug', `Attempting Save... User: ${userId}, Chapter: ${chapter.chapter_id}`); 
+                if (userId && chapter.chapter_id) {
+                    markSetCompleted(userId, chapter.chapter_id, currentSetIndex, 'mcq', score, quizQuestions.length)
+                        .then((res) => {
+                            if (res.status === 'success') {
+                                loadSetStatus('mcq');
+                                // Alert.alert('Success', 'MCQ Saved!'); 
+                            } else {
+                                Alert.alert('Backend Error', res.message);
+                            }
+                        })
+                        .catch(err => Alert.alert('Network Error', err.message));
+                } else {
+                    Alert.alert('Error', `Missing Data: User=${userId}, Chapter=${chapter?.chapter_id}`);
+                }
+            });
+
         }
     };
 
@@ -596,7 +626,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                     onPress={() => startQuiz(index)}
                                 >
                                     <View style={[styles.setIcon, { backgroundColor: 'white' }, isSolved && { backgroundColor: '#dcfce7' }]}>
-                                        <Text style={[styles.setIconText, { color: color.text }, isSolved && { color: '#16a34a' }]}>{index + 1}</Text>
+                                        <Text style={[styles.setIconText, { color: color.text }, isSolved && { color: '#16a34a' }]}>
+                                            {isSolved ? '✔' : index + 1}
+                                        </Text>
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Text style={[styles.setTitle, { color: '#334155' }]}>Set {index + 1}</Text>
@@ -668,7 +700,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                     }}
                                 >
                                     <View style={[styles.setIcon, { backgroundColor: 'white' }, isSolved && { backgroundColor: '#dcfce7' }]}>
-                                        <Text style={[styles.setIconText, { color: color.text }, isSolved && { color: '#16a34a' }]}>{index + 1}</Text>
+                                        <Text style={[styles.setIconText, { color: color.text }, isSolved && { color: '#16a34a' }]}>
+                                            {isSolved ? '✔' : index + 1}
+                                        </Text>
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Text style={[styles.setTitle, { color: '#334155' }]}>Set {index + 1}</Text>
@@ -797,8 +831,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         {[
                             { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981', lightColor: '#ecfdf5' }, // Emerald
                             { id: 'MCQs', icon: '📝', label: t('mcqs'), color: '#3b82f6', lightColor: '#eff6ff' }, // Blue
-                            { id: 'Videos', icon: '🎥', label: t('videos'), color: '#ef4444', lightColor: '#fef2f2' }, // Red
                             { id: 'QuickRevision', icon: '⚡', label: t('revision'), color: '#f59e0b', lightColor: '#fffbeb' }, // Amber
+                            { id: 'Videos', icon: '🎥', label: t('videos'), color: '#ef4444', lightColor: '#fef2f2' }, // Red
                             { id: 'Notes', icon: '📄', label: t('notes'), color: '#8b5cf6', lightColor: '#f5f3ff' }, // Violet
                         ].map((tab) => {
                             const isActive = activeTab === tab.id;

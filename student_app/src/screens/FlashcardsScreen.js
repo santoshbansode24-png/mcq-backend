@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+    View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
     Animated, Dimensions, StatusBar, Platform, SafeAreaView, Pressable
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -253,6 +253,42 @@ const FlashcardsScreen = ({ navigation, route }) => {
 
     const currentGradient = getCardGradient(currentIndex);
 
+    const handleFinish = async () => {
+        // console.log("[Flashcards] Finish button clicked");
+        // Alert.alert("Debug", "Finish Triggered");
+
+        try {
+            // Fix: Retrieve user_data object instead of user_id string
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            const userData = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = userData?.user_id || userData?.id;
+
+            // console.log(`[Flashcards] User: ${userId}, Chapter: ${chapterId}, Set: ${setIndex}`);
+
+            if (userId && chapterId && setIndex !== undefined) {
+                // Alert.alert("Debug", `Saving... User:${userId}`);
+                const result = await markSetCompleted(userId, chapterId, setIndex, 'flashcard', 0, cards.length);
+                // console.log("[Flashcards] Save Result:", result);
+                if (result.status === 'success') {
+                    // Alert.alert("Success", "Progress Saved!");
+                } else {
+                    Alert.alert("Notice", "Progress recorded (local)");
+                }
+            } else {
+                console.warn("[Flashcards] Missing data for save");
+                // Alert.alert("Debug", "Missing userId or chapterId");
+            }
+        } catch (e) {
+            console.error("[Flashcards] Finish Loop Error:", e);
+            Alert.alert("Error", "Something went wrong finishing");
+        } finally {
+            // Ensure we ALWAYS go back
+            navigation.goBack();
+        }
+    };
+
+
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#0f172a' : '#f8fafc'} />
@@ -347,18 +383,11 @@ const FlashcardsScreen = ({ navigation, route }) => {
                         backgroundColor: currentIndex === cards.length - 1 ? '#22c55e' : (currentIndex === cards.length - 1 ? '#ccc' : currentGradient[1]),
                         opacity: 1
                     }]}
-                    onPress={async () => {
+                    onPress={() => {
                         if (currentIndex < cards.length - 1) {
                             nextCard();
                         } else {
-                            // Mark as completed
-                            try {
-                                const userId = await AsyncStorage.getItem('user_id');
-                                if (userId && chapterId && setIndex !== undefined) {
-                                    await markSetCompleted(userId, chapterId, setIndex);
-                                }
-                                navigation.goBack();
-                            } catch (e) { console.warn(e); navigation.goBack(); }
+                            handleFinish();
                         }
                     }}
                 >
@@ -394,6 +423,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        display: 'none'
     },
     swipeHintText: {
         fontSize: 11,

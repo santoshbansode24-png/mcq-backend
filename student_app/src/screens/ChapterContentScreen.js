@@ -17,7 +17,7 @@ import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import Voi
 
 const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
-    const { theme } = useTheme();
+    const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
     const { chapter } = route.params || {};
     const [activeTab, setActiveTab] = useState('Flashcards'); // Default: Flashcards
@@ -594,7 +594,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         contentContainerStyle={styles.emptyContainer}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     >
-                        <Text style={styles.emptyText}>No MCQs available for this chapter.</Text>
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No MCQs available for this chapter.</Text>
                     </ScrollView>
                 );
             }
@@ -604,8 +604,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     contentContainerStyle={styles.setsContainer}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
-                    <Text style={styles.quizTitle}>MCQ Practice Sets</Text>
-                    <Text style={styles.quizSubtitle}>Select a set to start practicing</Text>
+                    <Text style={[styles.quizTitle, { color: theme.text }]}>MCQ Practice Sets</Text>
+                    <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Select a set to start practicing</Text>
 
                     <View style={styles.setsGrid}>
                         {mcqSets.map((set, index) => {
@@ -658,7 +658,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         contentContainerStyle={styles.emptyContainer}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     >
-                        <Text style={styles.emptyText}>No Flashcards available for this chapter.</Text>
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No Flashcards available for this chapter.</Text>
                     </ScrollView>
                 );
             }
@@ -668,8 +668,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     contentContainerStyle={styles.setsContainer}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
-                    <Text style={styles.quizTitle}>Flashcard Sets</Text>
-                    <Text style={styles.quizSubtitle}>Select a set to start learning</Text>
+                    <Text style={[styles.quizTitle, { color: theme.text }]}>Flashcard Sets</Text>
+                    <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Select a set to start learning</Text>
 
                     <View style={styles.setsGrid}>
                         {flashcardSets.map((set, index) => {
@@ -728,7 +728,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         contentContainerStyle={styles.emptyContainer}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     >
-                        <Text style={styles.emptyText}>No Quick Revision notes available.</Text>
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No Quick Revision notes available.</Text>
                     </ScrollView>
                 );
             }
@@ -740,8 +740,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 >
                     <View style={{ marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <View>
-                            <Text style={styles.quizTitle}>Quick Revision</Text>
-                            <Text style={styles.quizSubtitle}>Key points for {chapter.chapter_name}</Text>
+                            <Text style={[styles.quizTitle, { color: theme.text }]}>Quick Revision</Text>
+                            <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Key points for {chapter.chapter_name}</Text>
                         </View>
                         <TouchableOpacity
                             onPress={() => setVoiceModalVisible(true)}
@@ -807,7 +807,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 ListHeaderComponent={null}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No {activeTab.toLowerCase()} found.</Text>
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No {activeTab.toLowerCase()} found.</Text>
                     </View>
                 }
             />
@@ -815,18 +815,18 @@ const ChapterContentScreen = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.mainWrapper}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+        <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
+            <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
 
-            <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-                <View style={styles.header}>
+            <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right', 'bottom']}>
+                <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Text style={styles.backButtonText}>←</Text>
+                        <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle} numberOfLines={1}>{chapter?.chapter_name || 'Content'}</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{chapter?.chapter_name || 'Content'}</Text>
                 </View>
 
-                <View style={styles.tabContainer}>
+                <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
                     <View style={styles.tabsRow}>
                         {[
                             { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981', lightColor: '#ecfdf5' }, // Emerald
@@ -842,7 +842,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                     style={[
                                         styles.tile,
                                         {
-                                            backgroundColor: isActive ? tab.color : 'white',
+                                            backgroundColor: isActive ? tab.color : theme.card,
                                             borderColor: tab.color,
                                             elevation: isActive ? 8 : 2, // Pop up effect
                                             shadowColor: tab.color, // Colored shadow
@@ -888,11 +888,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     mainWrapper: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        // backgroundColor handled by theme
     },
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        // backgroundColor handled by theme
     },
     header: {
         flexDirection: 'row',
@@ -900,9 +900,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 0, // Removed extra padding, relying on SafeAreaView
         paddingBottom: 12,
-        backgroundColor: 'white',
+        // backgroundColor handled by theme
         borderBottomWidth: 1,
-        borderBottomColor: '#e2e8f0',
+        // borderBottomColor handled by theme
     },
     backButton: {
         padding: 5,
@@ -910,21 +910,21 @@ const styles = StyleSheet.create({
     },
     backButtonText: {
         fontSize: 24,
-        color: '#333',
+        // color handled by theme
         fontWeight: 'bold',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#0f172a',
+        // color handled by theme
         flex: 1,
     },
     tabContainer: {
-        backgroundColor: 'white',
+        // backgroundColor handled by theme
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        // borderBottomColor handled by theme
     },
     tabsRow: {
         flexDirection: 'row',
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 16,
-        color: '#94a3b8',
+        // color handled by theme
         fontStyle: 'italic',
     },
     setsContainer: {
@@ -1066,13 +1066,13 @@ const styles = StyleSheet.create({
     quizTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#0f172a',
+        // color handled by theme
         marginBottom: 4,
         marginTop: 10,
     },
     quizSubtitle: {
         fontSize: 14,
-        color: '#64748b',
+        // color handled by theme
         marginBottom: 20,
     },
     quizContainer: {

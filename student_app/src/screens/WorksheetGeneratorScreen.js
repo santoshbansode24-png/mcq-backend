@@ -373,17 +373,92 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
             <style>
-              body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
-              .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-              .header h1 { margin: 0; font-size: 24px; color: #4A00E0; text-transform: uppercase; }
-              .header p { margin: 5px 0; font-size: 14px; color: #666; }
-              .details { display: flex; justify-content: space-between; margin-bottom: 30px; font-weight: bold; border: 1px solid #ddd; padding: 10px; }
-              h3 { border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 30px; color: #444; }
-              .question-item { margin-bottom: 15px; page-break-inside: avoid; }
-              .question-text { font-weight: 500; font-size: 14px; }
-              .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px; font-size: 13px; color: #555; }
-              .page-break { page-break-before: always; }
-              .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; color: rgba(0,0,0,0.03); z-index: -1; pointer-events: none; }
+              @page {
+                margin: 70px 80px;
+              }
+              body { 
+                font-family: 'Arial', 'Segoe UI', sans-serif; 
+                margin: 0;
+                padding: 0;
+                color: #333; 
+                line-height: 1.6;
+              }
+              .content-wrapper {
+                padding: 0;
+              }
+              .header { 
+                text-align: center; 
+                border-bottom: 2px solid #333; 
+                padding-bottom: 20px; 
+                margin-bottom: 35px; 
+              }
+              .header h1 { 
+                margin: 0; 
+                font-size: 26px; 
+                color: #4A00E0; 
+                text-transform: uppercase; 
+                letter-spacing: 1px;
+              }
+              .header p { 
+                margin: 8px 0; 
+                font-size: 15px; 
+                color: #666; 
+              }
+              .details { 
+                display: flex; 
+                justify-content: space-between; 
+                margin-bottom: 35px; 
+                font-weight: bold; 
+                border: 1px solid #ddd; 
+                padding: 12px 15px; 
+                font-size: 15px;
+              }
+              h3 { 
+                border-bottom: 1px solid #ddd; 
+                padding-bottom: 8px; 
+                margin-top: 35px; 
+                margin-bottom: 20px;
+                color: #444; 
+                font-size: 18px;
+              }
+              .question-item { 
+                margin-bottom: 20px; 
+                page-break-inside: avoid; 
+                line-height: 1.7;
+              }
+              .question-text { 
+                font-weight: 500; 
+                font-size: 16px; 
+                line-height: 1.7;
+              }
+              .options-grid { 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 10px; 
+                margin-top: 8px; 
+                font-size: 14px; 
+                color: #555; 
+                line-height: 1.6;
+              }
+              .option {
+                padding: 2px 0;
+              }
+              .page-break { 
+                page-break-before: always; 
+              }
+              .answer-key-section {
+                padding-top: 0;
+              }
+              .watermark { 
+                position: fixed; 
+                top: 50%; 
+                left: 50%; 
+                transform: translate(-50%, -50%) rotate(-45deg); 
+                font-size: 100px; 
+                color: rgba(0,0,0,0.03); 
+                z-index: -1; 
+                pointer-events: none; 
+              }
             </style>
           </head>
           <body>
@@ -404,10 +479,12 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
             ${longSection}
 
             <div class="page-break"></div>
-            <div class="header">
-              <h1>Answer Key</h1>
+            <div class="answer-key-section">
+              <div class="header">
+                <h1>Answer Key</h1>
+              </div>
+              ${answerKey}
             </div>
-            ${answerKey}
             
           </body>
         </html>
@@ -443,7 +520,14 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                         <View style={styles.grid}>
                             {subjects.map((subject, index) => {
                                 const isSelected = selectedSubjects.find(s => s.subject_id === subject.subject_id);
-                                const gradients = [['#FF9A9E', '#FECFEF'], ['#a18cd1', '#fbc2eb'], ['#84fab0', '#8fd3f4']];
+                                const gradients = [
+                                    ['#FF6B6B', '#FFD93D'],  // Vibrant Coral to Golden Yellow
+                                    ['#4ECDC4', '#44A8FF'],  // Turquoise to Sky Blue
+                                    ['#A8E6CF', '#56CCF2'],  // Mint Green to Ocean Blue
+                                    ['#FF8C42', '#FF3E96'],  // Orange to Hot Pink
+                                    ['#667EEA', '#764BA2'],  // Indigo to Purple
+                                    ['#F093FB', '#F5576C']   // Pink to Coral Red
+                                ];
                                 const colors = gradients[index % gradients.length];
 
                                 return (

@@ -186,16 +186,16 @@ const ChaptersScreen = ({ navigation, route, user }) => {
 
                     {/* Motivational Message for Completed Chapters */}
                     {isCompleted && (
-                        <View style={styles.motivationBox}>
-                            <Text style={styles.motivationText}>🎉 Chapter Mastered!</Text>
+                        <View style={[styles.motivationBox, { backgroundColor: isDarkMode ? '#065f46' : '#dcfce7' }]}>
+                            <Text style={[styles.motivationText, { color: isDarkMode ? '#d1fae5' : '#166534' }]}>🎉 Chapter Mastered!</Text>
                         </View>
                     )}
                 </View>
 
-                <Text style={styles.chevron}>›</Text>
+                <Text style={[styles.chevron, { color: theme.textSecondary }]}>›</Text>
             </TouchableOpacity>
         );
-    }, [navigation, progressData]);
+    }, [navigation, progressData, isDarkMode, theme]);
 
     return (
         <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
         marginLeft: 6,
     },
     motivationBox: {
-        backgroundColor: '#dcfce7',
+        // backgroundColor handled by theme inline
         padding: 4, // Reduced from 8
         borderRadius: 4,
         marginTop: 4, // Reduced from 8
@@ -343,12 +343,12 @@ const styles = StyleSheet.create({
     motivationText: {
         fontSize: 10, // Reduced from 12
         fontWeight: '600',
-        color: '#166534',
+        // color handled by theme inline
         textAlign: 'center',
     },
     chevron: {
         fontSize: 20, // Reduced from 28
-        color: '#cbd5e1',
+        // color handled by theme inline
         alignSelf: 'center',
         marginLeft: 4,
     },

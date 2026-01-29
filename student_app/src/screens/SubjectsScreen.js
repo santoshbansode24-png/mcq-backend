@@ -16,12 +16,14 @@ import { fetchSubjects } from '../api/subjects';
 import { useTheme } from '../context/ThemeContext';
 
 const SUBJECT_THEMES = [
-    { bg: '#4F46E5', text: '#FFFFFF', subText: '#E0E7FF', iconBg: 'rgba(255,255,255,0.2)' },
-    { bg: '#059669', text: '#FFFFFF', subText: '#D1FAE5', iconBg: 'rgba(255,255,255,0.2)' },
-    { bg: '#EA580C', text: '#FFFFFF', subText: '#FFEDD5', iconBg: 'rgba(255,255,255,0.2)' },
-    { bg: '#DB2777', text: '#FFFFFF', subText: '#FCE7F3', iconBg: 'rgba(255,255,255,0.2)' },
-    { bg: '#2563EB', text: '#FFFFFF', subText: '#DBEAFE', iconBg: 'rgba(255,255,255,0.2)' },
-    { bg: '#7C3AED', text: '#FFFFFF', subText: '#EDE9FE', iconBg: 'rgba(255,255,255,0.2)' },
+    { bg: '#1E40AF', text: '#FFFFFF', subText: '#DBEAFE', iconBg: 'rgba(255,255,255,0.25)' },  // Deep Ocean Blue
+    { bg: '#047857', text: '#FFFFFF', subText: '#D1FAE5', iconBg: 'rgba(255,255,255,0.25)' },  // Emerald Green
+    { bg: '#DC2626', text: '#FFFFFF', subText: '#FEE2E2', iconBg: 'rgba(255,255,255,0.25)' },  // Vibrant Red
+    { bg: '#C026D3', text: '#FFFFFF', subText: '#FAE8FF', iconBg: 'rgba(255,255,255,0.25)' },  // Magenta Pink
+    { bg: '#0891B2', text: '#FFFFFF', subText: '#CFFAFE', iconBg: 'rgba(255,255,255,0.25)' },  // Electric Teal
+    { bg: '#7C3AED', text: '#FFFFFF', subText: '#EDE9FE', iconBg: 'rgba(255,255,255,0.25)' },  // Royal Purple
+    { bg: '#EA580C', text: '#FFFFFF', subText: '#FFEDD5', iconBg: 'rgba(255,255,255,0.25)' },  // Sunset Orange
+    { bg: '#BE123C', text: '#FFFFFF', subText: '#FFE4E6', iconBg: 'rgba(255,255,255,0.25)' },  // Rose Red
 ];
 
 const SubjectsScreen = ({ user, navigation }) => {

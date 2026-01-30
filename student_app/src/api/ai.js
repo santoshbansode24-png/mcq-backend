@@ -88,7 +88,7 @@ export const uploadHomeworkImage = async (imageUri, prompt, language = 'English'
             name: fileName,
         });
         formData.append('language', language);
-        formData.append('prompt', prompt || "Solve this problem step-by-step.");
+        formData.append('prompt', prompt || "Solve this problem. Give a simple and straightforward answer, not a complicated one.");
         if (userId) formData.append('user_id', userId); // Add user_id
 
         // 3. Send Request (Longer timeout for images)

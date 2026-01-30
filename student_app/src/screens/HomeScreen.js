@@ -97,7 +97,7 @@ const HomeScreen = ({ user, navigation }) => {
                     <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MentalMaths')}>
                         <LinearGradient colors={['#FF512F', '#F09819']} style={styles.gridGradient}>
                             <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
-                            <Text style={styles.gridTitle}>{t('maths')}</Text>
+                            <Text style={styles.gridTitle}>Mental Maths</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>

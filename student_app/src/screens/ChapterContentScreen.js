@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchMCQs, fetchNotes, fetchVideos, recordMCQAttempt, fetchFlashcards, fetchQuickRevision, markSetCompleted } from '../api/content';
 import axios from 'axios';
-import { API_URL } from '../api/config';
+import { API_URL, BASE_URL } from '../api/config';
 import * as Speech from 'expo-speech';
 import { getBestVoice } from '../utils/voiceUtils'; // Assuming this util exists or I should use the logic from QuickRevisionScreen
 import { fetchSetStatus } from '../api/content'; // Import new API
@@ -421,6 +421,13 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 </View>
 
                 <View style={styles.questionCard}>
+                    {question.image_url && (
+                        <Image
+                            source={{ uri: `${BASE_URL}/uploads/${question.image_url}` }}
+                            style={styles.questionImage}
+                            resizeMode="contain"
+                        />
+                    )}
                     <Text style={styles.questionText}>{decodeHtml(question.question)}</Text>
                 </View>
 
@@ -1116,6 +1123,13 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#134e4a', // Dark Teal Text
         lineHeight: 28,
+    },
+    questionImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 8,
+        marginBottom: 16,
+        backgroundColor: '#f0fdfa',
     },
     optionsList: {
         marginBottom: 20,

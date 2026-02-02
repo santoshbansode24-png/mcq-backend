@@ -162,6 +162,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 }
 
 // Get Classes for Initial Dropdown
+// Handle Bulk Image Upload
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'bulk_image_upload') {
+    $upload_dir = '../uploads/mcq_images/';
+    if (!file_exists($upload_dir)) { mkdir($upload_dir, 0777, true); }
+    
+    $count = 0;
+    $errors = 0;
+    
+    if (isset($_FILES['image_files']) && is_array($_FILES['image_files']['name'])) {
+        foreach ($_FILES['image_files']['name'] as $i => $name) {
+            if ($_FILES['image_files']['error'][$i] == 0) {
+                $tmp_name = $_FILES['image_files']['tmp_name'][$i];
+                // Use original filename so CSV mapping works
+                // Sanitize filename to prevent issues
+                $clean_name = basename($name); // e.g., "Figure_Page1.png"
+                if (move_uploaded_file($tmp_name, $upload_dir . $clean_name)) {
+                    $count++;
+                } else {
+                    $errors++;
+                }
+            } else {
+                $errors++;
+            }
+        }
+        $message = "Images Uploaded: $count. Errors: $errors. Now you can upload the CSV.";
+        $messageType = ($count > 0) ? "success" : "error";
+    }
+}
+
 // Get Classes for Initial Dropdown
 $classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_id");
 $classes_query->execute([$selected_board]);
@@ -429,8 +458,26 @@ $mcqs = $mcqs_query->fetchAll();
 
             <!-- Bulk Upload Form -->
             <div id="bulk-content" class="tab-content active">
+                <!-- STEP 1: BULK IMAGES -->
+                <div style="margin-bottom: 25px; padding: 20px; background: #e0f2fe; border-radius: 10px; border: 1px solid #bae6fd;">
+                    <h3 style="color: #0369a1; margin-bottom: 10px;">Step 1: Upload Images (Optional) 📸</h3>
+                    <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">
+                        If your CSV refers to images (e.g., "q1.png"), upload those files here <b>FIRST</b>.<br>
+                        You can select multiple files at once.
+                    </p>
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="bulk_image_upload">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="file" name="image_files[]" multiple accept="image/*" required style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #cbd5e1; flex: 1;">
+                            <button type="submit" class="btn-add" style="background: #0ea5e9;">Upload Images</button>
+                        </div>
+                    </form>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
                 <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                    <h3>📝 Instructions</h3>
+                    <h3>Step 2: Upload CSV 📝</h3>
                     <p style="margin: 10px 0; color: #666;">1. Download the sample CSV file.<br>2. Fill in your questions (keep the header row).<br>3. Select the Class, Subject, and Chapter below.<br>4. Upload the file.</p>
                     <a href="?action=download_sample" class="btn-download">⬇️ Download Sample CSV</a>
                 </div>
@@ -480,7 +527,12 @@ $mcqs = $mcqs_query->fetchAll();
                 <tbody>
                     <?php foreach($mcqs as $mcq): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars(substr($mcq['question'], 0, 50)) . '...'; ?></td>
+                        <td>
+                            <?php if($mcq['image_url']): ?>
+                                <div style="margin-bottom:5px; color:#667eea; font-size:12px;">[ Image Attached ]</div>
+                            <?php endif; ?>
+                            <?php echo htmlspecialchars(substr($mcq['question'], 0, 50)) . '...'; ?>
+                        </td>
                         <td>
                             <small><?php echo htmlspecialchars($mcq['subject_name']); ?></small><br>
                             <?php echo htmlspecialchars($mcq['chapter_name']); ?>

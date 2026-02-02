@@ -1,10 +1,12 @@
 <?php
-require_once 'config/db.php';
+require_once 'backend/config/db.php';
+
 try {
-    $stmt = $pdo->query("DESCRIBE user_vocab_stats");
+    $stmt = $pdo->query("DESCRIBE users");
     $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    echo json_encode(["status" => "success", "columns" => $columns]);
-} catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    echo "Columns in 'users' table:\n";
+    print_r($columns);
+} catch (PDOException $e) {
+    echo "Error: " . $e->getMessage();
 }
 ?>

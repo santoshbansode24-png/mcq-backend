@@ -71,6 +71,11 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
+        if (trimmedMobile.length !== 10) {
+            Alert.alert('Error', 'Mobile number must be exactly 10 digits');
+            return;
+        }
+
         if (trimmedPassword !== confirmPassword) {
             Alert.alert('Error', 'Passwords do not match');
             return;
@@ -159,7 +164,7 @@ const RegisterScreen = ({ navigation }) => {
                                 autoCapitalize="none"
                             />
 
-                            <Text style={styles.label}>Mobile Number</Text>
+                            <Text style={styles.label}>Mobile Number <Text style={{ color: 'red' }}>*</Text></Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="9876543210"

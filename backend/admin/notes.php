@@ -339,8 +339,8 @@ $notes = $notes_query->fetchAll();
 
                     <input type="text" name="title" placeholder="Note Title" required>
                     <select name="note_type" id="note_type_select" onchange="toggleNoteInputs()">
-                        <option value="pdf_upload">PDF (Upload File)</option>
                         <option value="pdf_drive">PDF (Google Drive / Link)</option>
+                        <option value="pdf_upload">PDF (Upload File)</option>
                         <option value="html">HTML Content</option>
                     </select>
                     

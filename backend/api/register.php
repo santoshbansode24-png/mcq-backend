@@ -72,22 +72,32 @@ try {
     $subscription_expiry = date('Y-m-d', strtotime('+30 days')); // 30 days trial/active
     
     // Insert new user
+    // We insert into BOTH 'mobile' and 'phone' columns for backward compatibility
+    // We insert into BOTH 'board_type' and 'board' columns for backward compatibility
+    // We also make sure school_name is definitely included
     $insertStmt = $pdo->prepare("
-        INSERT INTO users (name, email, mobile, password, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO users (
+            name, email, mobile, phone, 
+            password, user_type, 
+            subscription_status, subscription_expiry, 
+            school_name, class_id, 
+            board_type, board,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
 
     $insertStmt->execute([
         $name, 
         $email,
-        $mobile,
+        $mobile, $mobile, // Save mobile to both columns
         $hashed_password, 
         $user_type, 
         $subscription_status, 
         $subscription_expiry,
         $school_name,
         $class_id,
-        $board_type
+        $board_type, $board_type // Save board to both columns
     ]);
 
     $user_id = $pdo->lastInsertId();

@@ -235,6 +235,82 @@ if (isset($_POST['action']) && $_POST['action'] == 'download_selected') {
     }
 }
 
+// 4. DELETE SELECTED CONTENT (MULTIPLE)
+if (isset($_POST['action']) && $_POST['action'] == 'delete_selected') {
+    $ids = isset($_POST['ids']) ? explode(',', $_POST['ids']) : [];
+    $type = $_POST['type'];
+    
+    if (empty($ids)) {
+        echo json_encode(['status' => 'error', 'message' => 'No items selected']);
+        exit();
+    }
+    
+    // Check for Board Selection
+    if (!isset($_SESSION['admin_selected_board'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Board not selected']);
+        exit();
+    }
+    $selected_board = $_SESSION['admin_selected_board'];
+    
+    $table_map = [
+        'mcqs' => 'mcqs',
+        'notes' => 'notes',
+        'videos' => 'videos',
+        'flashcards' => 'flashcards',
+        'quick_revision' => 'quick_revision'
+    ];
+    
+    $id_col_map = [
+        'mcqs' => 'mcq_id',
+        'notes' => 'note_id',
+        'videos' => 'video_id',
+        'flashcards' => 'id',
+        'quick_revision' => 'revision_id'
+    ];
+    
+    if (isset($table_map[$type])) {
+        try {
+            $table = $table_map[$type];
+            $id_col = $id_col_map[$type];
+            
+            $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+            
+            // Verify ownership via joins (Security Check)
+            $verify_sql = "
+                SELECT t.$id_col 
+                FROM $table t
+                JOIN chapters ch ON t.chapter_id = ch.chapter_id
+                JOIN subjects s ON ch.subject_id = s.subject_id
+                JOIN classes c ON s.class_id = c.class_id
+                WHERE t.$id_col IN ($placeholders) AND c.board_type = ?
+            ";
+            
+            // Params: IDs + Board Type
+            $params = array_merge($ids, [$selected_board]);
+            
+            $check = $pdo->prepare($verify_sql);
+            $check->execute($params);
+            $valid_ids = $check->fetchAll(PDO::FETCH_COLUMN);
+            
+            if (!empty($valid_ids)) {
+                // Now delete only the valid IDs that belong to this board
+                $delete_placeholders = str_repeat('?,', count($valid_ids) - 1) . '?';
+                $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col IN ($delete_placeholders)");
+                $stmt->execute($valid_ids);
+                
+                echo json_encode(['status' => 'success', 'count' => count($valid_ids)]);
+            } else {
+                 echo json_encode(['status' => 'error', 'message' => 'No valid items found to delete (permission denied or not found)']);
+            }
+        } catch (PDOException $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid Type']);
+    }
+    exit();
+}
+
 // ==========================================
 // INITIAL DATA LOADING
 // ==========================================
@@ -478,6 +554,9 @@ $all_chapters = $all_chapters_query->fetchAll();
                     <label style="margin-right: 15px; cursor: pointer; font-weight: 600; color: #4a5568;">
                         <input type="checkbox" id="select_all" onchange="toggleSelectAll()"> Select All
                     </label>
+                    <button onclick="deleteSelected()" style="background: #e53e3e; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-right: 10px;">
+                        🗑️ Delete Selected
+                    </button>
                     <button onclick="downloadSelected()" style="background: #48bb78; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                         ⬇️ Download CSV
                     </button>
@@ -674,6 +753,47 @@ $all_chapters = $all_chapters_query->fetchAll();
             document.getElementById('download_type').value = currentType;
             document.getElementById('download_ids').value = selected.join(',');
             document.getElementById('download_form').submit();
+        }
+        
+        function deleteSelected() {
+            const selected = [];
+            document.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+                selected.push(cb.value);
+            });
+            
+            if (selected.length === 0) {
+                showToast('Please select at least one item to delete');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${selected.length} items? This cannot be undone.`)) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'delete_selected');
+            formData.append('ids', selected.join(','));
+            formData.append('type', currentType);
+            
+            fetch('content_manager.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    showToast(`Successfully deleted ${res.count} items.`);
+                    // Reload list
+                    loadContent(); 
+                    document.getElementById('select_all').checked = false;
+                } else {
+                    showToast('Error: ' + res.message);
+                }
+            })
+            .catch(err => {
+                showToast('Network error');
+                console.error(err);
+            });
         }
         
         // ==========================

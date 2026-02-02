@@ -361,8 +361,8 @@ $mcqs = $mcqs_query->fetchAll();
     <div class="container">
         <div class="card">
             <div class="tabs">
-                <button class="tab-btn active" id="single-btn" onclick="switchTab('single')">Add Single MCQ</button>
-                <button class="tab-btn" id="bulk-btn" onclick="switchTab('bulk')">Bulk Upload (CSV)</button>
+                <button class="tab-btn active" id="bulk-btn" onclick="switchTab('bulk')">Bulk Upload (CSV)</button>
+                <button class="tab-btn" id="single-btn" onclick="switchTab('single')">Add Single MCQ</button>
             </div>
 
             <?php if($message): ?>
@@ -370,7 +370,7 @@ $mcqs = $mcqs_query->fetchAll();
             <?php endif; ?>
 
             <!-- Single Add Form -->
-            <div id="single-content" class="tab-content active">
+            <div id="single-content" class="tab-content">
                 <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="add_single">
                     <div class="form-grid">
@@ -428,7 +428,7 @@ $mcqs = $mcqs_query->fetchAll();
             </div>
 
             <!-- Bulk Upload Form -->
-            <div id="bulk-content" class="tab-content">
+            <div id="bulk-content" class="tab-content active">
                 <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                     <h3>📝 Instructions</h3>
                     <p style="margin: 10px 0; color: #666;">1. Download the sample CSV file.<br>2. Fill in your questions (keep the header row).<br>3. Select the Class, Subject, and Chapter below.<br>4. Upload the file.</p>

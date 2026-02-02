@@ -110,6 +110,35 @@ try {
             JOIN subjects s ON ch.subject_id = s.subject_id 
             WHERE s.class_id IN ($class_ids_str)
         ")->fetchColumn();
+        $stats['notes'] = $pdo->query("
+            SELECT COUNT(*) FROM notes n 
+            JOIN chapters ch ON n.chapter_id = ch.chapter_id 
+            JOIN subjects s ON ch.subject_id = s.subject_id 
+            WHERE s.class_id IN ($class_ids_str)
+        ")->fetchColumn();
+
+        // Count Students (Linked to this Board via Class OR directly via board_type)
+        $stmtStudent = $pdo->prepare("
+            SELECT COUNT(DISTINCT u.user_id) 
+            FROM users u 
+            LEFT JOIN classes c ON u.class_id = c.class_id 
+            WHERE u.user_type = 'student' 
+            AND (c.board_type = ? OR u.board_type = ? OR u.board = ?)
+        ");
+        $stmtStudent->execute([$selected_board, $selected_board, $selected_board]);
+        $stats['student'] = $stmtStudent->fetchColumn();
+
+        // Count Teachers (Global)
+        $stats['teacher'] = $pdo->query("SELECT COUNT(*) FROM users WHERE user_type = 'teacher'")->fetchColumn();
+    }
+    
+    // Fallback if no classes, still check for students registered to the board directly
+    if (empty($valid_classes)) {
+         $stmtStudent = $pdo->prepare("SELECT COUNT(*) FROM users WHERE user_type = 'student' AND (board_type = ? OR board = ?)");
+         $stmtStudent->execute([$selected_board, $selected_board]);
+         $stats['student'] = $stmtStudent->fetchColumn();
+         
+         $stats['teacher'] = $pdo->query("SELECT COUNT(*) FROM users WHERE user_type = 'teacher'")->fetchColumn();
     }
     
     // Recent activities (Global for now, or filter if we tracked student board)

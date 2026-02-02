@@ -32,16 +32,19 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = sanitizeInput($_POST['name']);
     $email = sanitizeInput($_POST['email']);
+    $mobile = sanitizeInput($_POST['mobile']); // Get mobile number
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $type = $_POST['user_type'];
     $class_id = !empty($_POST['class_id']) ? $_POST['class_id'] : null;
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, password, user_type, class_id, subscription_status) VALUES (?, ?, ?, ?, ?, 'active')");
-        $stmt->execute([$name, $email, $password, $type, $class_id]);
+        // Updated query to include mobile/phone columns
+        $stmt = $pdo->prepare("INSERT INTO users (name, email, mobile, phone, password, user_type, class_id, subscription_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW())");
+        // Save mobile to both mobile and phone columns
+        $stmt->execute([$name, $email, $mobile, $mobile, $password, $type, $class_id]);
         $message = "User added successfully!";
     } catch (PDOException $e) {
-        $message = "Error: Email already exists";
+        $message = "Error: " . $e->getMessage();
     }
 }
 
@@ -179,6 +182,7 @@ $classes = $classes_query->fetchAll();
                 <div class="form-grid">
                     <input type="text" name="name" placeholder="Full Name" required>
                     <input type="email" name="email" placeholder="Email Address" required>
+                    <input type="tel" name="mobile" placeholder="Mobile Number (Required)" required pattern="[0-9]{10}" title="Ten digit mobile number">
                     <input type="password" name="password" placeholder="Password" required>
                     <select name="user_type" required onchange="this.value=='student'?document.getElementById('class_select').style.display='block':document.getElementById('class_select').style.display='none'">
                         <option value="student">Student</option>
@@ -201,7 +205,9 @@ $classes = $classes_query->fetchAll();
             <table>
                 <thead>
                     <tr>
+                        <th>#</th>
                         <th>Name</th>
+                        <th>School</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Type</th>
@@ -211,11 +217,18 @@ $classes = $classes_query->fetchAll();
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($users as $user): ?>
+                    <?php $i = 1; foreach($users as $user): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($user['name']); ?></td>
+                        <td><?php echo $i++; ?></td>
+                        <td>
+                            <?php echo htmlspecialchars($user['name']); ?>
+                            <?php if(!empty($user['board'])): ?>
+                                <br><small style="color:#888"><?php echo htmlspecialchars($user['board']); ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo htmlspecialchars($user['school_name'] ?? '-'); ?></td>
                         <td><?php echo htmlspecialchars($user['email']); ?></td>
-                        <td><?php echo htmlspecialchars($user['mobile'] ?? '-'); ?></td>
+                        <td><?php echo htmlspecialchars(!empty($user['mobile']) ? $user['mobile'] : ($user['phone'] ?? '-')); ?></td>
                         <td>
                             <span class="badge badge-<?php echo $user['user_type']; ?>">
                                 <?php echo ucfirst($user['user_type']); ?>

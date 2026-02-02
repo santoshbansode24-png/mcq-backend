@@ -44,7 +44,10 @@ if (isset($_GET['delete'])) {
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $chapter_id = intval($_POST['chapter_id']);
-    $title = sanitizeInput($_POST['title']);
+    // 0. Auto-generate Title from Chapter Name
+    $stmtCh = $pdo->prepare("SELECT chapter_name FROM chapters WHERE chapter_id = ?");
+    $stmtCh->execute([$chapter_id]);
+    $title = $stmtCh->fetchColumn() . ' - Revision'; // e.g. "Algebra - Revision"
     $summary = sanitizeInput($_POST['summary']);
     $key_points = [];
 
@@ -348,7 +351,7 @@ $revisions = $revisions_query->fetchAll();
                         <option value="">Select Chapter (Choose Subject First)</option>
                     </select>
 
-                    <input type="text" name="title" placeholder="Revision Title" required style="grid-column: span 3;">
+
                     
                     <textarea name="summary" placeholder="Chapter Summary..." style="grid-column: span 3; height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;" required></textarea>
                 </div>

@@ -43,7 +43,7 @@ const ChaptersScreen = ({ navigation, route, user }) => {
             // Load chapters
             // Load chapters and progress in parallel for speed
             const [chaptersResponse, progressResponse] = await Promise.all([
-                fetchChapters(subject.subject_id),
+                fetchChapters(subject.subject_id, isRefreshing), // Force refresh when pulling to refresh
                 fetchChapterProgress(user.user_id, subject.subject_id)
             ]);
 

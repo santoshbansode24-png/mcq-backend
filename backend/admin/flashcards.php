@@ -24,6 +24,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_sample') {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="flashcards_sample.csv"');
     $output = fopen('php://output', 'w');
+    fputs($output, "\xEF\xBB\xBF"); // Add BOM for Excel
     // Simplified CSV: Just Question and Answer. Subject/Topic/Chapter are selected in UI.
     fputcsv($output, ['Question_Front', 'Answer_Back']);
     fputcsv($output, ['What is the capital of France?', 'Paris']);

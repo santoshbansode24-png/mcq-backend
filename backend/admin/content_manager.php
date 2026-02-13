@@ -207,12 +207,10 @@ if (isset($_POST['action']) && $_POST['action'] == 'download_selected') {
         
         // Generate CSV
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=veeru_' . $type . '_' . date('Y-m-d') . '.csv');
+        header('Content-Disposition: attachment; filename=veeru_mcqs_' . date('Y-m-d') . '.csv');
         
         $output = fopen('php://output', 'w');
-        
-        // Add BOM for Excel compatibility
-        fputs($output, "\xEF\xBB\xBF");
+        fputs($output, "\xEF\xBB\xBF"); // Add BOM for Excel
         
         // Headers
         fputcsv($output, $cfg['headers']);

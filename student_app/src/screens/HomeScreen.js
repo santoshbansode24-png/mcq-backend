@@ -119,6 +119,20 @@ const HomeScreen = ({ user, navigation }) => {
                 </View>
             </View>
 
+            <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('StudyPlanner')}>
+                <LinearGradient colors={['#FF512F', '#DD2476']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
+                    <View style={styles.bannerContent}>
+                        <View>
+                            <Text style={styles.bannerTitle}>{t('studyPlanner') || "My Study Plan"}</Text>
+                            <Text style={styles.bannerSubtitle}>Your Daily Missions & Streaks 🔥</Text>
+                        </View>
+                        <View style={styles.bannerIconContainer}>
+                            <MaterialCommunityIcons name="compass-outline" size={24} color="white" />
+                        </View>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.fullWidthCard} onPress={() => {
                 const studentClass = parseInt(user?.class_id);
                 let scholarshipClassId = 38; // Default to Primary (38)

@@ -40,6 +40,8 @@ import ScholarshipChaptersScreen from './ScholarshipChaptersScreen';
 import ScholarshipSetsScreen from './ScholarshipSetsScreen';
 import WorksheetGeneratorScreen from './WorksheetGeneratorScreen';
 
+import StudyPlannerScreen from './StudyPlannerScreen';
+
 // --- Tab Button Component ---
 const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
     const animValue = useRef(new Animated.Value(0)).current;
@@ -279,6 +281,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'ScholarshipChapters': return <ScholarshipChaptersScreen {...commonProps} />;
             case 'ScholarshipSets': return <ScholarshipSetsScreen {...commonProps} />;
             case 'WorksheetGenerator': return <WorksheetGeneratorScreen {...commonProps} />;
+            case 'StudyPlanner': return <StudyPlannerScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };

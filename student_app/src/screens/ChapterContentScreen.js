@@ -19,10 +19,61 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
     const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
-    const { chapter } = route.params || {};
-    const [activeTab, setActiveTab] = useState('Flashcards'); // Default: Flashcards
+    const { chapter, activeTask } = route.params || {}; // activeTask contains timer info
+    const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'Flashcards'); // Use initialTab if passed
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    // Timer State
+    const [taskTimer, setTaskTimer] = useState(0);
+    const [isTaskActive, setIsTaskActive] = useState(false);
+
+    useEffect(() => {
+        if (activeTask && !isTaskActive) {
+            console.log('[Timer] Starting for task:', activeTask.title);
+            setTaskTimer(activeTask.duration_minutes * 60);
+            setIsTaskActive(true);
+        }
+    }, [activeTask]);
+
+    useEffect(() => {
+        let interval = null;
+        if (isTaskActive && taskTimer > 0) {
+            interval = setInterval(() => {
+                setTaskTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (taskTimer === 0 && isTaskActive) {
+            finishTask();
+        }
+        return () => clearInterval(interval);
+    }, [isTaskActive, taskTimer]);
+
+    const finishTask = async () => {
+        setIsTaskActive(false);
+        try {
+            // Get User ID from Storage
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            const userData = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = userData?.user_id || userData?.id;
+
+            if (userId) {
+                await axios.post(`${API_URL}/update_task_status.php`, {
+                    user_id: userId,
+                    task_id: activeTask.task_id,
+                    status: 'completed'
+                });
+                Alert.alert("Mission Complete! 🎉", `Great job! You earned ${activeTask.xp_reward} XP!`);
+            }
+        } catch (e) {
+            console.error('[Timer] Error finishing task:', e);
+        }
+    };
+
+    const formatTimer = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
 
     // Quiz State
     const [quizMode, setQuizMode] = useState(false);
@@ -547,7 +598,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
         const gradient = videoGradients[index % videoGradients.length];
         return (
             <TouchableOpacity
-                onPress={() => navigation.navigate('VideoPlayer', { videoUrl: item.url, title: item.title })}
+                onPress={() => navigation.navigate('VideoPlayer', {
+                    videoUrl: item.url,
+                    title: item.title,
+                    activeTask: activeTask // Pass timer info
+                })}
                 style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6 }]} // Remove default padding for gradient
             >
                 <LinearGradient
@@ -702,7 +757,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                             chapterName: chapter.chapter_name,
                                             flashcardsData: shuffledCards,
                                             setLabel: `Set ${index + 1}`,
-                                            setIndex: index
+                                            setIndex: index,
+                                            activeTask: activeTask // Add timer context
                                         });
                                     }}
                                 >
@@ -827,10 +883,35 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
             <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right', 'bottom']}>
                 <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => {
+                        if (isTaskActive) {
+                            Alert.alert(
+                                "Abandon Mission?",
+                                "Timer is still running. Do you want to leave?",
+                                [
+                                    { text: "Stay", style: "cancel" },
+                                    { text: "Leave", style: "destructive", onPress: () => navigation.goBack() }
+                                ]
+                            );
+                        } else {
+                            navigation.goBack();
+                        }
+                    }} style={styles.backButton}>
                         <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
                     </TouchableOpacity>
-                    <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{chapter?.chapter_name || 'Content'}</Text>
+
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{chapter?.chapter_name || 'Content'}</Text>
+                    </View>
+
+                    {isTaskActive && (
+                        <View style={styles.timerContainer}>
+                            <Text style={styles.timerText}>⏳ {formatTimer(taskTimer)}</Text>
+                            <TouchableOpacity onPress={finishTask} style={styles.finishBtn}>
+                                <Text style={styles.finishBtnText}>Done</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
@@ -1251,13 +1332,38 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
-    backToContentButton: {
-        padding: 16,
-    },
     backToContentText: {
         color: '#64748b',
         fontSize: 14,
     },
+    timerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f3e8ff', // Light Purple
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#d8b4fe'
+    },
+    timerText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#7e22ce',
+        marginRight: 8,
+        fontVariant: ['tabular-nums']
+    },
+    finishBtn: {
+        backgroundColor: '#7e22ce',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12
+    },
+    finishBtnText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold'
+    }
 });
 
 export default ChapterContentScreen;

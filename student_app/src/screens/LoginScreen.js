@@ -53,9 +53,12 @@ const LoginScreen = ({ navigation }) => {
             }
         } catch (error) {
             setLoading(false);
-            console.error("Login Error Catch:", error);
-            const errorMessage = error.message || 'Something went wrong';
-            Alert.alert('Error', errorMessage);
+            const errStr = error.response
+                ? `Status: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+                : error.message || error.toString();
+            console.error("Login Error:", errStr);
+            window.lastError = errStr; // Hack to show on screen
+            Alert.alert('Error Details', errStr);
         }
     };
 
@@ -168,6 +171,13 @@ const LoginScreen = ({ navigation }) => {
                             )}
                         </TouchableOpacity>
 
+                        {/* Debug Info On Screen */}
+                        {loading === false && (
+                            <Text style={{ color: 'red', marginTop: 10, textAlign: 'center' }}>
+                                {window.lastError || ''}
+                            </Text>
+                        )}
+
                         <TouchableOpacity
                             onPress={() => navigation.navigate('Register')}
                             style={{ marginTop: 24, alignItems: 'center' }}
@@ -177,6 +187,13 @@ const LoginScreen = ({ navigation }) => {
                             </Text>
                         </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity
+                        onPress={diagnoseConnection}
+                        style={styles.debugInfo}
+                    >
+                        <Text style={styles.debugText}>Diagnose Connection Issues</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>

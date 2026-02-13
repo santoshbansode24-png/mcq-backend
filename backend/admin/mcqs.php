@@ -24,6 +24,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_sample') {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="mcq_sample.csv"');
     $output = fopen('php://output', 'w');
+    fputs($output, "\xEF\xBB\xBF"); // Add BOM for Excel
     fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)', 'Image File (e.g. q1.jpg)']);
     fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy', '']);
     fputcsv($output, ['Identify this shape', 'Circle', 'Square', 'Triangle', 'Rectangle', 'c', 'It has 3 sides', 'medium', 'triangle.jpg']);

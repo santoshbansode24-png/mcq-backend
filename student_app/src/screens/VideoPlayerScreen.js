@@ -3,7 +3,9 @@ import { View, StyleSheet, TouchableOpacity, Text, StatusBar, Dimensions } from 
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { Video, ResizeMode } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { BASE_URL } from '../api/config';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL, API_URL } from '../api/config';
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +29,58 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
         }
     }, []);
+
+    // Timer State and Logic
+    const [taskTimer, setTaskTimer] = useState(0);
+    const [isTaskActive, setIsTaskActive] = useState(false);
+
+    // Initial Timer Setup
+    React.useEffect(() => {
+        if (activeTask && !isTaskActive) {
+            setTaskTimer(activeTask.duration_minutes * 60);
+            setIsTaskActive(true);
+        }
+    }, [activeTask]);
+
+    // Countdown Logic
+    React.useEffect(() => {
+        let interval = null;
+        if (isTaskActive && taskTimer > 0) {
+            interval = setInterval(() => {
+                setTaskTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (taskTimer === 0 && isTaskActive) {
+            finishTask();
+        }
+        return () => clearInterval(interval);
+    }, [isTaskActive, taskTimer]);
+
+    const finishTask = async () => {
+        setIsTaskActive(false);
+        try {
+            // Get User ID
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            const userData = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = userData?.user_id || userData?.id;
+
+            if (userId && activeTask) {
+                await axios.post(`${API_URL}/update_task_status.php`, {
+                    user_id: userId,
+                    task_id: activeTask.task_id,
+                    status: 'completed'
+                });
+                alert(`Mission Complete! You earned ${activeTask.xp_reward} XP!`);
+            }
+        } catch (e) {
+            console.error('[VideoPlayer] Error finishing task:', e);
+        }
+    };
+
+    const formatTimer = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
 
     // Robust Video ID Extractor
     const getVideoId = (url) => {
@@ -65,6 +119,16 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                         <Text style={styles.closeText}>✕ Close</Text>
                     </TouchableOpacity>
                     <Text style={styles.title} numberOfLines={1}>{title || 'Video Player'}</Text>
+                </View>
+            )}
+
+            {/* Timer Overlay */}
+            {isTaskActive && (
+                <View style={[styles.timerOverlay, isFullScreen ? styles.timerOverlayFullScreen : {}]}>
+                    <Text style={styles.timerText}>⏳ {formatTimer(taskTimer)}</Text>
+                    <TouchableOpacity onPress={finishTask} style={styles.finishBtn}>
+                        <Text style={styles.finishBtnText}>Done</Text>
+                    </TouchableOpacity>
                 </View>
             )}
 
@@ -133,6 +197,38 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         flex: 1,
+    },
+    timerOverlay: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: 8,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 2000,
+    },
+    timerOverlayFullScreen: {
+        top: 20,
+        right: 50,
+    },
+    timerText: {
+        color: 'white',
+        fontWeight: 'bold',
+        marginRight: 10,
+        fontVariant: ['tabular-nums']
+    },
+    finishBtn: {
+        backgroundColor: '#7e22ce',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 10,
+    },
+    finishBtnText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 12,
     },
     videoContainer: {
         flex: 1,

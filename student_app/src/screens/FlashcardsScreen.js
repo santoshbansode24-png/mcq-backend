@@ -11,6 +11,8 @@ import { fetchFlashcards, markSetCompleted } from '../api/content'; // Import fr
 
 import { fonts } from '../styles/typography';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import axios from 'axios';
+import { API_URL } from '../api/config';
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? StatusBar.currentHeight : 0;
@@ -44,6 +46,59 @@ const FlashcardsScreen = ({ navigation, route }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const isFlippedRef = useRef(false); // Ref to track valid state inside PanResponder closure
     const [error, setError] = useState(null);
+
+    // Timer State
+    const { activeTask } = route.params || {};
+    const [taskTimer, setTaskTimer] = useState(0);
+    const [isTaskActive, setIsTaskActive] = useState(false);
+
+    // Initial Timer Setup
+    useEffect(() => {
+        if (activeTask && !isTaskActive) {
+            setTaskTimer(activeTask.duration_minutes * 60);
+            setIsTaskActive(true);
+        }
+    }, [activeTask]);
+
+    // Countdown Logic
+    useEffect(() => {
+        let interval = null;
+        if (isTaskActive && taskTimer > 0) {
+            interval = setInterval(() => {
+                setTaskTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (taskTimer === 0 && isTaskActive) {
+            finishTask();
+        }
+        return () => clearInterval(interval);
+    }, [isTaskActive, taskTimer]);
+
+    const finishTask = async () => {
+        setIsTaskActive(false);
+        try {
+            // Get User ID
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            const userData = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = userData?.user_id || userData?.id;
+
+            if (userId && activeTask) {
+                await axios.post(`${API_URL}/update_task_status.php`, {
+                    user_id: userId,
+                    task_id: activeTask.task_id,
+                    status: 'completed'
+                });
+                Alert.alert("Mission Complete! 🎉", `Great job! You earned ${activeTask.xp_reward} XP!`);
+            }
+        } catch (e) {
+            console.error('[Flashcards] Error finishing task:', e);
+        }
+    };
+
+    const formatTimer = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
 
 
     // Update ref when state changes
@@ -301,7 +356,15 @@ const FlashcardsScreen = ({ navigation, route }) => {
                 <Text style={[styles.headerTitle, { color: theme.text }]}>
                     {setLabel ? `${setLabel}` : (chapterName || 'Flashcards')}
                 </Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                    {isTaskActive && (
+                        <View style={styles.timerContainer}>
+                            <Text style={styles.timerText}>{formatTimer(taskTimer)}</Text>
+                            <TouchableOpacity onPress={finishTask}>
+                                <Ionicons name="checkmark-circle" size={24} color="#4f46e5" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     <TouchableOpacity onPress={shuffleCards} style={styles.iconBtn}>
                         <Ionicons name="shuffle" size={24} color={theme.primary} />
@@ -493,7 +556,22 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     btnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-    retryBtn: { padding: 10, backgroundColor: '#4f46e5', borderRadius: 8 }
+    retryBtn: { padding: 10, backgroundColor: '#4f46e5', borderRadius: 8 },
+    timerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#e0e7ff',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 20,
+        marginRight: 8,
+    },
+    timerText: {
+        color: '#4f46e5',
+        fontWeight: 'bold',
+        marginRight: 6,
+        fontVariant: ['tabular-nums']
+    },
 });
 
 export default FlashcardsScreen;

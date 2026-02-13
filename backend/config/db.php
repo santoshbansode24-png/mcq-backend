@@ -117,6 +117,6 @@ function convertUtf8($data) {
  * Helper function to sanitize input
  */
 function sanitizeInput($data) {
-    return htmlspecialchars(strip_tags(trim($data ?? '')));
+    return strip_tags(trim($data ?? ''));
 }
 ?>

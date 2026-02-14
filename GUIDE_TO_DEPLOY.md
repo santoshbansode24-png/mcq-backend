@@ -44,7 +44,22 @@ You are ready for the next step!
    export const API_URL = 'https://YOUR-RAILWAY-URL/backend/api';
    export const BASE_URL = 'https://YOUR-RAILWAY-URL/backend';
    ```
+
 4. Restart your Expo app, and it will connect to the cloud!
+
+## Step 7: Configure Storage for Uploads (CRITICAL ⚠️)
+Railway deletes all files when it restarts unless you add a "Volume". Since you want to upload PDFs, you **MUST** do this step.
+
+1. Go to your Railway Project Dashboard.
+2. Click on your **Web Service** (backend).
+3. Go to the **"Volumes"** tab.
+4. Click **"New Volume"**.
+5. Set the **Mount Path** to exactly:
+   `/app/backend/uploads`
+6. Click **"Add"**.
+
+Now, any file you upload will be saved permanently on this "disk" and won't be lost when you restart or deploy.
+
 
 ## 🎉 Done!
 Your app is now live and accessible from anywhere.

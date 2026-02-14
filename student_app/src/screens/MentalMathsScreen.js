@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-    Animated, Vibration, SafeAreaView, Platform, Dimensions
+    Animated, Vibration, SafeAreaView, Platform, Dimensions, Modal
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
@@ -9,8 +9,10 @@ import { MathQuestionGenerator } from '../utils/MathQuestionGenerator';
 import axios from 'axios';
 import { API_URL } from '../api/config';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const MentalMathsScreen = ({ navigation, user }) => {
     const { theme, isDarkMode } = useTheme();
@@ -25,7 +27,6 @@ const MentalMathsScreen = ({ navigation, user }) => {
 
     // Timer State
     const [timeLeft, setTimeLeft] = useState(60);
-    // NEW: We store the max time for the current level to show in the UI text
     const [maxTimeForLevel, setMaxTimeForLevel] = useState(60);
     const timerRef = useRef(null);
 
@@ -35,27 +36,71 @@ const MentalMathsScreen = ({ navigation, user }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const [feedback, setFeedback] = useState(null);
 
+    // Sound Objects
+    const [soundCorrect, setSoundCorrect] = useState();
+    const [soundWrong, setSoundWrong] = useState();
+    const [soundLevelUp, setSoundLevelUp] = useState();
+
+    // Confetti Ref
+    const confettiRef = useRef(null);
+
     const TOTAL_QUESTIONS = 10;
     const PASSING_SCORE = 8;
 
-    // ====================================================
-    // 1. NEW LOGIC: Determine Timer based on Level
-    // ====================================================
     const getDurationForLevel = (currentLevel) => {
-        // Levels 1 to 5 = 30 Seconds
-        if (currentLevel <= 5) {
-            return 30;
-        }
-        // Level 6 and above = 60 Seconds
-        else {
-            return 60;
-        }
+        if (currentLevel <= 5) return 30;
+        return 60;
     };
 
     useEffect(() => {
+        loadSounds();
         loadProgress();
-        return () => clearInterval(timerRef.current);
+        return () => {
+            clearInterval(timerRef.current);
+            unloadSounds();
+        };
     }, []);
+
+    const loadSounds = async () => {
+        try {
+            // Using reliable external URLs for basic sounds. 
+            // Ideally these should be local assets like require('../../assets/sounds/correct.mp3')
+            const { sound: sCorrect } = await Audio.Sound.createAsync(
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3' }, // Ding
+                { shouldPlay: false }
+            );
+            const { sound: sWrong } = await Audio.Sound.createAsync(
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3' }, // Error/Buzz
+                { shouldPlay: false }
+            );
+            const { sound: sLevelUp } = await Audio.Sound.createAsync(
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' }, // Tada/Win
+                { shouldPlay: false }
+            );
+
+            setSoundCorrect(sCorrect);
+            setSoundWrong(sWrong);
+            setSoundLevelUp(sLevelUp);
+        } catch (error) {
+            console.log('Error loading sounds', error);
+        }
+    };
+
+    const unloadSounds = async () => {
+        if (soundCorrect) await soundCorrect.unloadAsync();
+        if (soundWrong) await soundWrong.unloadAsync();
+        if (soundLevelUp) await soundLevelUp.unloadAsync();
+    };
+
+    const playSound = async (type) => {
+        try {
+            if (type === 'correct' && soundCorrect) await soundCorrect.replayAsync();
+            if (type === 'wrong' && soundWrong) await soundWrong.replayAsync();
+            if (type === 'levelup' && soundLevelUp) await soundLevelUp.replayAsync();
+        } catch (error) {
+            console.log('Error playing sound', error);
+        }
+    };
 
     // Timer Interval Logic
     useEffect(() => {
@@ -82,11 +127,8 @@ const MentalMathsScreen = ({ navigation, user }) => {
             if (response.data.status === 'success') {
                 const data = response.data.data;
                 const userLevel = parseInt(data.level) || 1;
-
                 setLevel(userLevel);
                 setTotalSets(parseInt(data.total_sets_completed) || 0);
-
-                // Update the "Rule" text immediately based on loaded level
                 setMaxTimeForLevel(getDurationForLevel(userLevel));
             }
         } catch (error) {
@@ -99,14 +141,9 @@ const MentalMathsScreen = ({ navigation, user }) => {
     const startNewSet = useCallback(() => {
         setScore(0);
         setQuestionCount(1);
-
-        // ====================================================
-        // 2. APPLY LOGIC: Set Timer dynamically when game starts
-        // ====================================================
         const duration = getDurationForLevel(level);
         setTimeLeft(duration);
-        setMaxTimeForLevel(duration); // Keep track for UI display
-
+        setMaxTimeForLevel(duration);
         setGameState('PLAYING');
         generateNextQuestion();
     }, [level]);
@@ -122,7 +159,6 @@ const MentalMathsScreen = ({ navigation, user }) => {
         setFeedback(null);
     };
 
-    // ... (Animations and Answer Handling remain the same) ...
     const triggerShake = () => {
         Animated.sequence([
             Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
@@ -150,9 +186,11 @@ const MentalMathsScreen = ({ navigation, user }) => {
             newScore = score + 1;
             setScore(newScore);
             triggerPop();
+            playSound('correct');
         } else {
             Vibration.vibrate(100);
             triggerShake();
+            playSound('wrong');
         }
 
         Animated.sequence([
@@ -177,10 +215,17 @@ const MentalMathsScreen = ({ navigation, user }) => {
         const newLevel = passed ? level + 1 : level;
 
         if (passed) {
+            playSound('levelup');
+            // Trigger confetti if available
+            if (confettiRef.current) {
+                confettiRef.current.start();
+            }
+
             setLevel(newLevel);
             setTotalSets(prev => prev + 1);
-            // Update max time for the 'Next' level so UI updates if they hit replay
             setMaxTimeForLevel(getDurationForLevel(newLevel));
+        } else {
+            playSound('wrong'); // Play failure sound for game over
         }
 
         try {
@@ -229,6 +274,17 @@ const MentalMathsScreen = ({ navigation, user }) => {
                     </View>
                 </View>
 
+                {/* Confetti Cannon - Always present but triggered on demand */}
+                {gameState === 'RESULT' && score >= PASSING_SCORE && (
+                    <ConfettiCannon
+                        Ref={ref => (confettiRef.current = ref)}
+                        count={200}
+                        origin={{ x: -10, y: 0 }}
+                        autoStart={true}
+                        fadeOut={true}
+                    />
+                )}
+
                 {/* Level Controls */}
                 <View style={styles.levelControls}>
                     <TouchableOpacity
@@ -258,9 +314,6 @@ const MentalMathsScreen = ({ navigation, user }) => {
                             </View>
                             <Text style={[styles.title, { color: '#333' }]}>Speed Math</Text>
 
-                            {/* ====================================================
-                                3. UI UPDATE: Show dynamic time in text
-                               ==================================================== */}
                             <Text style={[styles.subtitle, { color: '#666' }]}>
                                 Solve {TOTAL_QUESTIONS} questions in {maxTimeForLevel} seconds!
                             </Text>
@@ -336,6 +389,12 @@ const MentalMathsScreen = ({ navigation, user }) => {
 
                     {gameState === 'RESULT' && (
                         <View style={styles.card}>
+                            {score >= PASSING_SCORE && (
+                                <View style={{ position: 'absolute', top: -100, zIndex: -1 }}>
+                                    {/* Placeholder for extra effects */}
+                                </View>
+                            )}
+
                             <View style={styles.iconCircle}>
                                 <Text style={styles.emoji}>{score >= PASSING_SCORE ? '🎉' : '⏰'}</Text>
                             </View>
@@ -466,7 +525,7 @@ const styles = StyleSheet.create({
         borderRadius: 25, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05,
         shadowRadius: 10, elevation: 3, marginBottom: 15,
     },
-    optionText: { fontSize: 28, fontWeight: 'bold', color: '#333' },
+    optionText: { fontSize: 28, fontWeight: 'bold', color: 'white' },
     bigScore: { fontSize: 60, fontWeight: '900', color: '#333', marginVertical: 10 },
     totalScore: { fontSize: 24, color: '#888', fontWeight: '500' },
     resultMessage: { fontSize: 16, color: '#666', marginBottom: 20 },

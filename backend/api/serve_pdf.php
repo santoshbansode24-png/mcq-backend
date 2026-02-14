@@ -105,7 +105,12 @@ if (isset($_SERVER['HTTP_RANGE'])) {
 
 // Common headers
 header('Content-Type: ' . $mime_type);
-header('Content-Disposition: inline; filename="' . basename($real_path) . '"');
+$filename = basename($real_path);
+// Force .pdf extension if missing, helps Android intents
+if (strtolower(substr($filename, -4)) !== '.pdf') {
+    $filename .= '.pdf';
+}
+header('Content-Disposition: inline; filename="' . $filename . '"');
 header('Accept-Ranges: bytes');
 header('Cache-Control: public, max-age=3600');
 
@@ -125,5 +130,3 @@ while (!feof($fp) && ($p = ftell($fp)) <= $end) {
 
 fclose($fp);
 exit;
-
-?>

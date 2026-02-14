@@ -80,21 +80,11 @@ try {
             $note['file_url'] = null;
         }
     }
-    unset($note); // Break reference
+    // Fail-safe cleanup
+    unset($note);
     
     // Success response
-    $payload = [
-        'status' => 'success',
-        'message' => 'Notes retrieved successfully',
-        'data' => $notes,
-        '_debug_source' => 'ROOT_API_FOLDER',
-        '_debug_server' => [
-            'HTTP_HOST' => $_SERVER['HTTP_HOST'],
-        ]
-    ];
-    header('Content-Type: application/json');
-    echo json_encode($payload);
-    exit;
+    sendResponse('success', 'Notes retrieved successfully', $notes, 200);
     
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);

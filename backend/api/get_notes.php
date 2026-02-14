@@ -46,10 +46,7 @@ try {
     
     // Check if notes exist
     if (empty($notes)) {
-    // Check if notes exist
-    if (empty($notes)) {
         sendResponse('success', 'No notes found for this chapter', [], 200);
-    }
     }
 
     // Prepare Base URL for files
@@ -86,24 +83,7 @@ try {
     unset($note); // Break reference
     
     // Success response
-    $upload_dir = __DIR__ . '/../uploads/notes';
-    $files = is_dir($upload_dir) ? scandir($upload_dir) : ['Directory Not Found'];
-    
-    $payload = [
-        'status' => 'success',
-        'message' => 'Notes retrieved successfully',
-        'data' => $notes,
-        '_debug_source' => 'BACKEND_FOLDER',
-        '_debug_files' => $files,
-        '_debug_server' => [
-            'HTTP_HOST' => $_SERVER['HTTP_HOST'],
-            'HTTPS' => $_SERVER['HTTPS'] ?? 'off',
-        ]
-    ];
-    
-    header('Content-Type: application/json');
-    echo json_encode($payload);
-    exit;
+    sendResponse('success', 'Notes retrieved successfully', $notes, 200);
     
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);

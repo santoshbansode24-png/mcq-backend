@@ -7,8 +7,9 @@ import { Alert, Platform } from 'react-native';
  * @param {string} url - The URL of the file to download.
  * @param {string} title - The title of the file (used for the filename).
  * @param {function} setLoading - Optional callback to set loading state (true/false).
+ * @param {boolean} autoOpen - If true, automatically opens the file after download.
  */
-export const downloadFile = async (url, title, setLoading = null) => {
+export const downloadFile = async (url, title, setLoading = null, autoOpen = false) => {
     if (!url) {
         Alert.alert("Error", "No download URL provided.");
         return;
@@ -45,10 +46,14 @@ export const downloadFile = async (url, title, setLoading = null) => {
         if (downloadRes.status === 200) {
             console.log('[DownloadUtils] Download complete:', downloadRes.uri);
 
+            // Always try to open the file using the system's default app
             if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(downloadRes.uri);
+                await Sharing.shareAsync(downloadRes.uri, {
+                    UTI: '.pdf',
+                    mimeType: 'application/pdf',
+                });
             } else {
-                Alert.alert("Success", "File downloaded to app storage.");
+                Alert.alert("Success", "File downloaded successfully. Please check your downloads folder.");
             }
         } else {
             throw new Error(`Download failed with status ${downloadRes.status}`);

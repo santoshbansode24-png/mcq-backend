@@ -38,15 +38,13 @@ const NotesScreen = () => {
         }
     };
 
+
     const openNote = async (note) => {
         if (note.note_type === 'pdf') {
             if (note.file_url) {
-                const supported = await Linking.canOpenURL(note.file_url);
-                if (supported) {
-                    await Linking.openURL(note.file_url);
-                } else {
-                    Alert.alert("Error", "Cannot allow this URL: " + note.file_url);
-                }
+                // Download the PDF first, then open it
+                // This is more reliable than trying to open URLs directly
+                await downloadFile(note.file_url, note.title, setLoading, true);
             } else {
                 Alert.alert("Error", "PDF URL is missing");
             }

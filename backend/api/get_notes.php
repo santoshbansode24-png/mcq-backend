@@ -86,7 +86,27 @@ try {
     unset($note); // Break reference
     
     // Success response
-    sendResponse('success', 'Notes retrieved successfully', $notes, 200);
+    $upload_dir = __DIR__ . '/../uploads/notes';
+    $files = is_dir($upload_dir) ? scandir($upload_dir) : ['Directory Not Found'];
+    
+    $payload = [
+        'status' => 'success',
+        'message' => 'Notes retrieved successfully',
+        'data' => $notes,
+        '_debug_files' => $files,
+        '_debug_server' => [
+            'HTTP_HOST' => $_SERVER['HTTP_HOST'],
+            'HTTPS' => $_SERVER['HTTPS'] ?? 'off',
+            'doc_root' => $_SERVER['DOCUMENT_ROOT'],
+            'cwd' => getcwd(),
+            'script' => $_SERVER['PHP_SELF']
+        ]
+    ];
+    
+    // Use json_encode manually to output
+    header('Content-Type: application/json');
+    echo json_encode($payload);
+    exit;
     
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);

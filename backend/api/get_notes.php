@@ -50,10 +50,11 @@ try {
     }
 
     // Prepare Base URL for files
-    // Force HTTPS on Railway (reverse proxy doesn't set HTTPS variable correctly)
-    $is_railway = strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false;
-    $protocol = ($is_railway || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST']; // e.g., 192.168.1.5 or localhost
+    // Force HTTPS on Railway or Custom Domain (reverse proxy doesn't set HTTPS variable correctly)
+    $host = $_SERVER['HTTP_HOST']; // e.g., 192.168.1.5 or localhost or api.veeruapp.in
+    $is_secure_host = $host === 'api.veeruapp.in' || strpos($host, 'railway.app') !== false;
+    $protocol = ($is_secure_host || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) ? "https" : "http";
+    
     // Script is in /backend/api/get_notes.php -> dirname is /backend/api -> dirname again is /backend
     $backend_path = dirname(dirname($_SERVER['PHP_SELF'])); 
     $base_url = $protocol . "://" . $host . $backend_path . "/";

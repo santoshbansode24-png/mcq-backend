@@ -83,7 +83,18 @@ try {
     unset($note); // Break reference
     
     // Success response
-    sendResponse('success', 'Notes retrieved successfully', $notes, 200);
+    $payload = [
+        'status' => 'success',
+        'message' => 'Notes retrieved successfully',
+        'data' => $notes,
+        '_debug_source' => 'ROOT_API_FOLDER',
+        '_debug_server' => [
+            'HTTP_HOST' => $_SERVER['HTTP_HOST'],
+        ]
+    ];
+    header('Content-Type: application/json');
+    echo json_encode($payload);
+    exit;
     
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);

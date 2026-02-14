@@ -93,17 +93,14 @@ try {
         'status' => 'success',
         'message' => 'Notes retrieved successfully',
         'data' => $notes,
+        '_debug_source' => 'BACKEND_FOLDER',
         '_debug_files' => $files,
         '_debug_server' => [
             'HTTP_HOST' => $_SERVER['HTTP_HOST'],
             'HTTPS' => $_SERVER['HTTPS'] ?? 'off',
-            'doc_root' => $_SERVER['DOCUMENT_ROOT'],
-            'cwd' => getcwd(),
-            'script' => $_SERVER['PHP_SELF']
         ]
     ];
     
-    // Use json_encode manually to output
     header('Content-Type: application/json');
     echo json_encode($payload);
     exit;

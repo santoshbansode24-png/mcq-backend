@@ -1,49 +1,67 @@
-<?php
-header('Content-Type: text/plain');
-
-echo "=== Upload Directory Test ===\n\n";
-
-$upload_dir = __DIR__ . '/../uploads/notes';
-echo "Upload Directory: $upload_dir\n";
-echo "Directory Exists: " . (is_dir($upload_dir) ? 'YES' : 'NO') . "\n";
-echo "Directory Writable: " . (is_writable($upload_dir) ? 'YES' : 'NO') . "\n\n";
-
-if (is_dir($upload_dir)) {
-    echo "Files in directory:\n";
-    $files = scandir($upload_dir);
-    foreach ($files as $file) {
-        if ($file != '.' && $file != '..') {
-            $full_path = $upload_dir . '/' . $file;
-            echo "  - $file (" . filesize($full_path) . " bytes)\n";
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PDF Upload</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        input[type="file"] { margin: 10px 0; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Test PDF Upload</h1>
+    <p>This is a simple test to verify PDF uploads work correctly.</p>
+    
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="test_pdf" accept=".pdf" required>
+        <br>
+        <button type="submit">Upload Test PDF</button>
+    </form>
+    
+    <?php
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['test_pdf'])) {
+        $upload_dir = __DIR__ . '/../uploads/notes/';
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        $file = $_FILES['test_pdf'];
+        $filename = time() . '_test.pdf';
+        $destination = $upload_dir . $filename;
+        
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            $file_url = "https://api.veeruapp.in/backend/api/serve_pdf.php?file=uploads/notes/" . $filename;
+            echo "<div class='success'>";
+            echo "✅ Upload successful!<br>";
+            echo "File saved to: $destination<br>";
+            echo "File size: " . filesize($destination) . " bytes<br>";
+            echo "Test URL: <a href='$file_url' target='_blank'>$file_url</a><br>";
+            echo "</div>";
+        } else {
+            echo "<div class='error'>❌ Upload failed!</div>";
         }
     }
-    if (count($files) <= 2) {
-        echo "  (empty)\n";
+    
+    // List existing files
+    $upload_dir = __DIR__ . '/../uploads/notes/';
+    if (is_dir($upload_dir)) {
+        $files = array_diff(scandir($upload_dir), ['.', '..']);
+        if (count($files) > 0) {
+            echo "<h2>Files in upload directory:</h2><ul>";
+            foreach ($files as $file) {
+                $size = filesize($upload_dir . $file);
+                echo "<li>$file (" . number_format($size) . " bytes)</li>";
+            }
+            echo "</ul>";
+        } else {
+            echo "<p><em>No files in upload directory yet.</em></p>";
+        }
     }
-} else {
-    echo "Directory does not exist!\n";
-    echo "Attempting to create...\n";
-    if (mkdir($upload_dir, 0777, true)) {
-        echo "Created successfully!\n";
-    } else {
-        echo "Failed to create directory!\n";
-    }
-}
-
-echo "\n=== Database Check ===\n\n";
-require_once '../config/db.php';
-
-$stmt = $pdo->query("SELECT note_id, title, note_type, file_path FROM notes WHERE note_type = 'pdf' ORDER BY created_at DESC LIMIT 5");
-$notes = $stmt->fetchAll();
-
-echo "Recent PDF notes in database:\n";
-foreach ($notes as $note) {
-    echo "  - ID: {$note['note_id']}, Title: {$note['title']}\n";
-    echo "    Path: {$note['file_path']}\n";
-    if (!empty($note['file_path']) && strpos($note['file_path'], 'http') !== 0) {
-        $file_exists = file_exists(__DIR__ . '/../' . $note['file_path']);
-        echo "    File Exists: " . ($file_exists ? 'YES' : 'NO') . "\n";
-    }
-    echo "\n";
-}
-?>
+    ?>
+</body>
+</html>

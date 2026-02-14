@@ -46,7 +46,14 @@ try {
     
     // Check if notes exist
     if (empty($notes)) {
-        sendResponse('success', 'No notes found for this chapter', [], 200);
+    // Check if notes exist
+    if (empty($notes)) {
+        sendResponse('success', 'No notes found for this chapter', [
+            'data' => [],
+            '_debug_timestamp' => date('Y-m-d H:i:s'),
+            '_debug_path' => __FILE__
+        ], 200);
+    }
     }
 
     // Prepare Base URL for files
@@ -83,7 +90,12 @@ try {
     unset($note); // Break reference
     
     // Success response
-    sendResponse('success', 'Notes retrieved successfully', $notes, 200);
+    $notes_with_debug = [
+        'data' => $notes,
+        '_debug_timestamp' => date('Y-m-d H:i:s'),
+        '_debug_path' => __FILE__
+    ];
+    sendResponse('success', 'Notes retrieved successfully', $notes_with_debug, 200);
     
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);

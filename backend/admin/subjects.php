@@ -18,6 +18,7 @@ $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
+require_once '../helpers/text_normalizer.php';
 
 // Handle Delete
 if (isset($_GET['delete'])) {
@@ -40,17 +41,26 @@ if (isset($_GET['delete'])) {
 
 // Handle Add Subject
 $message = '';
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = sanitizeInput($_POST['subject_name']);
     $class_id = intval($_POST['class_id']);
     $desc = sanitizeInput($_POST['description']);
     
-    try {
-        $stmt = $pdo->prepare("INSERT INTO subjects (subject_name, class_id, description) VALUES (?, ?, ?)");
-        $stmt->execute([$name, $class_id, $desc]);
-        $message = "Subject added successfully!";
-    } catch (PDOException $e) {
-        $message = "Error: Database error";
+    // Normalize subject name to UPPERCASE
+    $normalized_name = normalizeSubjectName($name);
+    
+    // Check for duplicates
+    if (isDuplicateSubject($pdo, $normalized_name, $class_id)) {
+        $error = "⚠️ Duplicate Subject: A subject with this name already exists for the selected class!";
+    } else {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO subjects (subject_name, class_id, description) VALUES (?, ?, ?)");
+            $stmt->execute([$normalized_name, $class_id, $desc]);
+            $message = "✓ Subject added successfully! (Auto-capitalized to: $normalized_name)";
+        } catch (PDOException $e) {
+            $error = "❌ Error: Database error occurred";
+        }
     }
 }
 
@@ -184,6 +194,7 @@ $classes = $classes_query->fetchAll();
         <div class="card">
             <h2>Add New Subject</h2>
             <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
+            <?php if($error): ?><div class="alert" style="background: #f8d7da; color: #721c24; border-color: #dc3545;"><?php echo $error; ?></div><?php endif; ?>
             <form method="POST">
                 <div class="form-grid">
                     <select name="class_id" required>

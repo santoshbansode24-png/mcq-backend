@@ -18,6 +18,7 @@ $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
+require_once '../helpers/text_normalizer.php';
 
 // Handle Delete
 if (isset($_GET['delete'])) {
@@ -41,18 +42,27 @@ if (isset($_GET['delete'])) {
 
 // Handle Add Chapter
 $message = '';
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $subject_id = intval($_POST['subject_id']);
     $name = sanitizeInput($_POST['chapter_name']);
     $desc = sanitizeInput($_POST['description']);
     $order = intval($_POST['chapter_order']);
     
-    try {
-        $stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$subject_id, $name, $desc, $order]);
-        $message = "Chapter added successfully!";
-    } catch (PDOException $e) {
-        $message = "Error: Database error";
+    // Normalize chapter name to UPPERCASE
+    $normalized_name = normalizeChapterName($name);
+    
+    // Check for duplicates
+    if (isDuplicateChapter($pdo, $normalized_name, $subject_id)) {
+        $error = "⚠️ Duplicate Chapter: A chapter with this name already exists for the selected subject!";
+    } else {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$subject_id, $normalized_name, $desc, $order]);
+            $message = "✓ Chapter added successfully! (Auto-capitalized to: $normalized_name)";
+        } catch (PDOException $e) {
+            $error = "❌ Error: Database error occurred";
+        }
     }
 }
 
@@ -501,6 +511,7 @@ $chapters = $chapters_query->fetchAll();
             </div>
             
             <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
+            <?php if($error): ?><div class="alert" style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); color: #721c24; border-color: #dc3545;"><span style="background: #dc3545;">✗</span><?php echo $error; ?></div><?php endif; ?>
             
             <form method="POST" class="modern-form">
                 <div class="form-row">

@@ -18,6 +18,7 @@ $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
+require_once '../helpers/text_normalizer.php';
 
 // Handle Delete
 if (isset($_GET['delete'])) {
@@ -37,17 +38,26 @@ if (isset($_GET['delete'])) {
 
 // Handle Add Class
 $message = '';
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = sanitizeInput($_POST['class_name']);
     // Board is now fixed from session
     $board = $selected_board; 
     
-    try {
-        $stmt = $pdo->prepare("INSERT INTO classes (class_name, board_type) VALUES (?, ?)");
-        $stmt->execute([$name, $board]);
-        $message = "Class added successfully!";
-    } catch (PDOException $e) {
-        $message = "Error: Class already exists for this board";
+    // Normalize class name to UPPERCASE
+    $normalized_name = normalizeClassName($name);
+    
+    // Check for duplicates
+    if (isDuplicateClass($pdo, $normalized_name, 1, null)) { // Assuming board_id = 1 for now
+        $error = "⚠️ Duplicate Class: A class with this name already exists for this board!";
+    } else {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO classes (class_name, board_type) VALUES (?, ?)");
+            $stmt->execute([$normalized_name, $board]);
+            $message = "✓ Class added successfully! (Auto-capitalized to: $normalized_name)";
+        } catch (PDOException $e) {
+            $error = "❌ Error: Database error occurred";
+        }
     }
 }
 
@@ -176,6 +186,7 @@ $classes = $classes->fetchAll();
             <h2>Add New Class</h2>
             <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Adding to: <strong><?php echo $board_name; ?></strong></p>
             <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
+            <?php if($error): ?><div class="alert" style="background: #f8d7da; color: #721c24; border-color: #dc3545;"><?php echo $error; ?></div><?php endif; ?>
             <form method="POST">
                 <input type="text" name="class_name" placeholder="Class Name (e.g. Class 10)" required>
                 <!-- Board Type is Hidden/Fixed -->

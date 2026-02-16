@@ -24,7 +24,8 @@ if ($subject_id <= 0) {
 }
 
 try {
-    // Query chapters for the subject
+    // Optimized Query: Fetch chapters and counts in a single query
+    // Uses LEFT JOIN and GROUP BY to avoid N+1 query problem
     $stmt = $pdo->prepare("
         SELECT 
             ch.chapter_id,
@@ -33,17 +34,21 @@ try {
             ch.chapter_order,
             ch.subject_id,
             s.subject_name,
-            (SELECT COUNT(*) FROM videos WHERE chapter_id = ch.chapter_id) as total_videos,
-            (SELECT COUNT(*) FROM notes WHERE chapter_id = ch.chapter_id) as total_notes,
-            (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ch.chapter_id) as total_mcqs
+            COUNT(DISTINCT v.video_id) as total_videos,
+            COUNT(DISTINCT n.note_id) as total_notes,
+            COUNT(DISTINCT m.mcq_id) as total_mcqs
         FROM chapters ch
         INNER JOIN subjects s ON ch.subject_id = s.subject_id
+        LEFT JOIN videos v ON ch.chapter_id = v.chapter_id
+        LEFT JOIN notes n ON ch.chapter_id = n.chapter_id
+        LEFT JOIN mcqs m ON ch.chapter_id = m.chapter_id
         WHERE ch.subject_id = ?
+        GROUP BY ch.chapter_id, ch.chapter_name, ch.description, ch.chapter_order, ch.subject_id, s.subject_name
         ORDER BY ch.chapter_order ASC, ch.chapter_name ASC
     ");
     
     $stmt->execute([$subject_id]);
-    $chapters = $stmt->fetchAll();
+    $chapters = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Check if chapters exist
     if (empty($chapters)) {

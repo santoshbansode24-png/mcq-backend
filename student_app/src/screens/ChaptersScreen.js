@@ -40,12 +40,24 @@ const ChaptersScreen = ({ navigation, route, user }) => {
     const loadChaptersWithProgress = async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true);
         try {
-            // Load chapters
-            // Load chapters and progress in parallel for speed
-            const [chaptersResponse, progressResponse] = await Promise.all([
-                fetchChapters(subject.subject_id, isRefreshing), // Force refresh when pulling to refresh
+            // Load chapters and progress in parallel
+            let [chaptersResponse, progressResponse] = await Promise.all([
+                fetchChapters(subject.subject_id, isRefreshing),
                 fetchChapterProgress(user.user_id, subject.subject_id)
             ]);
+
+            // Check for cache mismatch
+            // If the subject passed from previous screen has a different chapter count 
+            // than what we got from cache, force a refresh
+            if (
+                chaptersResponse.status === 'success' &&
+                subject?.total_chapters !== undefined &&
+                chaptersResponse.data.length !== subject.total_chapters &&
+                !isRefreshing // Only if we haven't already forced refresh
+            ) {
+                console.log(`[ChaptersScreen] Cache mismatch (Expected: ${subject.total_chapters}, Got: ${chaptersResponse.data.length}). Forcing refresh...`);
+                chaptersResponse = await fetchChapters(subject.subject_id, true);
+            }
 
             if (chaptersResponse.status === 'success') {
                 setChapters(chaptersResponse.data);
@@ -62,7 +74,10 @@ const ChaptersScreen = ({ navigation, route, user }) => {
             }
         } catch (error) {
             console.error('Error loading chapters:', error);
-            Alert.alert('Error', 'Failed to load chapters');
+            // Don't show alert solely for background refresh
+            if (!isRefreshing) {
+                Alert.alert('Error', 'Failed to load chapters');
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);

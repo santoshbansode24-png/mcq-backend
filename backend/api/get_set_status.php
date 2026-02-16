@@ -24,8 +24,9 @@ file_put_contents('../debug_log.txt', $logData, FILE_APPEND);
 try {
     // Single Unified Logic for ALL content types
     // We explicitly trust the manually marked completion status from `content_progress`
-    $stmt = $pdo->prepare("SELECT set_index, status, score, total FROM content_progress 
-                           WHERE user_id = ? AND chapter_id = ? AND content_type = ?");
+    $sql = "SELECT set_index, status, score, total FROM content_progress 
+            WHERE user_id = ? AND chapter_id = ? AND content_type = ?";
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([$user_id, $chapter_id, $type]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

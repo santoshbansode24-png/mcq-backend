@@ -46,6 +46,15 @@ export const downloadFile = async (url, title, setLoading = null, autoOpen = fal
         if (downloadRes.status === 200) {
             console.log('[DownloadUtils] Download complete:', downloadRes.uri);
 
+            // Verify file validity
+            const fileInfo = await FileSystem.getInfoAsync(downloadRes.uri);
+            if (!fileInfo.exists || fileInfo.size < 100) {
+                Alert.alert("Error", "Downloaded file seems corrupt or empty.");
+                console.error("[DownloadUtils] Corrupt file:", fileInfo);
+                return;
+            }
+            console.log(`[DownloadUtils] File Size: ${fileInfo.size} bytes`);
+
             // Always try to open the file using the system's default app
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(downloadRes.uri, {

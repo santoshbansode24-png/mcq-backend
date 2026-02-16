@@ -100,15 +100,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
     
                 $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
-                $upload_dir = "../uploads/notes/";
-                if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
                 
-                $destination = $upload_dir . $new_filename;
+                // NEW: AWS S3 UPLOAD LOGIC with Fallback
+                require_once '../config/aws-config.php';
                 
-                if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
-                    $file_path = "uploads/notes/" . $new_filename;
+                $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+                $s3_url = false;
+
+                if ($is_aws_configured) {
+                    // Define S3 Key (Path in bucket)
+                    $s3_key = "notes/" . $new_filename;
+                    
+                    // Upload directly from temp location to S3
+                    $s3_url = uploadToS3($_FILES['pdf_file']['tmp_name'], $s3_key);
+                }
+
+                if ($s3_url) {
+                    $file_path = $s3_url;
                 } else {
-                    $message = "Error: Failed to move uploaded file.";
+                    // FALLBACK: Local Upload
+                    if ($is_aws_configured) {
+                         $message = "Warning: AWS Upload failed, falling back to local storage. Check logs.";
+                    }
+                    
+                    $upload_dir = "../uploads/notes/";
+                    if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
+                    
+                    $destination = $upload_dir . $new_filename;
+                    
+                    if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $destination)) {
+                        // Use full URL for consistency if needed, or relative path
+                        // For now, keeping relative path for local files
+                        $file_path = "uploads/notes/" . $new_filename;
+                        
+                        // If we wanted to alert the user about using local storage
+                        // $message .= " Note uploaded locally.";
+                    } else {
+                        $message = "Error: Failed to upload file (Both AWS and Local failed).";
+                    }
                 }
             } else {
                 $message = "Error: No file uploaded or upload error code: " . $_FILES['pdf_file']['error'];

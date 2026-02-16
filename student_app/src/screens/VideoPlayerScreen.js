@@ -10,7 +10,7 @@ import { BASE_URL, API_URL } from '../api/config';
 const { width } = Dimensions.get('window');
 
 const VideoPlayerScreen = ({ route, navigation }) => {
-    const { videoUrl, title } = route.params || {};
+    const { videoUrl, title, activeTask } = route.params || {};
     const [playing, setPlaying] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
 

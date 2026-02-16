@@ -66,16 +66,16 @@ try {
             if (strpos($note['file_path'], 'http') === 0) {
                 $note['file_url'] = $note['file_path'];
             } else {
-                // It's a local file, use serve_pdf.php proxy
+                // It's a local file.
+                // OPTIMIZATION: Use direct static URL instead of serve_pdf.php proxy
+                // This lets Apache handle the file serving (better ranges, caching, no PHP corruption risk)
                 
-                // Get path and encode it properly to handle spaces in folder names
-                $path_parts = explode('/', dirname($_SERVER['PHP_SELF']));
-                $encoded_path_parts = array_map('rawurlencode', $path_parts);
-                $encoded_path = implode('/', $encoded_path_parts);
+                // Ensure the path uses forward slashes
+                $clean_path = str_replace('\\', '/', $note['file_path']);
                 
-                // Use same protocol detection as above
-                $current_dir_url = $protocol . "://" . $host . $encoded_path;
-                $note['file_url'] = $current_dir_url . "/serve_pdf.php?file=" . urlencode($note['file_path']);
+                // Construct the full URL based on the backend base URL
+                // $base_url is calculated above as "http://host/veeru/backend/"
+                $note['file_url'] = $base_url . $clean_path;
             }
         } else {
             $note['file_url'] = null;

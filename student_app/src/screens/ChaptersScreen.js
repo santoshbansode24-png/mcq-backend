@@ -40,11 +40,9 @@ const ChaptersScreen = ({ navigation, route, user }) => {
     const loadChaptersWithProgress = async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true);
         try {
-            // Load chapters and progress in parallel
-            let [chaptersResponse, progressResponse] = await Promise.all([
-                fetchChapters(subject.subject_id, isRefreshing),
-                fetchChapterProgress(user.user_id, subject.subject_id)
-            ]);
+            // 1. Fetch Chapters First (Fastest)
+            // We fetch chapters and render them immediately so the user sees the list
+            let chaptersResponse = await fetchChapters(subject.subject_id, isRefreshing);
 
             // Check for cache mismatch
             // If the subject passed from previous screen has a different chapter count 
@@ -56,12 +54,20 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                 !isRefreshing // Only if we haven't already forced refresh
             ) {
                 console.log(`[ChaptersScreen] Cache mismatch (Expected: ${subject.total_chapters}, Got: ${chaptersResponse.data.length}). Forcing refresh...`);
+                // Re-fetch with force refresh
                 chaptersResponse = await fetchChapters(subject.subject_id, true);
             }
 
             if (chaptersResponse.status === 'success') {
                 setChapters(chaptersResponse.data);
+                // CRITICAL OPTIMIZATION: Stop main loading indicator here so list renders
+                if (!isRefreshing) setLoading(false);
             }
+
+            // 2. Fetch Progress (Async)
+            // We fetch progress after chapters are rendered or in parallel if we wanted, 
+            // but here we just let it update the UI when it arrives
+            const progressResponse = await fetchChapterProgress(user.user_id, subject.subject_id);
 
             if (progressResponse.status === 'success') {
                 // Create a map of chapter_id to progress data

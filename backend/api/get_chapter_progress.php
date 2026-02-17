@@ -4,7 +4,7 @@
  * Veeru
  * 
  * Endpoint: GET /api/get_chapter_progress.php?user_id=1&subject_id=2
- * Purpose: Get detailed chapter-wise progress for a subject including solved count, mistakes, and completion percentage
+ * Purpose: Get detailed chapter-wise progress for a subject using optimized batch queries
  */
 
 require_once 'cors_middleware.php';
@@ -29,41 +29,64 @@ if ($subject_id <= 0) {
 }
 
 try {
-    // Get all chapters for the subject with progress data
-    $sql = "
+    // 1. Fetch all chapters for the subject
+    $stmtChapters = $pdo->prepare("
         SELECT 
-            c.chapter_id,
-            c.chapter_name,
-            c.subject_id,
-            
-            -- Total MCQs in chapter
-            (SELECT COUNT(*) FROM mcqs WHERE chapter_id = c.chapter_id) as total_mcqs,
-            
-            -- Unique MCQs solved (attempted at least once)
-            (SELECT COUNT(DISTINCT mcq_id) 
-             FROM mcq_attempts 
-             WHERE user_id = ? AND chapter_id = c.chapter_id) as solved_mcqs,
-            
-            -- Mistakes count (unique MCQs answered incorrectly at least once)
-            (SELECT COUNT(DISTINCT mcq_id) 
-             FROM mcq_attempts 
-             WHERE user_id = ? AND chapter_id = c.chapter_id AND is_correct = 0) as mistakes_count,
-            
-            -- Best score from student_progress (for backward compatibility)
-            (SELECT MAX(percentage) 
-             FROM student_progress 
-             WHERE user_id = ? AND chapter_id = c.chapter_id) as best_score
-            
-        FROM chapters c
-        WHERE c.subject_id = ?
-        ORDER BY c.chapter_id ASC
-    ";
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$user_id, $user_id, $user_id, $subject_id]);
-    $chapters = $stmt->fetchAll();
-    
-    // Calculate progress for each chapter
+            chapter_id, 
+            chapter_name, 
+            subject_id
+        FROM chapters 
+        WHERE subject_id = ? 
+        ORDER BY chapter_order ASC, chapter_id ASC
+    ");
+    $stmtChapters->execute([$subject_id]);
+    $chapters = $stmtChapters->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($chapters)) {
+        sendResponse('success', 'No chapters found', ['chapters' => [], 'summary' => ['total_chapters' => 0, 'completed' => 0, 'in_progress' => 0, 'not_started' => 0]], 200);
+    }
+
+    // Extract chapter IDs for efficient querying
+    $chapterIds = array_column($chapters, 'chapter_id');
+    $placeholders = implode(',', array_fill(0, count($chapterIds), '?'));
+
+    // 2. Fetch total MCQs per chapter in one go
+    // Note: We use the same placeholders array because we are querying by chapter_id IN (...)
+    $stmtTotalMcqs = $pdo->prepare("
+        SELECT chapter_id, COUNT(*) as total_mcqs 
+        FROM mcqs 
+        WHERE chapter_id IN ($placeholders)
+        GROUP BY chapter_id
+    ");
+    $stmtTotalMcqs->execute($chapterIds);
+    $totalMcqsMap = $stmtTotalMcqs->fetchAll(PDO::FETCH_KEY_PAIR); // [chapter_id => total_mcqs]
+
+    // 3. Fetch user attempts (solved and mistakes) in one go
+    // We group by chapter_id and calculate solved/mistakes using conditional aggregation
+    $stmtAttempts = $pdo->prepare("
+        SELECT 
+            chapter_id,
+            COUNT(DISTINCT mcq_id) as solved_mcqs,
+            COUNT(DISTINCT CASE WHEN is_correct = 0 THEN mcq_id END) as mistakes_count
+        FROM mcq_attempts 
+        WHERE user_id = ? AND chapter_id IN ($placeholders)
+        GROUP BY chapter_id
+    ");
+    // Merge user_id with chapterIds for the parameters
+    $stmtAttempts->execute(array_merge([$user_id], $chapterIds));
+    $attemptsMap = $stmtAttempts->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
+
+    // 4. Fetch best scores from student_progress (legacy/backup)
+    $stmtScores = $pdo->prepare("
+        SELECT chapter_id, MAX(percentage) as best_score 
+        FROM student_progress 
+        WHERE user_id = ? AND chapter_id IN ($placeholders)
+        GROUP BY chapter_id
+    ");
+    $stmtScores->execute(array_merge([$user_id], $chapterIds));
+    $scoresMap = $stmtScores->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Process and assemble logic
     $progress_data = [];
     $summary = [
         'total_chapters' => count($chapters),
@@ -71,16 +94,30 @@ try {
         'in_progress' => 0,
         'not_started' => 0
     ];
-    
+
     foreach ($chapters as $chapter) {
-        $total = intval($chapter['total_mcqs']);
-        $solved = intval($chapter['solved_mcqs']);
+        $chId = $chapter['chapter_id'];
+        
+        $total = isset($totalMcqsMap[$chId]) ? intval($totalMcqsMap[$chId]) : 0;
+        
+        // Get attempt data if exists
+        $solved = 0;
+        $mistakes = 0;
+        if (isset($attemptsMap[$chId])) {
+            $solved = intval($attemptsMap[$chId]['solved_mcqs']);
+            $mistakes = intval($attemptsMap[$chId]['mistakes_count']);
+        }
+
+        // Get legacy score if exists
+        $bestScore = isset($scoresMap[$chId]) ? floatval($scoresMap[$chId]) : null;
+
         $remaining = max(0, $total - $solved);
         $percentage = $total > 0 ? round(($solved / $total) * 100, 1) : 0;
         
         // Determine status
         $status = 'not_started';
         if ($percentage >= 100) {
+            // Check if effectively completed (sometimes slight calc diffs)
             $status = 'completed';
             $summary['completed']++;
         } elseif ($percentage > 0) {
@@ -91,15 +128,15 @@ try {
         }
         
         $progress_data[] = [
-            'chapter_id' => intval($chapter['chapter_id']),
+            'chapter_id' => intval($chId),
             'chapter_name' => $chapter['chapter_name'],
             'total_mcqs' => $total,
             'solved_mcqs' => $solved,
             'remaining_mcqs' => $remaining,
-            'mistakes_count' => intval($chapter['mistakes_count']),
+            'mistakes_count' => $mistakes,
             'completion_percentage' => $percentage,
             'status' => $status,
-            'best_score' => $chapter['best_score'] ? floatval($chapter['best_score']) : null
+            'best_score' => $bestScore
         ];
     }
     
@@ -110,6 +147,8 @@ try {
     ], 200);
     
 } catch (PDOException $e) {
-    sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+    // Log error for debugging but don't expose sensitive DB info to user
+    error_log("Database Error in get_chapter_progress: " . $e->getMessage());
+    sendResponse('error', 'Database error occurred', null, 500);
 }
 ?>

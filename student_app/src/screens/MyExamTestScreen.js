@@ -307,7 +307,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
                                     <MathJaxWebView
                                         content={decodeHtml(currentQuestion[`option_${opt}`])}
                                         textColor={selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) ? '#0f172a' : '#475569'}
-                                        fontSize="15px"
+                                        fontSize="14px"
                                     />
                                 </View>
                             </View>
@@ -420,20 +420,17 @@ const styles = StyleSheet.create({
         paddingBottom: 150,
     },
     questionCard: {
-        backgroundColor: '#f3e8ff', // Lavender Background
+        backgroundColor: 'white',
         borderRadius: 16,
-        padding: 24,
-        marginBottom: 24,
+        padding: 18,
+        marginBottom: 20,
         elevation: 3,
-        shadowColor: '#7c3aed', // Purple Shadow
+        shadowColor: '#7c3aed',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
-        borderTopWidth: 4,
-        borderBottomWidth: 4,
-        borderRightWidth: 4,
-        borderLeftWidth: 4, // Explicitly set to ensure visibility
-        borderColor: '#c084fc', // Medium Purple Border
+        borderWidth: 3,
+        borderColor: '#c084fc',
         borderStyle: 'solid',
     },
     questionText: {
@@ -449,14 +446,14 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     optionsList: {
-        gap: 12,
+        gap: 8,
     },
     optionButton: {
         backgroundColor: 'white',
         borderRadius: 12,
-        padding: 16,
+        padding: 6,
         borderWidth: 2,
-        borderColor: '#e2e8f0',
+        borderColor: '#cbd5e1',
     },
     selectedOption: {
         borderColor: '#0072ff',

@@ -985,9 +985,9 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 0, // Removed extra padding, relying on SafeAreaView
-        paddingBottom: 12,
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 8,
         // backgroundColor handled by theme
         borderBottomWidth: 1,
         // borderBottomColor handled by theme
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     },
     tabContainer: {
         // backgroundColor handled by theme
-        paddingVertical: 12,
+        paddingVertical: 8,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
         // borderBottomColor handled by theme

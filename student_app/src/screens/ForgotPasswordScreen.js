@@ -23,31 +23,31 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await axios.post(`${API_URL}/otp.php`, {
-                action: 'send_otp',
-                mobile: mobile
+            const response = await axios.post(`${API_URL}/send_otp.php`, {
+                phone_number: mobile
             });
 
             if (response.data.status === 'success') {
-                Alert.alert('OTP Sent', 'Please check your SMS for the OTP.');
-                if (response.data.debug_otp) {
-                    console.log('DEBUG OTP:', response.data.debug_otp); // For testing
-                }
+                Alert.alert('OTP Sent', response.data.message);
                 setStep(2);
             } else {
                 Alert.alert('Error', response.data.message || 'Failed to send OTP');
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Network error or server issue');
+            if (error.response) {
+                Alert.alert('Error', error.response.data.message || 'Failed to send OTP');
+            } else {
+                Alert.alert('Error', 'Network error. Please check your connection.');
+            }
         } finally {
             setLoading(false);
         }
     };
 
     const handleResetPassword = async () => {
-        if (!otp || otp.length < 4) {
-            Alert.alert('Invalid OTP', 'Please enter the 4-digit OTP');
+        if (!otp || otp.length < 6) {
+            Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP');
             return;
         }
         if (!newPassword || newPassword.length < 6) {
@@ -61,23 +61,38 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await axios.post(`${API_URL}/otp.php`, {
-                action: 'reset_password',
-                mobile: mobile,
-                otp: otp,
+            // Step 1: Verify OTP
+            const verifyResponse = await axios.post(`${API_URL}/verify_otp.php`, {
+                phone_number: mobile,
+                otp_code: otp
+            });
+
+            if (verifyResponse.data.status !== 'success') {
+                Alert.alert('Error', verifyResponse.data.message || 'Invalid OTP');
+                setLoading(false);
+                return;
+            }
+
+            // Step 2: Reset Password
+            const resetResponse = await axios.post(`${API_URL}/reset_password.php`, {
+                user_id: verifyResponse.data.user_id,
                 new_password: newPassword
             });
 
-            if (response.data.status === 'success') {
+            if (resetResponse.data.status === 'success') {
                 Alert.alert('Success', 'Password has been reset successfully!', [
                     { text: 'Login Now', onPress: () => navigation.navigate('Login') }
                 ]);
             } else {
-                Alert.alert('Error', response.data.message || 'Failed to reset password');
+                Alert.alert('Error', resetResponse.data.message || 'Failed to reset password');
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Network error or server issue');
+            if (error.response) {
+                Alert.alert('Error', error.response.data.message || 'Failed to reset password');
+            } else {
+                Alert.alert('Error', 'Network error. Please check your connection.');
+            }
         } finally {
             setLoading(false);
         }

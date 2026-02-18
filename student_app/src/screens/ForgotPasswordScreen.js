@@ -9,22 +9,22 @@ import { useTheme } from '../context/ThemeContext';
 const ForgotPasswordScreen = ({ navigation }) => {
     const { theme } = useTheme();
     const [step, setStep] = useState(1); // 1: Send OTP, 2: Verify & Reset
-    const [mobile, setMobile] = useState('');
+    const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSendOTP = async () => {
-        if (!mobile || mobile.length < 10) {
-            Alert.alert('Invalid Mobile', 'Please enter a valid mobile number');
+        if (!email || !email.includes('@')) {
+            Alert.alert('Invalid Email', 'Please enter a valid email address');
             return;
         }
 
         setLoading(true);
         try {
             const response = await axios.post(`${API_URL}/send_otp.php`, {
-                phone_number: mobile
+                email: email.trim().toLowerCase()
             });
 
             if (response.data.status === 'success') {
@@ -63,7 +63,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         try {
             // Step 1: Verify OTP
             const verifyResponse = await axios.post(`${API_URL}/verify_otp.php`, {
-                phone_number: mobile,
+                email: email.trim().toLowerCase(),
                 otp_code: otp
             });
 
@@ -111,22 +111,22 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
                     <Text style={styles.title}>Forgot Password</Text>
                     <Text style={styles.subtitle}>
-                        {step === 1 ? 'Enter your registered mobile number' : 'Enter OTP and new password'}
+                        {step === 1 ? 'Enter your registered email address' : 'Enter OTP and new password'}
                     </Text>
 
                     <View style={styles.card}>
                         {step === 1 ? (
                             <>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="call-outline" size={20} color="#666" style={styles.icon} />
+                                    <Ionicons name="mail-outline" size={20} color="#666" style={styles.icon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Mobile Number"
+                                        placeholder="Email Address"
                                         placeholderTextColor="#999"
-                                        keyboardType="phone-pad"
-                                        maxLength={10}
-                                        value={mobile}
-                                        onChangeText={setMobile}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        value={email}
+                                        onChangeText={setEmail}
                                     />
                                 </View>
 

@@ -1,11 +1,26 @@
 <?php
 /**
- * SMS Configuration for MSG91
- * Store your MSG91 credentials here
+ * Email / OTP Configuration
+ * Resend API credentials for sending OTP emails
  */
 
+// -----------------------------------------------
+// Resend Email API (replaces MSG91 SMS)
+// Get your API key from: https://resend.com/api-keys
+// -----------------------------------------------
+if (!defined('RESEND_API_KEY')) {
+    define('RESEND_API_KEY', 're_S5wgL2Xn_Kn5YGw4NTAzymSovXLm3LAzw');
+}
+
+if (!defined('RESEND_FROM_EMAIL')) {
+    define('RESEND_FROM_EMAIL', 'noreply@veeruapp.in');
+}
+
+// -----------------------------------------------
+// Legacy MSG91 (kept for reference, not used)
+// -----------------------------------------------
 if (!defined('MSG91_AUTH_KEY')) {
-    define('MSG91_AUTH_KEY', '494908AexhxcvQwe1M6994be64P1'); // MSG91 Auth Key
+    define('MSG91_AUTH_KEY', '494908AexhxcvQwe1M6994be64P1');
 }
 
 if (!defined('MSG91_SENDER_ID')) {

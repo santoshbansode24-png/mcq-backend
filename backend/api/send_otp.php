@@ -1,7 +1,8 @@
 <?php
 /**
  * Send OTP API
- * Generates and sends OTP to user's phone number for password reset
+ * Generates and sends OTP to user's email address for password reset
+ * Uses Resend email service (replaces MSG91 SMS)
  */
 
 header("Access-Control-Allow-Origin: *");
@@ -16,116 +17,115 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 require_once '../config/db.php';
 require_once '../config/sms_config.php';
-require_once '../services/SMSService.php';
+require_once '../services/EmailService.php';
 
 try {
     // Get POST data
     $data = json_decode(file_get_contents("php://input"));
-    
-    if (empty($data->phone_number)) {
+
+    if (empty($data->email)) {
         http_response_code(400);
         echo json_encode([
-            "status" => "error",
-            "message" => "Phone number is required"
+            "status"  => "error",
+            "message" => "Email address is required"
         ]);
         exit();
     }
-    
-    // Validate and format phone number
-    $phoneNumber = SMSService::formatPhoneNumber($data->phone_number);
-    
-    if (!SMSService::validatePhoneNumber($phoneNumber)) {
+
+    $email = strtolower(trim($data->email));
+
+    // Validate email format
+    if (!EmailService::validateEmail($email)) {
         http_response_code(400);
         echo json_encode([
-            "status" => "error",
-            "message" => "Invalid phone number format. Use +91XXXXXXXXXX or 10-digit number"
+            "status"  => "error",
+            "message" => "Invalid email address format"
         ]);
         exit();
     }
-    
-    // Check if user exists with this phone number
-    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE phone_number = ?");
-    $stmt->bind_param("s", $phoneNumber);
+
+    // Check if user exists with this email
+    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         http_response_code(404);
         echo json_encode([
-            "status" => "error",
-            "message" => "No account found with this phone number"
+            "status"  => "error",
+            "message" => "No account found with this email address"
         ]);
         exit();
     }
-    
-    $user = $result->fetch_assoc();
+
+    $user   = $result->fetch_assoc();
     $userId = $user['id'];
-    
-    // Check rate limiting - max 3 OTP requests per hour
+
+    // Rate limiting — max 3 OTP requests per hour
     $oneHourAgo = date('Y-m-d H:i:s', strtotime('-1 hour'));
     $stmt = $conn->prepare("SELECT COUNT(*) as count FROM password_reset_otps WHERE phone_number = ? AND created_at > ?");
-    $stmt->bind_param("ss", $phoneNumber, $oneHourAgo);
+    $stmt->bind_param("ss", $email, $oneHourAgo);
     $stmt->execute();
     $rateLimitResult = $stmt->get_result()->fetch_assoc();
-    
+
     if ($rateLimitResult['count'] >= OTP_MAX_ATTEMPTS_PER_HOUR) {
         http_response_code(429);
         echo json_encode([
-            "status" => "error",
+            "status"  => "error",
             "message" => "Too many OTP requests. Please try again after 1 hour."
         ]);
         exit();
     }
-    
+
     // Generate OTP
-    $otp = SMSService::generateOTP(OTP_LENGTH);
-    
-    // Calculate expiry time
+    $otp       = EmailService::generateOTP(OTP_LENGTH);
     $expiresAt = date('Y-m-d H:i:s', strtotime('+' . OTP_EXPIRY_MINUTES . ' minutes'));
-    
-    // Get client IP
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    
-    // Save OTP to database
+
+    // Save OTP to database (reusing phone_number column to store email)
     $stmt = $conn->prepare("INSERT INTO password_reset_otps (user_id, phone_number, otp_code, expires_at, ip_address) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("issss", $userId, $phoneNumber, $otp, $expiresAt, $ipAddress);
-    
+    $stmt->bind_param("issss", $userId, $email, $otp, $expiresAt, $ipAddress);
+
     if (!$stmt->execute()) {
         throw new Exception("Failed to save OTP");
     }
-    
-    // Send OTP via SMS
-    $smsService = new SMSService();
-    $smsResult = $smsService->sendOTP($phoneNumber, $otp);
-    
-    if (!$smsResult['success']) {
-        // Delete the OTP record if SMS failed
+
+    // Send OTP via Email (Resend)
+    $emailService = new EmailService();
+    $emailResult  = $emailService->sendOTP($email, $otp, $user['name']);
+
+    if (!$emailResult['success']) {
+        // Delete the OTP record if email failed
         $stmt = $conn->prepare("DELETE FROM password_reset_otps WHERE user_id = ? AND otp_code = ?");
         $stmt->bind_param("is", $userId, $otp);
         $stmt->execute();
-        
+
         http_response_code(500);
         echo json_encode([
-            "status" => "error",
-            "message" => $smsResult['message']
+            "status"  => "error",
+            "message" => $emailResult['message']
         ]);
         exit();
     }
-    
-    // Success response
+
+    // Mask email for response (e.g. s***@gmail.com)
+    $emailParts   = explode('@', $email);
+    $maskedEmail  = substr($emailParts[0], 0, 1) . '***@' . $emailParts[1];
+
     http_response_code(200);
     echo json_encode([
-        "status" => "success",
-        "message" => "OTP sent successfully to " . substr($phoneNumber, 0, -4) . "XXXX",
+        "status"            => "success",
+        "message"           => "OTP sent to " . $maskedEmail,
         "expires_in_minutes" => OTP_EXPIRY_MINUTES,
-        "user_name" => $user['name']
+        "user_name"         => $user['name']
     ]);
-    
+
 } catch (Exception $e) {
     error_log("Send OTP Error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
-        "status" => "error",
+        "status"  => "error",
         "message" => "An error occurred. Please try again later."
     ]);
 }

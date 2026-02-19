@@ -173,7 +173,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                     setShowExplanation(false);
                 }
             } else {
-                Alert.alert('Error', response.data.message || 'Failed to generate quiz');
+                Alert.alert('AI Generator Error', response.data.message || 'Failed to generate quiz');
             }
         } catch (error) {
             console.error(error);

@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { http_response_code(200); exit(); 
 
 require_once '../config/ai_config.php';
 // Ensure you ran: composer require smalot/pdfparser phpoffice/phpword
-require_once '../../vendor/autoload.php'; 
+require_once __DIR__ . '/../vendor/autoload.php'; 
 
 use Smalot\PdfParser\Parser;
 use PhpOffice\PhpWord\IOFactory;
@@ -51,6 +51,11 @@ function extractTextFromWord($filePath) {
 
 try {
     // 2. Validate Inputs
+    // Check for potential post_max_size overflow (POST is empty but Content-Length exists)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && $_SERVER['CONTENT_LENGTH'] > 0) {
+        throw new Exception("The request was too large for the server. Content-Length: " . $_SERVER['CONTENT_LENGTH'] . " bytes.");
+    }
+
     if (!isset($_POST['input_type'])) throw new Exception("Missing input_type");
 
     $inputType = $_POST['input_type'];
@@ -87,7 +92,30 @@ try {
     } elseif ($inputType === 'camera' || $inputType === 'file') {
         
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception("File upload failed");
+            $errCode = isset($_FILES['file']) ? $_FILES['file']['error'] : 'No file object';
+            $errMessage = "File upload failed (Error Code: $errCode). ";
+            
+            switch ($errCode) {
+                case UPLOAD_ERR_INI_SIZE:
+                    $errMessage .= "The file is too large. Server limit: " . ini_get('upload_max_filesize') . ".";
+                    break;
+                case UPLOAD_ERR_PARTIAL:
+                    $errMessage .= "The file was only partially uploaded.";
+                    break;
+                case UPLOAD_ERR_NO_FILE:
+                    $errMessage .= "No file was uploaded.";
+                    break;
+                case UPLOAD_ERR_NO_TMP_DIR:
+                    $errMessage .= "Internal server error: Missing temp folder.";
+                    break;
+                case UPLOAD_ERR_CANT_WRITE:
+                    $errMessage .= "Internal server error: Writing to disk failed.";
+                    break;
+                default:
+                    $errMessage .= "Please check your internet and try again.";
+                    break;
+            }
+            throw new Exception($errMessage);
         }
 
         $filePath = $_FILES['file']['tmp_name'];

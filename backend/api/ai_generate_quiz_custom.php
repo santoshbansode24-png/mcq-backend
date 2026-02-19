@@ -25,7 +25,11 @@ if (file_exists('../config/ai_config.php')) {
     }
 }
 // Ensure you ran: composer require smalot/pdfparser phpoffice/phpword
-require_once '../../vendor/autoload.php'; 
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+} else {
+    require_once __DIR__ . '/../../vendor/autoload.php';
+}
 
 use Smalot\PdfParser\Parser;
 use PhpOffice\PhpWord\IOFactory;
@@ -63,9 +67,14 @@ function extractTextFromWord($filePath) {
 
 try {
     // 2. Validate Inputs
+    // Check for potential post_max_size overflow (POST is empty but Content-Length exists)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && $_SERVER['CONTENT_LENGTH'] > 0) {
+        throw new Exception("The request was too large for the server. Content-Length: " . $_SERVER['CONTENT_LENGTH'] . " bytes.");
+    }
+
     $inputType = isset($_POST['input_type']) ? $_POST['input_type'] : '';
-    $difficulty = isset($_POST['difficulty']) ? $_POST['difficulty'] : 'Medium'; // Default to Medium
-    $language = isset($_POST['language']) ? $_POST['language'] : 'English'; // Default to English
+    $difficulty = isset($_POST['difficulty']) ? $_POST['difficulty'] : 'Medium';
+    $language = isset($_POST['language']) ? $_POST['language'] : 'English';
     $existingText = isset($_POST['existing_text']) ? $_POST['existing_text'] : '';
 
     $geminiParts = [];
@@ -122,10 +131,7 @@ try {
             
             switch ($errCode) {
                 case UPLOAD_ERR_INI_SIZE:
-                    $errMessage .= "The file is too large. PHP limits uploads to " . ini_get('upload_max_filesize') . ".";
-                    break;
-                case UPLOAD_ERR_FORM_SIZE:
-                    $errMessage .= "The file exceeds the MAX_FILE_SIZE limit in the HTML form.";
+                    $errMessage .= "The file is too large. Server limit: " . ini_get('upload_max_filesize') . ".";
                     break;
                 case UPLOAD_ERR_PARTIAL:
                     $errMessage .= "The file was only partially uploaded.";
@@ -134,16 +140,13 @@ try {
                     $errMessage .= "No file was uploaded.";
                     break;
                 case UPLOAD_ERR_NO_TMP_DIR:
-                    $errMessage .= "Server error: Missing temporary folder.";
+                    $errMessage .= "Internal server error: Missing temp folder.";
                     break;
                 case UPLOAD_ERR_CANT_WRITE:
-                    $errMessage .= "Server error: Failed to write file to disk.";
-                    break;
-                case UPLOAD_ERR_EXTENSION:
-                    $errMessage .= "A PHP extension blocked the upload.";
+                    $errMessage .= "Internal server error: Writing to disk failed.";
                     break;
                 default:
-                    $errMessage .= "Unknown upload error.";
+                    $errMessage .= "Please check your internet and try again.";
                     break;
             }
             throw new Exception($errMessage);

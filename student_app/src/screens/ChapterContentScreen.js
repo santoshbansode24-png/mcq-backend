@@ -613,23 +613,24 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         return (
             <TouchableOpacity
-                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6 }]}
+                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
                 onPress={openNote}
             >
                 <LinearGradient
                     colors={gradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={{ padding: 16, width: '100%', height: '100%', flexDirection: 'row', alignItems: 'center' }}
+                    style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
                 >
-                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                        <Text style={{ fontSize: 20 }}>📄</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
+                            <Text style={{ fontSize: 20 }}>📄</Text>
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 16 }}>
+                            <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800', marginBottom: 2 }]} numberOfLines={1}>{item.title}</Text>
+                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13 }]} numberOfLines={1}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
+                        </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.cardTitle, { color: 'white' }]}>{item.title}</Text>
-                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold' }]}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
-                    </View>
-
                 </LinearGradient>
             </TouchableOpacity>
         );
@@ -644,17 +645,23 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     title: item.title,
                     activeTask: activeTask // Pass timer info
                 })}
-                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6 }]} // Remove default padding for gradient
+                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
             >
                 <LinearGradient
                     colors={gradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={{ padding: 16, width: '100%', height: '100%' }}
+                    style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
                 >
-                    <Text style={[styles.cardTitle, { color: 'white' }]}>🎥 {item.title}</Text>
-                    <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)' }]}>{item.description || 'Click to watch video'}</Text>
-                    <Text style={[styles.duration, { color: 'white', fontWeight: 'bold', opacity: 0.9 }]}>Duration: {item.duration || 'N/A'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
+                            <Text style={{ fontSize: 20 }}>🎥</Text>
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 16 }}>
+                            <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800' }]} numberOfLines={1}>{item.title}</Text>
+                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)', fontSize: 13 }]} numberOfLines={1}>{item.description || 'Watch video'}</Text>
+                        </View>
+                    </View>
                 </LinearGradient>
             </TouchableOpacity>
         );

@@ -6,15 +6,26 @@
 
 // 1. Define API Key (Prevent re-definition errors)
 if (!defined('GEMINI_API_KEY')) {
-    // Try environment variable first, then fallback to hardcoded
-    $envKey = getenv('GEMINI_API_KEY');
-    define('GEMINI_API_KEY', $envKey ? $envKey : '');
+    // 1. Try loading from secrets.php (Ignored by Git)
+    if (file_exists(__DIR__ . '/secrets.php')) {
+        require_once __DIR__ . '/secrets.php';
+    }
+
+    // 2. Try environment variable
+    if (!defined('GEMINI_API_KEY')) {
+        $envKey = getenv('GEMINI_API_KEY');
+        if ($envKey) define('GEMINI_API_KEY', $envKey);
+    }
+
+    // 3. Fallback empty (will cause API error with clear message)
+    if (!defined('GEMINI_API_KEY')) {
+        define('GEMINI_API_KEY', '');
+    }
 }
 
-// 2. Define API URL (Corrected Model Name)
+// 2. Define API URL - Using gemini-2.0-flash (confirmed available for this key)
 if (!defined('GEMINI_API_URL')) {
-// Using verified gemini-2.5-flash (Confirmed working)
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
 }
 
 /**

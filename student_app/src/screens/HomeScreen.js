@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
     Text,
@@ -11,7 +12,8 @@ import {
     SafeAreaView,
     StatusBar,
     Platform,
-    FlatList
+    FlatList,
+    Animated
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +22,30 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { BASE_URL } from '../api/config';
 import { dataCache } from '../utils/dataCache';
+import { SmartCacheService } from '../services/SmartCacheService';
+
+const SkeletonItem = () => {
+    const opacity = useRef(new Animated.Value(0.3)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+                Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true })
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <Animated.View style={[styles.subjectCard, { opacity, backgroundColor: '#f1f5f9', borderWidth: 0 }]}>
+            <View style={[styles.iconContainer, { backgroundColor: '#e2e8f0' }]} />
+            <View style={{ flex: 1, marginLeft: 16 }}>
+                <View style={{ height: 16, backgroundColor: '#e2e8f0', borderRadius: 4, width: '60%', marginBottom: 8 }} />
+                <View style={{ height: 12, backgroundColor: '#e2e8f0', borderRadius: 4, width: '40%' }} />
+            </View>
+        </Animated.View>
+    );
+};
 
 const HomeScreen = ({ user, navigation }) => {
     const { theme, isDarkMode } = useTheme();
@@ -30,10 +56,28 @@ const HomeScreen = ({ user, navigation }) => {
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
-    useEffect(() => {
-        if (classId) loadSubjects();
-    }, [classId]);
+
+
+    useFocusEffect(
+        useCallback(() => {
+            if (classId) {
+                loadSubjects();
+                // Start background sync for all class content
+                startBackgroundSync();
+            }
+        }, [classId])
+    );
+
+    const startBackgroundSync = async () => {
+        setIsSyncing(true);
+        try {
+            await SmartCacheService.syncAllForClass(classId);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const loadSubjects = async (forceRefresh = false) => {
         if (!forceRefresh) setLoading(true);
@@ -68,7 +112,15 @@ const HomeScreen = ({ user, navigation }) => {
         <View>
             <View style={styles.header}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                    <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t('welcome')},</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t('welcome')},</Text>
+                        {isSyncing && (
+                            <View style={styles.syncIndicator}>
+                                <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                                <Text style={styles.syncText}>Syncing offline content...</Text>
+                            </View>
+                        )}
+                    </View>
                     <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
@@ -237,8 +289,8 @@ const HomeScreen = ({ user, navigation }) => {
             </SafeAreaView>
 
             {loading && !refreshing && (
-                <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color={theme.primary} />
+                <View style={[styles.scrollPadding, { marginTop: -20 }]}>
+                    {[1, 2, 3, 4].map(i => <SkeletonItem key={i} />)}
                 </View>
             )}
         </View>
@@ -278,7 +330,24 @@ const styles = StyleSheet.create({
     subjectStats: { fontSize: 12 },
     arrowContainer: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
     loadingOverlay: { padding: 40, alignItems: 'center' },
-    emptyContainer: { alignItems: 'center', marginTop: 20 }
+    emptyContainer: { alignItems: 'center', marginTop: 20 },
+    syncIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 10,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    syncText: {
+        fontSize: 10,
+        color: '#64748b',
+        marginLeft: 4,
+        fontWeight: '500'
+    }
 });
 
 export default HomeScreen;

@@ -19,24 +19,29 @@ if (is_dir($upload_dir)) {
 echo "\n=== Latest PDF Upload in Database ===\n";
 require_once '../config/db.php';
 
-$stmt = $pdo->query("SELECT note_id, title, file_path, created_at FROM notes WHERE note_type = 'pdf' AND file_path NOT LIKE 'http%' ORDER BY created_at DESC LIMIT 1");
+$stmt = $pdo->query("SELECT note_id, title, file_path, created_at FROM notes WHERE note_type = 'pdf' ORDER BY created_at DESC LIMIT 1");
 $note = $stmt->fetch();
 
 if ($note) {
     echo "Note ID: {$note['note_id']}\n";
     echo "Title: {$note['title']}\n";
-    echo "Path in DB: {$note['file_path']}\n";
+    echo "Filesystem Path / URL: {$note['file_path']}\n";
     echo "Created: {$note['created_at']}\n";
     
-    $full_path = __DIR__ . '/../' . $note['file_path'];
-    echo "Full Path: $full_path\n";
-    echo "File Exists: " . (file_exists($full_path) ? 'YES' : 'NO') . "\n";
-    
-    if (file_exists($full_path)) {
-        echo "File Size: " . filesize($full_path) . " bytes\n";
-        echo "\n✅ THIS FILE SHOULD WORK!\n";
+    // Check if it's an S3 URL
+    if (strpos($note['file_path'], 's3.amazonaws.com') !== false || strpos($note['file_path'], 'http') === 0) {
+        echo "\n✅ STORAGE: AWS S3 / REMOTE SERVER\n";
+        echo "The file is stored on the cloud. The app will download it from this URL.\n";
     } else {
-        echo "\n❌ FILE MISSING - Upload a new PDF via Admin Panel\n";
+        echo "\n⚠️ STORAGE: LOCAL SERVER (Not AWS)\n";
+        echo "The file is stored in your 'uploads/' folder.\n";
+        
+        $full_path = __DIR__ . '/../' . $note['file_path'];
+        if (file_exists($full_path)) {
+            echo "File verified on disk (Size: " . filesize($full_path) . " bytes)\n";
+        } else {
+            echo "❌ File missing from local disk!\n";
+        }
     }
 } else {
     echo "No uploaded PDFs found in database.\n";

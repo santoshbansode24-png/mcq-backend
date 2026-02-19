@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { fetchLeaderboard } from '../api/analytics';
 import { BASE_URL } from '../api/config';
@@ -8,12 +9,20 @@ const LeaderboardScreen = ({ navigation, user }) => {
     const { theme } = useTheme();
     const [leaderboardData, setLeaderboardData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        if (user?.class_id) {
-            loadLeaderboard();
-        }
-    }, [user]);
+    useFocusEffect(
+        useCallback(() => {
+            if (user?.class_id) {
+                loadLeaderboard();
+            }
+        }, [user])
+    );
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        loadLeaderboard().then(() => setRefreshing(false));
+    }, []);
 
     const loadLeaderboard = async () => {
         try {
@@ -86,6 +95,9 @@ const LeaderboardScreen = ({ navigation, user }) => {
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id.toString()}
                     contentContainerStyle={styles.list}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
+                    }
                     ListEmptyComponent={
                         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No scores yet. Be the first!</Text>
                     }

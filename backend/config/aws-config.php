@@ -5,12 +5,10 @@ use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
 
 // AWS Configuration
-// TODO: Replace these with your actual AWS credentials
-// Ideally, these should come from environment variables or a secure vault
-define('AWS_ACCESS_KEY_ID', 'YOUR_AWS_ACCESS_KEY_ID');
-define('AWS_SECRET_ACCESS_KEY', 'YOUR_AWS_SECRET_ACCESS_KEY');
-define('AWS_DEFAULT_REGION', 'ap-south-1'); // e.g., ap-south-1 for Mumbai
-define('AWS_BUCKET_NAME', 'YOUR_S3_BUCKET_NAME');
+define('AWS_ACCESS_KEY_ID', getenv('AWS_ACCESS_KEY_ID') ?: 'YOUR_AWS_ACCESS_KEY_ID');
+define('AWS_SECRET_ACCESS_KEY', getenv('AWS_SECRET_ACCESS_KEY') ?: 'YOUR_AWS_SECRET_ACCESS_KEY');
+define('AWS_DEFAULT_REGION', getenv('AWS_DEFAULT_REGION') ?: 'ap-south-1');
+define('AWS_BUCKET_NAME', getenv('AWS_BUCKET_NAME') ?: 'veeru-notes-storage-2026');
 
 /**
  * Get configured S3 Client
@@ -41,7 +39,7 @@ function uploadToS3($sourceFile, $s3Key) {
             'Bucket' => AWS_BUCKET_NAME,
             'Key'    => $s3Key,
             'SourceFile' => $sourceFile,
-            'ACL'    => 'public-read', // Make file publicly accessible
+            // 'ACL'    => 'public-read', // Removed: Bucket owner enforced / ACLs disabled
             // 'ContentType' => mime_content_type($sourceFile) // Optional: explicit content type
         ]);
         

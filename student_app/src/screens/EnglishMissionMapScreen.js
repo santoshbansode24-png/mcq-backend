@@ -90,7 +90,10 @@ const EnglishMissionMapScreen = ({ navigation, user }) => {
                                 {mission.is_locked ? (
                                     <Ionicons name="lock-closed" size={32} color="#94a3b8" />
                                 ) : (
-                                    <Text style={styles.levelNumber}>{mission.level_id}</Text>
+                                    <Text style={[
+                                        styles.levelNumber,
+                                        mission.is_completed && styles.completedLevelNumber
+                                    ]}>{mission.level_id}</Text>
                                 )}
 
                                 {mission.is_completed && (
@@ -162,7 +165,10 @@ const styles = StyleSheet.create({
     levelNumber: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#fff'
+        color: '#78350f' // Dark Amber/Brown for Yellow background
+    },
+    completedLevelNumber: {
+        color: '#fff' // White for Green background
     },
     starsContainer: {
         position: 'absolute',

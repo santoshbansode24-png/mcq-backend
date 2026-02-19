@@ -162,6 +162,41 @@ INSERT INTO `classes` VALUES (1,'Class 1','CBSE','2025-11-29 07:17:04'),(2,'Clas
 UNLOCK TABLES;
 
 --
+-- Table structure for table `content_progress`
+--
+
+DROP TABLE IF EXISTS `content_progress`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `content_progress` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `chapter_id` int(11) NOT NULL,
+  `content_type` enum('mcq','flashcard') NOT NULL,
+  `set_index` int(11) NOT NULL DEFAULT 0,
+  `status` enum('not_started','in_progress','completed') DEFAULT 'not_started',
+  `score` int(11) DEFAULT 0,
+  `total` int(11) DEFAULT 0,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_user_content_set` (`user_id`,`chapter_id`,`content_type`,`set_index`),
+  KEY `chapter_id` (`chapter_id`),
+  CONSTRAINT `content_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  CONSTRAINT `content_progress_ibfk_2` FOREIGN KEY (`chapter_id`) REFERENCES `chapters` (`chapter_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `content_progress`
+--
+
+LOCK TABLES `content_progress` WRITE;
+/*!40000 ALTER TABLE `content_progress` DISABLE KEYS */;
+/*!40000 ALTER TABLE `content_progress` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `english_missions`
 --
 
@@ -415,13 +450,13 @@ CREATE TABLE `notes` (
   `note_id` int(11) NOT NULL AUTO_INCREMENT,
   `chapter_id` int(11) NOT NULL,
   `title` varchar(200) NOT NULL,
-  `file_path` varchar(255) DEFAULT NULL,
+  `file_path` text DEFAULT NULL,
   `content` longtext DEFAULT NULL,
   `note_type` enum('pdf','html') DEFAULT 'html',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`note_id`),
   KEY `idx_chapter_id` (`chapter_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -430,7 +465,7 @@ CREATE TABLE `notes` (
 
 LOCK TABLES `notes` WRITE;
 /*!40000 ALTER TABLE `notes` DISABLE KEYS */;
-INSERT INTO `notes` VALUES (1,1,'Real Numbers - Complete Notes',NULL,'<h1>Real Numbers</h1><p>Real numbers include all rational and irrational numbers...</p>','html','2025-11-29 07:17:04'),(2,2,'Polynomials Study Guide',NULL,'<h1>Polynomials</h1><p>A polynomial is an expression consisting of variables and coefficients...</p>','html','2025-11-29 07:17:04'),(3,13,'सूर्य, चंद्र आणि पृथ्वी','uploads/notes/1766166465____________________________________________________.pdf','','pdf','2025-12-19 06:47:45'),(4,13,'sun, moon and earth','uploads/notes/1766501947____________________________________________________.pdf','','pdf','2025-12-23 03:59:07'),(5,14,'ELECTRICITY','uploads/notes/1766502046_The_Electricity_Sketchbook.pdf','','pdf','2025-12-23 04:00:46'),(6,14,'electricity','uploads/notes/1766504305_Acid_Base_Detectives.pdf','','pdf','2025-12-23 04:38:25'),(10,79,'NATIONAL SYMBOLS','https://drive.google.com/uc?export=download&id=1NxyQbRjbt5PMdtRzPgDhID3B4x6UNCRM','','pdf','2026-01-14 14:35:42'),(14,15,'EARLY HUMANS','https://drive.google.com/file/d/1mSLv9LzaYu4ZRyCh0nOU1v1dpLZr0ttL/view?usp=drive_link','','pdf','2026-01-14 14:58:08'),(15,77,'INDUS VALLEY CIVILISATION','https://drive.google.com/file/d/12gD-R9qicDSxctc_jW2xbRlVQ2J0Nktd/view?usp=drive_link','','pdf','2026-01-14 15:03:12'),(16,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=drive_link','','pdf','2026-01-14 15:03:32'),(20,82,'DIFFERENT OCCUPATIONS','https://drive.google.com/file/d/13S_KscXwxgGbUD8ApYeOl1vWxw3TCPQs/view?usp=drive_link','','pdf','2026-01-15 13:13:23'),(21,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=sharing','','pdf','2026-01-15 13:14:51'),(22,80,'OUR GREAT LEADERS','https://drive.google.com/file/d/1clc9pKXuQBCMIMC-d4BdgsJg6UZINcV_/view?usp=sharing','','pdf','2026-01-15 13:15:31'),(23,81,'TRANSPORT AND COMMUNICATIONS','https://drive.google.com/file/d/1so9Uf9XECpo3RM7WJ3PrDVo34F62vgNh/view?usp=sharing','','pdf','2026-01-15 13:16:12'),(24,83,'OUR ENVIRONMENT','https://drive.google.com/file/d/1bE9O1z__q_Ad4o5qwINsvKgRVbEl7Jj4/view?usp=sharing','','pdf','2026-01-15 13:29:35'),(25,84,'AIR, WATER AND WEATHER','https://drive.google.com/file/d/1PR7AKXEh6aGMGOW3pzB4fWViMi_sYuAm/view?usp=sharing','','pdf','2026-01-17 11:34:15'),(26,85,'HOUSING AND COTHING','https://drive.google.com/file/d/1I0k-HYUp3tJI3y6MhUZkaO9ijYBSUsqH/view?usp=sharing','','pdf','2026-01-17 11:34:52'),(27,132,'VISIT TO MAWLYNNONG','https://drive.google.com/file/d/1ZJQsj5jHNDsWHkq_G3uaY0auVuOVy4JK/view?usp=sharing','','pdf','2026-02-12 17:56:44'),(28,133,'BOOND','https://drive.google.com/file/d/1dwtaxCZyGLhop8pt3ThJRVz7ycVD6xYG/view?usp=sharing','','pdf','2026-02-12 19:00:21');
+INSERT INTO `notes` VALUES (1,1,'Real Numbers - Complete Notes',NULL,'<h1>Real Numbers</h1><p>Real numbers include all rational and irrational numbers...</p>','html','2025-11-29 07:17:04'),(2,2,'Polynomials Study Guide',NULL,'<h1>Polynomials</h1><p>A polynomial is an expression consisting of variables and coefficients...</p>','html','2025-11-29 07:17:04'),(3,13,'सूर्य, चंद्र आणि पृथ्वी','uploads/notes/1766166465____________________________________________________.pdf','','pdf','2025-12-19 06:47:45'),(4,13,'sun, moon and earth','uploads/notes/1766501947____________________________________________________.pdf','','pdf','2025-12-23 03:59:07'),(5,14,'ELECTRICITY','uploads/notes/1766502046_The_Electricity_Sketchbook.pdf','','pdf','2025-12-23 04:00:46'),(6,14,'electricity','uploads/notes/1766504305_Acid_Base_Detectives.pdf','','pdf','2025-12-23 04:38:25'),(10,79,'NATIONAL SYMBOLS','https://drive.google.com/uc?export=download&id=1NxyQbRjbt5PMdtRzPgDhID3B4x6UNCRM','','pdf','2026-01-14 14:35:42'),(14,15,'EARLY HUMANS','https://drive.google.com/file/d/1mSLv9LzaYu4ZRyCh0nOU1v1dpLZr0ttL/view?usp=drive_link','','pdf','2026-01-14 14:58:08'),(15,77,'INDUS VALLEY CIVILISATION','https://drive.google.com/file/d/12gD-R9qicDSxctc_jW2xbRlVQ2J0Nktd/view?usp=drive_link','','pdf','2026-01-14 15:03:12'),(16,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=drive_link','','pdf','2026-01-14 15:03:32'),(20,82,'DIFFERENT OCCUPATIONS','https://drive.google.com/file/d/13S_KscXwxgGbUD8ApYeOl1vWxw3TCPQs/view?usp=drive_link','','pdf','2026-01-15 13:13:23'),(21,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=sharing','','pdf','2026-01-15 13:14:51'),(22,80,'OUR GREAT LEADERS','https://drive.google.com/file/d/1clc9pKXuQBCMIMC-d4BdgsJg6UZINcV_/view?usp=sharing','','pdf','2026-01-15 13:15:31'),(23,81,'TRANSPORT AND COMMUNICATIONS','https://drive.google.com/file/d/1so9Uf9XECpo3RM7WJ3PrDVo34F62vgNh/view?usp=sharing','','pdf','2026-01-15 13:16:12'),(24,83,'OUR ENVIRONMENT','https://drive.google.com/file/d/1bE9O1z__q_Ad4o5qwINsvKgRVbEl7Jj4/view?usp=sharing','','pdf','2026-01-15 13:29:35'),(25,84,'AIR, WATER AND WEATHER','https://drive.google.com/file/d/1PR7AKXEh6aGMGOW3pzB4fWViMi_sYuAm/view?usp=sharing','','pdf','2026-01-17 11:34:15'),(26,85,'HOUSING AND COTHING','https://drive.google.com/file/d/1I0k-HYUp3tJI3y6MhUZkaO9ijYBSUsqH/view?usp=sharing','','pdf','2026-01-17 11:34:52'),(27,132,'VISIT TO MAWLYNNONG','https://drive.google.com/file/d/1ZJQsj5jHNDsWHkq_G3uaY0auVuOVy4JK/view?usp=sharing','','pdf','2026-02-12 17:56:44'),(28,133,'BOOND','https://drive.google.com/file/d/1dwtaxCZyGLhop8pt3ThJRVz7ycVD6xYG/view?usp=sharing','','pdf','2026-02-12 19:00:21'),(30,134,'MY BROTHER ON WHEELCHAIR','uploads/notes/1771265147_My_Brother_s_Wheelchair_Notes_compressed.pdf','','pdf','2026-02-16 18:05:48'),(31,135,'THE COCCOON','uploads/notes/1771266212_Cocoon_to_Butterfly_Notes_compressed.pdf','','pdf','2026-02-16 18:23:32');
 /*!40000 ALTER TABLE `notes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -489,6 +524,38 @@ CREATE TABLE `otp_store` (
 LOCK TABLES `otp_store` WRITE;
 /*!40000 ALTER TABLE `otp_store` DISABLE KEYS */;
 /*!40000 ALTER TABLE `otp_store` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `password_reset_otps`
+--
+
+DROP TABLE IF EXISTS `password_reset_otps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `password_reset_otps` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `phone_number` varchar(15) NOT NULL,
+  `otp_code` varchar(6) NOT NULL,
+  `expires_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `verified` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `ip_address` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_phone_otp` (`phone_number`,`otp_code`),
+  KEY `idx_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `password_reset_otps`
+--
+
+LOCK TABLES `password_reset_otps` WRITE;
+/*!40000 ALTER TABLE `password_reset_otps` DISABLE KEYS */;
+/*!40000 ALTER TABLE `password_reset_otps` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -602,7 +669,7 @@ CREATE TABLE `study_plans` (
   PRIMARY KEY (`plan_id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `study_plans_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -611,7 +678,7 @@ CREATE TABLE `study_plans` (
 
 LOCK TABLES `study_plans` WRITE;
 /*!40000 ALTER TABLE `study_plans` DISABLE KEYS */;
-INSERT INTO `study_plans` VALUES (2,29,0.25,'[14]','medium','2026-02-05 18:48:42','2026-02-05 18:48:42','daily_habit',NULL),(3,29,2.00,'[13]','medium','2026-02-12 17:37:26','2026-02-12 17:37:26','daily_habit',NULL),(4,29,0.50,'[14]','medium','2026-02-12 18:33:34','2026-02-12 18:33:34','daily_habit',NULL),(5,29,0.50,'[14]','medium','2026-02-12 18:33:50','2026-02-12 18:33:50','daily_habit',NULL),(6,29,0.50,'[14]','medium','2026-02-12 18:34:35','2026-02-12 18:34:35','daily_habit',NULL),(7,29,0.50,'[14]','medium','2026-02-12 18:35:01','2026-02-12 18:35:01','daily_habit',NULL),(8,29,0.25,'[14]','medium','2026-02-12 18:40:32','2026-02-12 18:40:32','daily_habit',NULL),(9,29,0.50,'[14]','medium','2026-02-12 18:40:58','2026-02-12 18:40:58','daily_habit',NULL);
+INSERT INTO `study_plans` VALUES (2,29,0.25,'[14]','medium','2026-02-05 18:48:42','2026-02-05 18:48:42','daily_habit',NULL),(3,29,2.00,'[13]','medium','2026-02-12 17:37:26','2026-02-12 17:37:26','daily_habit',NULL),(4,29,0.50,'[14]','medium','2026-02-12 18:33:34','2026-02-12 18:33:34','daily_habit',NULL),(5,29,0.50,'[14]','medium','2026-02-12 18:33:50','2026-02-12 18:33:50','daily_habit',NULL),(6,29,0.50,'[14]','medium','2026-02-12 18:34:35','2026-02-12 18:34:35','daily_habit',NULL),(7,29,0.50,'[14]','medium','2026-02-12 18:35:01','2026-02-12 18:35:01','daily_habit',NULL),(8,29,0.25,'[14]','medium','2026-02-12 18:40:32','2026-02-12 18:40:32','daily_habit',NULL),(9,29,0.50,'[14]','medium','2026-02-12 18:40:58','2026-02-12 18:40:58','daily_habit',NULL),(10,29,0.75,'[12]','medium','2026-02-16 17:51:40','2026-02-16 17:51:40','daily_habit',NULL);
 /*!40000 ALTER TABLE `study_plans` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -669,7 +736,7 @@ CREATE TABLE `study_tasks` (
   KEY `plan_id` (`plan_id`),
   CONSTRAINT `study_tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
   CONSTRAINT `study_tasks_ibfk_2` FOREIGN KEY (`plan_id`) REFERENCES `study_plans` (`plan_id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -678,7 +745,7 @@ CREATE TABLE `study_tasks` (
 
 LOCK TABLES `study_tasks` WRITE;
 /*!40000 ALTER TABLE `study_tasks` DISABLE KEYS */;
-INSERT INTO `study_tasks` VALUES (1,29,2,'2026-02-05','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(2,29,2,'2026-02-05','SCIENCE','Pract: AIR, WATER AND WEATHER (30 MCQs)','quiz',13,'pending',300,NULL,84),(3,29,2,'2026-02-06','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(4,29,2,'2026-02-06','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(5,29,2,'2026-02-07','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(6,29,2,'2026-02-07','SCIENCE','Pract: LIGHT, SOUND AND FORCE (50 MCQs)','quiz',21,'pending',500,NULL,86),(7,29,2,'2026-02-08','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(8,29,2,'2026-02-08','SCIENCE','Pract: MEASUREMENT (50 MCQs)','quiz',21,'pending',500,NULL,87),(9,29,2,'2026-02-09','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(10,29,2,'2026-02-09','SCIENCE','Pract: OUR EARTH (50 MCQs)','quiz',21,'pending',500,NULL,88),(11,29,2,'2026-02-10','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(12,29,2,'2026-02-10','SCIENCE','Pract: SOIL (50 MCQs)','quiz',21,'pending',500,NULL,89),(13,29,2,'2026-02-11','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(14,29,2,'2026-02-11','SCIENCE','Pract: SOLID, LIQUID AND GASEOUS (50 MCQs)','quiz',21,'pending',500,NULL,90),(15,29,3,'2026-02-12','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(16,29,3,'2026-02-12','ENGLISH','Pract: VERB (20 MCQs)','quiz',8,'pending',200,NULL,11),(17,29,3,'2026-02-12','ENGLISH','Read: VERB','video',15,'pending',30,NULL,11),(18,29,3,'2026-02-12','ENGLISH','Pract: a visit to mawlynnong (49 MCQs)','quiz',20,'pending',490,NULL,132),(19,29,3,'2026-02-12','ENGLISH','Flashcards: a visit to mawlynnong (50 Cards)','quiz',17,'pending',250,NULL,132),(20,29,3,'2026-02-12','ENGLISH','Read: a visit to mawlynnong','video',15,'pending',30,NULL,132),(21,29,3,'2026-02-12','ENGLISH','Pract: noun (20 MCQs)','quiz',8,'pending',200,NULL,12),(22,29,3,'2026-02-12','ENGLISH','Read: noun','video',15,'pending',30,NULL,12),(23,29,3,'2026-02-12','ENGLISH','Pract: BOOND (40 MCQs)','quiz',17,'pending',400,NULL,133),(30,29,4,'2026-02-12','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(31,29,4,'2026-02-12','SCIENCE','Flashcards: HOUSING AND CLOTHING (45 Cards)','quiz',15,'pending',225,NULL,85),(32,29,5,'2026-02-12','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(33,29,5,'2026-02-12','SCIENCE','Flashcards: HOUSING AND CLOTHING (45 Cards)','quiz',15,'pending',225,NULL,85),(34,29,6,'2026-02-12','SCIENCE','Pract: LIGHT, SOUND AND FORCE (50 MCQs)','quiz',21,'pending',500,NULL,86),(35,29,6,'2026-02-12','SCIENCE','Flashcards: LIGHT, SOUND AND FORCE (45 Cards)','quiz',15,'pending',225,NULL,86),(36,29,7,'2026-02-12','SCIENCE','Pract: LIGHT, SOUND AND FORCE (50 MCQs)','quiz',21,'pending',500,NULL,86),(37,29,7,'2026-02-12','SCIENCE','Flashcards: LIGHT, SOUND AND FORCE (45 Cards)','quiz',15,'pending',225,NULL,86),(38,29,8,'2026-02-12','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(39,29,9,'2026-02-12','SCIENCE','Pract: SOIL (50 MCQs)','quiz',21,'pending',500,NULL,89),(40,29,9,'2026-02-12','SCIENCE','Flashcards: SOIL (50 Cards)','quiz',17,'pending',250,NULL,89);
+INSERT INTO `study_tasks` VALUES (1,29,2,'2026-02-05','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(2,29,2,'2026-02-05','SCIENCE','Pract: AIR, WATER AND WEATHER (30 MCQs)','quiz',13,'pending',300,NULL,84),(3,29,2,'2026-02-06','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(4,29,2,'2026-02-06','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(5,29,2,'2026-02-07','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(6,29,2,'2026-02-07','SCIENCE','Pract: LIGHT, SOUND AND FORCE (50 MCQs)','quiz',21,'pending',500,NULL,86),(7,29,2,'2026-02-08','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(8,29,2,'2026-02-08','SCIENCE','Pract: MEASUREMENT (50 MCQs)','quiz',21,'pending',500,NULL,87),(9,29,2,'2026-02-09','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(10,29,2,'2026-02-09','SCIENCE','Pract: OUR EARTH (50 MCQs)','quiz',21,'pending',500,NULL,88),(11,29,2,'2026-02-10','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(12,29,2,'2026-02-10','SCIENCE','Pract: SOIL (50 MCQs)','quiz',21,'pending',500,NULL,89),(13,29,2,'2026-02-11','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(14,29,2,'2026-02-11','SCIENCE','Pract: SOLID, LIQUID AND GASEOUS (50 MCQs)','quiz',21,'pending',500,NULL,90),(15,29,3,'2026-02-12','General','Quick Revision','revision',10,'pending',20,NULL,NULL),(16,29,3,'2026-02-12','ENGLISH','Pract: VERB (20 MCQs)','quiz',8,'pending',200,NULL,11),(17,29,3,'2026-02-12','ENGLISH','Read: VERB','video',15,'pending',30,NULL,11),(18,29,3,'2026-02-12','ENGLISH','Pract: a visit to mawlynnong (49 MCQs)','quiz',20,'pending',490,NULL,132),(19,29,3,'2026-02-12','ENGLISH','Flashcards: a visit to mawlynnong (50 Cards)','quiz',17,'pending',250,NULL,132),(20,29,3,'2026-02-12','ENGLISH','Read: a visit to mawlynnong','video',15,'pending',30,NULL,132),(21,29,3,'2026-02-12','ENGLISH','Pract: noun (20 MCQs)','quiz',8,'pending',200,NULL,12),(22,29,3,'2026-02-12','ENGLISH','Read: noun','video',15,'pending',30,NULL,12),(23,29,3,'2026-02-12','ENGLISH','Pract: BOOND (40 MCQs)','quiz',17,'pending',400,NULL,133),(30,29,4,'2026-02-12','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(31,29,4,'2026-02-12','SCIENCE','Flashcards: HOUSING AND CLOTHING (45 Cards)','quiz',15,'pending',225,NULL,85),(32,29,5,'2026-02-12','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(33,29,5,'2026-02-12','SCIENCE','Flashcards: HOUSING AND CLOTHING (45 Cards)','quiz',15,'pending',225,NULL,85),(34,29,6,'2026-02-12','SCIENCE','Pract: LIGHT, SOUND AND FORCE (50 MCQs)','quiz',21,'pending',500,NULL,86),(35,29,6,'2026-02-12','SCIENCE','Flashcards: LIGHT, SOUND AND FORCE (45 Cards)','quiz',15,'pending',225,NULL,86),(36,29,7,'2026-02-12','SCIENCE','Pract: LIGHT, SOUND AND FORCE (50 MCQs)','quiz',21,'pending',500,NULL,86),(37,29,7,'2026-02-12','SCIENCE','Flashcards: LIGHT, SOUND AND FORCE (45 Cards)','quiz',15,'pending',225,NULL,86),(38,29,8,'2026-02-12','SCIENCE','Pract: HOUSING AND CLOTHING (50 MCQs)','quiz',21,'pending',500,NULL,85),(39,29,9,'2026-02-12','SCIENCE','Pract: SOIL (50 MCQs)','quiz',21,'pending',500,NULL,89),(40,29,9,'2026-02-12','SCIENCE','Flashcards: SOIL (50 Cards)','quiz',17,'pending',250,NULL,89),(41,29,10,'2026-02-16','SOCIAL STUDIES','Pract: EARLY HUMANS (50 MCQs)','quiz',21,'pending',500,NULL,15),(42,29,10,'2026-02-16','SOCIAL STUDIES','Flashcards: EARLY HUMANS (50 Cards)','quiz',17,'pending',250,NULL,15),(43,29,10,'2026-02-16','SOCIAL STUDIES','Watch: EARLY HUMANS','video',10,'pending',50,NULL,15);
 /*!40000 ALTER TABLE `study_tasks` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -937,7 +1004,7 @@ CREATE TABLE `user_vocab_stats` (
   KEY `idx_streak` (`current_streak`),
   KEY `idx_mastered` (`words_mastered`),
   KEY `idx_level` (`level`)
-) ENGINE=InnoDB AUTO_INCREMENT=133 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=134 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -946,7 +1013,7 @@ CREATE TABLE `user_vocab_stats` (
 
 LOCK TABLES `user_vocab_stats` WRITE;
 /*!40000 ALTER TABLE `user_vocab_stats` DISABLE KEYS */;
-INSERT INTO `user_vocab_stats` VALUES (1,4,15,15,0,37,0,0.00,0,0,'2026-01-10',0,0.00,1,300,NULL,0,NULL,'2026-01-08 06:30:27','2026-01-10 04:45:21',2,1,2,0,0),(44,5,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-10 02:22:07','2026-01-10 02:22:07',1,0,1,0,0),(45,6,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-10 02:43:16','2026-01-10 02:43:16',1,0,1,0,0),(46,7,3,3,0,5,0,0.00,0,0,'2026-01-28',0,0.00,1,0,NULL,0,NULL,'2026-01-10 02:43:33','2026-01-28 04:45:34',1,0,1,0,0),(47,8,2,2,0,2,0,0.00,0,0,'2026-01-14',0,0.00,1,0,NULL,0,NULL,'2026-01-14 09:03:30','2026-01-14 09:03:35',1,0,1,0,0),(50,12,0,0,0,2,0,0.00,0,0,'2026-01-28',0,0.00,1,0,NULL,0,NULL,'2026-01-28 02:07:23','2026-01-28 02:07:33',1,0,1,0,0),(53,15,0,0,0,3,0,0.00,0,0,'2026-01-28',0,0.00,1,0,NULL,0,NULL,'2026-01-28 02:29:20','2026-01-28 02:29:36',1,0,1,0,0),(61,18,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-28 08:58:37','2026-01-28 08:58:37',1,0,1,0,0),(62,24,0,0,0,12,0,0.00,0,0,'2026-02-02',0,0.00,1,0,NULL,0,NULL,'2026-01-28 10:46:08','2026-02-01 22:38:37',1,0,1,0,0),(74,16,0,0,0,27,0,0.00,0,0,'2026-01-31',0,0.00,1,125,NULL,0,NULL,'2026-01-28 21:15:33','2026-01-31 02:53:22',2,1,2,0,0),(75,11,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-30 00:27:16','2026-01-30 00:27:16',1,0,1,0,0),(79,19,0,0,0,3,0,0.00,0,0,'2026-01-30',0,0.00,1,0,NULL,0,NULL,'2026-01-30 07:41:43','2026-01-30 07:42:06',1,0,1,0,0),(93,14,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-30 08:36:48','2026-01-30 08:36:48',1,0,1,0,0),(94,25,0,0,0,1,0,0.00,0,0,'2026-02-01',0,0.00,1,0,NULL,0,NULL,'2026-01-30 10:37:08','2026-01-31 21:47:52',1,0,1,0,0),(131,1,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-02-12 19:17:30','2026-02-12 19:17:30',1,0,1,0,0);
+INSERT INTO `user_vocab_stats` VALUES (1,4,15,15,0,37,0,0.00,0,0,'2026-01-10',0,0.00,1,300,NULL,0,NULL,'2026-01-08 06:30:27','2026-01-10 04:45:21',2,1,2,0,0),(44,5,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-10 02:22:07','2026-01-10 02:22:07',1,0,1,0,0),(45,6,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-10 02:43:16','2026-01-10 02:43:16',1,0,1,0,0),(46,7,3,3,0,5,0,0.00,0,0,'2026-01-28',0,0.00,1,0,NULL,0,NULL,'2026-01-10 02:43:33','2026-01-28 04:45:34',1,0,1,0,0),(47,8,2,2,0,2,0,0.00,0,0,'2026-01-14',0,0.00,1,0,NULL,0,NULL,'2026-01-14 09:03:30','2026-01-14 09:03:35',1,0,1,0,0),(50,12,0,0,0,2,0,0.00,0,0,'2026-01-28',0,0.00,1,0,NULL,0,NULL,'2026-01-28 02:07:23','2026-01-28 02:07:33',1,0,1,0,0),(53,15,0,0,0,3,0,0.00,0,0,'2026-01-28',0,0.00,1,0,NULL,0,NULL,'2026-01-28 02:29:20','2026-01-28 02:29:36',1,0,1,0,0),(61,18,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-28 08:58:37','2026-01-28 08:58:37',1,0,1,0,0),(62,24,0,0,0,12,0,0.00,0,0,'2026-02-02',0,0.00,1,0,NULL,0,NULL,'2026-01-28 10:46:08','2026-02-01 22:38:37',1,0,1,0,0),(74,16,0,0,0,27,0,0.00,0,0,'2026-01-31',0,0.00,1,125,NULL,0,NULL,'2026-01-28 21:15:33','2026-01-31 02:53:22',2,1,2,0,0),(75,11,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-30 00:27:16','2026-01-30 00:27:16',1,0,1,0,0),(79,19,0,0,0,3,0,0.00,0,0,'2026-01-30',0,0.00,1,0,NULL,0,NULL,'2026-01-30 07:41:43','2026-01-30 07:42:06',1,0,1,0,0),(93,14,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-01-30 08:36:48','2026-01-30 08:36:48',1,0,1,0,0),(94,25,0,0,0,1,0,0.00,0,0,'2026-02-01',0,0.00,1,0,NULL,0,NULL,'2026-01-30 10:37:08','2026-01-31 21:47:52',1,0,1,0,0),(131,1,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-02-12 19:17:30','2026-02-12 19:17:30',1,0,1,0,0),(133,29,0,0,0,0,0,0.00,0,0,NULL,0,0.00,1,0,NULL,0,NULL,'2026-02-16 17:50:30','2026-02-16 17:50:30',1,0,1,0,0);
 /*!40000 ALTER TABLE `user_vocab_stats` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -961,6 +1028,8 @@ CREATE TABLE `users` (
   `user_id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
+  `phone_number` varchar(15) DEFAULT NULL,
+  `phone_verified` tinyint(1) DEFAULT 0,
   `profile_picture` varchar(255) DEFAULT NULL,
   `push_token` varchar(255) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
@@ -982,7 +1051,7 @@ CREATE TABLE `users` (
   KEY `idx_user_type` (`user_type`),
   KEY `idx_class_id` (`class_id`),
   KEY `idx_user_class` (`class_id`,`user_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -991,7 +1060,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Admin User','admin@example.com',NULL,NULL,'$2y$10$3MPEgIf60wlKGIvrCS8pf.GWlszIe3DqK3J87bF2DJFsM1tFbCA2q','admin',NULL,NULL,'CBSE','active',NULL,'2025-11-29 07:17:04',NULL,0,NULL,NULL,NULL),(2,'John Teacher','teacher@example.com',NULL,NULL,'$2y$10$dyvWuAp2oUjxwRynToEAse1W5DbYrU43WvjaagiTUqato9iodiemK','teacher','1234567890',NULL,'CBSE','inactive',NULL,'2025-11-29 07:17:04',NULL,0,NULL,NULL,NULL),(4,'Test Student','student@example.com',NULL,NULL,'$2y$10$LrwycdfxN0fhxkz2gnb36Oo4Xr22dR0lM1CziPA1m5t/0/gQPOo9q','student',NULL,3,'CBSE','active','2030-12-31','2025-12-06 05:26:03','2026-01-10 16:14:33',1,NULL,NULL,NULL),(7,'Deepak Rohi','Rohidipak@gmail.com',NULL,NULL,'$2y$10$p2kBO3CoZyW7n4Jsq6C3vetucHRdXkTw/cZhuPM98Tmu2WDCRtqcW','student',NULL,3,'CBSE','active','2026-02-09','2026-01-10 02:38:19','2026-01-28 09:28:52',1,'Dasgir vidyalaya shambhu umberga','State Board','9960724264'),(8,'Santosh','sbansode2021@gmail.com',NULL,NULL,'$2y$10$iHhLV0vML6dGtptVLVKEwOcXuCOjW98jqYQHtH2tPNFnPnF.DTG6K','student',NULL,3,'CBSE','active','2026-02-12','2026-01-13 11:24:44','2026-01-13 22:25:06',1,'Bankatlal',NULL,'7755952198'),(9,'Bharathi Bansode','bharathibansode9096@gmail.com',NULL,NULL,'$2y$10$/mTFu2bTvQeN6Oxm2mlRKOjAAGZWUN4R.DRZaqQx7YlPFCMVIg9vu','student',NULL,3,'CBSE','active','2026-02-27','2026-01-27 22:41:40','2026-01-28 04:12:03',1,'Bankatlal Lahoti',NULL,'9096359617'),(10,'Kaulaskar','sonukaulaskar@gmail.com',NULL,NULL,'$2y$10$n6bBp9gNqJ5rBmXT3y/Pbe3lWXZ53/CEdtYCOGhPJD.bWer9nNu6O','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 01:14:51','2026-01-28 06:45:29',1,'SMH Udgir',NULL,'8261914810'),(11,'Sudam Sarole','sudamsarole@gmail.com',NULL,NULL,'$2y$10$rDDGNydUiMjAz.UHYpS.hO1HD2TbpzPNk3b/rugcR7v8TKLoO2qnm','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 01:44:35','2026-01-28 07:14:59',1,'World school',NULL,'9404623730'),(12,'GUNVANT SANGRAM JADHAV','jadhavgunu.s.355@gmail.com',NULL,NULL,'$2y$10$p1YZdaEoxU7N2GzV6vrGVeFM7mLw8g5yt46ope1uV9USOATITxzbe','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:04:27','2026-01-28 07:34:43',1,'M G School',NULL,'9284006571'),(13,'sudhakar burbure','burburesn@gmail.com',NULL,NULL,'$2y$10$Swi.VrFrIxDaccmgKE4FM.4jwHeZ/ip5KRp3dFy26pylr.5SBOGfe','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:07:59','2026-01-28 07:39:22',1,'sudhakar burbure',NULL,'9404343843'),(14,'DAYANAND HALE','dayanandhale87@gmail.com',NULL,NULL,'$2y$10$z6bmB1dCQAlvCVsiym3o8ePaP0SRsSdosYWezhwQr3poa1jpNZX92','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:15:03','2026-01-28 07:45:12',1,'Z. P. P. School shirur anantpal',NULL,'9921042501'),(15,'Maroti Tukaram Kukar','marutimk1212@gmail.com',NULL,NULL,'$2y$10$vNzsCGzpWqPNkqhrR2ozH.0xi2yUYRO37cqHe3l9eqDRowLQRn5ri','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:26:23','2026-01-28 07:56:47',1,'Maroti',NULL,'9373730796'),(16,'DUBHALKAR PARASRAM','ppdubhalkar@gmail.com',NULL,NULL,'$2y$10$hYypfiVQgEVpQkofTzgruO2hP/V15gfthJGgeaAI8WNZimipEFIbm','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:55:23','2026-01-28 08:25:32',1,'Jawahar Vidhyalaya',NULL,'9225562688'),(17,'Suraj Bansode','bansodesuraj514@gmail.com',NULL,NULL,'$2y$10$Ei5rkYxILGzu0In.Zp6iBufHE1fMUSpClvJ8cFrnKkm2Z7AM4mC62','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 07:32:08','2026-01-30 14:56:09',1,'Little flower',NULL,'8767878281'),(18,'Sambhaji','sambhajireddy05@gmail.com',NULL,NULL,'$2y$10$NfGxBuYHb6/yVNN.PcicqO43rUjtaKqLZFb9jPXbsqV/7viQq.KjC','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 08:57:58','2026-01-28 14:30:13',1,'Z P',NULL,'8806082841'),(19,'Meera','bansodemeera29@gmail.com',NULL,NULL,'$2y$10$7FkaugCgVfWYFcn08OWCweTcX/UQ9Bb0W6PX/5COEixb.SrOeE95i','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 09:25:37','2026-01-28 14:55:56',1,'Shriram vidyalay.',NULL,'7020607324'),(20,'Akash','gadekar24081996@gmail.com',NULL,NULL,'$2y$10$tSjryyZ8S2/aUmClq8MKzOLCnghibPgBrA0KvMeh5SMihlUOEaUDK','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 09:56:28','2026-01-28 15:26:58',1,'Mda',NULL,'7038868785'),(21,'Pallavi','pallavigire292@gmail.com',NULL,NULL,'$2y$10$DrC2VfpKJmmliMX0vXNoieynlglpKZucLMyTKzcVcEIttXnwb.yfq','student',NULL,4,'CBSE','active','2026-02-27','2026-01-28 09:59:24','2026-01-28 15:30:04',1,'Zp',NULL,'8766983405'),(22,'Vicky Gadekar','vicky.entc@gmail.com',NULL,NULL,'$2y$10$HKG03zG/nLTXDo7tDXyT4OGEnYZBJW5ihF.w1FrFuU0zd9K.61NDC','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 10:03:11','2026-01-28 15:33:28',1,'Shriram Vidyalay Kasarkheda',NULL,'9730461942'),(23,'Vijay','vijaysarvade1087@gmail.com',NULL,NULL,'$2y$10$VFFJc6NxGysOUwab6njD.OSWRJLR/AeWOqRrn7QSmr8mCnaSI0J3K','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 10:11:35','2026-01-28 15:41:45',1,'Zp',NULL,'7218811087'),(24,'Suraj','salunkesuraj812@gmail.com',NULL,NULL,'$2y$10$x6fZlY7lteGzphplyYfuqeEc3RJ3XiCvEx2RFbd0TWWLL3Qd8aIvO','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 10:45:48','2026-01-28 16:15:56',1,'Hab',NULL,'9370892914'),(25,'Amol','janwalkar121.amol@gmail.com',NULL,NULL,'$2y$10$u.qtM2UEFGGTu2M626Ba..XbhKcqkehEfN7/Xqfe0IQgsobR6gE4e','student',NULL,19,'STATE_MARATHI','active','2026-03-01','2026-01-30 09:04:44','2026-01-30 16:06:25',1,'Bankatlal',NULL,'9975298951'),(27,'Amol','amoldshinde3@gmail.com',NULL,NULL,'$2y$10$aE7I7rUvE9xSa/v9hjosJ.eLKep4ao7BOcQ/Xfzta3T.vfXA0xjmG','student',NULL,12,'CBSE','active',NULL,'2026-01-30 21:32:18','2026-01-31 03:19:55',1,NULL,NULL,NULL),(28,'Test User Fix','test_fix_1770054708@example.com',NULL,NULL,'$2y$10$u9DjL/HxtMuVXgUuEgexI.5fhkau2zFQP210gmpTJqIwls8bOsnZ6','student','9998887776',10,'CBSE','active','2026-03-04','2026-02-02 17:51:48',NULL,0,'Test High School','CBSE','9998887776'),(29,'Viraj','santoshbansode24@gmail.com',NULL,NULL,'$2y$10$WI3wIUrItPAJyakAIau7euS7VAq.HRdQ2Suv70YngBojrD5Z9TdQO','student','7755952198',3,'CBSE','active','2026-03-07','2026-02-05 18:48:20','2026-02-06 00:18:32',1,'Bankatlal lahoti english school','CBSE','7755952198'),(30,'Google Reviewer','google.test@veeruapp.com',NULL,NULL,'$2y$10$xgURa7FL7NPDaKchOzp84.LOgCUDNU1IzjLNqg9HGDwsI772YA41u','student','9999999999',10,'CBSE','active','2030-01-01','2026-02-13 15:50:22',NULL,0,'Veeru Demo School','CBSE','9999999999');
+INSERT INTO `users` VALUES (1,'Admin User','admin@example.com','+917755952198',0,NULL,NULL,'$2y$10$3MPEgIf60wlKGIvrCS8pf.GWlszIe3DqK3J87bF2DJFsM1tFbCA2q','admin',NULL,NULL,'CBSE','active',NULL,'2025-11-29 07:17:04',NULL,0,NULL,NULL,NULL),(2,'John Teacher','teacher@example.com',NULL,0,NULL,NULL,'$2y$10$dyvWuAp2oUjxwRynToEAse1W5DbYrU43WvjaagiTUqato9iodiemK','teacher','1234567890',NULL,'CBSE','inactive',NULL,'2025-11-29 07:17:04',NULL,0,NULL,NULL,NULL),(4,'Test Student','student@example.com',NULL,0,NULL,NULL,'$2y$10$LrwycdfxN0fhxkz2gnb36Oo4Xr22dR0lM1CziPA1m5t/0/gQPOo9q','student',NULL,3,'CBSE','active','2030-12-31','2025-12-06 05:26:03','2026-01-10 16:14:33',1,NULL,NULL,NULL),(7,'Deepak Rohi','Rohidipak@gmail.com',NULL,0,NULL,NULL,'$2y$10$p2kBO3CoZyW7n4Jsq6C3vetucHRdXkTw/cZhuPM98Tmu2WDCRtqcW','student',NULL,3,'CBSE','active','2026-02-09','2026-01-10 02:38:19','2026-01-28 09:28:52',1,'Dasgir vidyalaya shambhu umberga','State Board','9960724264'),(8,'Santosh','sbansode2021@gmail.com',NULL,0,NULL,NULL,'$2y$10$iHhLV0vML6dGtptVLVKEwOcXuCOjW98jqYQHtH2tPNFnPnF.DTG6K','student',NULL,3,'CBSE','active','2026-02-12','2026-01-13 11:24:44','2026-01-13 22:25:06',1,'Bankatlal',NULL,'7755952198'),(9,'Bharathi Bansode','bharathibansode9096@gmail.com',NULL,0,NULL,NULL,'$2y$10$/mTFu2bTvQeN6Oxm2mlRKOjAAGZWUN4R.DRZaqQx7YlPFCMVIg9vu','student',NULL,3,'CBSE','active','2026-02-27','2026-01-27 22:41:40','2026-01-28 04:12:03',1,'Bankatlal Lahoti',NULL,'9096359617'),(10,'Kaulaskar','sonukaulaskar@gmail.com',NULL,0,NULL,NULL,'$2y$10$n6bBp9gNqJ5rBmXT3y/Pbe3lWXZ53/CEdtYCOGhPJD.bWer9nNu6O','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 01:14:51','2026-01-28 06:45:29',1,'SMH Udgir',NULL,'8261914810'),(11,'Sudam Sarole','sudamsarole@gmail.com',NULL,0,NULL,NULL,'$2y$10$rDDGNydUiMjAz.UHYpS.hO1HD2TbpzPNk3b/rugcR7v8TKLoO2qnm','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 01:44:35','2026-01-28 07:14:59',1,'World school',NULL,'9404623730'),(12,'GUNVANT SANGRAM JADHAV','jadhavgunu.s.355@gmail.com',NULL,0,NULL,NULL,'$2y$10$p1YZdaEoxU7N2GzV6vrGVeFM7mLw8g5yt46ope1uV9USOATITxzbe','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:04:27','2026-01-28 07:34:43',1,'M G School',NULL,'9284006571'),(13,'sudhakar burbure','burburesn@gmail.com',NULL,0,NULL,NULL,'$2y$10$Swi.VrFrIxDaccmgKE4FM.4jwHeZ/ip5KRp3dFy26pylr.5SBOGfe','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:07:59','2026-01-28 07:39:22',1,'sudhakar burbure',NULL,'9404343843'),(14,'DAYANAND HALE','dayanandhale87@gmail.com',NULL,0,NULL,NULL,'$2y$10$z6bmB1dCQAlvCVsiym3o8ePaP0SRsSdosYWezhwQr3poa1jpNZX92','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:15:03','2026-01-28 07:45:12',1,'Z. P. P. School shirur anantpal',NULL,'9921042501'),(15,'Maroti Tukaram Kukar','marutimk1212@gmail.com',NULL,0,NULL,NULL,'$2y$10$vNzsCGzpWqPNkqhrR2ozH.0xi2yUYRO37cqHe3l9eqDRowLQRn5ri','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:26:23','2026-01-28 07:56:47',1,'Maroti',NULL,'9373730796'),(16,'DUBHALKAR PARASRAM','ppdubhalkar@gmail.com',NULL,0,NULL,NULL,'$2y$10$hYypfiVQgEVpQkofTzgruO2hP/V15gfthJGgeaAI8WNZimipEFIbm','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 02:55:23','2026-01-28 08:25:32',1,'Jawahar Vidhyalaya',NULL,'9225562688'),(17,'Suraj Bansode','bansodesuraj514@gmail.com',NULL,0,NULL,NULL,'$2y$10$Ei5rkYxILGzu0In.Zp6iBufHE1fMUSpClvJ8cFrnKkm2Z7AM4mC62','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 07:32:08','2026-01-30 14:56:09',1,'Little flower',NULL,'8767878281'),(18,'Sambhaji','sambhajireddy05@gmail.com',NULL,0,NULL,NULL,'$2y$10$NfGxBuYHb6/yVNN.PcicqO43rUjtaKqLZFb9jPXbsqV/7viQq.KjC','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 08:57:58','2026-01-28 14:30:13',1,'Z P',NULL,'8806082841'),(19,'Meera','bansodemeera29@gmail.com',NULL,0,NULL,NULL,'$2y$10$7FkaugCgVfWYFcn08OWCweTcX/UQ9Bb0W6PX/5COEixb.SrOeE95i','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 09:25:37','2026-01-28 14:55:56',1,'Shriram vidyalay.',NULL,'7020607324'),(20,'Akash','gadekar24081996@gmail.com',NULL,0,NULL,NULL,'$2y$10$tSjryyZ8S2/aUmClq8MKzOLCnghibPgBrA0KvMeh5SMihlUOEaUDK','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 09:56:28','2026-01-28 15:26:58',1,'Mda',NULL,'7038868785'),(21,'Pallavi','pallavigire292@gmail.com',NULL,0,NULL,NULL,'$2y$10$DrC2VfpKJmmliMX0vXNoieynlglpKZucLMyTKzcVcEIttXnwb.yfq','student',NULL,4,'CBSE','active','2026-02-27','2026-01-28 09:59:24','2026-01-28 15:30:04',1,'Zp',NULL,'8766983405'),(22,'Vicky Gadekar','vicky.entc@gmail.com',NULL,0,NULL,NULL,'$2y$10$HKG03zG/nLTXDo7tDXyT4OGEnYZBJW5ihF.w1FrFuU0zd9K.61NDC','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 10:03:11','2026-01-28 15:33:28',1,'Shriram Vidyalay Kasarkheda',NULL,'9730461942'),(23,'Vijay','vijaysarvade1087@gmail.com',NULL,0,NULL,NULL,'$2y$10$VFFJc6NxGysOUwab6njD.OSWRJLR/AeWOqRrn7QSmr8mCnaSI0J3K','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 10:11:35','2026-01-28 15:41:45',1,'Zp',NULL,'7218811087'),(24,'Suraj','salunkesuraj812@gmail.com',NULL,0,NULL,NULL,'$2y$10$x6fZlY7lteGzphplyYfuqeEc3RJ3XiCvEx2RFbd0TWWLL3Qd8aIvO','student',NULL,3,'CBSE','active','2026-02-27','2026-01-28 10:45:48','2026-01-28 16:15:56',1,'Hab',NULL,'9370892914'),(25,'Amol','janwalkar121.amol@gmail.com',NULL,0,NULL,NULL,'$2y$10$u.qtM2UEFGGTu2M626Ba..XbhKcqkehEfN7/Xqfe0IQgsobR6gE4e','student',NULL,19,'STATE_MARATHI','active','2026-03-01','2026-01-30 09:04:44','2026-01-30 16:06:25',1,'Bankatlal',NULL,'9975298951'),(27,'Amol','amoldshinde3@gmail.com',NULL,0,NULL,NULL,'$2y$10$aE7I7rUvE9xSa/v9hjosJ.eLKep4ao7BOcQ/Xfzta3T.vfXA0xjmG','student',NULL,12,'CBSE','active',NULL,'2026-01-30 21:32:18','2026-01-31 03:19:55',1,NULL,NULL,NULL),(28,'Test User Fix','test_fix_1770054708@example.com',NULL,0,NULL,NULL,'$2y$10$u9DjL/HxtMuVXgUuEgexI.5fhkau2zFQP210gmpTJqIwls8bOsnZ6','student','9998887776',10,'CBSE','active','2026-03-04','2026-02-02 17:51:48',NULL,0,'Test High School','CBSE','9998887776'),(29,'Viraj','santoshbansode24@gmail.com',NULL,0,NULL,NULL,'$2y$10$WI3wIUrItPAJyakAIau7euS7VAq.HRdQ2Suv70YngBojrD5Z9TdQO','student','7755952198',3,'CBSE','active','2026-03-07','2026-02-05 18:48:20','2026-02-06 00:18:32',1,'Bankatlal lahoti english school','CBSE','7755952198'),(30,'Google Reviewer','google.test@veeruapp.com',NULL,0,NULL,NULL,'$2y$10$xgURa7FL7NPDaKchOzp84.LOgCUDNU1IzjLNqg9HGDwsI772YA41u','student','9999999999',10,'CBSE','active','2030-01-01','2026-02-13 15:50:22',NULL,0,'Veeru Demo School','CBSE','9999999999'),(31,'Google Reviewer','reviewer@veeru.com',NULL,0,NULL,NULL,'$2y$10$evEGFEMS4t3uuDNK4LqMe.A4Of8CdLoRuVMhkp/ngYP0N1M1tMhxS','student','9999999999',3,NULL,'active',NULL,'2026-02-17 18:32:22',NULL,0,NULL,NULL,'9999999999'),(34,'Google Reviewer','test@veeru.com',NULL,0,NULL,NULL,'$2y$10$8146wUssyTsCm78n/g1Hzuzb0yil0/eNLICBDeyC/kPub2mBa3o8O','student','9999999999',3,NULL,'active',NULL,'2026-02-17 20:30:27',NULL,0,NULL,NULL,'9999999999');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1236,4 +1305,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-15 10:12:57
+-- Dump completed on 2026-02-19 17:17:06

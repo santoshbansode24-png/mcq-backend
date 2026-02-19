@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -9,10 +10,12 @@ import {
     ActivityIndicator,
     Alert,
     StatusBar,
-    Platform
+    Platform,
+    RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchSubjects } from '../api/subjects';
 import { fetchChapters } from '../api/chapters';
 import axios from 'axios';
@@ -35,9 +38,17 @@ const MyExamScreen = ({ navigation, route, user }) => {
     const [questionLimit, setQuestionLimit] = useState('25');
     const [loading, setLoading] = useState(false);
     const [loadingChapters, setLoadingChapters] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        loadSubjects();
+    useFocusEffect(
+        useCallback(() => {
+            loadSubjects();
+        }, [])
+    );
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        loadSubjects().then(() => setRefreshing(false));
     }, []);
 
     useEffect(() => {
@@ -50,7 +61,7 @@ const MyExamScreen = ({ navigation, route, user }) => {
     }, [selectedSubjects]);
 
     const loadSubjects = async () => {
-        setLoading(true);
+        if (!refreshing) setLoading(true);
         try {
             const response = await fetchSubjects(classId);
             if (response.status === 'success') {
@@ -62,6 +73,7 @@ const MyExamScreen = ({ navigation, route, user }) => {
             Alert.alert('Error', 'Failed to load subjects');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 

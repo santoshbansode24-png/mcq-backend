@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// Force update
+import { useFocusEffect } from '@react-navigation/native';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
     ActivityIndicator, Dimensions, Platform, StatusBar, RefreshControl, Vibration
@@ -68,9 +70,15 @@ const VocabDashboardScreen = ({ user, navigation }) => {
         { name: 'Advanced', label: 'Advanced', range: [51, 80], color: '#ef4444' },
     ], []);
 
-    useEffect(() => {
-        loadStats();
-    }, []);
+
+
+    // ... inside component
+
+    useFocusEffect(
+        React.useCallback(() => {
+            loadStats();
+        }, [])
+    );
 
     const loadStats = async (isRef = false) => {
         if (!isRef) setLoading(true);

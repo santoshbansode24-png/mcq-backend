@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
     Text,
@@ -33,9 +34,14 @@ const SubjectsScreen = ({ user, navigation }) => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        if (classId) loadSubjects();
-    }, [classId]);
+
+
+    // ... inside SubjectsScreen
+    useFocusEffect(
+        useCallback(() => {
+            if (classId) loadSubjects();
+        }, [classId])
+    );
 
     const loadSubjects = async (forceRefresh = false) => {
         if (forceRefresh) {

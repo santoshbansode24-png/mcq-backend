@@ -521,11 +521,22 @@ const styles = StyleSheet.create({
     feedbackText: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 10 },
     optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 15 },
     optionButton: {
-        width: (width - 55) / 2, backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 25,
-        borderRadius: 25, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05,
-        shadowRadius: 10, elevation: 3, marginBottom: 15,
+        width: (width - 55) / 2,
+        backgroundColor: '#ffffff', // Solid white for visibility
+        paddingVertical: 25,
+        borderRadius: 25,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 4,
+        marginBottom: 15,
     },
-    optionText: { fontSize: 28, fontWeight: 'bold', color: 'white' },
+    optionText: {
+        fontSize: 32, // Increased slightly for readability
+        fontWeight: 'bold',
+        color: '#1e293b' // Dark Slate/Blue for high contrast
+    },
     bigScore: { fontSize: 60, fontWeight: '900', color: '#333', marginVertical: 10 },
     totalScore: { fontSize: 24, color: '#888', fontWeight: '500' },
     resultMessage: { fontSize: 16, color: '#666', marginBottom: 20 },

@@ -12,7 +12,7 @@ import { fetchSetStatus } from '../api/content'; // Import new API
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ensure imported
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { downloadFile } from '../utils/downloadUtils';
+import { downloadFile, getCachedFile } from '../utils/downloadUtils';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
 
 const ChapterContentScreen = ({ navigation, route }) => {
@@ -23,6 +23,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'Flashcards'); // Use initialTab if passed
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
 
     // Timer State
     const [taskTimer, setTaskTimer] = useState(0);
@@ -90,11 +94,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [flashcardSets, setFlashcardSets] = useState([]); // New state for Flashcard sets
     const [revisionData, setRevisionData] = useState([]); // New state for Quick Revision
     const [playingIndex, setPlayingIndex] = useState(null); // TTS State
-    const [setStatuses, setSetStatuses] = useState({}); // Stores { '0': {status:'completed'} } for current tab
-    const [userAnswers, setUserAnswers] = useState({}); // Stores user answers for current quiz { 0: 'a', 1: 'b' }
+    const [setStatuses, setSetStatuses] = useState({}); // Stores {'0': {status:'completed'} } for current tab
+    const [userAnswers, setUserAnswers] = useState({}); // Stores user answers for current quiz {0: 'a', 1: 'b' }
 
-    const [refreshing, setRefreshing] = useState(false);
-    const [voiceModalVisible, setVoiceModalVisible] = useState(false); // State for Voice Modal
+
 
     useEffect(() => {
         // Refresh status whenever the screen comes into focus
@@ -105,14 +108,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
     }, [isFocused, activeTab]);
 
     useEffect(() => {
-        // console.log('[ChapterContent] Route Params:', route.params);
-        // console.log('[ChapterContent] Chapter Object:', chapter);
-        if (chapter?.chapter_id) {
+        if (isFocused && chapter?.chapter_id) {
             loadContent();
-        } else {
-            console.error('[ChapterContent] No chapter_id found!');
         }
-    }, [chapter, activeTab]);
+    }, [isFocused, activeTab, chapter?.chapter_id]);
 
     const loadContent = async (isRefreshing = false) => {
         // Optimization: Avoid fetching for tabs that verify navigation only
@@ -160,44 +159,42 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 response = await fetchQuickRevision(chapter.chapter_id, force);
             }
 
-            if (response && response.status === 'success') {
+            // ROBUST HANDLING: Determine if we have data based on structure
+            const responseData = response?.data || (Array.isArray(response) ? response : null);
+            const isSuccess = response?.status === 'success' || Array.isArray(response);
+
+            if (isSuccess && responseData) {
                 if (activeTab === 'MCQs') {
                     // Chunk MCQs into sets of 10
-                    const allMcqs = response.data;
+                    const allMcqs = Array.isArray(responseData) ? responseData : [];
                     const chunks = [];
                     for (let i = 0; i < allMcqs.length; i += 10) {
                         chunks.push(allMcqs.slice(i, i + 10));
                     }
                     setMcqSets(chunks);
                     setData(allMcqs);
-                    // Fetch Status for MCQs
                     loadSetStatus('mcq');
                 } else if (activeTab === 'Flashcards') {
                     // Chunk Flashcards into sets of 10
-                    const allCards = Array.isArray(response) ? response : (response.data || []);
+                    const allCards = Array.isArray(responseData) ? responseData : [];
                     const chunks = [];
                     for (let i = 0; i < allCards.length; i += 10) {
                         chunks.push(allCards.slice(i, i + 10));
                     }
                     setFlashcardSets(chunks);
                     setData(allCards);
-                    // Fetch Status for Flashcards
                     loadSetStatus('flashcard');
                 } else if (activeTab === 'QuickRevision') {
-                    if (response.data && response.data.length > 0) {
-                        // The API returns an array, the first item contains key_points
-                        const points = response.data[0]?.key_points || [];
-                        // User previously requested to skip the first point
-                        setRevisionData(points.slice(1));
-                    } else {
-                        setRevisionData([]);
-                    }
+                    const points = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
+                    setRevisionData(points.slice(1));
                 } else {
-                    setData(response.data);
+                    setData(Array.isArray(responseData) ? responseData : []);
                 }
             } else if (response) {
-                if (!response.message.includes('No')) {
-                    Alert.alert('Error', response.message);
+                // If it's not a success and not an array, show error unless it's just "empty"
+                const msg = response.message || '';
+                if (!msg.toLowerCase().includes('no')) {
+                    Alert.alert('Error', msg || 'Invalid data format');
                 }
             }
         } catch (error) {
@@ -332,7 +329,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 const userData = userDataStr ? JSON.parse(userDataStr) : null;
                 const userId = userData?.user_id || userData?.id;
 
-                // Alert.alert('Debug', `Attempting Save... User: ${userId}, Chapter: ${chapter.chapter_id}`); 
+                // Alert.alert('Debug', `Attempting Save... User: ${userId}, Chapter: ${chapter.chapter_id}`);
                 if (userId && chapter.chapter_id) {
                     markSetCompleted(userId, chapter.chapter_id, currentSetIndex, 'mcq', score, quizQuestions.length)
                         .then((res) => {
@@ -570,10 +567,54 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     const renderNoteItem = ({ item, index }) => {
         const gradient = noteGradients[index % noteGradients.length];
+
+        const openNote = async () => {
+            // Handle inconsistent API field names (file_path vs file_url)
+            const rawPath = item.file_path || item.file_url;
+
+            if (!rawPath) {
+                Alert.alert('Error', 'File path is missing');
+                return;
+            }
+
+            // Google Drive Logic Removed - As per user request.
+            // We now treat all URLs as direct download links (AWS/Server).
+
+            // AWS / Server Files - Smart Cache (Download First)
+            try {
+                setDownloading(true);
+                setDownloadProgress(0);
+
+                // Construct full URL if relative (local files)
+                let remoteUrl = rawPath;
+                if (!rawPath.startsWith('http')) {
+                    remoteUrl = `${BASE_URL}/${rawPath}`;
+                }
+
+                // Get local cached file URI
+                // For AWS links (remoteUrl starts with http), getCachedFile handles them perfectly
+                const localUri = await getCachedFile(
+                    remoteUrl,
+                    item.title,
+                    (progress) => setDownloadProgress(progress)
+                );
+
+                setDownloading(false);
+
+                if (localUri) {
+                    navigation.navigate('PDFViewer', { url: localUri, title: item.title });
+                }
+            } catch (error) {
+                console.error(error);
+                setDownloading(false);
+                Alert.alert('Error', 'Failed to open note. Check internet.');
+            }
+        };
+
         return (
             <TouchableOpacity
                 style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6 }]}
-                onPress={() => navigation.navigate('PDFViewer', { url: item.file_url, title: item.title })}
+                onPress={openNote}
             >
                 <LinearGradient
                     colors={gradient}
@@ -882,6 +923,15 @@ const ChapterContentScreen = ({ navigation, route }) => {
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
 
             <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right', 'bottom']}>
+                {downloading && (
+                    <View style={styles.loadingOverlay}>
+                        <View style={styles.loadingBox}>
+                            <ActivityIndicator size="large" color="#4A90E2" />
+                            <Text style={styles.loadingText}>Downloading...</Text>
+                            <Text style={styles.loadingText}>{Math.round(downloadProgress * 100)}%</Text>
+                        </View>
+                    </View>
+                )}
                 <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
                     <TouchableOpacity onPress={() => {
                         if (isTaskActive) {
@@ -1363,7 +1413,30 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 10,
         fontWeight: 'bold'
-    }
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    loadingBox: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        elevation: 5,
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#333',
+    },
 });
 
 export default ChapterContentScreen;

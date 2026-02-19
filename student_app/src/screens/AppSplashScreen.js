@@ -36,35 +36,27 @@ const AppSplashScreen = ({ navigation, route }) => {
 
         // Navigate after delay
         const checkSessionAndNavigate = async () => {
-            // Wait at least 3 seconds for animation
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Parallel: Start storage check immediately while animation is running
+            const sessionPromise = (async () => {
+                if (user) {
+                    return user;
+                }
+                const savedUser = await AsyncStorage.getItem('user_data');
+                return savedUser ? JSON.parse(savedUser) : null;
+            })();
 
-            if (user) {
-                // User passed from Login/Register -> Check valid data
-                if (!user.class_id || !user.board_type) {
-                    navigation.replace('Setup', { user });
+            // Wait at least 1 second for initial animation "pop"
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const userData = await sessionPromise;
+
+            if (userData) {
+                if (!userData.class_id || !userData.board_type) {
+                    navigation.replace('Setup', { user: userData });
                 } else {
-                    navigation.replace('Main', { user });
+                    navigation.replace('Main', { user: userData });
                 }
             } else {
-                // No user passed -> Check Storage for auto-login
-                try {
-                    const savedUser = await AsyncStorage.getItem('user_data');
-                    if (savedUser) {
-                        const userData = JSON.parse(savedUser);
-                        if (!userData.class_id || !userData.board_type) {
-                            navigation.replace('Setup', { user: userData });
-                        } else {
-                            navigation.replace('Main', { user: userData });
-                        }
-                    } else {
-                        // No session -> Go to Login
-                        navigation.replace('Login');
-                    }
-                } catch (error) {
-                    console.error("Auto-login error:", error);
-                    navigation.replace('Login');
-                }
+                navigation.replace('Login');
             }
         };
 

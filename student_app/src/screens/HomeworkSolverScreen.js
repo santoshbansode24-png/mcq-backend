@@ -8,9 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
+import CustomImageCropper from '../components/CustomImageCropper';
+
 const HomeworkSolverScreen = ({ navigation }) => {
     const { theme } = useTheme();
     const [image, setImage] = useState(null);
+    const [originalImage, setOriginalImage] = useState(null); // Store original for re-cropping if needed
+    const [cropperVisible, setCropperVisible] = useState(false);
+
     const [solution, setSolution] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState('English');
@@ -24,13 +29,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
 
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
+            allowsEditing: false, // Disable system cropper
             quality: 1,
         });
 
         if (!result.canceled) {
-            setImage(result.assets[0].uri);
-            setSolution('');
+            setOriginalImage(result.assets[0].uri);
+            setCropperVisible(true); // Open custom cropper
         }
     };
 
@@ -42,14 +47,20 @@ const HomeworkSolverScreen = ({ navigation }) => {
         }
 
         let result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
+            allowsEditing: false, // Disable system cropper
             quality: 1,
         });
 
         if (!result.canceled) {
-            setImage(result.assets[0].uri);
-            setSolution('');
+            setOriginalImage(result.assets[0].uri);
+            setCropperVisible(true); // Open custom cropper
         }
+    };
+
+    const handleCropComplete = (croppedUri) => {
+        setCropperVisible(false);
+        setImage(croppedUri);
+        setSolution('');
     };
 
     const handleSolve = async () => {
@@ -69,6 +80,14 @@ const HomeworkSolverScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#be185d" />
+
+            {/* Custom Cropper Modal */}
+            <CustomImageCropper
+                visible={cropperVisible}
+                imageUri={originalImage}
+                onCropComplete={handleCropComplete}
+                onCancel={() => setCropperVisible(false)}
+            />
 
             {/* Header */}
             <View style={styles.headerContainer}>
@@ -104,8 +123,16 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         )}
 
                         {image && (
-                            <TouchableOpacity style={styles.closeButton} onPress={() => { setImage(null); setSolution(''); }}>
+                            <TouchableOpacity style={styles.closeButton} onPress={() => { setImage(null); setSolution(''); setOriginalImage(null); }}>
                                 <Ionicons name="close" size={20} color="#fff" />
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Re-Crop Button */}
+                        {image && originalImage && (
+                            <TouchableOpacity style={styles.reCropButton} onPress={() => setCropperVisible(true)}>
+                                <Ionicons name="crop" size={20} color="#fff" />
+                                <Text style={styles.reCropText}>Crop</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -236,6 +263,7 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fce7f3',
         borderStyle: 'dashed',
+        position: 'relative',
     },
     previewImage: {
         width: '100%',
@@ -275,6 +303,25 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         padding: 8,
         borderRadius: 20,
+        zIndex: 5,
+    },
+    reCropButton: {
+        position: 'absolute',
+        bottom: 10,
+        right: 10,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        zIndex: 5,
+    },
+    reCropText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
     },
     buttonRow: {
         flexDirection: 'row',

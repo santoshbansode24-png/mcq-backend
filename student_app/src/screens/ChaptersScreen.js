@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
     Text,
@@ -17,6 +18,8 @@ import { fetchChapters } from '../api/chapters';
 import { fetchChapterProgress } from '../api/chapterProgress';
 import { useTheme } from '../context/ThemeContext';
 import { fonts } from '../styles/typography';
+import { SmartCacheService } from '../services/SmartCacheService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Neon Accent Colors for Chapters
 const CHAPTER_ACCENTS = ['#00F5FF', '#BF00FF', '#39FF14', '#FF007F', '#FFF01F', '#FF4D00'];
@@ -31,11 +34,19 @@ const ChaptersScreen = ({ navigation, route, user }) => {
 
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        if (subject?.subject_id && user?.user_id) {
-            loadChaptersWithProgress();
-        }
-    }, [subject, user]);
+
+
+    // ... inside ChaptersScreen
+    useFocusEffect(
+        useCallback(() => {
+            if (subject?.subject_id && user?.user_id) {
+                // Pass false to not show full loading spinner on auto-refetch if we have data
+                // Or true if we want to ensure fresh data. 
+                // Let's rely on standard load logic.
+                loadChaptersWithProgress();
+            }
+        }, [subject, user])
+    );
 
     const loadChaptersWithProgress = async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true);
@@ -90,9 +101,14 @@ const ChaptersScreen = ({ navigation, route, user }) => {
         }
     };
 
-    const onRefresh = useCallback(() => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        loadChaptersWithProgress(true);
+        // Step 1: Force refresh chapters list
+        await loadChaptersWithProgress(true);
+        // Step 2: Background refresh all content for this subject
+        SmartCacheService.syncSubject(subject.subject_id).then(() => {
+            console.log(`[ChaptersScreen] Subject ${subject.subject_id} sync complete.`);
+        });
     }, [subject, user]);
 
     const getStatusColor = (status) => {
@@ -231,6 +247,17 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                         <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{subject?.subject_name}</Text>
                         <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>{chapters.length} Chapters</Text>
                     </View>
+                    <TouchableOpacity
+                        onPress={onRefresh}
+                        style={[styles.refreshBtn, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}
+                        disabled={refreshing}
+                    >
+                        {refreshing ? (
+                            <ActivityIndicator size="small" color={theme.primary} />
+                        ) : (
+                            <MaterialCommunityIcons name="refresh" size={24} color={theme.text} />
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 {loading ? (
@@ -293,6 +320,15 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         // color handled by theme
+    },
+    refreshBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
     },
     headerTextContainer: {
         flex: 1,

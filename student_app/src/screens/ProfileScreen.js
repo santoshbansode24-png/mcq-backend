@@ -10,7 +10,8 @@ import { fetchClasses, updateStudentClass } from '../api/classes';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import BadgesSection from '../components/BadgesSection';
-import { Modal, Pressable, FlatList } from 'react-native';
+import { Modal, Pressable, FlatList, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
     const { theme, isDarkMode, toggleTheme } = useTheme();
@@ -25,8 +26,17 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
     const [currentBoard, setCurrentBoard] = useState(user?.board_type || 'STATE_MARATHI'); // Default to Marathi
     const [loadingClasses, setLoadingClasses] = useState(false);
 
-    React.useEffect(() => {
-        loadClasses(currentBoard);
+    const [refreshing, setRefreshing] = useState(false);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            loadClasses(currentBoard);
+        }, [currentBoard])
+    );
+
+    const onRefresh = React.useCallback(() => {
+        setRefreshing(true);
+        loadClasses(currentBoard).then(() => setRefreshing(false));
     }, [currentBoard]);
 
     const loadClasses = async (board) => {
@@ -182,6 +192,9 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
+                }
             >
                 <View style={styles.header}>
                     <TouchableOpacity onPress={pickImage} disabled={uploading}>

@@ -20,26 +20,31 @@ const AIScreen = ({ navigation }) => {
     const { theme } = useTheme();
 
     const features = [
-
         {
             id: 'quiz',
             title: 'Quiz Generator',
             subtitle: 'Test Yourself',
-            description: 'Generate custom practice quizzes from your study material.',
+            description: 'Generate custom quizzes.',
             icon: 'create',
-            color1: '#7c3aed',
-            color2: '#a78bfa',
-            screen: 'QuizGenerator'
+            // Deep Blue to Electric Blue
+            color1: '#2563eb',
+            color2: '#3b82f6',
+            screen: 'QuizGenerator',
+            width: '100%',
+            height: 110
         },
         {
             id: 'homework',
             title: 'Homework Helper',
             subtitle: 'Snap & Solve',
-            description: 'Stuck on a problem? Take a photo and get step-by-step help.',
+            description: 'Get instant step-by-step help.',
             icon: 'camera',
-            color1: '#d946ef',
-            color2: '#f0abfc',
-            screen: 'HomeworkSolver'
+            // Vibrant Purple to Pink
+            color1: '#7c3aed',
+            color2: '#d946ef',
+            screen: 'HomeworkSolver',
+            width: '100%',
+            height: 110
         },
         {
             id: 'english',
@@ -47,9 +52,12 @@ const AIScreen = ({ navigation }) => {
             subtitle: 'Improve Fluency',
             description: 'Practice conversation and grammar with an AI native speaker.',
             icon: 'chatbubbles',
-            color1: '#f43f5e',
-            color2: '#fb7185',
-            screen: 'EnglishMissionMap'
+            // Bright Orange to Amber
+            color1: '#ea580c',
+            color2: '#f59e0b',
+            screen: 'EnglishMissionMap',
+            width: '100%',
+            height: 110
         }
     ];
 
@@ -107,46 +115,35 @@ const AIScreen = ({ navigation }) => {
                         {features.map((item) => (
                             <TouchableOpacity
                                 key={item.id}
-                                style={styles.cardContainer}
+                                style={[styles.tileWrapper, { width: item.width }]}
                                 onPress={() => navigation.navigate(item.screen)}
-                                activeOpacity={0.8}
+                                activeOpacity={0.9}
                             >
+                                {/* Gradient Card with Row Layout */}
                                 <LinearGradient
                                     colors={[item.color1, item.color2]}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
-                                    style={styles.cardGradient}
+                                    style={[styles.rowTile, { height: item.height }]}
                                 >
-                                    <View style={styles.iconCircle}>
-                                        <Ionicons name={item.icon} size={28} color={item.color1} />
+                                    {/* Icon Left */}
+                                    <View style={styles.iconContainerRow}>
+                                        <Ionicons name={item.icon} size={32} color={item.color1} />
                                     </View>
-                                    <Text style={styles.cardTitle}>{item.title}</Text>
-                                    <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-                                    <Text style={styles.cardDescription} numberOfLines={2}>
-                                        {item.description}
-                                    </Text>
-                                    <View style={styles.arrowContainer}>
-                                        <Ionicons name="arrow-forward-circle" size={32} color="rgba(255,255,255,0.9)" />
+
+                                    {/* Text Middle */}
+                                    <View style={styles.textContainerRow}>
+                                        <Text style={styles.rowTitle}>{item.title}</Text>
+                                        <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
+                                    </View>
+
+                                    {/* Arrow Right */}
+                                    <View style={styles.arrowContainerRow}>
+                                        <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.9)" />
                                     </View>
                                 </LinearGradient>
                             </TouchableOpacity>
                         ))}
-                    </View>
-
-                    {/* Daily Tip Section */}
-                    <View style={styles.tipContainer}>
-                        <LinearGradient
-                            colors={['#0f172a', '#334155']}
-                            style={styles.tipGradient}
-                        >
-                            <View style={styles.tipHeader}>
-                                <Ionicons name="bulb" size={24} color="#facc15" />
-                                <Text style={styles.tipTitle}>Daily Study Tip</Text>
-                            </View>
-                            <Text style={styles.tipText}>
-                                "Spaced repetition is key! Review your notes 10 minutes after class, then 24 hours later, and finally a week later for maximum retention."
-                            </Text>
-                        </LinearGradient>
                     </View>
 
                     <View style={{ height: 40 }} />
@@ -252,80 +249,57 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     grid: {
-        gap: 16,
+        flexDirection: 'column', // Stack vertically
+        gap: 16, // Vertical gap
         marginBottom: 24,
     },
-    cardContainer: {
-        borderRadius: 24,
-        // Using shadow only on cardContainer for cleaner rendering
+    tileWrapper: {
+        marginBottom: 0,
+        borderRadius: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
-        shadowRadius: 10,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    cardGradient: {
-        padding: 22,
-        borderRadius: 24,
-    },
-    iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        backgroundColor: 'white',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    cardTitle: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: 'white',
-        letterSpacing: -0.5,
-    },
-    cardSubtitle: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.9)',
-        marginBottom: 8,
-        textTransform: 'uppercase',
-        fontWeight: '700',
-        letterSpacing: 1,
-    },
-    cardDescription: {
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.85)',
-        lineHeight: 20,
-        maxWidth: '85%',
-    },
-    arrowContainer: {
-        position: 'absolute',
-        bottom: 22,
-        right: 22,
-    },
-    tipContainer: {
-        marginTop: 10,
-        borderRadius: 24,
-        overflow: 'hidden',
-    },
-    tipGradient: {
-        padding: 24,
-    },
-    tipHeader: {
+    rowTile: {
+        width: '100%',
+        borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        paddingHorizontal: 20,
+        justifyContent: 'space-between', // Spread items
     },
-    tipTitle: {
+    iconContainerRow: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    textContainerRow: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    rowTitle: {
         fontSize: 18,
-        fontWeight: '800',
-        color: '#facc15',
-        marginLeft: 10,
+        fontWeight: 'bold',
+        color: 'white',
+        marginBottom: 4,
     },
-    tipText: {
-        color: '#f1f5f9',
-        fontSize: 15,
-        lineHeight: 24,
-        fontStyle: 'italic',
-        opacity: 0.9,
+    rowSubtitle: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.9)',
+        textTransform: 'uppercase',
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    arrowContainerRow: {
+        padding: 8,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 12,
     },
 });
 

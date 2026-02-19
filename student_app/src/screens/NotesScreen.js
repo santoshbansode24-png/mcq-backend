@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+// Fixed syntax error
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { API_URL } from '../api/config';
-import { downloadFile } from '../utils/downloadUtils';
+import { BASE_URL, API_URL } from '../api/config';
+import { getCachedFile } from '../utils/downloadUtils';
 
 const NotesScreen = () => {
-    const navigation = useNavigation();
-    const route = useRoute();
-    const { chapterId, chapterName, subjectName } = route.params;
-
+    // ... params
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [notes, setNotes] = useState([]);
 
-    useEffect(() => {
-        fetchNotes();
-    }, []);
+    // Replace useEffect with useFocusEffect for auto-update
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchNotes();
+        }, [])
+    );
 
-    const fetchNotes = async () => {
+    const fetchNotes = async (isRefreshing = false) => {
+        if (!isRefreshing) setLoading(true);
         try {
             const response = await fetch(`${API_URL}/get_notes.php?chapter_id=${chapterId}`);
             const data = await response.json();
@@ -25,7 +28,6 @@ const NotesScreen = () => {
             if (data.status === 'success') {
                 setNotes(data.data);
             } else {
-                // Only show alert if it's an actual error, 'No notes found' is fine to just show empty state
                 if (data.message !== 'No notes found for this chapter') {
                     Alert.alert('Error', data.message);
                 }
@@ -35,61 +37,69 @@ const NotesScreen = () => {
             Alert.alert('Error', 'Failed to load notes. Please try again.');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
+    const onRefresh = React.useCallback(() => {
+        setRefreshing(true);
+        fetchNotes(true);
+    }, []);
 
-    const openNote = async (note) => {
-        if (note.note_type === 'pdf') {
-            if (note.file_url) {
-                // Download the PDF first, then open it
-                // This is more reliable than trying to open URLs directly
-                await downloadFile(note.file_url, note.title, setLoading, true);
-            } else {
-                Alert.alert("Error", "PDF URL is missing");
+    const openNote = (note) => {
+        if (note.file_path) {
+            // Check if it's a Google Drive link
+            if (note.file_path.includes('drive.google.com')) {
+                navigation.navigate('PDFViewer', {
+                    url: note.file_path,
+                    title: note.title
+                });
+                // Use serve_pdf.php proxy to handle CORS and file serving
+                // This is the "Permanent Solution" for rendering local PDFs on Android WebViews
+                const encodedPath = encodeURIComponent(note.file_path);
+                const fileUrl = `${API_URL}/serve_pdf.php?file=${encodedPath}`;
+
+                // Debug URL
+                // Alert.alert("Debug URL", fileUrl);
+
+                navigation.navigate('PDFViewer', {
+                    url: fileUrl,
+                    title: note.title
+                });
             }
         } else {
-            // Handle HTML type notes (future expansion, maybe navigate to a reader screen)
-            Alert.alert("Info", "HTML Note viewing is not yet implemented.");
+            Alert.alert('Error', 'File path is missing.');
         }
     };
 
     const renderItem = ({ item }) => (
         <TouchableOpacity style={styles.noteCard} onPress={() => openNote(item)}>
             <View style={styles.iconContainer}>
-                <Ionicons name="document-text" size={32} color="#4f46e5" />
+                <Ionicons name="document-text" size={24} color="#4A90E2" />
             </View>
             <View style={styles.noteInfo}>
                 <Text style={styles.noteTitle}>{item.title}</Text>
-                <Text style={styles.noteType}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
+                <Text style={styles.noteType}>{item.subject_name} • {item.chapter_name}</Text>
             </View>
-            <TouchableOpacity
-                style={styles.downloadButton}
-                onPress={() => {
-                    if (item.file_url) {
-                        downloadFile(item.file_url, item.title, setLoading);
-                    } else {
-                        Alert.alert("Error", "No file URL available");
-                    }
-                }}
-            >
-                <Ionicons name="download-outline" size={24} color="#4f46e5" />
+            <TouchableOpacity style={styles.downloadButton} onPress={() => openNote(item)}>
+                <Ionicons name="arrow-forward-circle" size={28} color="#ccc" />
             </TouchableOpacity>
         </TouchableOpacity>
     );
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <View>
-                    <Text style={styles.headerTitle}>{chapterName}</Text>
-                    <Text style={styles.headerSubtitle}>{subjectName} Notes</Text>
+            {/* ... Header */}
+
+            {downloading && (
+                <View style={styles.loadingOverlay}>
+                    <View style={styles.loadingBox}>
+                        <ActivityIndicator size="large" color="#4A90E2" />
+                        <Text style={styles.loadingText}>Downloading Note...</Text>
+                        <Text style={styles.loadingText}>{Math.round(downloadProgress * 100)}%</Text>
+                    </View>
                 </View>
-            </View>
+            )}
 
             {loading ? (
                 <View style={styles.center}>
@@ -101,6 +111,9 @@ const NotesScreen = () => {
                     renderItem={renderItem}
                     keyExtractor={(item) => item.note_id.toString()}
                     contentContainerStyle={styles.listContainer}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} />
+                    }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Ionicons name="folder-open-outline" size={64} color="#ccc" />
@@ -112,6 +125,7 @@ const NotesScreen = () => {
         </View>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {
@@ -189,6 +203,29 @@ const styles = StyleSheet.create({
     },
     downloadButton: {
         padding: 8,
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    loadingBox: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        elevation: 5,
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#333',
     },
 });
 

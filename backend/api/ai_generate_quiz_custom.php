@@ -11,7 +11,19 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { http_response_code(200); exit(); }
 
-require_once '../config/ai_config.php';
+// Load AI config safely - works both locally (XAMPP) and on Railway
+if (file_exists('../config/ai_config.php')) {
+    require_once '../config/ai_config.php';
+} else {
+    // Railway: config file is gitignored, read from environment variable
+    if (!defined('GEMINI_API_KEY')) {
+        $envKey = getenv('GEMINI_API_KEY');
+        if ($envKey) define('GEMINI_API_KEY', $envKey);
+    }
+    if (!defined('GEMINI_API_URL')) {
+        define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+    }
+}
 // Ensure you ran: composer require smalot/pdfparser phpoffice/phpword
 require_once '../../vendor/autoload.php'; 
 

@@ -5,7 +5,18 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-require_once '../config/ai_config.php';
+// Load AI config safely - works both locally (XAMPP) and on Railway
+if (file_exists('../config/ai_config.php')) {
+    require_once '../config/ai_config.php';
+} else {
+    if (!defined('GEMINI_API_KEY')) {
+        $envKey = getenv('GEMINI_API_KEY');
+        if ($envKey) define('GEMINI_API_KEY', $envKey);
+    }
+    if (!defined('GEMINI_API_URL')) {
+        define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+    }
+}
 
 // Check if image file is uploaded
 if (!isset($_FILES['image'])) {

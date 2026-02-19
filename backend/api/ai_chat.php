@@ -16,11 +16,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 // 3. Load Configuration
 // Make sure this file exists and defines 'GEMINI_API_KEY'
+// Load AI config safely - works both locally (XAMPP) and on Railway
 if (file_exists('../config/ai_config.php')) {
     require_once '../config/ai_config.php';
 } else {
-    // Fallback if config file is missing (For testing)
-    if (!defined('GEMINI_API_KEY')) define('GEMINI_API_KEY', 'YOUR_API_KEY_HERE'); 
+    // Railway: config file is gitignored, read from environment variable
+    if (!defined('GEMINI_API_KEY')) {
+        $envKey = getenv('GEMINI_API_KEY');
+        if ($envKey) define('GEMINI_API_KEY', $envKey);
+    }
+    if (!defined('GEMINI_API_URL')) {
+        define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+    }
 }
 
 try {

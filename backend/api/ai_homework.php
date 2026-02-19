@@ -42,8 +42,8 @@ $imageData = file_get_contents($file['tmp_name']);
 $base64Image = base64_encode($imageData);
 $mimeType = $file['type'];
 
-// Gemini 1.5 Flash is recommended for multimodal tasks
-$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" . GEMINI_API_KEY;
+// Using gemini-2.0-flash which supports multimodal/vision tasks
+$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . GEMINI_API_KEY;
 
 $payload = [
     'contents' => [

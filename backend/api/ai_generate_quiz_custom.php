@@ -166,8 +166,8 @@ try {
         throw new Exception("Invalid input type");
     }
 
-    // 5. Call Gemini API (Smart Model Selection)
-    $modelsToTry = ['gemini-2.5-flash'];
+    // 5. Call Gemini API - using gemini-2.0-flash (confirmed available model)
+    $modelsToTry = ['gemini-2.0-flash'];
     $finalReply = null;
     $lastError = "";
 

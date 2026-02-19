@@ -76,7 +76,7 @@ try {
     TASK:
     1. READ the text from the provided image, document, or text.
     2. UNDERSTAND the key concepts.
-    3. GENERATE 5 multiple-choice questions based on that content.
+    3. GENERATE 10 multiple-choice questions based on that content.
     
     DIFFICULTY LEVEL: " . $difficulty . "
     TARGET LANGUAGE: " . $language . "
@@ -106,7 +106,7 @@ try {
     // CASE 0: "Load More" - Use existing text
     if (!empty($existingText)) {
         $finalExtractedText = $existingText;
-        $geminiParts[] = ['text' => $systemPrompt . "\n\nCONTEXT TEXT:\n" . $existingText . "\n\nINSTRUCTION: Generate 5 NEW and UNIQUE questions different from any previous ones if possible."];
+        $geminiParts[] = ['text' => $systemPrompt . "\n\nCONTEXT TEXT:\n" . $existingText . "\n\nINSTRUCTION: Generate 10 NEW and UNIQUE questions different from any previous ones if possible."];
     }
     // CASE 1: New Input
     elseif ($inputType === 'text') {
@@ -186,8 +186,8 @@ try {
     foreach ($modelsToTry as $model) {
         $payload = [
             "contents" => [["parts" => $geminiParts]],
-            // Increased to 4000 to prevent truncation of 5 questions
-            "generationConfig" => ["temperature" => 0.4, "maxOutputTokens" => 4000] 
+            // Increased to 8000 to prevent truncation of 10 questions
+            "generationConfig" => ["temperature" => 0.4, "maxOutputTokens" => 8000] 
         ];
 
         $url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=" . GEMINI_API_KEY;

@@ -1,0 +1,45 @@
+<?php
+/**
+ * Remote Data Sync Script
+ * Push this to Railway and run it to sync your notes table.
+ */
+require_once __DIR__ . '/../config/db.php';
+
+// Simple security check (optional, but good)
+if (!isset($_GET['run']) || $_GET['run'] !== 'true') {
+    die("<h1>⚠️ Dangerous Operation</h1><p>This script will <b>ERASE and REPLACE</b> all data in the 'notes' table.</p><a href='?run=true'><button>CONFIRM & RUN SYNC</button></a>");
+}
+
+echo "Starting Sync...<br>";
+
+try {
+    // 1. Clear Table
+    $pdo->exec("DELETE FROM notes");
+    $pdo->exec("TRUNCATE TABLE notes"); // Reset IDs
+    echo "✅ Table cleared.<br>";
+
+    // 2. Insert Data (Generated from your local DB)
+    $sql = "
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('10', '79', 'NATIONAL SYMBOLS', 'pdf', 'https://drive.google.com/uc?export=download&id=1NxyQbRjbt5PMdtRzPgDhID3B4x6UNCRM', '', '2026-01-14 20:05:42');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('14', '15', 'EARLY HUMANS', 'pdf', 'https://drive.google.com/file/d/1mSLv9LzaYu4ZRyCh0nOU1v1dpLZr0ttL/view?usp=drive_link', '', '2026-01-14 20:28:08');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('15', '77', 'INDUS VALLEY CIVILISATION', 'pdf', 'https://drive.google.com/file/d/12gD-R9qicDSxctc_jW2xbRlVQ2J0Nktd/view?usp=drive_link', '', '2026-01-14 20:33:12');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('16', '78', 'OUR GOVERNMENT', 'pdf', 'https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=drive_link', '', '2026-01-14 20:33:32');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('20', '82', 'DIFFERENT OCCUPATIONS', 'pdf', 'https://drive.google.com/file/d/13S_KscXwxgGbUD8ApYeOl1vWxw3TCPQs/view?usp=drive_link', '', '2026-01-15 18:43:23');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('21', '78', 'OUR GOVERNMENT', 'pdf', 'https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=sharing', '', '2026-01-15 18:44:51');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('22', '80', 'OUR GREAT LEADERS', 'pdf', 'https://drive.google.com/file/d/1clc9pKXuQBCMIMC-d4BdgsJg6UZINcV_/view?usp=sharing', '', '2026-01-15 18:45:31');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('23', '81', 'TRANSPORT AND COMMUNICATIONS', 'pdf', 'https://drive.google.com/file/d/1so9Uf9XECpo3RM7WJ3PrDVo34F62vgNh/view?usp=sharing', '', '2026-01-15 18:46:12');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('24', '83', 'OUR ENVIRONMENT', 'pdf', 'https://drive.google.com/file/d/1bE9O1z__q_Ad4o5qwINsvKgRVbEl7Jj4/view?usp=sharing', '', '2026-01-15 18:59:35');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('25', '84', 'AIR, WATER AND WEATHER', 'pdf', 'https://drive.google.com/file/d/1PR7AKXEh6aGMGOW3pzB4fWViMi_sYuAm/view?usp=sharing', '', '2026-01-17 17:04:15');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('40', '133', 'BOOND', 'pdf', 'https://veeru-notes-storage-2026.s3.ap-south-1.amazonaws.com/notes/1771516269_Boond_The_Water_Cycle_Story_compressed.pdf', '', '2026-02-19 21:21:11');
+INSERT INTO notes (note_id, chapter_id, title, note_type, file_path, content, created_at) VALUES ('41', '134', 'WHEELCHAIR', 'pdf', 'https://veeru-notes-storage-2026.s3.ap-south-1.amazonaws.com/notes/1771522977_My_Brother_s_Wheelchair_Notes_compressed.pdf', '', '2026-02-19 23:13:00');
+";
+    
+    $pdo->exec($sql);
+    echo "✅ inserted " . 12 . " notes.<br>";
+    echo "<h1>🚀 SUCCESS! Database Synced.</h1>";
+    echo "<p>You can now use the app. The PDFs should work!</p>";
+
+} catch (PDOException $e) {
+    echo "❌ Error: " . $e->getMessage();
+}
+?>

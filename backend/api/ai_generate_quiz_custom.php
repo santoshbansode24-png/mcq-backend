@@ -117,7 +117,36 @@ try {
     } elseif ($inputType === 'camera' || $inputType === 'file') {
         
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception("File upload failed");
+            $errCode = isset($_FILES['file']) ? $_FILES['file']['error'] : 'No file object';
+            $errMessage = "File upload failed (Error Code: $errCode). ";
+            
+            switch ($errCode) {
+                case UPLOAD_ERR_INI_SIZE:
+                    $errMessage .= "The file is too large. PHP limits uploads to " . ini_get('upload_max_filesize') . ".";
+                    break;
+                case UPLOAD_ERR_FORM_SIZE:
+                    $errMessage .= "The file exceeds the MAX_FILE_SIZE limit in the HTML form.";
+                    break;
+                case UPLOAD_ERR_PARTIAL:
+                    $errMessage .= "The file was only partially uploaded.";
+                    break;
+                case UPLOAD_ERR_NO_FILE:
+                    $errMessage .= "No file was uploaded.";
+                    break;
+                case UPLOAD_ERR_NO_TMP_DIR:
+                    $errMessage .= "Server error: Missing temporary folder.";
+                    break;
+                case UPLOAD_ERR_CANT_WRITE:
+                    $errMessage .= "Server error: Failed to write file to disk.";
+                    break;
+                case UPLOAD_ERR_EXTENSION:
+                    $errMessage .= "A PHP extension blocked the upload.";
+                    break;
+                default:
+                    $errMessage .= "Unknown upload error.";
+                    break;
+            }
+            throw new Exception($errMessage);
         }
 
         $filePath = $_FILES['file']['tmp_name'];
@@ -126,16 +155,6 @@ try {
         // --- CASE A: IMAGES (The True OCR) ---
         if (strpos($mimeType, 'image') !== false) {
             $base64Image = base64_encode(file_get_contents($filePath));
-            // Note: For images, we can't easily "extract" text to return without a separate call.
-            // So for "Load More" on images, we might rely on Gemini's internal text capability or just re-send image if needed.
-            // BETTER STRATEGY: Ask Gemini to ALSO return the extracted text in the JSON? 
-            // For now, to keep it simple, we will send the image. 
-            // But to support "Load More", we actually need the text. 
-            // Workaround: We will ask Gemini to generate questions AND provide a summary of text if possible, but JSON structure is strict.
-            // changing strategy: logic for image "Load More" will be handled by re-sending the image if specific text isn't returned, 
-            // OR we just accept that for images, "Load More" might need to re-process or we just store context on client? 
-            // Let's stick to standard flow: Users usually want "Load More" on text/PDFs. 
-            // For images, we will just proceed. Only PDF/Docs give us clear text to return easily.
             
             $geminiParts[] = ['text' => $systemPrompt . "\n\n(Analyze this image and extract the text to create the quiz)"];
             $geminiParts[] = [

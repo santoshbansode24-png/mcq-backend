@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     backIcon: {
         fontSize: 24,
         fontWeight: 'bold',
-        // color handled by theme
+        fontFamily: 'NotoSans-Bold',
     },
     refreshBtn: {
         width: 40,
@@ -337,10 +337,12 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#0f172a',
+        fontFamily: 'NotoSans-Bold',
     },
     headerSubtitle: {
         fontSize: 14,
         color: '#64748b',
+        fontFamily: 'NotoSans-Regular',
     },
     listContainer: {
         paddingHorizontal: 20,
@@ -370,8 +372,9 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     chapterNumber: {
-        fontSize: 16, // Increased font size
+        fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     chapterInfo: {
         flex: 1,
@@ -385,6 +388,7 @@ const styles = StyleSheet.create({
         // color handled by theme
         flex: 1,
         fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
     },
     goldStar: {
         fontSize: 16, // Reduced from 20
@@ -398,10 +402,10 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start'
     },
     motivationText: {
-        fontSize: 10, // Reduced from 12
+        fontSize: 10,
         fontWeight: '600',
-        // color handled by theme inline
         textAlign: 'center',
+        fontFamily: 'NotoSans-Bold',
     },
     chevron: {
         fontSize: 20, // Reduced from 28
@@ -418,6 +422,7 @@ const styles = StyleSheet.create({
         marginTop: 12,
         fontSize: 14,
         color: '#64748b',
+        fontFamily: 'NotoSans-Bold',
     },
     emptyContainer: {
         padding: 40,
@@ -426,6 +431,7 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 14,
         color: '#64748b',
+        fontFamily: 'NotoSans-Regular',
     },
 });
 

@@ -130,8 +130,8 @@ const SubjectsScreen = ({ user, navigation }) => {
                             <RefreshControl
                                 refreshing={refreshing}
                                 onRefresh={onRefresh}
-                                colors={['#4F46E5']}
-                                tintColor="#4F46E5"
+                                colors={['#4f46e5']}
+                                tintColor="#4f46e5"
                             />
                         }
                         ListEmptyComponent={
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 26,
         fontWeight: 'bold',
-        // Color handled via inline style
+        fontFamily: 'NotoSans-Bold',
     },
     classBadge: {
         backgroundColor: '#F1F5F9',
@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     listContainer: {
         padding: 16,
@@ -208,14 +209,17 @@ const styles = StyleSheet.create({
     subjectIconText: {
         fontSize: 18,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     subjectName: {
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     subjectStats: {
         fontSize: 12,
         marginTop: 2,
+        fontFamily: 'NotoSans-Regular',
     },
     center: {
         flex: 1,
@@ -228,6 +232,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         color: '#94A3B8',
+        fontFamily: 'NotoSans-Regular',
     }
 });
 

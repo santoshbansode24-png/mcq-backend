@@ -1,14 +1,45 @@
 import axios from 'axios';
 import { API_URL } from './config';
 
-export const fetchClasses = async () => {
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const fetchClasses = async (board = null, forceRefresh = false) => {
+    const cacheKey = board ? `classes_${board}` : 'classes_all';
+
     try {
-        console.log(`[Classes] Fetching from ${API_URL}/get_classes.php`);
-        const response = await axios.get(`${API_URL}/get_classes.php`, { timeout: 5000 });
-        console.log(`[Classes] Response:`, response.status);
+        // 1. Try to load from cache first if not forcing refresh
+        if (!forceRefresh) {
+            const cachedData = await AsyncStorage.getItem(cacheKey);
+            if (cachedData) {
+                console.log(`[Classes] Loading ${cacheKey} from cache`);
+                // Background refresh: don't return here if we want to ensure fresh data eventually,
+                // but for speed, we return cached data and let the caller handle it.
+                // For now, let's return cached data immediately.
+                return JSON.parse(cachedData);
+            }
+        }
+
+        // 2. Fetch from network
+        console.log(`[Classes] Fetching from ${API_URL}/get_classes.php${board ? `?board=${board}` : ''}`);
+        const response = await axios.get(`${API_URL}/get_classes.php`, {
+            params: board ? { board } : {},
+            timeout: 5000
+        });
+
+        if (response.data && response.data.status === 'success') {
+            // 3. Save to cache
+            await AsyncStorage.setItem(cacheKey, JSON.stringify(response.data));
+            return response.data;
+        }
+
         return response.data;
     } catch (error) {
         console.error('[Classes] Error:', error.message);
+
+        // Final fallback: try cache even if forceRefresh was true
+        const fallbackCached = await AsyncStorage.getItem(cacheKey);
+        if (fallbackCached) return JSON.parse(fallbackCached);
+
         throw error.response ? error.response.data : new Error(error.message || 'Network Error');
     }
 };

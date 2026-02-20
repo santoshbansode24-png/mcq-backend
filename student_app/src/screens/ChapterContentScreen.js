@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl, Image, BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,6 +51,32 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
         return () => clearInterval(interval);
     }, [isTaskActive, taskTimer]);
+
+    // Handle Hardware Back Button
+    useEffect(() => {
+        const backAction = () => {
+            if (isTaskActive) {
+                Alert.alert(
+                    "Abandon Mission?",
+                    "Timer is still running. Do you want to leave?",
+                    [
+                        { text: "Stay", style: "cancel" },
+                        { text: "Leave", style: "destructive", onPress: () => navigation.goBack() }
+                    ]
+                );
+                return true;
+            }
+            navigation.goBack();
+            return true;
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [isTaskActive, navigation]);
 
     const finishTask = async () => {
         setIsTaskActive(false);
@@ -133,7 +159,6 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         // Only clear data if NOT refreshing, to prevent flickering
         if (!isRefreshing) {
-            setData([]);
             setData([]);
             setMcqSets([]);
             setFlashcardSets([]);
@@ -565,42 +590,29 @@ const ChapterContentScreen = ({ navigation, route }) => {
         '#fff7ed', // Soft Orange
     ];
 
-    const renderNoteItem = ({ item, index }) => {
+    const renderNoteItem = React.useCallback(({ item, index }) => {
         const gradient = noteGradients[index % noteGradients.length];
 
         const openNote = async () => {
-            // Handle inconsistent API field names (file_path vs file_url)
             const rawPath = item.file_path || item.file_url;
-
             if (!rawPath) {
                 Alert.alert('Error', 'File path is missing');
                 return;
             }
 
-            // Google Drive Logic Removed - As per user request.
-            // We now treat all URLs as direct download links (AWS/Server).
-
-            // AWS / Server Files - Smart Cache (Download First)
             try {
                 setDownloading(true);
                 setDownloadProgress(0);
-
-                // Construct full URL if relative (local files)
                 let remoteUrl = rawPath;
                 if (!rawPath.startsWith('http')) {
                     remoteUrl = `${BASE_URL}/${rawPath}`;
                 }
-
-                // Get local cached file URI
-                // For AWS links (remoteUrl starts with http), getCachedFile handles them perfectly
                 const localUri = await getCachedFile(
                     remoteUrl,
                     item.title,
                     (progress) => setDownloadProgress(progress)
                 );
-
                 setDownloading(false);
-
                 if (localUri) {
                     navigation.navigate('PDFViewer', { url: localUri, title: item.title });
                 }
@@ -634,16 +646,16 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 </LinearGradient>
             </TouchableOpacity>
         );
-    };
+    }, [navigation]);
 
-    const renderVideoItem = ({ item, index }) => {
+    const renderVideoItem = React.useCallback(({ item, index }) => {
         const gradient = videoGradients[index % videoGradients.length];
         return (
             <TouchableOpacity
                 onPress={() => navigation.navigate('VideoPlayer', {
                     videoUrl: item.url,
                     title: item.title,
-                    activeTask: activeTask // Pass timer info
+                    activeTask: activeTask
                 })}
                 style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
             >
@@ -665,7 +677,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 </LinearGradient>
             </TouchableOpacity>
         );
-    };
+    }, [navigation, activeTask]);
 
     // Color Palette for Sets (Option 1: Pastel Rainbow)
     const setColors = [
@@ -973,44 +985,47 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
                 <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
                     <View style={styles.tabsRow}>
-                        {[
-                            { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981', lightColor: '#ecfdf5' }, // Emerald
-                            { id: 'MCQs', icon: '📝', label: t('mcqs'), color: '#3b82f6', lightColor: '#eff6ff' }, // Blue
-                            { id: 'QuickRevision', icon: '⚡', label: t('revision'), color: '#f59e0b', lightColor: '#fffbeb' }, // Amber
-                            { id: 'Videos', icon: '🎥', label: t('videos'), color: '#ef4444', lightColor: '#fef2f2' }, // Red
-                            { id: 'Notes', icon: '📄', label: t('notes'), color: '#8b5cf6', lightColor: '#f5f3ff' }, // Violet
-                        ].map((tab) => {
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <TouchableOpacity
-                                    key={tab.id}
-                                    style={[
-                                        styles.tile,
-                                        {
-                                            backgroundColor: isActive ? tab.color : theme.card,
-                                            borderColor: tab.color,
-                                            elevation: isActive ? 8 : 2, // Pop up effect
-                                            shadowColor: tab.color, // Colored shadow
-                                            transform: [{ translateY: isActive ? -4 : 0 }] // Physical lift
-                                        }
-                                    ]}
-                                    onPress={() => setActiveTab(tab.id)}
-                                    activeOpacity={0.9}
-                                >
-                                    <Text style={[styles.tileIcon, { fontSize: 20 }]}>{tab.icon}</Text>
-                                    <Text style={[
-                                        styles.tileText,
-                                        {
-                                            color: isActive ? 'white' : tab.color,
-                                            fontWeight: 'bold',
-                                            fontSize: 11
-                                        }
-                                    ]} numberOfLines={1}>
-                                        {tab.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
+                        {(() => {
+                            const tabs = [
+                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981' },
+                                { id: 'MCQs', icon: '📝', label: t('mcqs'), color: '#3b82f6' },
+                                { id: 'QuickRevision', icon: '⚡', label: t('revision'), color: '#f59e0b' },
+                                { id: 'Videos', icon: '🎥', label: t('videos'), color: '#ef4444' },
+                                { id: 'Notes', icon: '📄', label: t('notes'), color: '#8b5cf6' },
+                            ];
+                            return tabs.map((tab) => {
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <TouchableOpacity
+                                        key={tab.id}
+                                        style={[
+                                            styles.tile,
+                                            {
+                                                backgroundColor: isActive ? tab.color : theme.card,
+                                                borderColor: tab.color,
+                                                elevation: isActive ? 8 : 2,
+                                                shadowColor: tab.color,
+                                                transform: [{ translateY: isActive ? -4 : 0 }]
+                                            }
+                                        ]}
+                                        onPress={() => setActiveTab(tab.id)}
+                                        activeOpacity={0.9}
+                                    >
+                                        <Text style={[styles.tileIcon, { fontSize: 20 }]}>{tab.icon}</Text>
+                                        <Text style={[
+                                            styles.tileText,
+                                            {
+                                                color: isActive ? 'white' : tab.color,
+                                                fontWeight: 'bold',
+                                                fontSize: 11
+                                            }
+                                        ]} numberOfLines={1}>
+                                            {tab.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            });
+                        })()}
                     </View>
                 </View>
 
@@ -1055,14 +1070,15 @@ const styles = StyleSheet.create({
     },
     backButtonText: {
         fontSize: 24,
-        // color handled by theme
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        // color handled by theme
         flex: 1,
+        fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
     },
     tabContainer: {
         // backgroundColor handled by theme
@@ -1103,6 +1119,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#64748B',
         textAlign: 'center',
+        fontFamily: 'NotoSans-Bold',
     },
     activeTileText: {
         color: 'white',
@@ -1139,17 +1156,20 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#1e293b',
         marginBottom: 4,
+        fontFamily: 'NotoSans-Bold',
     },
     cardSubtitle: {
         fontSize: 14,
         color: '#64748b',
         marginBottom: 4,
+        fontFamily: 'NotoSans-Regular',
     },
     duration: {
         fontSize: 12,
         color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
     },
     emptyContainer: {
         alignItems: 'center',
@@ -1159,6 +1179,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         // color handled by theme
         fontStyle: 'italic',
+        fontFamily: 'NotoSans-Regular',
     },
     setsContainer: {
         padding: 20,
@@ -1193,15 +1214,18 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#4f46e5',
+        fontFamily: 'NotoSans-Bold',
     },
     setCardTitle: {
         fontSize: 16,
         fontWeight: 'bold',
         color: '#1e293b',
+        fontFamily: 'NotoSans-Bold',
     },
     setCardSubtitle: {
         fontSize: 13,
         color: '#64748b',
+        fontFamily: 'NotoSans-Regular',
     },
     playIcon: {
         marginLeft: 'auto',
@@ -1214,11 +1238,13 @@ const styles = StyleSheet.create({
         // color handled by theme
         marginBottom: 4,
         marginTop: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     quizSubtitle: {
         fontSize: 14,
         // color handled by theme
         marginBottom: 20,
+        fontFamily: 'NotoSans-Regular',
     },
     quizContainer: {
         padding: 20,
@@ -1232,11 +1258,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#64748b',
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     scoreText: {
         fontSize: 14,
         color: '#10b981',
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     questionCard: {
         backgroundColor: '#f0fdfa', // Light Teal Background
@@ -1261,6 +1289,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#134e4a', // Dark Teal Text
         lineHeight: 28,
+        fontFamily: 'NotoSans-Bold',
     },
     questionImage: {
         width: '100%',
@@ -1291,6 +1320,7 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 15,
         color: '#334155',
+        fontFamily: 'NotoSans-Regular',
     },
     whiteText: {
         color: 'white',
@@ -1307,11 +1337,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#166534',
         marginBottom: 4,
+        fontFamily: 'NotoSans-Bold',
     },
     explanationText: {
         fontSize: 14,
         color: '#166534',
         marginBottom: 16,
+        fontFamily: 'NotoSans-Regular',
     },
     nextButton: {
         backgroundColor: '#4f46e5',
@@ -1323,6 +1355,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     prevButton: {
         backgroundColor: '#cbd5e1', // Slate 300
@@ -1335,6 +1368,7 @@ const styles = StyleSheet.create({
         color: '#334155', // Slate 700
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     resultContainer: {
         flex: 1,
@@ -1351,12 +1385,14 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#0f172a',
         marginBottom: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     resultScore: {
         fontSize: 20,
         color: '#4f46e5',
         fontWeight: 'bold',
         marginBottom: 30,
+        fontFamily: 'NotoSans-Bold',
     },
     restartButton: {
         backgroundColor: 'white',
@@ -1373,6 +1409,7 @@ const styles = StyleSheet.create({
         color: '#4f46e5',
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     nextSetButton: {
         backgroundColor: '#4f46e5',
@@ -1388,10 +1425,12 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     backToContentText: {
         color: '#64748b',
         fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
     },
     timerContainer: {
         flexDirection: 'row',
@@ -1419,7 +1458,8 @@ const styles = StyleSheet.create({
     finishBtnText: {
         color: 'white',
         fontSize: 10,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     loadingOverlay: {
         position: 'absolute',
@@ -1443,6 +1483,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 16,
         color: '#333',
+        fontFamily: 'NotoSans-Bold',
     },
 });
 

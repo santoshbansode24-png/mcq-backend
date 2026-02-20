@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         color: '#fff',
+        fontFamily: 'NotoSans-Bold',
     },
     content: {
         padding: 20,
@@ -290,11 +291,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#be185d',
         marginBottom: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     placeholderText: {
         textAlign: 'center',
         color: '#831843',
         lineHeight: 24,
+        fontFamily: 'NotoSans-Regular',
     },
     closeButton: {
         position: 'absolute',
@@ -322,6 +325,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 14,
+        fontFamily: 'NotoSans-Bold',
     },
     buttonRow: {
         flexDirection: 'row',
@@ -346,6 +350,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#db2777',
+        fontFamily: 'NotoSans-Bold',
     },
     solveButton: {
         borderRadius: 20,
@@ -367,6 +372,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     solutionContainer: {
         marginTop: 10,
@@ -382,6 +388,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#be185d',
         marginLeft: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     solutionCard: {
         backgroundColor: '#fff',
@@ -395,6 +402,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         lineHeight: 26,
         color: '#334155',
+        fontFamily: 'NotoSans-Regular',
     },
     languageContainer: {
         marginBottom: 20,
@@ -409,6 +417,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#be185d',
         marginBottom: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     languageRow: {
         flexDirection: 'row',
@@ -430,9 +439,11 @@ const styles = StyleSheet.create({
     langText: {
         color: '#be185d',
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     activeLangText: {
         color: '#fff',
+        fontFamily: 'NotoSans-Bold',
     }
 });
 

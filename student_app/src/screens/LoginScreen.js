@@ -128,7 +128,7 @@ const LoginScreen = ({ navigation }) => {
                     <Text style={styles.subtitle}>Veeru - Learn Smarter</Text>
 
                     <View style={styles.form}>
-                        <Text style={styles.label}>Email or Mobile Number</Text>
+                        <Text style={styles.label}>EMAIL OR MOBILE NUMBER</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Email or Mobile No."
@@ -138,7 +138,7 @@ const LoginScreen = ({ navigation }) => {
                             autoCapitalize="none"
                         />
 
-                        <Text style={styles.label}>Password</Text>
+                        <Text style={styles.label}>PASSWORD</Text>
                         <View style={styles.passwordContainer}>
                             <TextInput
                                 style={styles.passwordInput}
@@ -156,7 +156,7 @@ const LoginScreen = ({ navigation }) => {
                             onPress={() => navigation.navigate('ForgotPassword')}
                             style={{ alignSelf: 'flex-end', marginTop: 8 }}
                         >
-                            <Text style={{ color: '#4f46e5', fontWeight: 'bold' }}>Forgot Password?</Text>
+                            <Text style={{ color: '#4f46e5', fontWeight: 'bold' }}>FORGOT PASSWORD?</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -167,7 +167,7 @@ const LoginScreen = ({ navigation }) => {
                             {loading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.buttonText}>Login</Text>
+                                <Text style={styles.buttonText}>LOGIN</Text>
                             )}
                         </TouchableOpacity>
 
@@ -183,7 +183,7 @@ const LoginScreen = ({ navigation }) => {
                             style={{ marginTop: 24, alignItems: 'center' }}
                         >
                             <Text style={{ color: '#666' }}>
-                                Don't have an account? <Text style={{ color: '#4f46e5', fontWeight: 'bold' }}>Register Here</Text>
+                                Don't have an account? <Text style={{ color: '#4f46e5', fontWeight: 'bold' }}>REGISTER HERE</Text>
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -234,6 +234,7 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 48,
         textAlign: 'center',
+        fontFamily: 'NotoSans-Bold',
     },
     form: {
         backgroundColor: '#fff',
@@ -251,6 +252,7 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 8,
         marginTop: 16,
+        fontFamily: 'NotoSans-Bold',
     },
     input: {
         backgroundColor: '#f9fafb',
@@ -260,6 +262,7 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 16,
         color: '#333',
+        fontFamily: 'NotoSans-Regular',
     },
     passwordContainer: {
         flexDirection: 'row',
@@ -275,6 +278,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         fontSize: 16,
         color: '#333',
+        fontFamily: 'NotoSans-Regular',
     },
     eyeIcon: {
         padding: 8,
@@ -291,6 +295,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     debugInfo: {
         marginTop: 20,

@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20, paddingBottom: 15,
         justifyContent: 'space-between'
     },
-    headerTitle: { fontSize: 20, fontWeight: 'bold' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     iconButton: { padding: 8 },
     scrollContent: { paddingBottom: 20 },
 
@@ -254,8 +254,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05, shadowRadius: 10, elevation: 3
     },
     statItem: { alignItems: 'center', flex: 1 },
-    statValue: { fontSize: 22, fontWeight: 'bold', marginBottom: 4 },
-    statLabel: { fontSize: 12, fontWeight: '600' },
+    statValue: { fontSize: 22, fontWeight: 'bold', marginBottom: 4, fontFamily: 'NotoSans-Bold' },
+    statLabel: { fontSize: 12, fontWeight: '600', fontFamily: 'NotoSans-Bold' },
     verticalDivider: { width: 1, height: '80%', alignSelf: 'center' },
 
     // Tabs
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18, paddingVertical: 8,
         borderRadius: 20, borderWidth: 1, marginRight: 10,
     },
-    tabText: { fontWeight: '600', fontSize: 13 },
+    tabText: { fontWeight: '600', fontSize: 13, fontFamily: 'NotoSans-Bold' },
 
     // Grid
     gridContainer: {
@@ -287,8 +287,8 @@ const styles = StyleSheet.create({
         width: 40, height: 40, borderRadius: 20,
         justifyContent: 'center', alignItems: 'center', marginBottom: 10
     },
-    setNumText: { fontWeight: 'bold', fontSize: 15, marginBottom: 4 },
-    setStatusText: { fontSize: 11, fontWeight: '600' }
+    setNumText: { fontWeight: 'bold', fontSize: 15, marginBottom: 4, fontFamily: 'NotoSans-Bold' },
+    setStatusText: { fontSize: 11, fontWeight: '600', fontFamily: 'NotoSans-Bold' }
 });
 
 export default VocabDashboardScreen;

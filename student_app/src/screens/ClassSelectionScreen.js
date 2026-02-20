@@ -121,17 +121,20 @@ const styles = StyleSheet.create({
         color: '#64748b',
         fontWeight: '600',
         marginBottom: 8,
+        fontFamily: 'NotoSans-Bold',
     },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#0f172a',
         marginBottom: 8,
+        fontFamily: 'NotoSans-Bold',
     },
     subtitle: {
         fontSize: 16,
         color: '#94a3b8',
         lineHeight: 24,
+        fontFamily: 'NotoSans-Regular',
     },
     listContainer: {
         padding: 20,
@@ -174,10 +177,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1e293b',
         marginBottom: 4,
+        fontFamily: 'NotoSans-Bold',
     },
     subText: {
         fontSize: 14,
         color: '#64748b',
+        fontFamily: 'NotoSans-Regular',
     },
     arrow: {
         fontSize: 28,

@@ -28,6 +28,18 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
     const [refreshing, setRefreshing] = useState(false);
 
+    const [fetchingClasses, setFetchingClasses] = useState(false);
+
+    // Pre-warm cache for all boards on mount
+    React.useEffect(() => {
+        const preWarm = async () => {
+            const boards = ['CBSE', 'STATE_MARATHI', 'STATE_SEMI'];
+            // Fetch all in parallel without blocking main thread
+            Promise.all(boards.map(b => fetchClasses(b))).catch(err => console.log("Pre-warm failed:", err));
+        };
+        preWarm();
+    }, []);
+
     useFocusEffect(
         React.useCallback(() => {
             loadClasses(currentBoard);
@@ -39,23 +51,21 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
         loadClasses(currentBoard).then(() => setRefreshing(false));
     }, [currentBoard]);
 
-    const loadClasses = async (board) => {
+    const loadClasses = async (board, forceRefresh = false) => {
         try {
-            // Fetch classes filtered by board
-            // console.log(`Fetching classes for board: ${board}`);
-            const response = await axios.get(`${API_URL}/get_classes.php?board=${board}`);
-            if (response.data && response.data.status === 'success') {
-                setClasses(response.data.data);
-                if (response.data.data.length === 0) {
-                    // Alert.alert("Debug", `No classes found for board: ${board}`);
-                }
+            // Use the optimized API which handles caching
+            const response = await fetchClasses(board, forceRefresh);
+
+            if (response && (response.status === 'success' || Array.isArray(response))) {
+                const classData = response.data || response;
+                setClasses(classData);
             } else {
                 setClasses([]);
-                Alert.alert("Error", response.data.message || "Failed to load classes");
+                if (forceRefresh) Alert.alert("Error", response?.message || "Failed to load classes");
             }
         } catch (error) {
             console.error("Failed to load classes:", error);
-            Alert.alert("Connection Error", `Could not load classes.\n${error.message}`);
+            if (forceRefresh) Alert.alert("Connection Error", `Could not load classes.\n${error.message}`);
             setClasses([]);
         }
     };
@@ -222,7 +232,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
                     {/* Board Selection Tab */}
                     <View style={styles.classSelectorContainer}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Select Board / Medium</Text>
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>SELECT BOARD / MEDIUM</Text>
                         <View style={{ flexDirection: 'row', paddingHorizontal: 5 }}>
                             {[
                                 { id: 'CBSE', label: 'CBSE' },
@@ -255,35 +265,41 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
                     {/* Class Scroll Tab */}
                     <View style={styles.classSelectorContainer}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('selectClass') || 'Select Class'}</Text>
-                        <FlatList
-                            data={classes}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            keyExtractor={(item) => item.class_id.toString()}
-                            contentContainerStyle={styles.classList}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.classItem,
-                                        {
-                                            backgroundColor: item.class_id === currentClassId ? theme.primary : theme.card,
-                                            borderColor: theme.border,
-                                            borderWidth: item.class_id === currentClassId ? 0 : 1
-                                        }
-                                    ]}
-                                    onPress={() => handleClassChange(item)}
-                                    disabled={loadingClasses}
-                                >
-                                    <Text style={[
-                                        styles.classItemText,
-                                        { color: item.class_id === currentClassId ? '#fff' : theme.text }
-                                    ]}>
-                                        {item.class_name}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                        />
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('selectClass')?.toUpperCase() || 'SELECT CLASS'}</Text>
+                        {fetchingClasses && classes.length === 0 ? (
+                            <View style={{ height: 50, justifyContent: 'center', alignItems: 'center' }}>
+                                <ActivityIndicator size="small" color={theme.primary} />
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={classes}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                keyExtractor={(item) => item.class_id.toString()}
+                                contentContainerStyle={styles.classList}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.classItem,
+                                            {
+                                                backgroundColor: item.class_id === currentClassId ? theme.primary : theme.card,
+                                                borderColor: theme.border,
+                                                borderWidth: item.class_id === currentClassId ? 0 : 1
+                                            }
+                                        ]}
+                                        onPress={() => handleClassChange(item)}
+                                        disabled={loadingClasses}
+                                    >
+                                        <Text style={[
+                                            styles.classItemText,
+                                            { color: item.class_id === currentClassId ? '#fff' : theme.text }
+                                        ]}>
+                                            {item.class_name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        )}
                     </View>
                 </View>
 
@@ -337,7 +353,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         style={[styles.menuItem, { borderBottomColor: theme.border }]}
                         onPress={() => setHelpModalVisible(true)}
                     >
-                        <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')}</Text>
+                        <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')?.toUpperCase()}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -361,7 +377,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
             >
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalView, { backgroundColor: theme.card }]}>
-                        <Text style={[styles.modalTitle, { color: theme.text }]}>{t('selectLanguage')}</Text>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>{t('selectLanguage')?.toUpperCase()}</Text>
 
                         {languages.map((lang) => (
                             <TouchableOpacity
@@ -408,7 +424,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
             >
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalView, { backgroundColor: theme.card }]}>
-                        <Text style={[styles.modalTitle, { color: theme.text }]}>Help & Support</Text>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>HELP & SUPPORT</Text>
 
                         <View style={{ width: '100%', marginBottom: 20 }}>
                             <Text style={{ color: theme.text, fontSize: 16, marginBottom: 8 }}>Need assistance? Contact us:</Text>
@@ -494,10 +510,12 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 24,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     email: {
         fontSize: 16,
         marginBottom: 8,
+        fontFamily: 'NotoSans-Regular',
     },
     badge: {
         paddingHorizontal: 12,
@@ -506,6 +524,7 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     classSelectorContainer: {
         marginTop: 20,
@@ -517,6 +536,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 10,
         marginLeft: 5,
+        fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
     },
     classList: {
         paddingVertical: 5,
@@ -535,9 +556,10 @@ const styles = StyleSheet.create({
     },
     classItemText: {
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     boardItem: {
-        paddingHorizontal: 15,
+        paddingHorizontal: 12, // Reduced padding for better fit
         paddingVertical: 8,
         borderRadius: 15,
         marginRight: 8,
@@ -557,6 +579,7 @@ const styles = StyleSheet.create({
     },
     menuText: {
         fontSize: 16,
+        fontFamily: 'NotoSans-Regular',
     },
     logoutButton: {
         backgroundColor: '#ef4444',
@@ -568,6 +591,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
     },
     modalOverlay: {
         flex: 1,

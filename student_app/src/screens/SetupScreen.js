@@ -195,10 +195,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
         marginBottom: 8,
+        fontFamily: 'NotoSans-Bold',
     },
     headerSubtitle: {
         fontSize: 16,
         color: 'rgba(255, 255, 255, 0.9)',
+        fontFamily: 'NotoSans-Regular',
     },
     content: {
         flex: 1,
@@ -238,6 +240,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
         color: '#374151',
+        fontFamily: 'NotoSans-Bold',
     },
     optionTextActive: {
         color: '#4f46e5',
@@ -263,6 +266,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#374151',
         fontWeight: '500',
+        fontFamily: 'NotoSans-Bold',
     },
     classTextActive: {
         color: '#4f46e5',
@@ -284,6 +288,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     backButton: {
         alignItems: 'center',

@@ -26,7 +26,7 @@ if (!isset($_FILES['image'])) {
 
 // AUTH & TRAFFIC CONTROL
 require_once 'AiUsageManager.php';
-$userId = isset($_POST['user_id']) ? (int)$$_POST['user_id'] : 0; // Fix: $_POST['user_id']
+$userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0; 
 
 // Only enforce limits if we have a valid user ID. 
 if ($userId > 0) {
@@ -54,7 +54,7 @@ $base64Image = base64_encode($imageData);
 $mimeType = $file['type'];
 
 // Using gemini-2.0-flash which supports multimodal/vision tasks
-$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . GEMINI_API_KEY;
+$apiUrl = GEMINI_API_URL . "?key=" . GEMINI_API_KEY;
 
 $payload = [
     'contents' => [

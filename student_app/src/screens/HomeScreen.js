@@ -246,7 +246,7 @@ const HomeScreen = ({ user, navigation }) => {
                         <Text style={styles.subjectIconText}>{item.subject_name.charAt(0)}</Text>
                     </LinearGradient>
                     <View style={styles.subjectInfo}>
-                        <Text style={[styles.subjectName, { color: theme.text }]}>{item.subject_name}</Text>
+                        <Text style={[styles.subjectName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{item.subject_name}</Text>
                         <Text style={[styles.subjectStats, { color: theme.textSecondary }]}>
                             {item.total_chapters} {t('chapters')} • {item.total_mcqs} {t('mcqs')}
                         </Text>
@@ -303,31 +303,31 @@ const styles = StyleSheet.create({
     background: { ...StyleSheet.absoluteFillObject },
     scrollPadding: { paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30, marginTop: 10 },
-    greeting: { fontSize: 16, fontWeight: '500', marginBottom: 4 },
-    userName: { fontSize: 28, fontWeight: '800' },
+    greeting: { fontSize: 16, fontWeight: '500', marginBottom: 4, fontFamily: 'NotoSans-Regular' },
+    userName: { fontSize: 28, fontWeight: '800', fontFamily: 'NotoSans-Bold' },
     avatarContainer: { borderWidth: 2, borderRadius: 30, padding: 2 },
     avatar: { width: 50, height: 50, borderRadius: 25 },
     avatarPlaceholder: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
-    avatarText: { fontSize: 22, fontWeight: 'bold', color: 'white' },
-    sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 15 },
+    avatarText: { fontSize: 22, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold' },
+    sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 15, fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
     gridContainer: { marginBottom: 25 },
     gridItem: { flex: 1, height: 140, borderRadius: 24, overflow: 'hidden', elevation: 4, shadowOpacity: 0.2, shadowRadius: 5 },
     gridGradient: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
     gridIcon: { fontSize: 32, marginBottom: 8 },
-    gridTitle: { fontSize: 15, fontWeight: 'bold', color: 'white' },
+    gridTitle: { fontSize: 13, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold', textTransform: 'uppercase', textAlign: 'center' },
     fullWidthCard: { marginBottom: 30, borderRadius: 24, overflow: 'hidden', elevation: 4 },
     bannerGradient: { padding: 20 },
     bannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    bannerTitle: { fontSize: 18, fontWeight: 'bold', color: 'white' },
-    bannerSubtitle: { fontSize: 13, color: 'white', opacity: 0.9 },
+    bannerTitle: { fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
+    bannerSubtitle: { fontSize: 13, color: 'white', opacity: 0.9, fontFamily: 'NotoSans-Regular' },
     bannerIconContainer: { width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     subjectWrapper: { marginBottom: 12 },
     subjectCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 20, borderWidth: 1 },
     subjectIcon: { width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    subjectIconText: { fontSize: 20, fontWeight: 'bold', color: 'white' },
+    subjectIconText: { fontSize: 20, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold' },
     subjectInfo: { flex: 1 },
-    subjectName: { fontSize: 16, fontWeight: 'bold', marginBottom: 2 },
-    subjectStats: { fontSize: 12 },
+    subjectName: { fontSize: 15, fontWeight: 'bold', marginBottom: 2, fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
+    subjectStats: { fontSize: 12, fontFamily: 'NotoSans-Regular' },
     arrowContainer: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
     loadingOverlay: { padding: 40, alignItems: 'center' },
     emptyContainer: { alignItems: 'center', marginTop: 20 },
@@ -346,7 +346,8 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#64748b',
         marginLeft: 4,
-        fontWeight: '500'
+        fontWeight: '500',
+        fontFamily: 'NotoSans-Bold',
     }
 });
 

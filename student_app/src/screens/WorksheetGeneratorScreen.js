@@ -599,31 +599,31 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                         <Text style={styles.sectionHeader}>3. Customize Paper</Text>
 
                         <View style={styles.card}>
-                            <Text style={styles.label}>Total Marks: {totalMarks}</Text>
+                            <Text style={styles.label}>Total Marks: {Math.round(totalMarks)}</Text>
                             <Slider
-                                style={{ width: '100%', height: 40 }}
+                                style={styles.slider}
                                 minimumValue={10}
                                 maximumValue={100}
                                 step={5}
                                 value={totalMarks}
-                                onValueChange={setTotalMarks}
+                                onValueChange={(val) => setTotalMarks(Math.round(val))}
                                 minimumTrackTintColor="#C026D3"
-                                maximumTrackTintColor="#e0e0e0"
-                                thumbTintColor="#C026D3"
+                                maximumTrackTintColor="#cbd5e1"
+                                thumbTintColor="#A855F7"
                             />
                         </View>
 
                         <View style={styles.card}>
                             <View style={styles.switchRow}>
-                                <Text>Include MCQs (1 Mark)</Text>
+                                <Text style={styles.switchLabel}>Include MCQs (1 Mark)</Text>
                                 <Switch value={includeMCQs} onValueChange={setIncludeMCQs} trackColor={{ true: '#C026D3' }} />
                             </View>
                             <View style={styles.switchRow}>
-                                <Text>Short Answers (2 Marks)</Text>
+                                <Text style={styles.switchLabel}>Short Answers (2 Marks)</Text>
                                 <Switch value={includeFlashcards} onValueChange={setIncludeFlashcards} trackColor={{ true: '#C026D3' }} />
                             </View>
                             <View style={styles.switchRow}>
-                                <Text>Long Answers (5 Marks)</Text>
+                                <Text style={styles.switchLabel}>Long Answers (5 Marks)</Text>
                                 <Switch value={includeRevision} onValueChange={setIncludeRevision} trackColor={{ true: '#C026D3' }} />
                             </View>
                         </View>
@@ -655,11 +655,11 @@ const styles = StyleSheet.create({
     headerGradient: { paddingBottom: 20 },
     header: { flexDirection: 'row', padding: 20, alignItems: 'center' },
     backButton: { marginRight: 15 },
-    headerTitle: { fontSize: 22, fontWeight: 'bold', color: 'white' },
-    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.9)' },
+    headerTitle: { fontSize: 22, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold' },
+    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.9)', fontFamily: 'NotoSans-Regular' },
     content: { padding: 20, paddingBottom: 50 },
     section: { marginBottom: 30 },
-    sectionHeader: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 15 },
+    sectionHeader: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 15, fontFamily: 'NotoSans-Bold' },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     subjectCard: { width: '48%', borderRadius: 16, overflow: 'hidden', elevation: 3 },
     subjectCardSelected: { transform: [{ scale: 1.02 }], elevation: 6 },
@@ -676,7 +676,9 @@ const styles = StyleSheet.create({
     checkboxSelected: { backgroundColor: '#C026D3', borderColor: '#C026D3' },
     chapterText: { fontSize: 15, color: '#334155', flex: 1 },
     card: { backgroundColor: 'white', borderRadius: 12, padding: 15, marginBottom: 15, elevation: 2 },
-    label: { fontSize: 15, fontWeight: '600', marginBottom: 10 },
+    label: { fontSize: 15, fontWeight: '600', marginBottom: 10, color: '#1e293b', fontFamily: 'NotoSans-Bold' },
+    switchLabel: { fontSize: 15, color: '#334155', fontFamily: 'NotoSans-Regular' },
+    slider: { width: '100%', height: 40, marginTop: 5 },
     switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
     generateBtn: { borderRadius: 16, overflow: 'hidden', marginTop: 10, elevation: 4 },
     btnGradient: { padding: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },

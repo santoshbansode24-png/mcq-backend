@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     },
     tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', height: '100%' },
     iconWrapper: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 2 },
-    tabLabel: { fontSize: 11, textAlign: 'center' },
+    tabLabel: { fontSize: 11, textAlign: 'center', fontFamily: 'NotoSans-Bold' },
 });
 
 export default MainScreen;

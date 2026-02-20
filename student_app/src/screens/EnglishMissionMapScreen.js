@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     center: { justifyContent: 'center', alignItems: 'center' },
     header: { padding: 20, paddingTop: 50, flexDirection: 'row', alignItems: 'center', elevation: 4 },
     backButton: { marginRight: 15 },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', fontFamily: 'NotoSans-Bold' },
     mapContainer: { padding: 20, paddingBottom: 50, alignItems: 'center' },
     pathLine: {
         position: 'absolute',
@@ -165,7 +165,8 @@ const styles = StyleSheet.create({
     levelNumber: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#78350f' // Dark Amber/Brown for Yellow background
+        color: '#78350f', // Dark Amber/Brown for Yellow background
+        fontFamily: 'NotoSans-Bold'
     },
     completedLevelNumber: {
         color: '#fff' // White for Green background
@@ -186,8 +187,8 @@ const styles = StyleSheet.create({
         padding: 5,
         borderRadius: 8
     },
-    levelTitle: { fontWeight: 'bold', fontSize: 14 },
-    levelRole: { fontSize: 12 }
+    levelTitle: { fontWeight: 'bold', fontSize: 14, fontFamily: 'NotoSans-Bold' },
+    levelRole: { fontSize: 12, fontFamily: 'NotoSans-Regular' }
 });
 
 export default EnglishMissionMapScreen;

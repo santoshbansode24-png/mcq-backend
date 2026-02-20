@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: 'bold',
         marginBottom: 20,
+        fontFamily: 'NotoSans-Bold',
     },
     statsRow: {
         flexDirection: 'row',
@@ -147,16 +148,19 @@ const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: 'bold',
         marginBottom: 5,
+        fontFamily: 'NotoSans-Bold',
     },
     statLabel: {
         fontSize: 14,
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 15,
         marginTop: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     chartContainer: {
         padding: 10,
@@ -177,9 +181,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 4,
+        fontFamily: 'NotoSans-Bold',
     },
     recentDate: {
         fontSize: 12,
+        fontFamily: 'NotoSans-Regular',
     },
     scoreBadge: {
         paddingHorizontal: 12,
@@ -189,6 +195,7 @@ const styles = StyleSheet.create({
     },
     scoreText: {
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     }
 });
 

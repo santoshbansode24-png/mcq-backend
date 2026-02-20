@@ -109,7 +109,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </TouchableOpacity>
 
-                    <Text style={styles.title}>Forgot Password</Text>
+                    <Text style={styles.title}>FORGOT PASSWORD</Text>
                     <Text style={styles.subtitle}>
                         {step === 1 ? 'Enter your registered email address' : 'Enter OTP and new password'}
                     </Text>
@@ -135,7 +135,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                                     onPress={handleSendOTP}
                                     disabled={loading}
                                 >
-                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Send OTP</Text>}
+                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>SEND OTP</Text>}
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -182,7 +182,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                                     onPress={handleResetPassword}
                                     disabled={loading}
                                 >
-                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Reset Password</Text>}
+                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>RESET PASSWORD</Text>}
                                 </TouchableOpacity>
                             </>
                         )}
@@ -198,14 +198,14 @@ const styles = StyleSheet.create({
     background: { flex: 1 },
     scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20 },
     backButton: { position: 'absolute', top: 40, left: 20, zIndex: 10 },
-    title: { fontSize: 32, fontWeight: 'bold', color: 'white', textAlign: 'center', marginBottom: 10, marginTop: 60 },
-    subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 40 },
+    title: { fontSize: 32, fontWeight: 'bold', color: 'white', textAlign: 'center', marginBottom: 10, marginTop: 60, fontFamily: 'NotoSans-Bold' },
+    subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 40, fontFamily: 'NotoSans-Regular' },
     card: { backgroundColor: 'white', borderRadius: 20, padding: 30, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5 },
     inputContainer: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ddd', marginBottom: 20, paddingBottom: 5 },
     icon: { marginRight: 10 },
-    input: { flex: 1, fontSize: 16, color: '#333', paddingVertical: 10 },
+    input: { flex: 1, fontSize: 16, color: '#333', paddingVertical: 10, fontFamily: 'NotoSans-Regular' },
     button: { backgroundColor: '#4c669f', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-    buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+    buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
 });
 
 export default ForgotPasswordScreen;

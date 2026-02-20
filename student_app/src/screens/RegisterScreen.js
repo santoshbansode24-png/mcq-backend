@@ -43,10 +43,11 @@ const RegisterScreen = ({ navigation }) => {
     const loadClassesData = async (board) => {
         setLoadingClasses(true);
         try {
-            // Fetch classes using the new board filter
-            const response = await axios.get(`${API_URL}/get_classes.php?board=${board}`);
-            if (response.data && response.data.status === 'success') {
-                setClasses(response.data.data);
+            // Fetch classes using the optimized service with caching
+            const response = await fetchClasses(board);
+            if (response && (response.status === 'success' || Array.isArray(response))) {
+                const classData = response.data || response;
+                setClasses(classData);
             } else {
                 setClasses([]); // No classes for this board yet
             }
@@ -145,7 +146,7 @@ const RegisterScreen = ({ navigation }) => {
 
                     <View style={styles.formContainer}>
                         <View style={styles.form}>
-                            <Text style={styles.label}>Full Name</Text>
+                            <Text style={styles.label}>FULL NAME</Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="John Doe"
@@ -154,7 +155,7 @@ const RegisterScreen = ({ navigation }) => {
                                 autoCapitalize="words"
                             />
 
-                            <Text style={styles.label}>Email Address</Text>
+                            <Text style={styles.label}>EMAIL ADDRESS</Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="student@example.com"
@@ -164,7 +165,7 @@ const RegisterScreen = ({ navigation }) => {
                                 autoCapitalize="none"
                             />
 
-                            <Text style={styles.label}>Mobile Number <Text style={{ color: 'red' }}>*</Text></Text>
+                            <Text style={styles.label}>MOBILE NUMBER <Text style={{ color: 'red' }}>*</Text></Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="9876543210"
@@ -174,7 +175,7 @@ const RegisterScreen = ({ navigation }) => {
                                 maxLength={10}
                             />
 
-                            <Text style={styles.label}>School Name</Text>
+                            <Text style={styles.label}>SCHOOL NAME</Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Enter your school name"
@@ -183,7 +184,7 @@ const RegisterScreen = ({ navigation }) => {
                             />
 
                             {/* Board Selection */}
-                            <Text style={styles.label}>Select Board / Medium</Text>
+                            <Text style={styles.label}>SELECT BOARD / MEDIUM</Text>
                             <View style={styles.boardContainer}>
                                 {[
                                     { id: 'CBSE', label: 'CBSE' },
@@ -203,7 +204,7 @@ const RegisterScreen = ({ navigation }) => {
                             </View>
 
                             {/* Class Selection */}
-                            <Text style={styles.label}>Class</Text>
+                            <Text style={styles.label}>CLASS</Text>
                             <TouchableOpacity
                                 style={[styles.dropdownBtn, !selectedBoard && { opacity: 0.5, backgroundColor: '#f3f4f6' }]}
                                 onPress={() => {
@@ -221,7 +222,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <Ionicons name="chevron-down" size={20} color="#6b7280" />
                             </TouchableOpacity>
 
-                            <Text style={styles.label}>Password</Text>
+                            <Text style={styles.label}>PASSWORD</Text>
                             <View style={styles.passwordContainer}>
                                 <TextInput
                                     style={styles.passwordInput}
@@ -235,7 +236,7 @@ const RegisterScreen = ({ navigation }) => {
                                 </TouchableOpacity>
                             </View>
 
-                            <Text style={styles.label}>Confirm Password</Text>
+                            <Text style={styles.label}>CONFIRM PASSWORD</Text>
                             <View style={styles.passwordContainer}>
                                 <TextInput
                                     style={styles.passwordInput}
@@ -319,10 +320,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
         marginBottom: 8,
+        fontFamily: 'NotoSans-Bold',
     },
     headerSubtitle: {
         fontSize: 16,
         color: 'rgba(255, 255, 255, 0.9)',
+        fontFamily: 'NotoSans-Regular',
     },
     formContainer: {
         flex: 1,
@@ -343,6 +346,7 @@ const styles = StyleSheet.create({
         color: '#374151',
         marginBottom: 8,
         marginTop: 16,
+        fontFamily: 'NotoSans-Bold',
     },
     input: {
         backgroundColor: '#f9fafb',
@@ -352,8 +356,7 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 16,
         color: '#1f2937',
-        fontSize: 16,
-        color: '#1f2937',
+        fontFamily: 'NotoSans-Regular',
     },
     passwordContainer: {
         backgroundColor: '#f9fafb',
@@ -369,6 +372,7 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 16,
         color: '#1f2937',
+        fontFamily: 'NotoSans-Regular',
     },
     eyeIcon: {
         padding: 4,
@@ -394,10 +398,12 @@ const styles = StyleSheet.create({
     boardText: {
         color: '#6b7280',
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     boardTextActive: {
         color: '#4f46e5',
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     dropdownBtn: {
         backgroundColor: '#f9fafb',
@@ -412,6 +418,7 @@ const styles = StyleSheet.create({
     dropdownText: {
         fontSize: 16,
         color: '#1f2937',
+        fontFamily: 'NotoSans-Regular',
     },
     button: {
         backgroundColor: '#4f46e5',
@@ -429,6 +436,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     loginLink: {
         marginTop: 20,

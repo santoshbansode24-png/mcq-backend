@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 10,
         paddingHorizontal: 20,
+        fontFamily: 'NotoSans-Bold',
     },
     list: {
         paddingHorizontal: 15,
@@ -121,6 +122,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         textAlign: 'center',
+        fontFamily: 'NotoSans-Bold',
     },
     modalOverlay: {
         flex: 1,
@@ -144,12 +146,14 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 8,
+        fontFamily: 'NotoSans-Bold',
     },
     modalDesc: {
         fontSize: 16,
         textAlign: 'center',
         marginBottom: 20,
         lineHeight: 22,
+        fontFamily: 'NotoSans-Regular',
     },
     earnedDate: {
         fontSize: 14,

@@ -15,7 +15,7 @@ if (!defined('GEMINI_API_KEY')) {
 }
 
 if (!defined('GEMINI_API_URL')) {
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
 }
 
 // uploadToGemini removed for optimization

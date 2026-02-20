@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     background: { ...StyleSheet.absoluteFillObject },
     header: { paddingTop: 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     missionTag: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-    missionText: { color: '#fff', fontWeight: 'bold' },
+    missionText: { color: '#fff', fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     closeBtn: { padding: 5 },
 
     tutorArea: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
@@ -279,25 +279,25 @@ const styles = StyleSheet.create({
     avatarImage: { width: 140, height: 140 },
 
     speechBubble: { backgroundColor: '#fff', padding: 20, borderRadius: 20, maxWidth: '90%', elevation: 5 },
-    tutorText: { fontSize: 18, color: '#1e293b', lineHeight: 26, textAlign: 'center' },
+    tutorText: { fontSize: 18, color: '#1e293b', lineHeight: 26, textAlign: 'center', fontFamily: 'NotoSans-Regular' },
 
     hintBox: { marginTop: 30, backgroundColor: 'rgba(251, 191, 36, 0.2)', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#facc15', alignItems: 'center' },
-    hintTitle: { color: '#facc15', fontWeight: 'bold', marginBottom: 5 },
-    hintText: { color: '#fff', fontSize: 16 },
+    hintTitle: { color: '#facc15', fontWeight: 'bold', marginBottom: 5, fontFamily: 'NotoSans-Bold' },
+    hintText: { color: '#fff', fontSize: 16, fontFamily: 'NotoSans-Regular' },
 
     bottomArea: { padding: 30, paddingBottom: 50 },
     fluencyContainer: { marginBottom: 30 },
-    fluencyLabel: { color: '#94a3b8', marginBottom: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
+    fluencyLabel: { color: '#94a3b8', marginBottom: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'NotoSans-Bold' },
     barTrack: { height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' },
     barFill: { height: '100%', borderRadius: 4 },
 
     micContainer: { alignItems: 'center', gap: 10 },
     micButton: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center', elevation: 10, borderWidth: 4, borderColor: 'rgba(255,255,255,0.2)' },
     micActive: { backgroundColor: '#22c55e', transform: [{ scale: 1.1 }] },
-    micLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
+    micLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontFamily: 'NotoSans-Regular' },
 
     completeBtn: { backgroundColor: '#22c55e', padding: 20, borderRadius: 16, alignItems: 'center' },
-    completeText: { color: '#fff', fontSize: 20, fontWeight: 'bold' }
+    completeText: { color: '#fff', fontSize: 20, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' }
 });
 
 export default EnglishTutorScreen;

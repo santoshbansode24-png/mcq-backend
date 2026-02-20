@@ -331,7 +331,7 @@ CREATE TABLE `mcq_attempts` (
   KEY `idx_user_chapter` (`user_id`,`chapter_id`),
   KEY `idx_user_mcq` (`user_id`,`mcq_id`),
   KEY `idx_correctness` (`user_id`,`chapter_id`,`is_correct`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -340,6 +340,7 @@ CREATE TABLE `mcq_attempts` (
 
 LOCK TABLES `mcq_attempts` WRITE;
 /*!40000 ALTER TABLE `mcq_attempts` DISABLE KEYS */;
+INSERT INTO `mcq_attempts` VALUES (1,29,1367,135,'d','b',0,'2026-02-19 18:03:51'),(2,29,1369,135,'c','b',0,'2026-02-19 18:03:53');
 /*!40000 ALTER TABLE `mcq_attempts` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -456,7 +457,7 @@ CREATE TABLE `notes` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`note_id`),
   KEY `idx_chapter_id` (`chapter_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -465,7 +466,7 @@ CREATE TABLE `notes` (
 
 LOCK TABLES `notes` WRITE;
 /*!40000 ALTER TABLE `notes` DISABLE KEYS */;
-INSERT INTO `notes` VALUES (1,1,'Real Numbers - Complete Notes',NULL,'<h1>Real Numbers</h1><p>Real numbers include all rational and irrational numbers...</p>','html','2025-11-29 07:17:04'),(2,2,'Polynomials Study Guide',NULL,'<h1>Polynomials</h1><p>A polynomial is an expression consisting of variables and coefficients...</p>','html','2025-11-29 07:17:04'),(3,13,'सूर्य, चंद्र आणि पृथ्वी','uploads/notes/1766166465____________________________________________________.pdf','','pdf','2025-12-19 06:47:45'),(4,13,'sun, moon and earth','uploads/notes/1766501947____________________________________________________.pdf','','pdf','2025-12-23 03:59:07'),(5,14,'ELECTRICITY','uploads/notes/1766502046_The_Electricity_Sketchbook.pdf','','pdf','2025-12-23 04:00:46'),(6,14,'electricity','uploads/notes/1766504305_Acid_Base_Detectives.pdf','','pdf','2025-12-23 04:38:25'),(10,79,'NATIONAL SYMBOLS','https://drive.google.com/uc?export=download&id=1NxyQbRjbt5PMdtRzPgDhID3B4x6UNCRM','','pdf','2026-01-14 14:35:42'),(14,15,'EARLY HUMANS','https://drive.google.com/file/d/1mSLv9LzaYu4ZRyCh0nOU1v1dpLZr0ttL/view?usp=drive_link','','pdf','2026-01-14 14:58:08'),(15,77,'INDUS VALLEY CIVILISATION','https://drive.google.com/file/d/12gD-R9qicDSxctc_jW2xbRlVQ2J0Nktd/view?usp=drive_link','','pdf','2026-01-14 15:03:12'),(16,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=drive_link','','pdf','2026-01-14 15:03:32'),(20,82,'DIFFERENT OCCUPATIONS','https://drive.google.com/file/d/13S_KscXwxgGbUD8ApYeOl1vWxw3TCPQs/view?usp=drive_link','','pdf','2026-01-15 13:13:23'),(21,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=sharing','','pdf','2026-01-15 13:14:51'),(22,80,'OUR GREAT LEADERS','https://drive.google.com/file/d/1clc9pKXuQBCMIMC-d4BdgsJg6UZINcV_/view?usp=sharing','','pdf','2026-01-15 13:15:31'),(23,81,'TRANSPORT AND COMMUNICATIONS','https://drive.google.com/file/d/1so9Uf9XECpo3RM7WJ3PrDVo34F62vgNh/view?usp=sharing','','pdf','2026-01-15 13:16:12'),(24,83,'OUR ENVIRONMENT','https://drive.google.com/file/d/1bE9O1z__q_Ad4o5qwINsvKgRVbEl7Jj4/view?usp=sharing','','pdf','2026-01-15 13:29:35'),(25,84,'AIR, WATER AND WEATHER','https://drive.google.com/file/d/1PR7AKXEh6aGMGOW3pzB4fWViMi_sYuAm/view?usp=sharing','','pdf','2026-01-17 11:34:15'),(26,85,'HOUSING AND COTHING','https://drive.google.com/file/d/1I0k-HYUp3tJI3y6MhUZkaO9ijYBSUsqH/view?usp=sharing','','pdf','2026-01-17 11:34:52'),(27,132,'VISIT TO MAWLYNNONG','https://drive.google.com/file/d/1ZJQsj5jHNDsWHkq_G3uaY0auVuOVy4JK/view?usp=sharing','','pdf','2026-02-12 17:56:44'),(28,133,'BOOND','https://drive.google.com/file/d/1dwtaxCZyGLhop8pt3ThJRVz7ycVD6xYG/view?usp=sharing','','pdf','2026-02-12 19:00:21'),(30,134,'MY BROTHER ON WHEELCHAIR','uploads/notes/1771265147_My_Brother_s_Wheelchair_Notes_compressed.pdf','','pdf','2026-02-16 18:05:48'),(31,135,'THE COCCOON','uploads/notes/1771266212_Cocoon_to_Butterfly_Notes_compressed.pdf','','pdf','2026-02-16 18:23:32');
+INSERT INTO `notes` VALUES (1,1,'Real Numbers - Complete Notes',NULL,'<h1>Real Numbers</h1><p>Real numbers include all rational and irrational numbers...</p>','html','2025-11-29 07:17:04'),(2,2,'Polynomials Study Guide',NULL,'<h1>Polynomials</h1><p>A polynomial is an expression consisting of variables and coefficients...</p>','html','2025-11-29 07:17:04'),(3,13,'सूर्य, चंद्र आणि पृथ्वी','uploads/notes/1766166465____________________________________________________.pdf','','pdf','2025-12-19 06:47:45'),(4,13,'sun, moon and earth','uploads/notes/1766501947____________________________________________________.pdf','','pdf','2025-12-23 03:59:07'),(5,14,'ELECTRICITY','uploads/notes/1766502046_The_Electricity_Sketchbook.pdf','','pdf','2025-12-23 04:00:46'),(6,14,'electricity','uploads/notes/1766504305_Acid_Base_Detectives.pdf','','pdf','2025-12-23 04:38:25'),(10,79,'NATIONAL SYMBOLS','https://drive.google.com/uc?export=download&id=1NxyQbRjbt5PMdtRzPgDhID3B4x6UNCRM','','pdf','2026-01-14 14:35:42'),(14,15,'EARLY HUMANS','https://drive.google.com/file/d/1mSLv9LzaYu4ZRyCh0nOU1v1dpLZr0ttL/view?usp=drive_link','','pdf','2026-01-14 14:58:08'),(15,77,'INDUS VALLEY CIVILISATION','https://drive.google.com/file/d/12gD-R9qicDSxctc_jW2xbRlVQ2J0Nktd/view?usp=drive_link','','pdf','2026-01-14 15:03:12'),(16,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=drive_link','','pdf','2026-01-14 15:03:32'),(20,82,'DIFFERENT OCCUPATIONS','https://drive.google.com/file/d/13S_KscXwxgGbUD8ApYeOl1vWxw3TCPQs/view?usp=drive_link','','pdf','2026-01-15 13:13:23'),(21,78,'OUR GOVERNMENT','https://drive.google.com/file/d/1ey5lLlhEP_G_gi0fculCtk0KlVGZZTQ5/view?usp=sharing','','pdf','2026-01-15 13:14:51'),(22,80,'OUR GREAT LEADERS','https://drive.google.com/file/d/1clc9pKXuQBCMIMC-d4BdgsJg6UZINcV_/view?usp=sharing','','pdf','2026-01-15 13:15:31'),(23,81,'TRANSPORT AND COMMUNICATIONS','https://drive.google.com/file/d/1so9Uf9XECpo3RM7WJ3PrDVo34F62vgNh/view?usp=sharing','','pdf','2026-01-15 13:16:12'),(24,83,'OUR ENVIRONMENT','https://drive.google.com/file/d/1bE9O1z__q_Ad4o5qwINsvKgRVbEl7Jj4/view?usp=sharing','','pdf','2026-01-15 13:29:35'),(25,84,'AIR, WATER AND WEATHER','https://drive.google.com/file/d/1PR7AKXEh6aGMGOW3pzB4fWViMi_sYuAm/view?usp=sharing','','pdf','2026-01-17 11:34:15'),(33,132,'VISIT TO MAWLYNNONG','uploads/notes/1771502647_Mawlynnong_Chapter_Review_compressed__1_.pdf','','pdf','2026-02-19 12:04:07'),(34,85,'HOUSING AND CLOTHING','uploads/notes/1771502697_Housing_and_Clothing_Notes_compressed.pdf','','pdf','2026-02-19 12:04:57'),(35,85,'HOUSING AND CLOTHING','uploads/notes/1771508423_Housing_and_Clothing_Notes_compressed.pdf','','pdf','2026-02-19 13:40:24'),(40,133,'BOOND','https://veeru-notes-storage-2026.s3.ap-south-1.amazonaws.com/notes/1771516269_Boond_The_Water_Cycle_Story_compressed.pdf','','pdf','2026-02-19 15:51:11'),(41,134,'WHEELCHAIR','https://veeru-notes-storage-2026.s3.ap-south-1.amazonaws.com/notes/1771522977_My_Brother_s_Wheelchair_Notes_compressed.pdf','','pdf','2026-02-19 17:43:00');
 /*!40000 ALTER TABLE `notes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1305,4 +1306,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-19 17:17:06
+-- Dump completed on 2026-02-20  1:02:46

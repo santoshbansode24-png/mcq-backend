@@ -47,8 +47,7 @@ if ($action === 'send_otp') {
 
         echo json_encode([
             'status' => 'success', 
-            'message' => 'OTP sent successfully',
-            'debug_otp' => $otp // REMOVE THIS IN PRODUCTION
+            'message' => 'OTP sent successfully'
         ]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Failed to generate OTP']);

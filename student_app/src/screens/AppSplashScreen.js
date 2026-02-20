@@ -132,12 +132,14 @@ const styles = StyleSheet.create({
         textShadowColor: 'rgba(0, 0, 0, 0.3)',
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 10,
+        fontFamily: 'NotoSans-Bold',
     },
     subtitle: {
         fontSize: 20,
         color: '#f0f9ff',
         marginTop: 5,
         fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
     },
     tagline: {
         fontSize: 16,

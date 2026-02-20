@@ -479,18 +479,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center', alignItems: 'center', marginBottom: 20,
     },
     emoji: { fontSize: 40 },
-    title: { fontSize: 26, fontWeight: '800', marginBottom: 5, color: '#1e293b' },
-    subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 15, color: '#64748b' },
+    title: { fontSize: 26, fontWeight: '800', marginBottom: 5, color: '#1e293b', fontFamily: 'NotoSans-Bold' },
+    subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 15, color: '#64748b', fontFamily: 'NotoSans-Regular' },
     rulesContainer: {
         backgroundColor: '#f1f5f9', padding: 15, borderRadius: 12, marginBottom: 25, width: '100%',
     },
-    ruleText: { fontSize: 14, color: '#475569', textAlign: 'center', marginBottom: 5, fontWeight: '600' },
+    ruleText: { fontSize: 14, color: '#475569', textAlign: 'center', marginBottom: 5, fontWeight: '600', fontFamily: 'NotoSans-Bold' },
     primaryButton: {
         flexDirection: 'row', width: '100%', paddingVertical: 18, borderRadius: 20,
         justifyContent: 'center', alignItems: 'center', shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
     },
-    primaryButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+    primaryButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     buttonRow: { flexDirection: 'row', width: '100%', marginTop: 20 },
     outlineButton: {
         paddingHorizontal: 25, paddingVertical: 16, borderRadius: 20, borderWidth: 2,
@@ -500,21 +500,21 @@ const styles = StyleSheet.create({
     gameWrapper: { flex: 1, justifyContent: 'center' },
     gameHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     scorePill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 15 },
-    scoreText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+    scoreText: { color: '#fff', fontWeight: 'bold', fontSize: 16, fontFamily: 'NotoSans-Bold' },
     timerPill: {
         flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)',
         paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'
     },
     timerUrgent: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-    timerText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
+    timerText: { color: '#fff', fontWeight: 'bold', fontSize: 18, fontFamily: 'NotoSans-Bold' },
     questionCard: {
         backgroundColor: '#fff', borderRadius: 30, height: 200, justifyContent: 'center',
         alignItems: 'center', marginBottom: 30, shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20,
         elevation: 10, overflow: 'hidden',
     },
-    questionText: { fontSize: 48, fontWeight: '900', color: '#1e293b' },
+    questionText: { fontSize: 48, fontWeight: '900', color: '#1e293b', fontFamily: 'NotoSans-Bold' },
     feedbackOverlay: {
         ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10,
     },
@@ -535,9 +535,10 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 32, // Increased slightly for readability
         fontWeight: 'bold',
-        color: '#1e293b' // Dark Slate/Blue for high contrast
+        color: '#1e293b', // Dark Slate/Blue for high contrast
+        fontFamily: 'NotoSans-Bold',
     },
-    bigScore: { fontSize: 60, fontWeight: '900', color: '#333', marginVertical: 10 },
+    bigScore: { fontSize: 60, fontWeight: '900', color: '#333', marginVertical: 10, fontFamily: 'NotoSans-Bold' },
     totalScore: { fontSize: 24, color: '#888', fontWeight: '500' },
     resultMessage: { fontSize: 16, color: '#666', marginBottom: 20 },
 });

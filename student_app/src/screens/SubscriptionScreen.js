@@ -162,8 +162,8 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 20 : 60
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
-    headerTitle: { fontSize: 20, fontWeight: 'bold' },
-    title: { fontSize: 24, fontWeight: 'bold' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
+    title: { fontSize: 24, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     card: {
         backgroundColor: 'rgba(255,255,255,0.05)',
         padding: 30,
@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(0,0,0,0.1)'
     },
-    planTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 5 },
-    price: { fontSize: 36, fontWeight: 'bold', marginBottom: 20 },
+    planTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 5, fontFamily: 'NotoSans-Bold' },
+    price: { fontSize: 36, fontWeight: 'bold', marginBottom: 20, fontFamily: 'NotoSans-Bold' },
     features: { width: '100%', marginBottom: 30 },
     featureItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
     buyBtn: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 5
     },
-    buyBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+    buyBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     btn: { padding: 15, borderRadius: 10 },
     btnText: { color: 'white', fontWeight: 'bold' }
 });

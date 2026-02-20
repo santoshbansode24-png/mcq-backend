@@ -181,11 +181,13 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#fff',
         letterSpacing: -0.5,
+        fontFamily: 'NotoSans-Bold',
     },
     subGreeting: {
         fontSize: 15,
         color: 'rgba(255,255,255,0.7)',
         marginTop: 2,
+        fontFamily: 'NotoSans-Regular',
     },
     profileButton: {
         width: 44,
@@ -222,6 +224,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '800',
         color: '#1e293b',
+        fontFamily: 'NotoSans-Bold',
     },
     statLabel: {
         fontSize: 11,
@@ -229,6 +232,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
         fontWeight: '600',
         textTransform: 'uppercase',
+        fontFamily: 'NotoSans-Bold',
     },
     statDivider: {
         width: 1,
@@ -247,6 +251,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#1e293b',
         marginBottom: 16,
+        fontFamily: 'NotoSans-Bold',
     },
     grid: {
         flexDirection: 'column', // Stack vertically
@@ -288,6 +293,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: 'white',
         marginBottom: 4,
+        fontFamily: 'NotoSans-Bold',
     },
     rowSubtitle: {
         fontSize: 12,
@@ -295,6 +301,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         fontWeight: '600',
         letterSpacing: 0.5,
+        fontFamily: 'NotoSans-Bold',
     },
     arrowContainerRow: {
         padding: 8,

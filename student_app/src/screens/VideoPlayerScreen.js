@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, StatusBar, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar, Dimensions, BackHandler } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { Video, ResizeMode } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -40,7 +40,24 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             setTaskTimer(activeTask.duration_minutes * 60);
             setIsTaskActive(true);
         }
-    }, [activeTask]);
+
+        // Handle physical back button and ensure orientation reset on unmount
+        const backAction = () => {
+            navigation.goBack();
+            return true; // Prevent default behavior (which might be popping the history stack in MainScreen)
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => {
+            backHandler.remove();
+            // Force reset to Portrait when leaving VideoPlayer
+            ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+        };
+    }, [activeTask, navigation]);
 
     // Countdown Logic
     React.useEffect(() => {
@@ -192,11 +209,13 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     title: {
         color: 'white',
         fontSize: 16,
         flex: 1,
+        fontFamily: 'NotoSans-Bold',
     },
     timerOverlay: {
         position: 'absolute',
@@ -217,7 +236,8 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         marginRight: 10,
-        fontVariant: ['tabular-nums']
+        fontVariant: ['tabular-nums'],
+        fontFamily: 'NotoSans-Bold',
     },
     finishBtn: {
         backgroundColor: '#7e22ce',
@@ -229,6 +249,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
     },
     videoContainer: {
         flex: 1,

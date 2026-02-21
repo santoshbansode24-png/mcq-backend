@@ -1,2 +1,2 @@
-2.7
-// Version 2.7: Consolidated Admin and Fixed Note Logic
+2.7.2
+// Adding AWS SDK dependency

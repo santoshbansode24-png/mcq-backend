@@ -1,20 +1,25 @@
-header('Content-Type: text/plain');
+// header('Content-Type: text/plain'); // Removed for browser visibility
 require_once '../config/db.php';
 
-echo "Database Host: " . (getenv('DB_HOST') ?: '127.0.0.1') . "\n";
-echo "Database Name: " . (getenv('DB_NAME') ?: 'veeru_db') . "\n";
+echo "<h1>Debug Info</h1>";
+echo "Database Host: " . (getenv('DB_HOST') ?: '127.0.0.1') . "<br>";
+echo "Database Name: " . (getenv('DB_NAME') ?: 'veeru_db') . "<br>";
 
 try {
     $stmt = $pdo->query("SELECT * FROM notes ORDER BY created_at DESC LIMIT 10");
     $notes = $stmt->fetchAll();
     
-    echo "Count: " . count($notes) . "\n\n";
+    echo "<h2>Notes (Count: " . count($notes) . ")</h2>";
+    echo "<table border='1'>";
+    echo "<tr><th>ID</th><th>Title</th><th>Path</th></tr>";
     foreach ($notes as $note) {
-        echo "ID: " . $note['note_id'] . " | ";
-        echo "Title: " . $note['title'] . " | ";
-        echo "Source: " . ($note['source'] ?? 'N/A') . " | ";
-        echo "Path: " . $note['file_path'] . "\n";
+        echo "<tr>";
+        echo "<td>" . $note['note_id'] . "</td>";
+        echo "<td>" . htmlspecialchars($note['title']) . "</td>";
+        echo "<td>" . htmlspecialchars($note['file_path']) . "</td>";
+        echo "</tr>";
     }
+    echo "</table>";
 } catch (Exception $e) {
-    echo "Error: " . $e->getMessage();
+    echo "<p style='color:red'>Error: " . $e->getMessage() . "</p>";
 }

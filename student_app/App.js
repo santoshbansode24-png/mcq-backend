@@ -9,6 +9,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 // Expo Fonts & Splash Screen
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Screen Imports
 import LoginScreen from './src/screens/LoginScreen';
@@ -31,6 +32,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [serverChecked, setServerChecked] = useState(false);
+  const [initialRoute, setInitialRoute] = useState(null);
   const [fontsLoaded, error] = useFonts({
     'NotoSans-Regular': require('./assets/fonts/NotoSansDevanagari-Regular.ttf'),
     'NotoSans-Bold': require('./assets/fonts/NotoSansDevanagari-Bold.ttf'),
@@ -51,8 +53,22 @@ export default function App() {
           checkServerConnection(),
           timeoutPromise
         ]);
+
+        // NEW: Check session logic moved from AppSplashScreen
+        const savedUser = await AsyncStorage.getItem('user_data');
+        const userData = savedUser ? JSON.parse(savedUser) : null;
+        if (userData) {
+          if (!userData.class_id || !userData.board_type) {
+            setInitialRoute('Setup');
+          } else {
+            setInitialRoute('Main');
+          }
+        } else {
+          setInitialRoute('Login');
+        }
       } catch (e) {
-        console.log('Server check bypassed or failed:', e.message);
+        console.log('Server check or session check failed:', e.message);
+        setInitialRoute('Login'); // Fallback to login
       } finally {
         // Always allow the app to proceed
         setServerChecked(true);
@@ -62,12 +78,12 @@ export default function App() {
   }, []);
 
   const onLayoutRootView = useCallback(async () => {
-    if ((fontsLoaded || error) && serverChecked) {
+    if ((fontsLoaded || error) && serverChecked && initialRoute) {
       await SplashScreen.hideAsync().catch(console.warn);
     }
-  }, [fontsLoaded, error, serverChecked]);
+  }, [fontsLoaded, error, serverChecked, initialRoute]);
 
-  if ((!fontsLoaded && !error) || !serverChecked) {
+  if ((!fontsLoaded && !error) || !serverChecked || !initialRoute) {
     return null;
   }
 
@@ -78,7 +94,7 @@ export default function App() {
           <NavigationContainer onReady={onLayoutRootView}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <Stack.Navigator
-              initialRouteName="AppSplash"
+              initialRouteName={initialRoute}
               screenOptions={{
                 headerShown: false,
                 animationEnabled: true
@@ -86,14 +102,12 @@ export default function App() {
             >
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
-              <Stack.Screen name="AppSplash" component={AppSplashScreen} />
               <Stack.Screen name="Setup" component={SetupScreen} />
               <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
               <Stack.Screen name="Main" component={MainScreen} />
               <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
               <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-
             </Stack.Navigator>
           </NavigationContainer>
         </ThemeProvider>

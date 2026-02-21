@@ -1,2 +1,2 @@
-2.7.5
-// Revert Splash Screen Design & v1.0.5 Build
+2.7.6
+// Remove In-App Splash Screen & v1.0.6 Build

@@ -4,37 +4,28 @@
  * Verifies the OTP code entered by user (email-based)
  */
 
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 require_once '../services/EmailService.php';
 
-try {
-    // Get POST data
-    $data = json_decode(file_get_contents("php://input"));
+// Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendResponse('error', 'Only POST requests are allowed', null, 405);
+}
 
-    if (empty($data->email) || empty($data->otp_code)) {
-        http_response_code(400);
-        echo json_encode([
-            "status"  => "error",
-            "message" => "Email and OTP code are required"
-        ]);
-        exit();
+try {
+    // Get JSON input
+    $input = getJsonInput();
+
+    if (empty($input['email']) || empty($input['otp_code'])) {
+        sendResponse('error', 'Email and OTP code are required', null, 400);
     }
 
-    $email   = strtolower(trim($data->email));
-    $otpCode = trim($data->otp_code);
+    $email   = strtolower(trim($input['email']));
+    $otpCode = trim($input['otp_code']);
 
     // Find valid OTP (phone_number column stores email now)
-    $stmt = $conn->prepare("
+    $stmt = $pdo->prepare("
         SELECT id, user_id, verified
         FROM password_reset_otps
         WHERE phone_number = ?
@@ -44,52 +35,36 @@ try {
         ORDER BY created_at DESC
         LIMIT 1
     ");
-    $stmt->bind_param("ss", $email, $otpCode);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->execute([$email, $otpCode]);
+    $otpRecord = $stmt->fetch();
 
-    if ($result->num_rows === 0) {
-        http_response_code(400);
-        echo json_encode([
-            "status"  => "error",
-            "message" => "Invalid or expired OTP code"
-        ]);
-        exit();
+    if (!$otpRecord) {
+        sendResponse('error', 'Invalid or expired OTP code', null, 400);
     }
 
-    $otpRecord = $result->fetch_assoc();
-
     // Mark OTP as verified
-    $stmt = $conn->prepare("UPDATE password_reset_otps SET verified = TRUE WHERE id = ?");
-    $stmt->bind_param("i", $otpRecord['id']);
-    $stmt->execute();
+    $stmt = $pdo->prepare("UPDATE password_reset_otps SET verified = TRUE WHERE id = ?");
+    $stmt->execute([$otpRecord['id']]);
 
     // Generate a temporary reset token (valid for 15 minutes)
     $resetToken  = bin2hex(random_bytes(32));
-    $tokenExpiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+    // We don't save reset_token in DB currently, it's just passed back to client
+    // For production, you'd save this in users or a reset_tokens table.
 
     // Get user details
-    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE id = ?");
-    $stmt->bind_param("i", $otpRecord['user_id']);
-    $stmt->execute();
-    $user = $stmt->get_result()->fetch_assoc();
+    $stmt = $pdo->prepare("SELECT user_id, name, email FROM users WHERE user_id = ?");
+    $stmt->execute([$otpRecord['user_id']]);
+    $user = $stmt->fetch();
 
-    http_response_code(200);
-    echo json_encode([
-        "status"                  => "success",
-        "message"                 => "OTP verified successfully",
+    sendResponse('success', 'OTP verified successfully', [
         "reset_token"             => $resetToken,
-        "user_id"                 => $user['id'],
+        "user_id"                 => $user['user_id'],
         "user_name"               => $user['name'],
         "token_expires_in_minutes" => 15
-    ]);
+    ], 200);
 
 } catch (Exception $e) {
     error_log("Verify OTP Error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        "status"  => "error",
-        "message" => "An error occurred. Please try again later."
-    ]);
+    sendResponse('error', 'An error occurred. Please try again later.', ['debug' => $e->getMessage()], 500);
 }
 ?>

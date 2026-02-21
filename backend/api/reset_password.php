@@ -4,46 +4,32 @@
  * Resets user password after OTP verification
  */
 
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
+// Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendResponse('error', 'Only POST requests are allowed', null, 405);
+}
+
 try {
-    // Get POST data
-    $data = json_decode(file_get_contents("php://input"));
+    // Get JSON input
+    $input = getJsonInput();
     
-    if (empty($data->user_id) || empty($data->new_password)) {
-        http_response_code(400);
-        echo json_encode([
-            "status" => "error",
-            "message" => "User ID and new password are required"
-        ]);
-        exit();
+    if (empty($input['user_id']) || empty($input['new_password'])) {
+        sendResponse('error', 'User ID and new password are required', null, 400);
     }
     
-    $userId = intval($data->user_id);
-    $newPassword = trim($data->new_password);
+    $userId = intval($input['user_id']);
+    $newPassword = trim($input['new_password']);
     
     // Validate password strength
     if (strlen($newPassword) < 6) {
-        http_response_code(400);
-        echo json_encode([
-            "status" => "error",
-            "message" => "Password must be at least 6 characters long"
-        ]);
-        exit();
+        sendResponse('error', 'Password must be at least 6 characters long', null, 400);
     }
     
     // Optional: Check if there's a recent verified OTP for this user
-    $stmt = $conn->prepare("
+    $stmt = $pdo->prepare("
         SELECT id 
         FROM password_reset_otps 
         WHERE user_id = ? 
@@ -52,55 +38,38 @@ try {
         ORDER BY created_at DESC 
         LIMIT 1
     ");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->execute([$userId]);
+    $otpRecord = $stmt->fetch();
     
-    if ($result->num_rows === 0) {
-        http_response_code(403);
-        echo json_encode([
-            "status" => "error",
-            "message" => "Invalid or expired reset session. Please request a new OTP."
-        ]);
-        exit();
+    if (!$otpRecord) {
+        sendResponse('error', 'Invalid or expired reset session. Please request a new OTP.', null, 403);
     }
     
     // Hash the new password
     $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
     
     // Update user password
-    $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-    $stmt->bind_param("si", $hashedPassword, $userId);
+    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
     
-    if (!$stmt->execute()) {
+    if (!$stmt->execute([$hashedPassword, $userId])) {
         throw new Exception("Failed to update password");
     }
     
     // Delete all OTP records for this user (cleanup)
-    $stmt = $conn->prepare("DELETE FROM password_reset_otps WHERE user_id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
+    $stmt = $pdo->prepare("DELETE FROM password_reset_otps WHERE user_id = ?");
+    $stmt->execute([$userId]);
     
     // Get user details
-    $stmt = $conn->prepare("SELECT name, email FROM users WHERE id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $user = $stmt->get_result()->fetch_assoc();
+    $stmt = $pdo->prepare("SELECT name, email FROM users WHERE user_id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
     
-    // Success response
-    http_response_code(200);
-    echo json_encode([
-        "status" => "success",
-        "message" => "Password reset successfully",
+    sendResponse('success', 'Password reset successfully', [
         "user_name" => $user['name']
-    ]);
+    ], 200);
     
 } catch (Exception $e) {
     error_log("Reset Password Error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        "status" => "error",
-        "message" => "An error occurred. Please try again later."
-    ]);
+    sendResponse('error', 'An error occurred. Please try again later.', ['debug' => $e->getMessage()], 500);
 }
 ?>

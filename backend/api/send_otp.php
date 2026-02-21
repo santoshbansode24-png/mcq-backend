@@ -5,77 +5,50 @@
  * Uses Resend email service (replaces MSG91 SMS)
  */
 
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+require_once 'cors_middleware.php';
 require_once '../config/db.php';
 require_once '../config/sms_config.php';
 require_once '../services/EmailService.php';
 
-try {
-    // Get POST data
-    $data = json_decode(file_get_contents("php://input"));
+// Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendResponse('error', 'Only POST requests are allowed', null, 405);
+}
 
-    if (empty($data->email)) {
-        http_response_code(400);
-        echo json_encode([
-            "status"  => "error",
-            "message" => "Email address is required"
-        ]);
-        exit();
+try {
+    // Get JSON input
+    $input = getJsonInput();
+
+    if (empty($input['email'])) {
+        sendResponse('error', 'Email address is required', null, 400);
     }
 
-    $email = strtolower(trim($data->email));
+    $email = strtolower(trim($input['email']));
 
     // Validate email format
     if (!EmailService::validateEmail($email)) {
-        http_response_code(400);
-        echo json_encode([
-            "status"  => "error",
-            "message" => "Invalid email address format"
-        ]);
-        exit();
+        sendResponse('error', 'Invalid email address format', null, 400);
     }
 
     // Check if user exists with this email
-    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt = $pdo->prepare("SELECT user_id, name, email FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
 
-    if ($result->num_rows === 0) {
-        http_response_code(404);
-        echo json_encode([
-            "status"  => "error",
-            "message" => "No account found with this email address"
-        ]);
-        exit();
+    if (!$user) {
+        sendResponse('error', 'No account found with this email address', null, 404);
     }
 
-    $user   = $result->fetch_assoc();
-    $userId = $user['id'];
+    $userId = $user['user_id'];
 
     // Rate limiting — max 3 OTP requests per hour
     $oneHourAgo = date('Y-m-d H:i:s', strtotime('-1 hour'));
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM password_reset_otps WHERE phone_number = ? AND created_at > ?");
-    $stmt->bind_param("ss", $email, $oneHourAgo);
-    $stmt->execute();
-    $rateLimitResult = $stmt->get_result()->fetch_assoc();
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM password_reset_otps WHERE phone_number = ? AND created_at > ?");
+    $stmt->execute([$email, $oneHourAgo]);
+    $rateLimit = $stmt->fetch();
 
-    if ($rateLimitResult['count'] >= OTP_MAX_ATTEMPTS_PER_HOUR) {
-        http_response_code(429);
-        echo json_encode([
-            "status"  => "error",
-            "message" => "Too many OTP requests. Please try again after 1 hour."
-        ]);
-        exit();
+    if ($rateLimit['count'] >= OTP_MAX_ATTEMPTS_PER_HOUR) {
+        sendResponse('error', 'Too many OTP requests. Please try again after 1 hour.', null, 429);
     }
 
     // Generate OTP
@@ -84,10 +57,9 @@ try {
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
     // Save OTP to database (reusing phone_number column to store email)
-    $stmt = $conn->prepare("INSERT INTO password_reset_otps (user_id, phone_number, otp_code, expires_at, ip_address) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("issss", $userId, $email, $otp, $expiresAt, $ipAddress);
-
-    if (!$stmt->execute()) {
+    $stmt = $pdo->prepare("INSERT INTO password_reset_otps (user_id, phone_number, otp_code, expires_at, ip_address) VALUES (?, ?, ?, ?, ?)");
+    
+    if (!$stmt->execute([$userId, $email, $otp, $expiresAt, $ipAddress])) {
         throw new Exception("Failed to save OTP");
     }
 
@@ -97,36 +69,23 @@ try {
 
     if (!$emailResult['success']) {
         // Delete the OTP record if email failed
-        $stmt = $conn->prepare("DELETE FROM password_reset_otps WHERE user_id = ? AND otp_code = ?");
-        $stmt->bind_param("is", $userId, $otp);
-        $stmt->execute();
+        $stmt = $pdo->prepare("DELETE FROM password_reset_otps WHERE user_id = ? AND otp_code = ?");
+        $stmt->execute([$userId, $otp]);
 
-        http_response_code(500);
-        echo json_encode([
-            "status"  => "error",
-            "message" => $emailResult['message']
-        ]);
-        exit();
+        sendResponse('error', $emailResult['message'], $emailResult['error'] ?? null, 500);
     }
 
     // Mask email for response (e.g. s***@gmail.com)
     $emailParts   = explode('@', $email);
     $maskedEmail  = substr($emailParts[0], 0, 1) . '***@' . $emailParts[1];
 
-    http_response_code(200);
-    echo json_encode([
-        "status"            => "success",
-        "message"           => "OTP sent to " . $maskedEmail,
+    sendResponse('success', "OTP sent to " . $maskedEmail, [
         "expires_in_minutes" => OTP_EXPIRY_MINUTES,
         "user_name"         => $user['name']
-    ]);
+    ], 200);
 
 } catch (Exception $e) {
     error_log("Send OTP Error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        "status"  => "error",
-        "message" => "An error occurred. Please try again later."
-    ]);
+    sendResponse('error', 'An error occurred. Please try again later.', ['debug' => $e->getMessage()], 500);
 }
 ?>

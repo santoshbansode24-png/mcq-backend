@@ -56,15 +56,20 @@ try {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
-    // Verify password
-    if (!password_verify($password, $user['password'])) {
+    // --- START REVIEWER BYPASS ---
+    // Special bypass for Google Play Store reviewers
+    $isReviewerBypass = ($email === 'reviewer@veeru.com' && $password === 'veeru123');
+    
+    // Verify password (skip for reviewer)
+    if (!$isReviewerBypass && !password_verify($password, $user['password'])) {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
-    // Check subscription status
-    if ($user['subscription_status'] !== 'active') {
+    // Check subscription status (skip for reviewer)
+    if (!$isReviewerBypass && $user['subscription_status'] !== 'active') {
         sendResponse('error', 'Your subscription is inactive. Please renew to continue.', null, 403);
     }
+    // --- END REVIEWER BYPASS ---
     
     // Update Login Streak and Last Login
     $today = date('Y-m-d');

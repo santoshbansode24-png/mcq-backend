@@ -28,7 +28,7 @@ export const dataCache = {
      * Get data from cache
      * @param {string} key - Unique key
      * @param {string} type - Content type
-     * @returns {any|null} - The data or null if missing/expired
+     * @returns {any|null} - The data or null if missing
      */
     get: async (key, type) => {
         try {
@@ -37,13 +37,16 @@ export const dataCache = {
 
             const cacheItem = JSON.parse(raw);
 
-            // Check expiry (Enabling to fix stale note links)
-            if (Date.now() - cacheItem.timestamp > DEFAULT_EXPIRY_MS) {
-                console.log(`[Cache] Expired ${key}`);
-                return null;
+            // DURABILITY: We always return the cached data even if it's old.
+            // The API wrappers (fetchMCQs, etc.) handle the "Stale-While-Revalidate" 
+            // logic by showing this data instantly and then updating it from the network.
+            const ageHours = (Date.now() - cacheItem.timestamp) / (1000 * 60 * 60);
+            if (ageHours > 24) {
+                console.log(`[Cache] Returning stale data for ${key} (${Math.round(ageHours)}h old). Background refresh will update it.`);
+            } else {
+                console.log(`[Cache] Hit ${key}`);
             }
 
-            console.log(`[Cache] Hit ${key}`);
             return cacheItem.data;
         } catch (error) {
             console.warn('[Cache] Get failed:', error);

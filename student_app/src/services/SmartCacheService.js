@@ -15,6 +15,8 @@ import { BASE_URL } from '../api/config';
 const SYNC_STATUS_KEY = '@smart_sync_status';
 const SYNC_QUEUE_KEY = '@smart_sync_queue'; // To resume interrupted syncs
 
+let isProcessing = false; // concurrency lock
+
 export const SmartCacheService = {
     /**
      * Bulk sync all data for a specific class
@@ -31,7 +33,7 @@ export const SmartCacheService = {
 
                 // Even if we skip bulk sync, check if we have any pending "Resume" work
                 const queue = await SmartCacheService.getSyncQueue();
-                if (queue && queue.length > 0) {
+                if (queue && queue.length > 0 && !isProcessing) {
                     console.log(`[SmartCache] ⏯️ Resuming interrupted sync for ${queue.length} items...`);
                     await SmartCacheService.processSyncQueue();
                 }
@@ -74,9 +76,15 @@ export const SmartCacheService = {
      * Process items in the sync queue
      */
     processSyncQueue: async () => {
+        if (isProcessing) return;
+        isProcessing = true;
+
         try {
             let queue = await SmartCacheService.getSyncQueue();
-            if (!queue || queue.length === 0) return;
+            if (!queue || queue.length === 0) {
+                isProcessing = false;
+                return;
+            }
 
             while (queue.length > 0) {
                 const chapterId = queue[0];
@@ -93,6 +101,8 @@ export const SmartCacheService = {
             }
         } catch (error) {
             console.warn('[SmartCache] Queue processing error:', error);
+        } finally {
+            isProcessing = false;
         }
     },
 
@@ -148,5 +158,13 @@ export const SmartCacheService = {
     getSyncStatus: async () => {
         const raw = await AsyncStorage.getItem(SYNC_STATUS_KEY);
         return raw ? JSON.parse(raw) : null;
+    },
+
+    /**
+     * Get the current sync queue
+     */
+    getSyncQueue: async () => {
+        const raw = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+        return raw ? JSON.parse(raw) : [];
     }
 };

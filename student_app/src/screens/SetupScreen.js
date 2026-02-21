@@ -8,13 +8,29 @@ import { API_URL } from '../api/config';
 import { updateStudentClass } from '../api/classes';
 
 const SetupScreen = ({ navigation, route }) => {
-    const user = route.params?.user;
+    const [user, setUser] = useState(route.params?.user);
     const [step, setStep] = useState(1); // 1: Board, 2: Class
     const [selectedBoard, setSelectedBoard] = useState('CBSE');
     const [selectedClass, setSelectedClass] = useState(null);
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        const loadUser = async () => {
+            if (!user) {
+                try {
+                    const savedUser = await AsyncStorage.getItem('user_data');
+                    if (savedUser) {
+                        setUser(JSON.parse(savedUser));
+                    }
+                } catch (e) {
+                    console.error("Setup: Failed to load user", e);
+                }
+            }
+        };
+        loadUser();
+    }, []);
 
     useEffect(() => {
         if (step === 2 && selectedBoard) {

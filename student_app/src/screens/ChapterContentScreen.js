@@ -30,6 +30,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     // Timer State
     const [taskTimer, setTaskTimer] = useState(0);
+    const tabRequestRef = React.useRef(activeTab); // Track latest requested tab
     const [isTaskActive, setIsTaskActive] = useState(false);
 
     useEffect(() => {
@@ -140,6 +141,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
     }, [isFocused, activeTab, chapter?.chapter_id]);
 
     const loadContent = async (isRefreshing = false) => {
+        const currentTab = activeTab;
+        tabRequestRef.current = currentTab;
+
         // Stop speech when leaving tab or refreshing
         Speech.stop();
         setPlayingIndex(null);
@@ -156,17 +160,14 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     'QuickRevision': `quick_rev_${chapter.chapter_id}`
                 };
 
-                const cacheKey = cacheKeyMap[activeTab];
+                const cacheKey = cacheKeyMap[currentTab];
                 if (cacheKey) {
-                    const cachedData = await AsyncStorage.getItem(`@cache_${cacheKey}`);
+                    // Use the dataCache utility instead of manual AsyncStorage
+                    const cachedData = await dataCache.get(cacheKey, currentTab.toLowerCase());
                     if (cachedData) {
-                        const parsed = JSON.parse(cachedData);
-                        // Check expiry (24h)
-                        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-                            console.log(`[Content] Stale-While-Revalidate: Showing cache for ${activeTab}`);
-                            processLoadedData(parsed.data, false); // Update UI
-                            hasCache = true;
-                        }
+                        console.log(`[Content] Stale-While-Revalidate: Showing cache for ${currentTab}`);
+                        processLoadedData(cachedData, false, currentTab); // Update UI with currentTab context
+                        hasCache = true;
                     }
                 }
             } catch (e) {
@@ -201,7 +202,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
             const isSuccess = response?.status === 'success' || Array.isArray(response);
 
             if (isSuccess && responseData) {
-                processLoadedData(responseData, true);
+                // RACE CONDITION PROTECT: Only update if we are still on the same tab
+                if (tabRequestRef.current === currentTab) {
+                    processLoadedData(responseData, true, currentTab);
+                }
             } else if (response) {
                 const msg = response.message || '';
                 if (!msg.toLowerCase().includes('no')) {
@@ -219,8 +223,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
     };
 
-    const processLoadedData = (responseData, isFresh = true) => {
-        if (activeTab === 'MCQs') {
+    const processLoadedData = (responseData, isFresh = true, targetTab = null) => {
+        const actingTab = targetTab || activeTab;
+
+        if (actingTab === 'MCQs') {
             const allMcqs = Array.isArray(responseData) ? responseData : [];
             const chunks = [];
             for (let i = 0; i < allMcqs.length; i += 10) {
@@ -229,7 +235,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
             setMcqSets(chunks);
             setData(allMcqs);
             if (isFresh) loadSetStatus('mcq');
-        } else if (activeTab === 'Flashcards') {
+        } else if (actingTab === 'Flashcards') {
             const allCards = Array.isArray(responseData) ? responseData : [];
             const chunks = [];
             for (let i = 0; i < allCards.length; i += 10) {
@@ -238,9 +244,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
             setFlashcardSets(chunks);
             setData(allCards);
             if (isFresh) loadSetStatus('flashcard');
-        } else if (activeTab === 'QuickRevision') {
+        } else if (actingTab === 'QuickRevision') {
             const points = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
             setRevisionData(points.slice(1));
+            setData(points.slice(1)); // Also set data to prevent loading spinner
         } else {
             setData(Array.isArray(responseData) ? responseData : []);
         }
@@ -721,7 +728,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
     ];
 
     const renderContent = () => {
-        if (loading) return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
+        // Only show full-screen loader if data is empty (no cache yet)
+        if (loading && data.length === 0) return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
 
         if (activeTab === 'MCQs') {
             if (quizMode) return renderQuiz();

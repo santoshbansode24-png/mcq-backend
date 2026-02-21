@@ -18,6 +18,7 @@ import LeaderboardScreen from './LeaderboardScreen';
 import SubjectsScreen from './SubjectsScreen';
 import ChaptersScreen from './ChaptersScreen';
 import ChapterContentScreen from './ChapterContentScreen';
+import { SmartCacheService } from '../services/SmartCacheService';
 import PDFViewerScreen from './PDFViewerScreen';
 import NotificationsScreen from './NotificationsScreen';
 import AIScreen from './AIScreen';
@@ -138,6 +139,33 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         };
         saveHistory();
     }, [historyStack, isHistoryLoaded]);
+
+    // SELF-HEALING: Load user data if it's missing (happens on app restart)
+    useEffect(() => {
+        const recoverUser = async () => {
+            if (!userState || !userState.user_id) {
+                try {
+                    const savedUser = await AsyncStorage.getItem('user_data');
+                    if (savedUser) {
+                        const parsedUser = JSON.parse(savedUser);
+                        if (parsedUser && parsedUser.user_id) {
+                            console.log("[MainScreen] Recovered user data from AsyncStorage");
+                            setUserState(parsedUser);
+
+                            // AUTOMATIC SYNC: Start background download for the recovered class
+                            if (parsedUser.class_id) {
+                                console.log("[MainScreen] Triggering automatic background sync...");
+                                SmartCacheService.syncAllForClass(parsedUser.class_id, false);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to recover user data", e);
+                }
+            }
+        };
+        recoverUser();
+    }, [userState]);
 
     // Update user state handler
     const handleUpdateUser = useCallback(async (updates) => {

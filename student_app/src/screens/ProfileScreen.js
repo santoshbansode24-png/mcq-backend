@@ -89,10 +89,17 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                 {
                     text: "Yes, Change",
                     onPress: async () => {
+                        const studentId = user?.user_id;
+
+                        if (!studentId) {
+                            Alert.alert("Error", "Student ID is missing. Please log in again.");
+                            return;
+                        }
+
                         try {
                             setLoadingClasses(true);
                             // Assuming we want to save the board selection along with the class
-                            const response = await updateStudentClass(user.user_id, newClass.class_id, currentBoard);
+                            const response = await updateStudentClass(studentId, newClass.class_id, currentBoard);
 
                             if (response.status === 'success') {
                                 setCurrentClassId(newClass.class_id);
@@ -112,16 +119,18 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                                 if (onUserUpdate) {
                                     onUserUpdate({
                                         class_id: newClass.class_id,
-                                        class_name: newClass.class_name
+                                        class_name: newClass.class_name,
+                                        board_type: currentBoard
                                     });
                                 }
 
                                 Alert.alert("Success", "Class updated successfully!");
                             } else {
-                                Alert.alert("Error", "Failed to update class.");
+                                Alert.alert("Error", response.message || "Failed to update class.");
                             }
                         } catch (error) {
-                            Alert.alert("Error", "Something went wrong.");
+                            console.error("Update Class Error:", error);
+                            Alert.alert("Error", error.message || "Something went wrong.");
                         } finally {
                             setLoadingClasses(false);
                         }

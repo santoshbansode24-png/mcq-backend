@@ -64,34 +64,39 @@ const HomeScreen = ({ user, navigation, route }) => {
         useCallback(() => {
             if (classId) {
                 loadSubjects();
-                // Start background sync for all class content
-                startBackgroundSync();
             }
         }, [classId])
     );
 
-    const startBackgroundSync = async () => {
-        setIsSyncing(true);
-        try {
-            // Check if this is a new selection (from Setup or ClassSelection)
-            const isPriority = route?.params?.isNewSelection || false;
-            await SmartCacheService.syncAllForClass(classId, isPriority);
-        } finally {
-            setIsSyncing(false);
-        }
-    };
-
     const loadSubjects = async (forceRefresh = false) => {
-        if (!forceRefresh) setLoading(true);
+        // STALE-WHILE-REVALIDATE: Try to show cache immediately
+        if (!forceRefresh) {
+            try {
+                const cached = await dataCache.get(`subjects_${classId}`, 'subjects');
+                if (cached && Array.isArray(cached.data)) {
+                    setSubjects(cached.data);
+                } else if (cached && Array.isArray(cached)) {
+                    setSubjects(cached);
+                }
+            } catch (e) {
+                console.log('[Home] Cache load error', e);
+            }
+        }
+
+        if (!forceRefresh && subjects.length === 0) setLoading(true);
+
         try {
             const response = await fetchSubjects(classId, forceRefresh);
             if (response.status === 'success') {
                 setSubjects(response.data);
+            } else if (Array.isArray(response)) {
+                setSubjects(response);
             } else {
-                Alert.alert('Error', response.message);
+                // Only alert if we don't have ANY data (even stale)
+                if (subjects.length === 0) Alert.alert('Error', response.message || 'Failed to load subjects');
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to load subjects');
+            if (subjects.length === 0) Alert.alert('Error', 'Failed to load subjects');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -281,7 +286,7 @@ const HomeScreen = ({ user, navigation, route }) => {
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
                     }
-                    ListEmptyComponent={!loading && (
+                    ListEmptyComponent={(!loading || subjects.length > 0) && subjects.length === 0 && (
                         <View style={styles.emptyContainer}>
                             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('noSubjects')}</Text>
                         </View>
@@ -290,7 +295,7 @@ const HomeScreen = ({ user, navigation, route }) => {
                 />
             </SafeAreaView>
 
-            {loading && !refreshing && (
+            {loading && subjects.length === 0 && !refreshing && (
                 <View style={[styles.scrollPadding, { marginTop: -20 }]}>
                     {[1, 2, 3, 4].map(i => <SkeletonItem key={i} />)}
                 </View>

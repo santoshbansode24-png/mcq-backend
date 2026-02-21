@@ -66,12 +66,15 @@ try {
                 $note['file_url'] = $note['file_path'];
             } else {
                 // It's a local file path (e.g., uploads/notes/file.pdf)
-                // Normalize slashes
                 $clean_path = str_replace('\\', '/', $note['file_path']);
                 
-                // If the path starts with uploads/, it should be inside the backend folder on Railway
-                // Because /app/backend/uploads is the persistent volume.
+                // Normal solution (full direct URL)
                 $note['file_url'] = $base_url . $clean_path;
+
+                // COMPATIBILITY HACK for installed APKs (v2.2 and below)
+                // Older apps only open if 'drive.google.com' is in the path
+                // We use serve_pdf.php proxy and append a dummy parameter to trick it.
+                $note['file_path'] = $base_url . "api/serve_pdf.php?file=" . urlencode($clean_path) . "&_drive.google.com";
             }
         } else {
             $note['file_url'] = null;

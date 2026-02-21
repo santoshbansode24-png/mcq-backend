@@ -66,8 +66,11 @@ const SetupScreen = ({ navigation, route }) => {
                     };
                     await AsyncStorage.setItem('user_data', JSON.stringify(updatedUser));
 
-                    // Navigate to Home
-                    navigation.replace('Main', { user: updatedUser });
+                    // Navigate to Home with priority sync flag
+                    navigation.replace('Main', {
+                        user: updatedUser,
+                        isNewSelection: true
+                    });
                 } else {
                     Alert.alert("Error", "Failed to save selection.");
                 }

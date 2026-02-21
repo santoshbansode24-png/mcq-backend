@@ -85,20 +85,44 @@ const QuickRevisionScreen = ({ navigation, route }) => {
             return;
         }
 
+        if (!forceReconnect) {
+            // 1. Try cache first
+            try {
+                const cacheKey = `quick_rev_${chapterId}`;
+                const cachedData = await AsyncStorage.getItem(`@cache_${cacheKey}`);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+                        const points = parsed.data[0]?.key_points || [];
+                        if (points.length > 0) {
+                            setRevisionData(points.slice(1));
+                            setLoading(false);
+                            // Fresh fetch happens in background
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('[QuickRevision] Cache error:', e);
+            }
+        }
+
+        if (revisionData.length === 0) setLoading(true);
+        setError(null);
         try {
-            setLoading(true);
             const response = await fetchQuickRevision(chapterId, forceReconnect);
 
             if (response?.status === 'success' && response?.data?.length) {
                 const points = response.data[0]?.key_points || [];
-                // Removing the first point as requested by user
                 setRevisionData(points.slice(1));
-                setError(null);
             } else {
-                setError('Revision notes not found');
+                if (revisionData.length === 0) {
+                    setError('Revision notes not found');
+                }
             }
         } catch (e) {
-            setError('Failed to load revision');
+            if (revisionData.length === 0) {
+                setError('Failed to load revision');
+            }
         } finally {
             setLoading(false);
         }

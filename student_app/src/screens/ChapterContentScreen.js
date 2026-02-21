@@ -7,9 +7,9 @@ import { fetchMCQs, fetchNotes, fetchVideos, recordMCQAttempt, fetchFlashcards, 
 import axios from 'axios';
 import { API_URL, BASE_URL } from '../api/config';
 import * as Speech from 'expo-speech';
-import { getBestVoice } from '../utils/voiceUtils'; // Assuming this util exists or I should use the logic from QuickRevisionScreen
-import { fetchSetStatus } from '../api/content'; // Import new API
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Ensure imported
+import { getBestVoice } from '../utils/voiceUtils';
+import { fetchSetStatus } from '../api/content';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { downloadFile, getCachedFile } from '../utils/downloadUtils';
@@ -145,7 +145,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
         setPlayingIndex(null);
 
         // STALE-WHILE-REVALIDATE PATTERN
-        // 1. Try to load from cache first for instant UI response
+        let hasCache = false;
         if (!isRefreshing) {
             try {
                 const cacheKeyMap = {
@@ -161,10 +161,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     const cachedData = await AsyncStorage.getItem(`@cache_${cacheKey}`);
                     if (cachedData) {
                         const parsed = JSON.parse(cachedData);
-                        // Check expiry (24h) manually here too for extra safety
+                        // Check expiry (24h)
                         if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
                             console.log(`[Content] Stale-While-Revalidate: Showing cache for ${activeTab}`);
-                            processLoadedData(parsed.data, false); // Update UI but don't stop loader yet
+                            processLoadedData(parsed.data, false); // Update UI
+                            hasCache = true;
                         }
                     }
                 }
@@ -176,7 +177,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
         if (isRefreshing) {
             setRefreshing(true);
         } else {
-            setLoading(true);
+            // Only show loader if we don't have cache
+            if (!hasCache) setLoading(true);
         }
 
         try {

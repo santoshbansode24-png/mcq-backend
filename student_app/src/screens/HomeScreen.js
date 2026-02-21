@@ -47,7 +47,7 @@ const SkeletonItem = () => {
     );
 };
 
-const HomeScreen = ({ user, navigation }) => {
+const HomeScreen = ({ user, navigation, route }) => {
     const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
     const userName = (user?.name || 'Student').split(' ')[0];
@@ -73,7 +73,9 @@ const HomeScreen = ({ user, navigation }) => {
     const startBackgroundSync = async () => {
         setIsSyncing(true);
         try {
-            await SmartCacheService.syncAllForClass(classId);
+            // Check if this is a new selection (from Setup or ClassSelection)
+            const isPriority = route?.params?.isNewSelection || false;
+            await SmartCacheService.syncAllForClass(classId, isPriority);
         } finally {
             setIsSyncing(false);
         }

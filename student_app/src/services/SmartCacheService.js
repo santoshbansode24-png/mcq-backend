@@ -13,42 +13,50 @@ import { Image } from 'react-native';
 import { BASE_URL } from '../api/config';
 
 const SYNC_STATUS_KEY = '@smart_sync_status';
+const SYNC_QUEUE_KEY = '@smart_sync_queue'; // To resume interrupted syncs
 
 export const SmartCacheService = {
     /**
      * Bulk sync all data for a specific class
      */
-    syncAllForClass: async (classId) => {
+    syncAllForClass: async (classId, isPriority = false) => {
         try {
             // Cooldown check: Don't sync more than once every 6 hours automatically
+            // But if it's Priority (user just changed class/board), bypass cooldown
             const status = await SmartCacheService.getSyncStatus();
             const SIX_HOURS = 6 * 60 * 60 * 1000;
-            if (status && status.classId === classId && (Date.now() - status.lastSync < SIX_HOURS)) {
+
+            if (!isPriority && status && status.classId === classId && (Date.now() - status.lastSync < SIX_HOURS)) {
                 console.log(`[SmartCache] ⏭️ Skipping background sync (last sync was recent).`);
+
+                // Even if we skip bulk sync, check if we have any pending "Resume" work
+                const queue = await SmartCacheService.getSyncQueue();
+                if (queue && queue.length > 0) {
+                    console.log(`[SmartCache] ⏯️ Resuming interrupted sync for ${queue.length} items...`);
+                    await SmartCacheService.processSyncQueue();
+                }
                 return;
             }
 
-            console.log(`[SmartCache] 🔄 Starting bulk sync for class ${classId}...`);
+            console.log(`[SmartCache] 🔄 Starting bulk sync for class ${classId} (Priority: ${isPriority})...`);
 
             // 1. Sync Subjects
             const subjectRes = await fetchSubjects(classId, true);
             if (subjectRes.status !== 'success') return;
             const subjects = subjectRes.data;
 
-            // 2. Sync Chapters for each subject
+            // Initialize Queue
+            const fullQueue = [];
             for (const subject of subjects) {
-                console.log(`[SmartCache]   - Syncing subject: ${subject.subject_name}`);
                 const chapterRes = await fetchChapters(subject.subject_id, true);
                 if (chapterRes.status === 'success') {
-                    const chapters = chapterRes.data;
-
-                    // 3. Sync Content for each chapter (Parallel Chunks of 3)
-                    for (let i = 0; i < chapters.length; i += 3) {
-                        const chunk = chapters.slice(i, i + 3);
-                        await Promise.all(chunk.map(ch => SmartCacheService.syncChapterContent(ch.chapter_id)));
-                    }
+                    chapterRes.data.forEach(ch => fullQueue.push(ch.chapter_id));
                 }
             }
+
+            // Save queue to storage so we can resume if app closes
+            await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(fullQueue));
+            await SmartCacheService.processSyncQueue();
 
             await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
                 lastSync: Date.now(),
@@ -63,17 +71,42 @@ export const SmartCacheService = {
     },
 
     /**
+     * Process items in the sync queue
+     */
+    processSyncQueue: async () => {
+        try {
+            let queue = await SmartCacheService.getSyncQueue();
+            if (!queue || queue.length === 0) return;
+
+            while (queue.length > 0) {
+                const chapterId = queue[0];
+                console.log(`[SmartCache] 📥 Syncing Chapter: ${chapterId} (${queue.length} left)`);
+
+                await SmartCacheService.syncChapterContent(chapterId);
+
+                // Remove from queue after successful (or attempted) sync
+                queue.shift();
+                await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+
+                // Small delay to prevent blocking the UI thread too much
+                await new Promise(r => setTimeout(r, 100));
+            }
+        } catch (error) {
+            console.warn('[SmartCache] Queue processing error:', error);
+        }
+    },
+
+    /**
      * Sync all content types for a single chapter
      */
     syncChapterContent: async (chapterId) => {
         try {
-            const [mcqRes] = await Promise.all([
-                fetchMCQs(chapterId, true),
-                fetchFlashcards(chapterId, true),
-                fetchQuickRevision(chapterId, true),
-                fetchNotes(chapterId, true),
-                fetchVideos(chapterId, true)
-            ]);
+            // Sequential to ensure it doesn't overload on low-end devices during background sync
+            const mcqRes = await fetchMCQs(chapterId, true);
+            await fetchFlashcards(chapterId, true);
+            await fetchQuickRevision(chapterId, true);
+            await fetchNotes(chapterId, true);
+            await fetchVideos(chapterId, true);
 
             // Pre-fetch MCQ images if they exist
             if (mcqRes && mcqRes.status === 'success' && Array.isArray(mcqRes.data)) {
@@ -98,9 +131,8 @@ export const SmartCacheService = {
             const chapterRes = await fetchChapters(subjectId, true);
             if (chapterRes.status === 'success') {
                 const chapters = chapterRes.data;
-                for (let i = 0; i < chapters.length; i += 3) {
-                    const chunk = chapters.slice(i, i + 3);
-                    await Promise.all(chunk.map(ch => SmartCacheService.syncChapterContent(ch.chapter_id)));
+                for (const ch of chapters) {
+                    await SmartCacheService.syncChapterContent(ch.chapter_id);
                 }
             }
             return true;

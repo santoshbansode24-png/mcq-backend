@@ -43,7 +43,10 @@ const ClassSelectionScreen = ({ navigation, route }) => {
     const handleClassSelect = (selectedClass) => {
         // Update user object with selected class_id
         const updatedUser = { ...user, class_id: selectedClass.class_id, class_name: selectedClass.class_name };
-        navigation.replace('Main', { user: updatedUser });
+        navigation.replace('Main', {
+            user: updatedUser,
+            isNewSelection: true
+        });
     };
 
     const renderClassItem = ({ item }) => (

@@ -126,21 +126,48 @@ const FlashcardsScreen = ({ navigation, route }) => {
         }
     }, [chapterId, flashcardsData]);
 
-    const loadCards = async () => {
-        setLoading(true);
+    const loadCards = async (forceRefresh = false) => {
+        if (!forceRefresh) {
+            // 1. Try cache first
+            const cacheKey = `flashcards_${chapterId}`;
+            try {
+                const cachedData = await AsyncStorage.getItem(`@cache_${cacheKey}`);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    // 24 hour session check
+                    if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+                        const data = Array.isArray(parsed.data) ? parsed.data : (parsed.data?.data || []);
+                        if (data.length > 0) {
+                            setCards(data);
+                            setLoading(false); // Stop loading immediately if cache found
+                            // Continue to fetch fresh data in background if needed
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('[Flashcards] Cache error:', e);
+            }
+        }
+
+        if (!cards || cards.length === 0) setLoading(true);
         setError(null);
         try {
-            const response = await fetchFlashcards(chapterId);
+            const response = await fetchFlashcards(chapterId, forceRefresh);
 
             if (response && (response.status === 'success' || Array.isArray(response))) {
                 const data = Array.isArray(response) ? response : (response.data || []);
                 setCards(data);
             } else {
-                setError(response?.message || "Failed to load cards");
+                // Only set error if we don't have ANY cards (even from cache)
+                if (!cards || cards.length === 0) {
+                    setError(response?.message || "Failed to load cards");
+                }
             }
         } catch (error) {
             console.error("Error loading cards:", error);
-            setError("Network Error: " + error.message);
+            if (!cards || cards.length === 0) {
+                setError("Network Error: " + error.message);
+            }
         } finally {
             setLoading(false);
         }

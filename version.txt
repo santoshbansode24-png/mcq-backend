@@ -1,2 +1,2 @@
-2.7.2
-// Adding AWS SDK dependency
+2.7.3
+// Fix AWS SDK path and PHP redirect

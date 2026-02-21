@@ -1,8 +1,8 @@
-// REDIRECT TO BACKEND ADMIN (NEW VERSION WITH AWS SUPPORT)
-header('Location: ../backend/admin/');
+<?php
+// GLOBAL REDIRECT TO BACKEND ADMIN
+header('Location: /backend/admin/');
 exit();
-
-require_once '../config/db.php';
+?>
 
 $error = '';
 

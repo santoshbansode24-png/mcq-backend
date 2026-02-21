@@ -1,4 +1,5 @@
 <?php
+// Force redeploy v2.3.1
 // Print current directory Listing
 $files = scandir(__DIR__);
 echo "<h1>File Structure Debug</h1>";

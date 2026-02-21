@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Default cache duration (7 days) for safety, but effectively permanent until manual refresh
-const DEFAULT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export const dataCache = {
     /**
@@ -37,8 +37,11 @@ export const dataCache = {
 
             const cacheItem = JSON.parse(raw);
 
-            // Optional: Check expiry (currently disabled for "Permanent" strategy)
-            // if (Date.now() - cacheItem.timestamp > DEFAULT_EXPIRY_MS) return null;
+            // Check expiry (Enabling to fix stale note links)
+            if (Date.now() - cacheItem.timestamp > DEFAULT_EXPIRY_MS) {
+                console.log(`[Cache] Expired ${key}`);
+                return null;
+            }
 
             console.log(`[Cache] Hit ${key}`);
             return cacheItem.data;

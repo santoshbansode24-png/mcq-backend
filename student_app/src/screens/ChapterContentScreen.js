@@ -140,16 +140,38 @@ const ChapterContentScreen = ({ navigation, route }) => {
     }, [isFocused, activeTab, chapter?.chapter_id]);
 
     const loadContent = async (isRefreshing = false) => {
-        // Optimization: Avoid fetching for tabs that verify navigation only
-        /* if (activeTab === 'QuickRevision') {
-            setLoading(false);
-            setRefreshing(false);
-            return;
-        } */
-
         // Stop speech when leaving tab or refreshing
         Speech.stop();
         setPlayingIndex(null);
+
+        // STALE-WHILE-REVALIDATE PATTERN
+        // 1. Try to load from cache first for instant UI response
+        if (!isRefreshing) {
+            try {
+                const cacheKeyMap = {
+                    'MCQs': `mcqs_${chapter.chapter_id}`,
+                    'Notes': `notes_${chapter.chapter_id}`,
+                    'Videos': `videos_${chapter.chapter_id}`,
+                    'Flashcards': `flashcards_${chapter.chapter_id}`,
+                    'QuickRevision': `quick_rev_${chapter.chapter_id}`
+                };
+
+                const cacheKey = cacheKeyMap[activeTab];
+                if (cacheKey) {
+                    const cachedData = await AsyncStorage.getItem(`@cache_${cacheKey}`);
+                    if (cachedData) {
+                        const parsed = JSON.parse(cachedData);
+                        // Check expiry (24h) manually here too for extra safety
+                        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+                            console.log(`[Content] Stale-While-Revalidate: Showing cache for ${activeTab}`);
+                            processLoadedData(parsed.data, false); // Update UI but don't stop loader yet
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('[Content] Cache read error', e);
+            }
+        }
 
         if (isRefreshing) {
             setRefreshing(true);
@@ -157,20 +179,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
             setLoading(true);
         }
 
-        // Only clear data if NOT refreshing, to prevent flickering
-        if (!isRefreshing) {
-            setData([]);
-            setMcqSets([]);
-            setFlashcardSets([]);
-            setRevisionData([]);
-            setQuizMode(false);
-            setQuizFinished(false);
-        }
-
         try {
             let response;
-            // Force refresh passed to API calls
-            const force = isRefreshing;
+            const force = true; // Always bypass internal API cache to get fresh data
 
             if (activeTab === 'MCQs') {
                 response = await fetchMCQs(chapter.chapter_id, force);
@@ -184,49 +195,52 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 response = await fetchQuickRevision(chapter.chapter_id, force);
             }
 
-            // ROBUST HANDLING: Determine if we have data based on structure
             const responseData = response?.data || (Array.isArray(response) ? response : null);
             const isSuccess = response?.status === 'success' || Array.isArray(response);
 
             if (isSuccess && responseData) {
-                if (activeTab === 'MCQs') {
-                    // Chunk MCQs into sets of 10
-                    const allMcqs = Array.isArray(responseData) ? responseData : [];
-                    const chunks = [];
-                    for (let i = 0; i < allMcqs.length; i += 10) {
-                        chunks.push(allMcqs.slice(i, i + 10));
-                    }
-                    setMcqSets(chunks);
-                    setData(allMcqs);
-                    loadSetStatus('mcq');
-                } else if (activeTab === 'Flashcards') {
-                    // Chunk Flashcards into sets of 10
-                    const allCards = Array.isArray(responseData) ? responseData : [];
-                    const chunks = [];
-                    for (let i = 0; i < allCards.length; i += 10) {
-                        chunks.push(allCards.slice(i, i + 10));
-                    }
-                    setFlashcardSets(chunks);
-                    setData(allCards);
-                    loadSetStatus('flashcard');
-                } else if (activeTab === 'QuickRevision') {
-                    const points = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
-                    setRevisionData(points.slice(1));
-                } else {
-                    setData(Array.isArray(responseData) ? responseData : []);
-                }
+                processLoadedData(responseData, true);
             } else if (response) {
-                // If it's not a success and not an array, show error unless it's just "empty"
                 const msg = response.message || '';
                 if (!msg.toLowerCase().includes('no')) {
                     Alert.alert('Error', msg || 'Invalid data format');
                 }
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to load content');
+            // Only alert if we don't have ANY data (even stale)
+            if (data.length === 0) {
+                Alert.alert('Error', 'Failed to load content. Please check your internet connection.');
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    const processLoadedData = (responseData, isFresh = true) => {
+        if (activeTab === 'MCQs') {
+            const allMcqs = Array.isArray(responseData) ? responseData : [];
+            const chunks = [];
+            for (let i = 0; i < allMcqs.length; i += 10) {
+                chunks.push(allMcqs.slice(i, i + 10));
+            }
+            setMcqSets(chunks);
+            setData(allMcqs);
+            if (isFresh) loadSetStatus('mcq');
+        } else if (activeTab === 'Flashcards') {
+            const allCards = Array.isArray(responseData) ? responseData : [];
+            const chunks = [];
+            for (let i = 0; i < allCards.length; i += 10) {
+                chunks.push(allCards.slice(i, i + 10));
+            }
+            setFlashcardSets(chunks);
+            setData(allCards);
+            if (isFresh) loadSetStatus('flashcard');
+        } else if (activeTab === 'QuickRevision') {
+            const points = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
+            setRevisionData(points.slice(1));
+        } else {
+            setData(Array.isArray(responseData) ? responseData : []);
         }
     };
 

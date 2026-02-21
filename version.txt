@@ -1,2 +1,2 @@
-2.7.3
-// Fix AWS SDK path and PHP redirect
+2.7.4
+// Fix Splash UI & Note Sync logic (SWR)

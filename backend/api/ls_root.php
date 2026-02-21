@@ -8,6 +8,11 @@ if (is_dir($root)) {
     if (is_dir($uploads)) {
         echo "Listing $uploads:\n";
         print_r(scandir($uploads));
+        $notes = "$uploads/notes";
+        if (is_dir($notes)) {
+            echo "\nListing $notes:\n";
+            print_r(scandir($notes));
+        }
     } else {
         echo "$uploads not found\n";
     }

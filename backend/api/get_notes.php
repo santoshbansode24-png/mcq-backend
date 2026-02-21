@@ -50,38 +50,34 @@ try {
     }
 
     // Prepare Base URL for files
-    // Force HTTPS on Railway or Custom Domain (reverse proxy doesn't set HTTPS variable correctly)
-    $host = $_SERVER['HTTP_HOST']; // e.g., 192.168.1.5 or localhost or api.veeruapp.in
+    $host = $_SERVER['HTTP_HOST'];
     $is_secure_host = $host === 'api.veeruapp.in' || strpos($host, 'railway.app') !== false;
     $protocol = ($is_secure_host || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) ? "https" : "http";
     
-    // Script is in /backend/api/get_notes.php -> dirname is /backend/api -> dirname again is /backend
+    // Calculate backend base URL
     $backend_path = dirname(dirname($_SERVER['PHP_SELF'])); 
-    $base_url = $protocol . "://" . $host . $backend_path . "/";
+    $base_url = $protocol . "://" . $host . rtrim($backend_path, '/') . "/";
 
     // Add file_url to each note
     foreach ($notes as &$note) {
         if ($note['note_type'] === 'pdf' && !empty($note['file_path'])) {
-            // Check if it's an external URL (e.g. Google Drive)
+            // Check if it's already a full URL (S3, Drive, etc.)
             if (strpos($note['file_path'], 'http') === 0) {
                 $note['file_url'] = $note['file_path'];
             } else {
-                // It's a local file.
-                // OPTIMIZATION: Use direct static URL instead of serve_pdf.php proxy
-                // This lets Apache handle the file serving (better ranges, caching, no PHP corruption risk)
-                
-                // Ensure the path uses forward slashes
+                // It's a local file path (e.g., uploads/notes/file.pdf)
+                // Normalize slashes
                 $clean_path = str_replace('\\', '/', $note['file_path']);
                 
-                // Construct the full URL based on the backend base URL
-                // $base_url is calculated above as "http://host/veeru/backend/"
+                // If the path starts with uploads/, it should be inside the backend folder on Railway
+                // Because /app/backend/uploads is the persistent volume.
                 $note['file_url'] = $base_url . $clean_path;
             }
         } else {
             $note['file_url'] = null;
         }
     }
-    unset($note); // Break reference
+    unset($note);
     
     // Success response
     sendResponse('success', 'Notes retrieved successfully', $notes, 200);

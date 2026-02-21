@@ -1,15 +1,6 @@
-<?php
-/**
- * Admin Login Page
- * Veeru - Modern Premium Design
- */
-session_start();
-
-// If already logged in, redirect to dashboard
-if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-    header('Location: dashboard.php');
-    exit();
-}
+// REDIRECT TO BACKEND ADMIN (NEW VERSION WITH AWS SUPPORT)
+header('Location: ../backend/admin/');
+exit();
 
 require_once '../config/db.php';
 

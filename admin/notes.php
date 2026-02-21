@@ -1,13 +1,6 @@
-<?php
-/**
- * Notes Management
- * Veeru
- */
-session_start();
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: index.php');
-    exit();
-}
+// REDIRECT TO BACKEND ADMIN NOTES (NEW VERSION WITH AWS SUPPORT)
+header('Location: ../backend/admin/notes.php');
+exit();
 
 // Check for Board Selection
 if (!isset($_SESSION['admin_selected_board'])) {

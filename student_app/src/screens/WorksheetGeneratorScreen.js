@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Slider from '@react-native-community/slider';
+// Removed Slider import
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -599,18 +599,26 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                         <Text style={styles.sectionHeader}>3. Customize Paper</Text>
 
                         <View style={styles.card}>
-                            <Text style={styles.label}>Total Marks: {Math.round(totalMarks)}</Text>
-                            <Slider
-                                style={styles.slider}
-                                minimumValue={10}
-                                maximumValue={100}
-                                step={5}
-                                value={totalMarks}
-                                onValueChange={(val) => setTotalMarks(Math.round(val))}
-                                minimumTrackTintColor="#C026D3"
-                                maximumTrackTintColor="#cbd5e1"
-                                thumbTintColor="#A855F7"
-                            />
+                            <Text style={styles.label}>Select Total Marks: {totalMarks}</Text>
+                            <View style={styles.markButtonsContainer}>
+                                {[25, 40, 50, 80, 100].map((mark) => (
+                                    <TouchableOpacity
+                                        key={mark}
+                                        style={[
+                                            styles.markButton,
+                                            totalMarks === mark && styles.markButtonSelected
+                                        ]}
+                                        onPress={() => setTotalMarks(mark)}
+                                    >
+                                        <Text style={[
+                                            styles.markButtonText,
+                                            totalMarks === mark && styles.markButtonTextSelected
+                                        ]}>
+                                            {mark}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
 
                         <View style={styles.card}>
@@ -682,7 +690,40 @@ const styles = StyleSheet.create({
     switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
     generateBtn: { borderRadius: 16, overflow: 'hidden', marginTop: 10, elevation: 4 },
     btnGradient: { padding: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    btnText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
+    btnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+    markButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 5,
+    },
+    markButton: {
+        flex: 1,
+        paddingVertical: 12,
+        marginHorizontal: 3,
+        borderRadius: 12,
+        backgroundColor: '#f1f5f9',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    markButtonSelected: {
+        backgroundColor: '#C026D3',
+        borderColor: '#C026D3',
+        elevation: 3,
+        shadowColor: '#C026D3',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    markButtonText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#64748b',
+    },
+    markButtonTextSelected: {
+        color: 'white',
+    },
 });
 
 export default WorksheetGeneratorScreen;

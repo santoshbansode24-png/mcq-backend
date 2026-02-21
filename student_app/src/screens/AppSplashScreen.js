@@ -66,8 +66,8 @@ const AppSplashScreen = ({ navigation, route }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#A855F7" />
-            <View style={[styles.background, { backgroundColor: '#A855F7' }]}>
+            <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
+            <View style={[styles.background, { backgroundColor: '#0f172a' }]}>
                 <Animated.View style={[
                     styles.content,
                     {
@@ -76,7 +76,7 @@ const AppSplashScreen = ({ navigation, route }) => {
                     }
                 ]}>
                     <Image
-                        source={require('../../assets/veeru_splash_transparent.png')}
+                        source={require('../../assets/veeru_splash_dark.jpg')}
                         style={styles.character}
                         resizeMode="contain"
                     />
@@ -89,6 +89,7 @@ const AppSplashScreen = ({ navigation, route }) => {
                         transform: [{ translateY: textTranslateY }]
                     }
                 ]}>
+                    <Text style={styles.title}>VEERU</Text>
                     <Text style={styles.subtitle}>Your Smart Learning Companion</Text>
                     <Text style={styles.tagline}>Learn Smarter. Grow Faster.</Text>
                 </Animated.View>

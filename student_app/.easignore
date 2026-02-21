@@ -4,6 +4,7 @@
 # Dependencies
 node_modules/
 .expo/
+.git_backup/
 
 # Build artifacts
 *.apk

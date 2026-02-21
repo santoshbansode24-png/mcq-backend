@@ -2,15 +2,15 @@
   "expo": {
     "name": "Veeru",
     "slug": "mcq-student-app",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/veeru_splash_transparent.png",
+      "image": "./assets/veeru_splash_dark.jpg",
       "resizeMode": "contain",
-      "backgroundColor": "#A855F7"
+      "backgroundColor": "#0f172a"
     },
     "updates": {
       "enabled": true,
@@ -30,7 +30,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.veeru.app",
-      "versionCode": 5,
+      "versionCode": 7,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

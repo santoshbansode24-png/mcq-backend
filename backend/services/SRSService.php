@@ -94,7 +94,7 @@ class SRSService {
                     last_rating = :last_rating,
                     mastery_status = :mastery_status,
                     last_reviewed_at = NOW(),
-                    mastered_at = CASE WHEN :mastery_status_check = 'Mastered' AND mastered_at IS NULL THEN NOW() ELSE mastered_at END
+                    mastered_at = CASE WHEN :m_status_check = 'Mastered' AND mastered_at IS NULL THEN NOW() ELSE mastered_at END
                     WHERE user_id = :user_id AND word_id = :word_id";
             
             $stmt = $this->pdo->prepare($sql);
@@ -108,7 +108,7 @@ class SRSService {
                 ':average_rating' => $averageRating,
                 ':last_rating' => $rating,
                 ':mastery_status' => $masteryStatus,
-                ':mastery_status_check' => $masteryStatus,
+                ':m_status_check' => $masteryStatus,
                 ':user_id' => $userId,
                 ':word_id' => $wordId
             ]);
@@ -143,6 +143,7 @@ class SRSService {
             ];
             
         } catch (Exception $e) {
+            error_log("SRSService Error in updateProgress: " . $e->getMessage());
             return [
                 'success' => false,
                 'message' => $e->getMessage()

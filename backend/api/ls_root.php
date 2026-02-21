@@ -17,4 +17,14 @@ if (is_dir($root)) {
         echo "$uploads not found\n";
     }
 }
-?>
+    $root_api = "$root/api";
+    if (is_dir($root_api)) {
+        echo "\nListing $root_api:\n";
+        print_r(scandir($root_api));
+    }
+    
+    $root_admin = "$root/admin";
+    if (is_dir($root_admin)) {
+        echo "\nListing $root_admin:\n";
+        print_r(scandir($root_admin));
+    }

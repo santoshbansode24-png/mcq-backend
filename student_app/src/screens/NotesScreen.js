@@ -46,29 +46,28 @@ const NotesScreen = () => {
         fetchNotes(true);
     }, []);
 
-    const openNote = (note) => {
-        if (note.file_path) {
-            // Check if it's a Google Drive link
-            if (note.file_path.includes('drive.google.com')) {
-                navigation.navigate('PDFViewer', {
-                    url: note.file_path,
-                    title: note.title
-                });
-                // Use serve_pdf.php proxy to handle CORS and file serving
-                // This is the "Permanent Solution" for rendering local PDFs on Android WebViews
-                const encodedPath = encodeURIComponent(note.file_path);
-                const fileUrl = `${API_URL}/serve_pdf.php?file=${encodedPath}`;
+    const openNote = (item) => {
+        // Prioritize file_url if available (provided by v2.5+ backend)
+        const targetUrl = item.file_url || item.file_path;
 
-                // Debug URL
-                // Alert.alert("Debug URL", fileUrl);
+        if (!targetUrl) {
+            Alert.alert('Error', 'Note link is missing.');
+            return;
+        }
 
-                navigation.navigate('PDFViewer', {
-                    url: fileUrl,
-                    title: note.title
-                });
-            }
-        } else {
-            Alert.alert('Error', 'File path is missing.');
+        console.log('Opening Note:', item.title, 'URL:', targetUrl);
+
+        // Handle PDF navigation
+        if (item.note_type === 'pdf') {
+            navigation.navigate('PDFViewer', {
+                url: targetUrl,
+                title: item.title
+            });
+        } else if (item.note_type === 'html') {
+            navigation.navigate('HTMLViewer', {
+                content: item.content,
+                title: item.title
+            });
         }
     };
 

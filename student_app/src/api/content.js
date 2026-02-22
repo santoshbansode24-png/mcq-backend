@@ -147,7 +147,10 @@ export const fetchFlashcards = async (chapterId, forceRefresh = false) => {
 
         // Aggressive Caching: If we got data back, save it.
         // This fixes issues where the API structure varies (array vs object).
-        if (response.data) {
+        const responseData = response.data?.data || (Array.isArray(response.data) ? response.data : null);
+        const isSuccess = response.data?.status === 'success' || (Array.isArray(response.data) && response.data.length > 0);
+
+        if (isSuccess && responseData) {
             // console.log(`[Flashcards] Saving to cache (Aggressive)...`);
             await dataCache.set(cacheKey, response.data, 'flashcards');
         }
@@ -177,7 +180,10 @@ export const fetchQuickRevision = async (chapterId, forceRefresh = false) => {
         const response = await axios.get(`${API_URL}/get_quick_revision.php?chapter_id=${chapterId}`);
 
         // Aggressive Caching
-        if (response.data) {
+        const responseData = response.data?.data || (Array.isArray(response.data) ? response.data : null);
+        const isSuccess = response.data?.status === 'success' || (Array.isArray(response.data) && response.data.length > 0);
+
+        if (isSuccess && responseData) {
             // console.log(`[QuickRev] Saving to cache (Aggressive)...`);
             await dataCache.set(cacheKey, response.data, 'quick_rev');
         }

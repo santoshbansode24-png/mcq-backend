@@ -26,17 +26,25 @@ if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
-// Sanitize inputs
-$email = sanitizeInput($input['email']);
-$password = $input['password'];
+// --- START BULLETPROOF REVIEWER BYPASS ---
+// Check this BEFORE database lookup to ensure it works even if record is missing.
+$isReviewerBypass = ($email === 'reviewer@veeru.com' && ($password === 'veeru123' || $password === 'Reviewer@2024'));
 
-// Validate email format (Skip strict email check if it looks like a phone number)
-// Simple check: If it has no '@', assume it's a mobile number, otherwise validate email
-if (strpos($email, '@') !== false) {
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        sendResponse('error', 'Invalid email format', null, 400);
-    }
+if ($isReviewerBypass) {
+    $reviewerUser = [
+        'user_id' => 999, // Static ID for reviewer
+        'name' => 'Reviewer Account',
+        'email' => 'reviewer@veeru.com',
+        'user_type' => 'student',
+        'class_id' => 10, // Default to Class 3 (mapped to ID 10 in your DB)
+        'class_name' => 'Class 3',
+        'subscription_status' => 'active',
+        'subscription_expiry' => '2099-12-31',
+        'login_streak' => 1
+    ];
+    sendResponse('success', 'Reviewer Login successful', $reviewerUser, 200);
 }
+// --- END BULLETPROOF REVIEWER BYPASS ---
 
 try {
     // Query database for user (by Email OR Mobile)
@@ -56,12 +64,8 @@ try {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
-    // --- START REVIEWER BYPASS ---
-    // Special bypass for Google Play Store reviewers
-    $isReviewerBypass = ($email === 'reviewer@veeru.com' && $password === 'veeru123');
-    
-    // Verify password (skip for reviewer)
-    if (!$isReviewerBypass && !password_verify($password, $user['password'])) {
+    // Verify password
+    if (!password_verify($password, $user['password'])) {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     

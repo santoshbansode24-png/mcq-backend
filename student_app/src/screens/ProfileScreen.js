@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, Switch, ScrollView, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +19,8 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
     const [profilePic, setProfilePic] = useState(user?.profile_picture);
     const [uploading, setUploading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
-    const [helpModalVisible, setHelpModalVisible] = useState(false); // State for Help Modal
+    const [helpModalVisible, setHelpModalVisible] = useState(false);
+    const [securityModalVisible, setSecurityModalVisible] = useState(false); // Security sub-menu
     const [classes, setClasses] = useState([]);
     const [currentClassId, setCurrentClassId] = useState(user?.class_id);
     const [currentClassName, setCurrentClassName] = useState(user?.class_name);
@@ -206,6 +207,47 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
         return `${BASE_URL}/${path}`;
     };
 
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            "Delete Account",
+            "Are you sure you want to permanently delete your account and all your progress? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete Permanently",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setUploading(true);
+                            const response = await axios.post(`${API_URL}/delete_account.php`, {
+                                user_id: user.user_id
+                            });
+
+                            if (response.data.status === 'success') {
+                                Alert.alert("Account Deleted", "Your account has been permanently removed.");
+                                if (onLogout) onLogout();
+                            } else {
+                                Alert.alert("Error", response.data.message || "Failed to delete account.");
+                            }
+                        } catch (error) {
+                            Alert.alert("Error", "A server error occurred while deleting your account.");
+                        } finally {
+                            setUploading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const PRIVACY_POLICY_URL = 'https://veeru-app.github.io/privacy-policy'; // Placeholder URL
+
+    const handleOpenPrivacyPolicy = () => {
+        Linking.openURL(PRIVACY_POLICY_URL).catch(err => {
+            Alert.alert("Error", "Could not open the privacy policy link.");
+        });
+    };
+
     return (
         <View style={{ flex: 1, backgroundColor: theme.background }}>
             <ScrollView
@@ -360,6 +402,14 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
                     <TouchableOpacity
                         style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                        onPress={() => setSecurityModalVisible(true)}
+                    >
+                        <Text style={[styles.menuText, { color: theme.text }]}>🛡️ SECURITY & PRIVACY</Text>
+                        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.menuItem, { borderBottomColor: theme.border }]}
                         onPress={() => setHelpModalVisible(true)}
                     >
                         <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')?.toUpperCase()}</Text>
@@ -462,6 +512,58 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         <TouchableOpacity
                             style={[styles.closeButton, { backgroundColor: theme.primary }]}
                             onPress={() => setHelpModalVisible(false)}
+                        >
+                            <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Security & Privacy Modal (Play Store Compliance) */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={securityModalVisible}
+                onRequestClose={() => setSecurityModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalView, { backgroundColor: theme.card }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>SECURITY & PRIVACY</Text>
+
+                        <View style={{ width: '100%', marginBottom: 20 }}>
+                            <TouchableOpacity
+                                style={[styles.infoRow, { backgroundColor: theme.background, paddingVertical: 15, borderRadius: 12 }]}
+                                onPress={handleOpenPrivacyPolicy}
+                            >
+                                <Ionicons name="document-text-outline" size={24} color={theme.primary} style={{ marginRight: 15 }} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.infoValue, { color: theme.text }]}>Privacy Policy</Text>
+                                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>How we handle your data</Text>
+                                </View>
+                                <Ionicons name="link" size={20} color={theme.textSecondary} />
+                            </TouchableOpacity>
+
+                            <View style={{ height: 20 }} />
+
+                            <TouchableOpacity
+                                style={[styles.infoRow, { backgroundColor: '#fee2e2', paddingVertical: 15, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: '#ef4444' }]}
+                                onPress={handleDeleteAccount}
+                            >
+                                <Ionicons name="trash-outline" size={24} color="#ef4444" style={{ marginRight: 15 }} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.infoValue, { color: '#b91c1c', fontWeight: 'bold' }]}>Delete Account</Text>
+                                    <Text style={{ color: '#ef4444', fontSize: 12 }}>Permanently remove all data</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <Text style={{ color: theme.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 15, fontStyle: 'italic' }}>
+                                Warning: Deleting your account is permanent and cannot be undone.
+                            </Text>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.closeButton, { backgroundColor: theme.primary }]}
+                            onPress={() => setSecurityModalVisible(false)}
                         >
                             <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
                         </TouchableOpacity>

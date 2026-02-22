@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, Image, KeyboardAvoidingView, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, Image, KeyboardAvoidingView, ScrollView, Platform, Dimensions, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginUser } from '../api/auth';
@@ -193,6 +193,15 @@ const LoginScreen = ({ navigation }) => {
                         style={styles.debugInfo}
                     >
                         <Text style={styles.debugText}>Diagnose Connection Issues</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => Linking.openURL('https://veeru-app.github.io/privacy-policy')}
+                        style={{ marginTop: 20, alignItems: 'center' }}
+                    >
+                        <Text style={{ color: '#666', fontSize: 12 }}>
+                            By logging in, you agree to our <Text style={{ color: '#4f46e5', textDecorationLine: 'underline' }}>Privacy Policy</Text>
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

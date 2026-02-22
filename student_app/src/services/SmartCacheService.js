@@ -11,6 +11,7 @@ import { dataCache } from '../utils/dataCache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'react-native';
 import { BASE_URL } from '../api/config';
+import { getCachedFile } from '../utils/downloadUtils';
 
 const SYNC_STATUS_KEY = '@smart_sync_status';
 const SYNC_QUEUE_KEY = '@smart_sync_queue'; // To resume interrupted syncs
@@ -107,18 +108,33 @@ export const SmartCacheService = {
     },
 
     /**
+     * Helper to retry a promise-based function
+     */
+    retry: async (fn, retries = 2, delay = 1000) => {
+        for (let i = 0; i < retries; i++) {
+            try {
+                return await fn();
+            } catch (err) {
+                if (i === retries - 1) throw err;
+                console.warn(`[SmartCache] Retry ${i + 1}/${retries} failed. Retrying in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+    },
+
+    /**
      * Sync all content types for a single chapter
      */
     syncChapterContent: async (chapterId) => {
         try {
-            // Sequential to ensure it doesn't overload on low-end devices during background sync
-            const mcqRes = await fetchMCQs(chapterId, true);
-            await fetchFlashcards(chapterId, true);
-            await fetchQuickRevision(chapterId, true);
-            await fetchNotes(chapterId, true);
-            await fetchVideos(chapterId, true);
+            // 1. Fetch JSON Content (MCQs, Flashcards, etc.) with Retry
+            const mcqRes = await SmartCacheService.retry(() => fetchMCQs(chapterId, true));
+            await SmartCacheService.retry(() => fetchFlashcards(chapterId, true));
+            await SmartCacheService.retry(() => fetchQuickRevision(chapterId, true));
+            const notesRes = await SmartCacheService.retry(() => fetchNotes(chapterId, true));
+            await SmartCacheService.retry(() => fetchVideos(chapterId, true));
 
-            // Pre-fetch MCQ images if they exist
+            // 2. Pre-fetch MCQ images
             if (mcqRes && mcqRes.status === 'success' && Array.isArray(mcqRes.data)) {
                 mcqRes.data.forEach(item => {
                     if (item.image_url) {
@@ -127,8 +143,32 @@ export const SmartCacheService = {
                     }
                 });
             }
+
+            // 3. SILENT PDF PRE-FETCHING
+            // This ensures PDFs open instantly when the user clicks them
+            if (notesRes && notesRes.status === 'success' && Array.isArray(notesRes.data)) {
+                console.log(`[SmartCache] 📥 Starting silent PDF sync for Chapter ${chapterId} (${notesRes.data.length} files)`);
+
+                for (const note of notesRes.data) {
+                    const rawPath = note.file_path || note.file_url;
+                    if (rawPath) {
+                        let remoteUrl = rawPath;
+                        if (!rawPath.startsWith('http')) {
+                            remoteUrl = `${BASE_URL}/${rawPath}`;
+                        }
+
+                        try {
+                            // Download silently in background
+                            await SmartCacheService.retry(() => getCachedFile(remoteUrl, note.title, null, true), 2, 2000);
+                            console.log(`[SmartCache] ✅ Silently cached PDF: ${note.title}`);
+                        } catch (pdfErr) {
+                            console.warn(`[SmartCache] ⚠️ Failed to silently cache PDF: ${note.title}`, pdfErr.message);
+                        }
+                    }
+                }
+            }
         } catch (error) {
-            console.warn(`[SmartCache] ⚠️ Failed content for chapter ${chapterId}:`, error.message);
+            console.warn(`[SmartCache] ❌ Failed content for chapter ${chapterId}:`, error.message);
         }
     },
 

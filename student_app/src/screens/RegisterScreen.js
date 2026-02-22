@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, ScrollView, Modal, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, ScrollView, Modal, FlatList, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { registerUser } from '../api/auth';
 import { fetchClasses } from '../api/classes';
 import { Ionicons } from '@expo/vector-icons';
@@ -264,6 +264,16 @@ const RegisterScreen = ({ navigation }) => {
 
                             <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
                                 <Text style={styles.loginText}>Already have an account? <Text style={styles.loginHighlight}>Login</Text></Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={() => Linking.openURL('https://veeru-app.github.io/privacy-policy')}
+                                style={{ marginTop: 20, alignItems: 'center' }}
+                            >
+                                <Text style={{ color: '#666', fontSize: 12, textAlign: 'center' }}>
+                                    By registering, you agree to our {"\n"}
+                                    <Text style={{ color: '#4f46e5', textDecorationLine: 'underline' }}>Privacy Policy</Text> and <Text style={{ color: '#4f46e5', textDecorationLine: 'underline' }}>Terms of Service</Text>
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>

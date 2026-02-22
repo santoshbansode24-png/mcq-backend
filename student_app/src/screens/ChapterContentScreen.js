@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl, Image, BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
@@ -14,6 +14,110 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { downloadFile, getCachedFile } from '../utils/downloadUtils';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
+
+// --- CONSTANTS MOVED OUTSIDE FOR PERFORMANCE ---
+
+// Gradient Palette for Videos (10 Attractive Gradients)
+const videoGradients = [
+    ['#f97316', '#ef4444'], // Sunset (Orange -> Red)
+    ['#06b6d4', '#3b82f6'], // Ocean (Cyan -> Blue)
+    ['#ec4899', '#8b5cf6'], // Berry (Pink -> Purple)
+    ['#84cc16', '#10b981'], // Nature (Lime -> Green)
+    ['#3b82f6', '#4f46e5'], // Midnight (Blue -> Indigo)
+    ['#ec4899', '#facc15'], // Candy (Pink -> Gold)
+    ['#8b5cf6', '#eab308'], // Royal (Purple -> Gold)
+    ['#14b8a6', '#06b6d4'], // Mint (Teal -> Cyan)
+    ['#facc15', '#ef4444'], // Fire (Yellow -> Red)
+    ['#6366f1', '#ec4899'], // Galaxy (Indigo -> Pink)
+];
+
+// Gradient Palette for Notes (Reordered for variety)
+const noteGradients = [
+    ['#84cc16', '#10b981'], // Nature (Lime -> Green)
+    ['#3b82f6', '#4f46e5'], // Midnight (Blue -> Indigo)
+    ['#ec4899', '#facc15'], // Candy (Pink -> Gold)
+    ['#f97316', '#ef4444'], // Sunset (Orange -> Red)
+    ['#14b8a6', '#06b6d4'], // Mint (Teal -> Cyan)
+    ['#8b5cf6', '#eab308'], // Royal (Purple -> Gold)
+    ['#06b6d4', '#3b82f6'], // Ocean (Cyan -> Blue)
+    ['#ec4899', '#8b5cf6'], // Berry (Pink -> Purple)
+    ['#6366f1', '#ec4899'], // Galaxy (Indigo -> Pink)
+    ['#facc15', '#ef4444'], // Fire (Yellow -> Red)
+];
+
+// Color Palette for Revision Points
+const revisionColors = [
+    '#fff1f2', // Soft Rose
+    '#fffbeb', // Soft Amber
+    '#f0fdf4', // Soft Green
+    '#eff6ff', // Soft Blue
+    '#faf5ff', // Soft Purple
+    '#fff7ed', // Soft Orange
+];
+
+// --- MEMOIZED COMPONENTS TO PREVENT FLICKER ---
+
+const NoteItem = React.memo(({ item, index, onOpenNote }) => {
+    const gradient = noteGradients[index % noteGradients.length];
+    return (
+        <TouchableOpacity
+            style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
+            onPress={() => onOpenNote(item)}
+        >
+            <LinearGradient
+                colors={gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
+                        <Text style={{ fontSize: 20 }}>📄</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 16 }}>
+                        <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800', marginBottom: 2 }]} numberOfLines={1}>
+                            {item.title || `Note Lesson ${index + 1}`}
+                        </Text>
+                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13 }]} numberOfLines={1}>
+                            {item.note_type?.toUpperCase() || 'PDF'}
+                        </Text>
+                    </View>
+                </View>
+            </LinearGradient>
+        </TouchableOpacity>
+    );
+});
+
+const VideoItem = React.memo(({ item, index, onOpenVideo }) => {
+    const gradient = videoGradients[index % videoGradients.length];
+    return (
+        <TouchableOpacity
+            onPress={() => onOpenVideo(item)}
+            style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
+        >
+            <LinearGradient
+                colors={gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
+                        <Text style={{ fontSize: 20 }}>🎥</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 16 }}>
+                        <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800' }]} numberOfLines={1}>
+                            {item.title || `Video Lesson ${index + 1}`}
+                        </Text>
+                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)', fontSize: 13 }]} numberOfLines={1}>
+                            {item.description || 'Watch video'}
+                        </Text>
+                    </View>
+                </View>
+            </LinearGradient>
+        </TouchableOpacity>
+    );
+});
 
 const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
@@ -567,140 +671,51 @@ const ChapterContentScreen = ({ navigation, route }) => {
         );
     };
 
-    // Color Palette for Items (User Requested: Poppy Noisy Neon)
-    const itemColors = [
-        { border: '#06b6d4', shadow: '#06b6d4' }, // Neon Cyan
-        { border: '#d946ef', shadow: '#d946ef' }, // Neon Magenta
-        { border: '#84cc16', shadow: '#84cc16' }, // Neon Lime
-        { border: '#facc15', shadow: '#facc15' }, // Neon Yellow
-    ];
+    const handleOpenNote = useCallback(async (item) => {
+        const rawPath = item.file_path || item.file_url;
+        if (!rawPath) {
+            Alert.alert('Error', 'File path is missing');
+            return;
+        }
 
-    // Gradient Palette for Videos (10 Attractive Gradients)
-    const videoGradients = [
-        ['#f97316', '#ef4444'], // Sunset (Orange -> Red)
-        ['#06b6d4', '#3b82f6'], // Ocean (Cyan -> Blue)
-        ['#ec4899', '#8b5cf6'], // Berry (Pink -> Purple)
-        ['#84cc16', '#10b981'], // Nature (Lime -> Green)
-        ['#3b82f6', '#4f46e5'], // Midnight (Blue -> Indigo)
-        ['#ec4899', '#facc15'], // Candy (Pink -> Gold)
-        ['#8b5cf6', '#eab308'], // Royal (Purple -> Gold)
-        ['#14b8a6', '#06b6d4'], // Mint (Teal -> Cyan)
-        ['#facc15', '#ef4444'], // Fire (Yellow -> Red)
-        ['#6366f1', '#ec4899'], // Galaxy (Indigo -> Pink)
-    ];
-
-    // Gradient Palette for Notes (Reordered for variety)
-    const noteGradients = [
-        ['#84cc16', '#10b981'], // Nature (Lime -> Green)
-        ['#3b82f6', '#4f46e5'], // Midnight (Blue -> Indigo)
-        ['#ec4899', '#facc15'], // Candy (Pink -> Gold)
-        ['#f97316', '#ef4444'], // Sunset (Orange -> Red)
-        ['#14b8a6', '#06b6d4'], // Mint (Teal -> Cyan)
-        ['#8b5cf6', '#eab308'], // Royal (Purple -> Gold)
-        ['#06b6d4', '#3b82f6'], // Ocean (Cyan -> Blue)
-        ['#ec4899', '#8b5cf6'], // Berry (Pink -> Purple)
-        ['#6366f1', '#ec4899'], // Galaxy (Indigo -> Pink)
-        ['#facc15', '#ef4444'], // Fire (Yellow -> Red)
-    ];
-
-    // Color Palette for Revision Points (User Requested: Different Soft Colors)
-    const revisionColors = [
-        '#fff1f2', // Soft Rose
-        '#fffbeb', // Soft Amber
-        '#f0fdf4', // Soft Green
-        '#eff6ff', // Soft Blue
-        '#faf5ff', // Soft Purple
-        '#fff7ed', // Soft Orange
-    ];
-
-    const renderNoteItem = React.useCallback(({ item, index }) => {
-        const gradient = noteGradients[index % noteGradients.length];
-
-        const openNote = async () => {
-            const rawPath = item.file_path || item.file_url;
-            if (!rawPath) {
-                Alert.alert('Error', 'File path is missing');
-                return;
+        try {
+            setDownloading(true);
+            setDownloadProgress(0);
+            let remoteUrl = rawPath;
+            if (!rawPath.startsWith('http')) {
+                remoteUrl = `${BASE_URL}/${rawPath}`;
             }
-
-            try {
-                setDownloading(true);
-                setDownloadProgress(0);
-                let remoteUrl = rawPath;
-                if (!rawPath.startsWith('http')) {
-                    remoteUrl = `${BASE_URL}/${rawPath}`;
-                }
-                const localUri = await getCachedFile(
-                    remoteUrl,
-                    item.title,
-                    (progress) => setDownloadProgress(progress)
-                );
-                setDownloading(false);
-                if (localUri) {
-                    navigation.navigate('PDFViewer', { url: localUri, title: item.title });
-                }
-            } catch (error) {
-                console.error(error);
-                setDownloading(false);
-                Alert.alert('Error', 'Failed to open note. Check internet.');
+            const localUri = await getCachedFile(
+                remoteUrl,
+                item.title,
+                (progress) => setDownloadProgress(progress)
+            );
+            setDownloading(false);
+            if (localUri) {
+                navigation.navigate('PDFViewer', { url: localUri, title: item.title });
             }
-        };
-
-        return (
-            <TouchableOpacity
-                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
-                onPress={openNote}
-            >
-                <LinearGradient
-                    colors={gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
-                >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
-                            <Text style={{ fontSize: 20 }}>📄</Text>
-                        </View>
-                        <View style={{ flex: 1, marginLeft: 16 }}>
-                            <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800', marginBottom: 2 }]} numberOfLines={1}>{item.title}</Text>
-                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13 }]} numberOfLines={1}>{item.note_type?.toUpperCase() || 'PDF'}</Text>
-                        </View>
-                    </View>
-                </LinearGradient>
-            </TouchableOpacity>
-        );
+        } catch (error) {
+            console.error(error);
+            setDownloading(false);
+            Alert.alert('Error', 'Failed to open note. Check internet.');
+        }
     }, [navigation]);
 
-    const renderVideoItem = React.useCallback(({ item, index }) => {
-        const gradient = videoGradients[index % videoGradients.length];
-        return (
-            <TouchableOpacity
-                onPress={() => navigation.navigate('VideoPlayer', {
-                    videoUrl: item.url,
-                    title: item.title,
-                    activeTask: activeTask
-                })}
-                style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
-            >
-                <LinearGradient
-                    colors={gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
-                >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
-                            <Text style={{ fontSize: 20 }}>🎥</Text>
-                        </View>
-                        <View style={{ flex: 1, marginLeft: 16 }}>
-                            <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800' }]} numberOfLines={1}>{item.title}</Text>
-                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)', fontSize: 13 }]} numberOfLines={1}>{item.description || 'Watch video'}</Text>
-                        </View>
-                    </View>
-                </LinearGradient>
-            </TouchableOpacity>
-        );
+    const handleOpenVideo = useCallback((item) => {
+        navigation.navigate('VideoPlayer', {
+            videoUrl: item.url,
+            title: item.title || 'Video Lesson',
+            activeTask: activeTask
+        });
     }, [navigation, activeTask]);
+
+    const renderNoteItem = useCallback(({ item, index }) => (
+        <NoteItem item={item} index={index} onOpenNote={handleOpenNote} />
+    ), [handleOpenNote]);
+
+    const renderVideoItem = useCallback(({ item, index }) => (
+        <VideoItem item={item} index={index} onOpenVideo={handleOpenVideo} />
+    ), [handleOpenVideo]);
 
     // Color Palette for Sets (Option 1: Pastel Rainbow)
     const setColors = [
@@ -947,7 +962,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
             <FlatList
                 data={data}
                 renderItem={activeTab === 'Notes' ? renderNoteItem : renderVideoItem}
-                keyExtractor={(item) => (item.note_id || item.video_id || Math.random()).toString()}
+                keyExtractor={(item, index) => (item.note_id || item.video_id || `item-${index}`).toString()}
                 contentContainerStyle={styles.listContainer}
                 refreshing={refreshing}
                 onRefresh={onRefresh}

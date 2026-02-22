@@ -90,7 +90,7 @@ export const downloadFile = async (url, title, setLoading = null, autoOpen = fal
  * @param {function} onProgress - Callback (0-1) for progress bar
  * @returns {Promise<string>} Local file URI (file://...)
  */
-export const getCachedFile = async (url, title, onProgress = null) => {
+export const getCachedFile = async (url, title, onProgress = null, silent = false) => {
     if (!url) return null;
 
     // If it's already a local file, return it immediately
@@ -174,7 +174,9 @@ export const getCachedFile = async (url, title, onProgress = null) => {
 
     } catch (e) {
         console.error('[Cache] Error:', e);
-        Alert.alert("Error", "Failed to download file for offline viewing.");
+        if (!silent) {
+            Alert.alert("Error", "Failed to download file for offline viewing.");
+        }
         throw e;
     }
 };

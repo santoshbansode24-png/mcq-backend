@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Debug Log
-file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Input: " . json_encode($input) . "\n", FILE_APPEND);
+$log_msg = date('Y-m-d H:i:s') . " Attempt - Email: " . ($input['email'] ?? 'MISSING') . " (JSON: " . json_encode($input) . ")\n";
+file_put_contents('../login_debug.log', $log_msg, FILE_APPEND);
 
 // Validate required fields
 $required = ['email', 'password'];
@@ -35,6 +36,7 @@ $password = $input['password'];
 $isReviewerBypass = ($email === 'reviewer@veeru.com' && ($password === 'veeru123' || $password === 'Reviewer@2024'));
 
 if ($isReviewerBypass) {
+    file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Reviewer Bypass triggered for: $email\n", FILE_APPEND);
     $reviewerUser = [
         'user_id' => 999, // Static ID for reviewer
         'name' => 'Reviewer Account',
@@ -66,11 +68,13 @@ try {
     
     // Check if user exists
     if (!$user) {
+        file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: User not found for: $email\n", FILE_APPEND);
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
     // Verify password
     if (!password_verify($password, $user['password'])) {
+        file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: Password mismatch for: $email\n", FILE_APPEND);
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     

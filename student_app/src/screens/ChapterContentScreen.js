@@ -130,6 +130,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [voiceModalVisible, setVoiceModalVisible] = useState(false);
 
     // Separate states for each tab to prevent flicker/ghosting
     const [mcqData, setMcqData] = useState([]);

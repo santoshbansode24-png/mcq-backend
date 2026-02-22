@@ -54,7 +54,8 @@ try {
     // Query database for user (by Email OR Mobile)
     $stmt = $pdo->prepare("
         SELECT user_id, name, email, password, user_type, class_id, 
-               subscription_status, subscription_expiry 
+               subscription_status, subscription_expiry, last_login, 
+               login_streak, school_name, board_type, mobile
         FROM users 
         WHERE (email = ? OR mobile = ?) AND user_type = 'student'
     ");

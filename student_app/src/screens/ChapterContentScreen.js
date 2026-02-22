@@ -131,6 +131,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+    console.log("[ChapterContent] Rendered. voiceModalVisible state initialized.");
 
     // Separate states for each tab to prevent flicker/ghosting
     const [mcqData, setMcqData] = useState([]);

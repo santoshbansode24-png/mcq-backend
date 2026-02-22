@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginUser } from '../api/auth';
-import config from '../api/config';
+import config, { BASE_URL } from '../api/config';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -196,7 +196,7 @@ const LoginScreen = ({ navigation }) => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => Linking.openURL('https://veeru-app.github.io/privacy-policy')}
+                        onPress={() => Linking.openURL(`${BASE_URL}/privacy-policy.html`)}
                         style={{ marginTop: 20, alignItems: 'center' }}
                     >
                         <Text style={{ color: '#666', fontSize: 12 }}>

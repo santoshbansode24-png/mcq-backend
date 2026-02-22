@@ -4,7 +4,7 @@ import { registerUser } from '../api/auth';
 import { fetchClasses } from '../api/classes';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { API_URL, BASE_URL } from '../api/config';
+import config, { API_URL, BASE_URL } from '../api/config';
 
 const RegisterScreen = ({ navigation }) => {
     const [name, setName] = useState('');
@@ -267,7 +267,7 @@ const RegisterScreen = ({ navigation }) => {
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                onPress={() => Linking.openURL(`${BASE_URL}/privacy.php`)}
+                                onPress={() => Linking.openURL(`${config.ROOT_URL}/privacy.php`)}
                                 style={{ marginTop: 20, alignItems: 'center' }}
                             >
                                 <Text style={{ color: '#666', fontSize: 12, textAlign: 'center' }}>

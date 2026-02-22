@@ -196,7 +196,7 @@ const LoginScreen = ({ navigation }) => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => Linking.openURL(`${BASE_URL}/privacy.php`)}
+                        onPress={() => Linking.openURL(`${config.ROOT_URL}/privacy.php`)}
                         style={{ marginTop: 20, alignItems: 'center' }}
                     >
                         <Text style={{ color: '#666', fontSize: 12 }}>

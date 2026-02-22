@@ -240,7 +240,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
         );
     };
 
-    const PRIVACY_POLICY_URL = `${BASE_URL}/privacy.php`;
+    const PRIVACY_POLICY_URL = `${config.ROOT_URL}/privacy.php`;
 
     const handleOpenPrivacyPolicy = () => {
         Linking.openURL(PRIVACY_POLICY_URL).catch(err => {

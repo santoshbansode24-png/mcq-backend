@@ -23,7 +23,8 @@ const LOCAL_CONFIG = {
 // ========================================
 const RAILWAY_CONFIG = {
     API_URL: 'https://api.veeruapp.in/backend/api',
-    BASE_URL: 'https://api.veeruapp.in/backend'
+    BASE_URL: 'https://api.veeruapp.in/backend',
+    ROOT_URL: 'https://api.veeruapp.in'
 };
 
 // ========================================

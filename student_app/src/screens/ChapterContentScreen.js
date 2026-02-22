@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { downloadFile, getCachedFile } from '../utils/downloadUtils';
+import { dataCache } from '../utils/dataCache';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
 
 // --- CONSTANTS MOVED OUTSIDE FOR PERFORMANCE ---
@@ -125,7 +126,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const { t } = useLanguage();
     const { chapter, activeTask } = route.params || {}; // activeTask contains timer info
     const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'Flashcards'); // Use initialTab if passed
+    const [downloading, setDownloading] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Separate states for each tab to prevent flicker/ghosting
     const [mcqData, setMcqData] = useState([]);
@@ -764,7 +768,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     const renderContent = () => {
         // Only show full-screen loader if data is empty (no cache yet)
-        if (loading && data.length === 0) return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
+        const tabData = getTabSpecificData(activeTab);
+        if (loading && tabData.length === 0) return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
 
         if (activeTab === 'MCQs') {
             if (quizMode) return renderQuiz();

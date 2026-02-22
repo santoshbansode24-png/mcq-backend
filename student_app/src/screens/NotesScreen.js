@@ -6,11 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { BASE_URL, API_URL } from '../api/config';
 import { getCachedFile } from '../utils/downloadUtils';
 
-const NotesScreen = () => {
-    // ... params
+const NotesScreen = ({ navigation, route }) => {
+    const { chapterId, chapterName } = route.params || {};
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [notes, setNotes] = useState([]);
+    const [downloading, setDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
 
     // Replace useEffect with useFocusEffect for auto-update
     useFocusEffect(

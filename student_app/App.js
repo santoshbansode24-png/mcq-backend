@@ -39,7 +39,6 @@ export default function App() {
   });
 
   // Check Server Status on App Start
-  // Check Server Status on App Start
   useEffect(() => {
     const initServer = async () => {
       // Create a promise that rejects after 5 seconds to prevent indefinite hanging
@@ -48,13 +47,17 @@ export default function App() {
       );
 
       try {
-        // Race the server check against the timeout
+        // 1. Attempt Server Check (Non-blocking)
         await Promise.race([
           checkServerConnection(),
           timeoutPromise
         ]);
+      } catch (e) {
+        console.log('Server check timed out or failed (likely offline):', e.message);
+      }
 
-        // NEW: Check session logic moved from AppSplashScreen
+      // 2. Always Check Session, even if offline
+      try {
         const savedUser = await AsyncStorage.getItem('user_data');
         const userData = savedUser ? JSON.parse(savedUser) : null;
         if (userData) {
@@ -67,13 +70,13 @@ export default function App() {
           setInitialRoute('Login');
         }
       } catch (e) {
-        console.log('Server check or session check failed:', e.message);
-        setInitialRoute('Login'); // Fallback to login
+        console.error('Session check failed:', e);
+        setInitialRoute('Login');
       } finally {
-        // Always allow the app to proceed
         setServerChecked(true);
       }
     };
+
     initServer();
   }, []);
 

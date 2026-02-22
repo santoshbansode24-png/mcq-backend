@@ -248,11 +248,49 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         if (isFocused && chapter?.chapter_id) {
-            loadContent();
+            loadContent(false, false); // Initial load: not refreshing, not forcing
+            preFetchAll(); // Start pre-fetching everything else
         }
-    }, [isFocused, activeTab, chapter?.chapter_id]);
+    }, [isFocused, chapter?.chapter_id]); // Only run on mount/chapter change
 
-    const loadContent = async (isRefreshing = false) => {
+    // If already loaded, switching tabs shouldn't trigger a full reload
+    useEffect(() => {
+        if (isFocused && chapter?.chapter_id) {
+            loadContent(false, false); // Just ensures local state is set for the tab
+        }
+    }, [activeTab]);
+
+    const preFetchAll = async () => {
+        if (!chapter?.chapter_id) return;
+        console.log("[ChapterContent] Starting background pre-fetch...");
+
+        const tabsToFetch = ['MCQs', 'Notes', 'Videos', 'Flashcards', 'QuickRevision'].filter(t => t !== activeTab);
+
+        // Fetch sequentially in background to avoid overwhelming the bridge
+        for (const tab of tabsToFetch) {
+            loadTabInBackground(tab);
+        }
+    };
+
+    const loadTabInBackground = async (tab) => {
+        try {
+            let response;
+            if (tab === 'MCQs') response = await fetchMCQs(chapter.chapter_id, false);
+            else if (tab === 'Notes') response = await fetchNotes(chapter.chapter_id, false);
+            else if (tab === 'Videos') response = await fetchVideos(chapter.chapter_id, false);
+            else if (tab === 'Flashcards') response = await fetchFlashcards(chapter.chapter_id, false);
+            else if (tab === 'QuickRevision') response = await fetchQuickRevision(chapter.chapter_id, false);
+
+            const responseData = response?.data || (Array.isArray(response) ? response : null);
+            if (responseData) {
+                processLoadedData(responseData, true, tab);
+            }
+        } catch (e) {
+            console.log(`[Pre-fetch] Failed for ${tab}:`, e.message);
+        }
+    };
+
+    const loadContent = async (isRefreshing = false, forceRefresh = false) => {
         const currentTab = activeTab;
         tabRequestRef.current = currentTab;
 
@@ -299,7 +337,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         try {
             let response;
-            const force = true; // Always bypass internal API cache to get fresh data
+            const force = forceRefresh; // Respect the explicit forceRefresh flag
 
             if (activeTab === 'MCQs') {
                 response = await fetchMCQs(chapter.chapter_id, force);

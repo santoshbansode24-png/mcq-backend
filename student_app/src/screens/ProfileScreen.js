@@ -388,17 +388,28 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         <Text style={[styles.menuText, { color: theme.text }]}>{t('subscription')}: {user?.subscription_status || 'Active'}</Text>
                     </TouchableOpacity>
 
-                    {ENABLE_PAYMENTS && (
-                        <TouchableOpacity
-                            style={[styles.menuItem, { borderBottomColor: theme.border }]}
-                            onPress={() => navigation.navigate('Subscription')}
-                        >
+                    <TouchableOpacity
+                        style={[styles.menuItem, { borderBottomColor: theme.border, opacity: ENABLE_PAYMENTS ? 1 : 0.4 }]}
+                        onPress={() => {
+                            if (!ENABLE_PAYMENTS) {
+                                Alert.alert('Coming Soon! 🚀', 'Premium features are under development. Stay tuned!');
+                            } else {
+                                navigation.navigate('Subscription');
+                            }
+                        }}
+                    >
+                        <View>
                             <Text style={[styles.menuText, { color: theme.primary, fontWeight: 'bold' }]}>
                                 💎 {t('upgradePremium') || 'Upgrade to Premium'}
                             </Text>
-                            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                        </TouchableOpacity>
-                    )}
+                            {!ENABLE_PAYMENTS && (
+                                <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }}>
+                                    Coming Soon
+                                </Text>
+                            )}
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                         style={[styles.menuItem, { borderBottomColor: theme.border }]}

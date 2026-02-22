@@ -49,7 +49,7 @@ const AppSplashScreen = ({ navigation, route }) => {
             await new Promise(resolve => setTimeout(resolve, 1000));
             const userData = await sessionPromise;
 
-            if (targetRoute) {
+            if (targetRoute && !(targetRoute === 'Login' && userData)) {
                 navigation.replace(targetRoute, { user: userData });
                 return;
             }

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import { API_URL, BASE_URL, ENABLE_PAYMENTS } from '../api/config';
+import config, { API_URL, BASE_URL, ENABLE_PAYMENTS } from '../api/config';
 import { fetchClasses, updateStudentClass } from '../api/classes';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';

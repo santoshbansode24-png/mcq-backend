@@ -20,7 +20,7 @@ const NotesScreen = () => {
     );
 
     const fetchNotes = async (isRefreshing = false) => {
-        if (!isRefreshing) setLoading(true);
+        if (!isRefreshing && notes.length === 0) setLoading(true);
         try {
             const response = await fetch(`${API_URL}/get_notes.php?chapter_id=${chapterId}`);
             const data = await response.json();

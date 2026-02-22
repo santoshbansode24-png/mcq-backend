@@ -1,2 +1,2 @@
-2.7.8
-// Internal legal files hosted in root to fix 404
+2.7.9
+// Privacy Policy Root Fix & Video/Notes Flicker Elimination

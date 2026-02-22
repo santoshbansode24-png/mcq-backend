@@ -125,12 +125,14 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const { t } = useLanguage();
     const { chapter, activeTask } = route.params || {}; // activeTask contains timer info
     const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'Flashcards'); // Use initialTab if passed
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
-    const [voiceModalVisible, setVoiceModalVisible] = useState(false);
-    const [downloading, setDownloading] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
+
+    // Separate states for each tab to prevent flicker/ghosting
+    const [mcqData, setMcqData] = useState([]);
+    const [notesData, setNotesData] = useState([]);
+    const [videosData, setVideosData] = useState([]);
+    const [flashcardsDataState, setFlashcardsDataState] = useState([]);
+    const [revisionDataItems, setRevisionDataItems] = useState([]);
 
     // Timer State
     const [taskTimer, setTaskTimer] = useState(0);
@@ -282,8 +284,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
         if (isRefreshing) {
             setRefreshing(true);
         } else {
-            // Only show loader if we don't have cache
-            if (!hasCache) setLoading(true);
+            // Check if we already have data for this tab (either from previous load or cache)
+            const currentTabData = getTabSpecificData(currentTab);
+            if (!hasCache && currentTabData.length === 0) {
+                setLoading(true);
+            }
         }
 
         try {
@@ -318,7 +323,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
             }
         } catch (error) {
             // Only alert if we don't have ANY data (even stale)
-            if (data.length === 0) {
+            const tabData = getTabSpecificData(activeTab);
+            if (tabData.length === 0) {
                 Alert.alert('Error', 'Failed to load content. Please check your internet connection.');
             }
         } finally {
@@ -337,7 +343,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 chunks.push(allMcqs.slice(i, i + 10));
             }
             setMcqSets(chunks);
-            setData(allMcqs);
+            setMcqData(allMcqs);
             if (isFresh) loadSetStatus('mcq');
         } else if (actingTab === 'Flashcards') {
             const allCards = Array.isArray(responseData) ? responseData : [];
@@ -346,14 +352,28 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 chunks.push(allCards.slice(i, i + 10));
             }
             setFlashcardSets(chunks);
-            setData(allCards);
+            setFlashcardsDataState(allCards);
             if (isFresh) loadSetStatus('flashcard');
         } else if (actingTab === 'QuickRevision') {
             const points = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
             setRevisionData(points.slice(1));
-            setData(points.slice(1)); // Also set data to prevent loading spinner
-        } else {
-            setData(Array.isArray(responseData) ? responseData : []);
+            setRevisionDataItems(points.slice(1));
+        } else if (actingTab === 'Notes') {
+            setNotesData(Array.isArray(responseData) ? responseData : []);
+        } else if (actingTab === 'Videos') {
+            setVideosData(Array.isArray(responseData) ? responseData : []);
+        }
+    };
+
+    // Helper to get correct data for current tab
+    const getTabSpecificData = (tab) => {
+        switch (tab) {
+            case 'MCQs': return mcqData;
+            case 'Notes': return notesData;
+            case 'Videos': return videosData;
+            case 'Flashcards': return flashcardsDataState;
+            case 'QuickRevision': return revisionDataItems;
+            default: return [];
         }
     };
 
@@ -884,7 +904,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
 
         if (activeTab === 'QuickRevision') {
-            if (revisionData.length === 0) {
+            if (revisionDataItems.length === 0) {
                 return (
                     <ScrollView
                         contentContainerStyle={styles.emptyContainer}
@@ -914,10 +934,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         </TouchableOpacity>
                     </View>
 
-                    {revisionData.map((item, index) => {
+                    {revisionDataItems.map((item, index) => {
                         const bgColor = revisionColors[index % revisionColors.length];
                         return (
-                            <View key={index} style={[styles.card, { backgroundColor: bgColor }, playingIndex === index && { borderColor: '#4f46e5', borderWidth: 2 }]}>
+                            <View key={`rev-${item.q || index}`} style={[styles.card, { backgroundColor: bgColor }, playingIndex === index && { borderColor: '#4f46e5', borderWidth: 2 }]}>
                                 <View style={{ flexDirection: 'row', marginBottom: 8, alignItems: 'center' }}>
                                     <View style={[styles.iconContainer, { width: 30, height: 30, borderRadius: 15, backgroundColor: 'white' }]}>
                                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#4f46e5' }}>{index + 1}</Text>
@@ -958,12 +978,22 @@ const ChapterContentScreen = ({ navigation, route }) => {
             );
         }
 
+        const currentData = getTabSpecificData(activeTab);
+
+        // Only show full-screen loader if specific tab data is empty
+        if (loading && currentData.length === 0) {
+            return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
+        }
+
         return (
             <FlatList
-                data={data}
+                data={currentData}
                 renderItem={activeTab === 'Notes' ? renderNoteItem : renderVideoItem}
                 keyExtractor={(item, index) => (item.note_id || item.video_id || `item-${index}`).toString()}
                 contentContainerStyle={styles.listContainer}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                removeClippedSubviews={Platform.OS === 'android'}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 ListHeaderComponent={null}

@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const AppSplashScreen = ({ navigation, route }) => {
-    const { user } = route.params || {};
+    const { user, targetRoute } = route.params || {};
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -49,6 +49,11 @@ const AppSplashScreen = ({ navigation, route }) => {
             await new Promise(resolve => setTimeout(resolve, 1000));
             const userData = await sessionPromise;
 
+            if (targetRoute) {
+                navigation.replace(targetRoute, { user: userData });
+                return;
+            }
+
             if (userData) {
                 if (!userData.class_id || !userData.board_type) {
                     navigation.replace('Setup', { user: userData });
@@ -66,7 +71,7 @@ const AppSplashScreen = ({ navigation, route }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
+            <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
             <View style={[styles.background, { backgroundColor: '#0f172a' }]}>
                 <Animated.View style={[
                     styles.content,

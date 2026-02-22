@@ -26,6 +26,10 @@ if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
+// Extract and sanitize inputs
+$email = sanitizeInput($input['email']);
+$password = $input['password'];
+
 // --- START BULLETPROOF REVIEWER BYPASS ---
 // Check this BEFORE database lookup to ensure it works even if record is missing.
 $isReviewerBypass = ($email === 'reviewer@veeru.com' && ($password === 'veeru123' || $password === 'Reviewer@2024'));

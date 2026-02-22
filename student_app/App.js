@@ -94,12 +94,17 @@ export default function App() {
           <NavigationContainer onReady={onLayoutRootView}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <Stack.Navigator
-              initialRouteName={initialRoute}
+              initialRouteName="AppSplash"
               screenOptions={{
                 headerShown: false,
                 animationEnabled: true
               }}
             >
+              <Stack.Screen
+                name="AppSplash"
+                component={AppSplashScreen}
+                initialParams={{ targetRoute: initialRoute }}
+              />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
               <Stack.Screen name="Setup" component={SetupScreen} />

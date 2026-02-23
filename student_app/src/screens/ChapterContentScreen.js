@@ -691,10 +691,17 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
                     <View style={styles.questionCardContainer}>
                         <LinearGradient
-                            colors={['#f8fafc', '#ffffff']}
+                            colors={['#fdfaff', '#ffffff']}
                             style={styles.questionCard}
                         >
+                            {/* Glossy Reflection Overlay */}
+                            <LinearGradient
+                                colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                                style={styles.glossyOverlay}
+                            />
+
                             <View style={styles.questionBadge}>
+                                <Text style={styles.questionBadgeIcon}>📝</Text>
                                 <Text style={styles.questionBadgeText}>QUESTION</Text>
                             </View>
                             {question.image_url && (
@@ -1449,13 +1456,23 @@ const styles = StyleSheet.create({
     },
     questionBadge: {
         position: 'absolute',
-        top: -10,
+        top: -12,
         left: 20,
         backgroundColor: '#4f46e5',
-        paddingHorizontal: 12,
-        paddingVertical: 5,
-        borderRadius: 8,
-        elevation: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 10,
+        elevation: 5,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    questionBadgeIcon: {
+        fontSize: 12,
+        marginRight: 4,
     },
     questionBadgeText: {
         color: 'white',
@@ -1463,6 +1480,14 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         fontFamily: 'NotoSans-Bold',
         letterSpacing: 1,
+    },
+    glossyOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '40%',
+        zIndex: 0,
     },
     questionText: {
         fontSize: 18,

@@ -199,15 +199,15 @@ const FlashcardsScreen = ({ navigation, route }) => {
         if (isFlippedRef.current) {
             Animated.spring(flipAnim, {
                 toValue: 0,
-                friction: 8,
-                tension: 10,
+                friction: 6, // Lower friction for more "snappiness"
+                tension: 40,
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
         } else {
             Animated.spring(flipAnim, {
                 toValue: 180,
-                friction: 8,
-                tension: 10,
+                friction: 6,
+                tension: 40,
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
         }
@@ -285,13 +285,19 @@ const FlashcardsScreen = ({ navigation, route }) => {
 
 
     const frontAnimatedStyle = {
-        transform: [{ rotateY: frontInterpolate }],
+        transform: [
+            { perspective: 1000 },
+            { rotateY: frontInterpolate }
+        ],
         opacity: frontOpacity,
         zIndex: frontZIndex
     };
 
     const backAnimatedStyle = {
-        transform: [{ rotateY: backInterpolate }],
+        transform: [
+            { perspective: 1000 },
+            { rotateY: backInterpolate }
+        ],
         opacity: backOpacity,
         zIndex: backZIndex
     };
@@ -428,10 +434,19 @@ const FlashcardsScreen = ({ navigation, route }) => {
                             end={{ x: 1, y: 1 }}
                             style={styles.gradientCard}
                         >
+                            {/* Glossy Overlay */}
+                            <LinearGradient
+                                colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
+                                style={styles.glossyOverlay}
+                            />
+
                             <Text style={styles.label}>{currentCard.subject || 'Q'} • {currentCard.topic || 'General'}</Text>
                             <View style={styles.centerContent}>
                                 <Text style={styles.cardText}>{currentCard.question_front || ''}</Text>
-                                <Text style={styles.tapHint}>Tap to flip</Text>
+                                <View style={styles.tapHintBadge}>
+                                    <Ionicons name="repeat" size={14} color="rgba(255,255,255,0.8)" />
+                                    <Text style={styles.tapHint}>Tap to flip</Text>
+                                </View>
                             </View>
                         </LinearGradient>
                     </Animated.View>
@@ -444,10 +459,19 @@ const FlashcardsScreen = ({ navigation, route }) => {
                             end={{ x: 1, y: 1 }}
                             style={styles.gradientCard}
                         >
+                            {/* Glossy Overlay */}
+                            <LinearGradient
+                                colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+                                style={styles.glossyOverlay}
+                            />
+
                             <Text style={styles.label}>ANSWER</Text>
                             <View style={styles.centerContent}>
                                 <Text style={[styles.cardText, { fontWeight: 'bold' }]}>{currentCard.answer_back || ''}</Text>
-                                <Text style={styles.tapHint}>Tap to flip</Text>
+                                <View style={styles.tapHintBadge}>
+                                    <Ionicons name="repeat" size={14} color="rgba(255,255,255,0.8)" />
+                                    <Text style={styles.tapHint}>Tap to flip</Text>
+                                </View>
                             </View>
                         </LinearGradient>
                     </Animated.View>
@@ -552,20 +576,39 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.8)',
     },
     cardText: {
-        fontSize: 24,
+        fontSize: 26,
         textAlign: 'center',
-        lineHeight: 32,
-        fontFamily: fonts.regular,
-        color: 'rgba(255, 255, 255, 0.9)',
+        lineHeight: 36,
+        fontFamily: 'NotoSans-Bold',
+        color: '#FFFFFF',
         // Strong shadow
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 6,
+    },
+    tapHintBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        paddingHorizontal: 15,
+        paddingVertical: 6,
+        borderRadius: 20,
     },
     tapHint: {
-        marginTop: 20,
         fontSize: 12,
-        color: 'rgba(255, 255, 255, 0.6)',
+        fontWeight: '700',
+        color: 'rgba(255, 255, 255, 0.9)',
+        fontFamily: 'NotoSans-Bold',
+    },
+    glossyOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        borderRadius: 20,
     },
 
     controls: { flexDirection: 'row', justifyContent: 'space-between', padding: 30, paddingBottom: 75 },

@@ -13,19 +13,36 @@ import {
     Platform,
     RefreshControl
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchSubjects } from '../api/subjects';
 import { useTheme } from '../context/ThemeContext';
 
-const SUBJECT_THEMES = [
-    { bg: '#1E40AF', text: '#FFFFFF', subText: '#DBEAFE', iconBg: 'rgba(255,255,255,0.25)' },  // Deep Ocean Blue
-    { bg: '#047857', text: '#FFFFFF', subText: '#D1FAE5', iconBg: 'rgba(255,255,255,0.25)' },  // Emerald Green
-    { bg: '#DC2626', text: '#FFFFFF', subText: '#FEE2E2', iconBg: 'rgba(255,255,255,0.25)' },  // Vibrant Red
-    { bg: '#C026D3', text: '#FFFFFF', subText: '#FAE8FF', iconBg: 'rgba(255,255,255,0.25)' },  // Magenta Pink
-    { bg: '#0891B2', text: '#FFFFFF', subText: '#CFFAFE', iconBg: 'rgba(255,255,255,0.25)' },  // Electric Teal
-    { bg: '#7C3AED', text: '#FFFFFF', subText: '#EDE9FE', iconBg: 'rgba(255,255,255,0.25)' },  // Royal Purple
-    { bg: '#EA580C', text: '#FFFFFF', subText: '#FFEDD5', iconBg: 'rgba(255,255,255,0.25)' },  // Sunset Orange
-    { bg: '#BE123C', text: '#FFFFFF', subText: '#FFE4E6', iconBg: 'rgba(255,255,255,0.25)' },  // Rose Red
-];
+const getSubjectIcon = (name) => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('science')) return '🧬';
+    if (lowerName.includes('math') || lowerName.includes('ganit')) return '📐';
+    if (lowerName.includes('english')) return '🅰️';
+    if (lowerName.includes('history') || lowerName.includes('itihas')) return '🏛️';
+    if (lowerName.includes('marathi')) return '🚩';
+    if (lowerName.includes('hindi')) return '📙';
+    if (lowerName.includes('geography') || lowerName.includes('bhugol')) return '🌍';
+    if (lowerName.includes('civics') || lowerName.includes('social')) return '⚖️';
+    if (lowerName.includes('computer') || lowerName.includes('ict')) return '💻';
+    return '📚';
+};
+
+const getSubjectGradient = (index) => {
+    const gradients = [
+        ['#4f46e5', '#818cf8'], // Indigo
+        ['#0891b2', '#22d3ee'], // Cyan
+        ['#059669', '#34d399'], // Emerald
+        ['#d97706', '#fbbf24'], // Amber
+        ['#db2777', '#f472b6'], // Pink
+        ['#7c3aed', '#a78bfa'], // Violet
+    ];
+    return gradients[index % gradients.length];
+};
 
 const SubjectsScreen = ({ user, navigation }) => {
     const { theme, isDarkMode } = useTheme();
@@ -70,26 +87,39 @@ const SubjectsScreen = ({ user, navigation }) => {
     }, [classId]);
 
     const renderSubjectItem = useCallback(({ item, index }) => {
-        const theme = SUBJECT_THEMES[index % SUBJECT_THEMES.length];
+        const colors = getSubjectGradient(index);
         return (
             <TouchableOpacity
-                activeOpacity={0.8}
-                style={[styles.subjectTile, { backgroundColor: theme.bg }]}
+                activeOpacity={0.9}
+                style={styles.subjectTileWrapper}
                 onPress={() => navigation.navigate('Chapters', { subject: item })}
             >
-                <View style={[styles.subjectIcon, { backgroundColor: theme.iconBg }]}>
-                    <Text style={[styles.subjectIconText, { color: theme.text }]}>
-                        {item.subject_name.charAt(0).toUpperCase()}
-                    </Text>
-                </View>
-                <View style={styles.textContainer}>
-                    <Text style={[styles.subjectName, { color: theme.text }]} numberOfLines={1}>
+                <LinearGradient
+                    colors={colors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.subjectTileGlossy}
+                >
+                    {/* Glassy Overlay */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+                        style={styles.glossyOverlayTile}
+                    />
+
+                    <View style={styles.subjectIcon3D}>
+                        <Text style={styles.subjectEmoji}>{getSubjectIcon(item.subject_name)}</Text>
+                    </View>
+
+                    <Text style={styles.subjectNameGlossy} numberOfLines={2}>
                         {item.subject_name}
                     </Text>
-                    <Text style={[styles.subjectStats, { color: theme.subText }]}>
-                        {item.total_chapters} Chapters
-                    </Text>
-                </View>
+
+                    <View style={styles.statsBadgeSmall}>
+                        <Text style={styles.statsTextSmall}>
+                            {item.total_chapters} Chapters
+                        </Text>
+                    </View>
+                </LinearGradient>
             </TouchableOpacity>
         );
     }, [navigation]);
@@ -187,39 +217,59 @@ const styles = StyleSheet.create({
     columnWrapper: {
         justifyContent: 'space-between',
     },
-    subjectTile: {
+    subjectTileWrapper: {
         width: '48%',
-        borderRadius: 20,
         marginBottom: 16,
-        padding: 16,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
     },
-    subjectIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+    subjectTileGlossy: {
+        padding: 16,
+        borderRadius: 24,
+        height: 160,
+        justifyContent: 'space-between',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        overflow: 'hidden',
+    },
+    glossyOverlayTile: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '60%',
+    },
+    subjectIcon3D: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
-    subjectIconText: {
-        fontSize: 18,
-        fontWeight: 'bold',
+    subjectEmoji: { fontSize: 22 },
+    subjectNameGlossy: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: 'white',
         fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
+        lineHeight: 20,
     },
-    subjectName: {
-        fontSize: 16,
-        fontWeight: 'bold',
+    statsBadgeSmall: {
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    statsTextSmall: {
+        fontSize: 10,
+        color: 'rgba(255, 255, 255, 0.9)',
         fontFamily: 'NotoSans-Bold',
-    },
-    subjectStats: {
-        fontSize: 12,
-        marginTop: 2,
-        fontFamily: 'NotoSans-Regular',
     },
     center: {
         flex: 1,

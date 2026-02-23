@@ -1509,7 +1509,7 @@ const styles = StyleSheet.create({
     },
     optionButton: {
         backgroundColor: 'white',
-        padding: 12,
+        padding: 14,
         borderRadius: 12,
         marginBottom: 8,
         borderWidth: 1,
@@ -1524,9 +1524,9 @@ const styles = StyleSheet.create({
         borderColor: '#ef4444',
     },
     optionText: {
-        fontSize: 14,
-        color: '#334155',
-        fontFamily: 'NotoSans-Regular',
+        fontSize: 16,
+        color: '#1e293b', // Sharper dark slate
+        fontFamily: 'NotoSans-Bold', // Use Bold for better sharpness
     },
     whiteText: {
         color: 'white',

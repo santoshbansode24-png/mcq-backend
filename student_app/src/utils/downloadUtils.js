@@ -139,43 +139,48 @@ export const getCachedFile = async (url, title, onProgress = null, silent = fals
         );
 
         const { uri } = await downloadResumable.downloadAsync();
-        console.log('[Cache] Download Complete:', uri);
 
-        // Verify the downloaded file
+        // 5. Verify the downloaded file
         const downloadedFileInfo = await FileSystem.getInfoAsync(uri);
+
         if (!downloadedFileInfo.exists || downloadedFileInfo.size < 500) {
-            console.error("[Cache] Downloaded file is too small. Deleting.");
+            const msg = `[Cache] Downloaded file is too small (${downloadedFileInfo.size} bytes). Deleting.`;
+            if (silent) console.log(msg); else console.error(msg);
+
             await FileSystem.deleteAsync(uri, { idempotent: true });
             throw new Error("Downloaded file is invalid or empty.");
         }
 
-        // MAGIC NUMBER CHECK: Read the beginning of the file to see if it claims to be a PDF
+        // 6. MAGIC NUMBER CHECK: Read the beginning of the file to see if it claims to be a PDF
+        // This stops us from caching HTML error pages (404/500) as PDFs
         const fileHeader = await FileSystem.readAsStringAsync(uri, {
-            length: 50,
+            length: 100, // Read a bit more to catch HTML tags
             position: 0,
             encoding: 'utf8'
         });
 
         if (!fileHeader.includes('%PDF')) {
-            console.error("[Cache] File does not start with %PDF. It starts with:", fileHeader);
-            console.error("Likely an HTML error page or corrupt file.");
+            const msg = `[Cache] Invalid file format. Does not start with %PDF. Content starts with: ${fileHeader.substring(0, 50)}`;
+            if (silent) console.log(msg); else console.error(msg);
 
             await FileSystem.deleteAsync(uri, { idempotent: true });
 
             // Extract detailed error if it looks like HTML
-            if (fileHeader.includes('<html') || fileHeader.includes('<!DOCTYPE')) {
-                throw new Error("Server returned an HTML Page instead of a PDF (404/500 Error).");
+            if (fileHeader.includes('<html') || fileHeader.includes('<!DOCTYPE') || fileHeader.includes('Error:')) {
+                throw new Error(`Server Error: ${fileHeader.substring(0, 50)}...`);
             }
             throw new Error("Downloaded file is not a valid PDF.");
         }
 
+        console.log('[Cache] ✅ Successfully cached:', uri);
         return uri;
 
-
     } catch (e) {
-        console.error('[Cache] Error:', e);
         if (!silent) {
-            Alert.alert("Error", "Failed to download file for offline viewing.");
+            console.error('[Cache] Critical Error:', e);
+            Alert.alert("Download Error", e.message || "Failed to download file for offline viewing.");
+        } else {
+            console.log('[Cache] Silent Error:', e.message);
         }
         throw e;
     }

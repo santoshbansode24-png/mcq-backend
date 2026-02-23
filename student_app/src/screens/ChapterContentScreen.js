@@ -743,20 +743,25 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         onPress={prevQuestion}
                         disabled={currentQuestionIndex === 0}
                     >
-                        <View style={styles.prevButtonContent}>
-                            <Text style={styles.prevButtonIcon}>←</Text>
-                            <Text style={styles.prevButtonTextStylized}>Prev</Text>
-                        </View>
+                        <LinearGradient
+                            colors={['#f8fafc', '#f1f5f9']}
+                            style={[styles.prevButtonGradient, { borderRadius: 16 }]}
+                        >
+                            <View style={styles.prevButtonContent}>
+                                <Text style={styles.prevButtonIcon}>←</Text>
+                                <Text style={styles.prevButtonTextStylized}>Prev</Text>
+                            </View>
+                        </LinearGradient>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.nextButtonStylized, !selectedOption && { opacity: 0.5 }]}
+                        style={styles.nextButtonStylized}
                         onPress={nextQuestion}
                         activeOpacity={0.8}
                         disabled={!selectedOption}
                     >
                         <LinearGradient
-                            colors={!selectedOption ? ['#94a3b8', '#64748b'] : ['#4f46e5', '#6366f1']}
+                            colors={!selectedOption ? ['#cbd5e1', '#94a3b8'] : ['#4f46e5', '#8b5cf6']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={styles.nextButtonGradient}
@@ -1417,22 +1422,25 @@ const styles = StyleSheet.create({
         fontFamily: 'NotoSans-Bold',
     },
     questionCard: {
-        backgroundColor: '#f0fdfa', // Light Teal Background
+        backgroundColor: '#fff',
         padding: 24,
-        borderRadius: 16,
+        borderRadius: 20,
         marginBottom: 24,
-        elevation: 3,
-        shadowColor: '#0d9488', // Teal Shadow
-        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
-        borderWidth: 4,
-        borderColor: '#2dd4bf', // Medium Teal Border
-        borderStyle: 'solid',
-        borderLeftWidth: 4, // Explicit for consistency
-        borderRightWidth: 4,
-        borderTopWidth: 4,
-        borderBottomWidth: 4,
+        shadowRadius: 12,
+        borderWidth: 1.5,
+        borderColor: '#e2e8f0',
+        overflow: 'hidden',
+    },
+    questionHeaderGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
     },
     questionText: {
         fontSize: 18,
@@ -1528,17 +1536,21 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     prevButtonStylized: {
-        backgroundColor: '#fff',
-        borderWidth: 1.5,
-        borderColor: '#e2e8f0',
         borderRadius: 16,
-        paddingHorizontal: 16,
+        overflow: 'hidden',
         height: 54,
-        justifyContent: 'center',
-        elevation: 2,
+        width: 100,
+        elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.1,
+    },
+    prevButtonGradient: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#e2e8f0',
     },
     prevButtonContent: {
         flexDirection: 'row',
@@ -1547,11 +1559,11 @@ const styles = StyleSheet.create({
     },
     prevButtonIcon: {
         fontSize: 18,
-        color: '#64748b',
+        color: '#475569',
         fontWeight: 'bold',
     },
     prevButtonTextStylized: {
-        color: '#64748b',
+        color: '#475569',
         fontSize: 15,
         fontWeight: '700',
         fontFamily: 'NotoSans-Bold',
@@ -1561,11 +1573,11 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: 'hidden',
         height: 54,
-        elevation: 4,
+        elevation: 8,
         shadowColor: '#4f46e5',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
     },
     nextButtonGradient: {
         flex: 1,
@@ -1579,6 +1591,9 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         fontFamily: 'NotoSans-Bold',
         letterSpacing: 0.5,
+        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
     },
     explanationHeader: {
         flexDirection: 'row',

@@ -60,15 +60,15 @@ async function makeIcon(croppedLogo, canvasSize, fillPercent, outputPath) {
     console.log('✂️  Auto-cropping white space...');
     const cropped = autoCrop(original);
 
-    // icon.png — logo fills 82% (for iOS & Play Store listing)
-    console.log('\n🖼️  Creating icon.png (1024x1024, logo at 82%)...');
-    await makeIcon(cropped, 1024, 0.82, path.join(ASSETS, 'icon.png'));
+    // icon.png — logo fills 75% (Safe for most platforms)
+    console.log('\n🖼️  Creating icon.png (1024x1024, logo at 75%)...');
+    await makeIcon(cropped, 1024, 0.75, path.join(ASSETS, 'icon.png'));
 
-    // adaptive-foreground.png — logo fills 65% only
-    // Android safe zone = central 72% (25% cropped from each edge in circle mode)
-    // 65% ensures logo is big but NEVER gets clipped on any device
-    console.log('\n📱 Creating adaptive-foreground.png (1024x1024, logo at 65%)...');
-    await makeIcon(cropped, 1024, 0.65, path.join(ASSETS, 'adaptive-foreground.png'));
+    // adaptive-foreground.png — logo fills 50% only
+    // This is the CRITICAL fix for "cutting from all side"
+    // Android safe zone is roughly 50-60%. 50% ensures NO cutting.
+    console.log('\n📱 Creating adaptive-foreground.png (1024x1024, logo at 50%)...');
+    await makeIcon(cropped, 1024, 0.50, path.join(ASSETS, 'adaptive-foreground.png'));
 
     console.log('\n🎉 Done! Both icon files have been fixed.');
     console.log('   Rebuild your APK to see the new icon on your phone.');

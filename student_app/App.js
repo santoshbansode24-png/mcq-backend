@@ -15,7 +15,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import SetupScreen from './src/screens/SetupScreen';
-import AppSplashScreen from './src/screens/AppSplashScreen';
 import ClassSelectionScreen from './src/screens/ClassSelectionScreen';
 import MainScreen from './src/screens/MainScreen';
 import VideoPlayerScreen from './src/screens/VideoPlayerScreen';
@@ -97,17 +96,12 @@ export default function App() {
           <NavigationContainer onReady={onLayoutRootView}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <Stack.Navigator
-              initialRouteName="AppSplash"
+              initialRouteName={initialRoute}
               screenOptions={{
                 headerShown: false,
                 animationEnabled: true
               }}
             >
-              <Stack.Screen
-                name="AppSplash"
-                component={AppSplashScreen}
-                initialParams={{ targetRoute: initialRoute }}
-              />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
               <Stack.Screen name="Setup" component={SetupScreen} />

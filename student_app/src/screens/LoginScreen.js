@@ -37,12 +37,11 @@ const LoginScreen = ({ navigation }) => {
                 // Save user session
                 await AsyncStorage.setItem('user_data', JSON.stringify(data.data));
 
-                Alert.alert('Success', `Welcome back, ${data.data.name || 'Student'}!`);
                 if (navigation) {
                     if (!data.data.class_id || !data.data.board_type) {
                         navigation.replace('Setup', { user: data.data });
                     } else {
-                        navigation.replace('AppSplash', { user: data.data });
+                        navigation.replace('Main', { user: data.data });
                     }
                 }
             } else {
@@ -62,53 +61,7 @@ const LoginScreen = ({ navigation }) => {
         }
     };
 
-    const diagnoseConnection = async () => {
-        setLoading(true);
-        let debugMsg = "Starting diagnostics...\n";
 
-        try {
-            // 1. Check Internet (Google)
-            debugMsg += "1. Checking Internet (Google)... ";
-            try {
-                const googleRes = await fetch('https://www.google.com', { method: 'HEAD', mode: 'no-cors', timeout: 5000 });
-                debugMsg += "OK ✅\n";
-            } catch (e) {
-                debugMsg += `FAIL ❌ (${e.message})\n`;
-            }
-
-            // 2. Check Backend Health
-            debugMsg += `2. Checking Backend (${config.API_URL})... `;
-            try {
-                const backendRes = await fetch(`${config.API_URL}/health.php`, {
-                    method: 'GET',
-                    timeout: 25000,
-                    headers: { 'Cache-Control': 'no-cache' }
-                });
-                debugMsg += `Status: ${backendRes.status} `;
-                if (backendRes.ok) {
-                    debugMsg += "OK ✅\n";
-                    const text = await backendRes.text();
-                    debugMsg += `Response: ${text.substring(0, 50)}...\n`;
-                } else {
-                    debugMsg += "FAIL ❌\n";
-                }
-            } catch (e) {
-                debugMsg += `FAIL ❌ (${e.message})\n`;
-                // Detailed Axios style error if available
-                if (e.toJSON) {
-                    debugMsg += `Details: ${JSON.stringify(e.toJSON())}\n`;
-                }
-            }
-
-            Alert.alert("Diagnostic Results", debugMsg);
-            console.log(debugMsg);
-
-        } catch (err) {
-            Alert.alert("Diagnostic Error", err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <KeyboardAvoidingView
@@ -188,12 +141,7 @@ const LoginScreen = ({ navigation }) => {
                         </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity
-                        onPress={diagnoseConnection}
-                        style={styles.debugInfo}
-                    >
-                        <Text style={styles.debugText}>Diagnose Connection Issues</Text>
-                    </TouchableOpacity>
+
 
                     <TouchableOpacity
                         onPress={() => Linking.openURL(`${config.ROOT_URL}/privacy.php`)}
@@ -306,17 +254,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
     },
-    debugInfo: {
-        marginTop: 20,
-        padding: 10,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    debugText: {
-        fontSize: 12,
-        color: '#666',
-    }
+
 });
 
 export default LoginScreen;

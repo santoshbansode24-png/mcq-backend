@@ -242,26 +242,70 @@ const HomeScreen = ({ user, navigation, route }) => {
         </View>
     );
 
+    const getSubjectIcon = (name) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('science')) return '🧬';
+        if (lowerName.includes('math') || lowerName.includes('ganit')) return '📐';
+        if (lowerName.includes('english')) return '🅰️';
+        if (lowerName.includes('history') || lowerName.includes('itihas')) return '🏛️';
+        if (lowerName.includes('marathi')) return '🚩';
+        if (lowerName.includes('hindi')) return '📙';
+        if (lowerName.includes('geography') || lowerName.includes('bhugol')) return '🌍';
+        if (lowerName.includes('civics') || lowerName.includes('social')) return '⚖️';
+        if (lowerName.includes('computer') || lowerName.includes('ict')) return '💻';
+        return '📚';
+    };
+
+    const getSubjectGradient = (index) => {
+        const gradients = [
+            ['#4f46e5', '#818cf8'], // Indigo
+            ['#0891b2', '#22d3ee'], // Cyan
+            ['#059669', '#34d399'], // Emerald
+            ['#d97706', '#fbbf24'], // Amber
+            ['#db2777', '#f472b6'], // Pink
+            ['#7c3aed', '#a78bfa'], // Violet
+        ];
+        return gradients[index % gradients.length];
+    };
+
     const renderSubjectItem = ({ item, index }) => {
-        const gradients = [['#FF9A9E', '#FECFEF'], ['#a18cd1', '#fbc2eb'], ['#84fab0', '#8fd3f4'], ['#a6c0fe', '#f68084']];
-        const colors = gradients[index % gradients.length];
+        const colors = getSubjectGradient(index);
 
         return (
-            <TouchableOpacity onPress={() => navigation.navigate('Chapters', { subject: item })} style={styles.subjectWrapper}>
-                <View style={[styles.subjectCard, { borderColor: theme.border, backgroundColor: isDarkMode ? '#1f2937' : '#ffffff' }]}>
-                    <LinearGradient colors={colors} style={styles.subjectIcon}>
-                        <Text style={styles.subjectIconText}>{item.subject_name.charAt(0)}</Text>
-                    </LinearGradient>
+            <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => navigation.navigate('Chapters', { subject: item })}
+                style={styles.subjectWrapper}
+            >
+                <LinearGradient
+                    colors={colors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.subjectCardGlossy}
+                >
+                    {/* Glassy Overlay */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+                        style={styles.glossyOverlaySubject}
+                    />
+
+                    <View style={styles.subjectIcon3D}>
+                        <Text style={styles.subjectEmoji}>{getSubjectIcon(item.subject_name)}</Text>
+                    </View>
+
                     <View style={styles.subjectInfo}>
-                        <Text style={[styles.subjectName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{item.subject_name}</Text>
-                        <Text style={[styles.subjectStats, { color: theme.textSecondary }]}>
-                            {item.total_chapters} {t('chapters')} • {item.total_mcqs} {t('mcqs')}
-                        </Text>
+                        <Text style={styles.subjectNameGlossy} numberOfLines={1}>{item.subject_name}</Text>
+                        <View style={styles.subjectStatsBadge}>
+                            <Text style={styles.subjectStatsText}>
+                                {item.total_chapters} Chapters • {item.total_mcqs} MCQs
+                            </Text>
+                        </View>
                     </View>
-                    <View style={[styles.arrowContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-                        <Text style={[styles.arrow, { color: theme.textSecondary }]}>›</Text>
+
+                    <View style={styles.arrowContainerGlossy}>
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="white" />
                     </View>
-                </View>
+                </LinearGradient>
             </TouchableOpacity>
         );
     };
@@ -328,14 +372,70 @@ const styles = StyleSheet.create({
     bannerTitle: { fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
     bannerSubtitle: { fontSize: 13, color: 'white', opacity: 0.9, fontFamily: 'NotoSans-Regular' },
     bannerIconContainer: { width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-    subjectWrapper: { marginBottom: 12 },
-    subjectCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 20, borderWidth: 1 },
-    subjectIcon: { width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    subjectIconText: { fontSize: 20, fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold' },
+    subjectWrapper: { marginBottom: 15 },
+    subjectCardGlossy: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 24,
+        elevation: 8,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        overflow: 'hidden',
+    },
+    glossyOverlaySubject: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '60%',
+        zIndex: 0,
+    },
+    subjectIcon3D: {
+        width: 54,
+        height: 54,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    subjectEmoji: { fontSize: 28 },
     subjectInfo: { flex: 1 },
-    subjectName: { fontSize: 15, fontWeight: 'bold', marginBottom: 2, fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
-    subjectStats: { fontSize: 12, fontFamily: 'NotoSans-Regular' },
-    arrowContainer: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    subjectNameGlossy: {
+        fontSize: 17,
+        fontWeight: '800',
+        color: 'white',
+        fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
+    },
+    subjectStatsBadge: {
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+        marginTop: 4,
+    },
+    subjectStatsText: {
+        fontSize: 11,
+        color: 'rgba(255, 255, 255, 0.9)',
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 0.5,
+    },
+    arrowContainerGlossy: {
+        width: 32,
+        height: 32,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     loadingOverlay: { padding: 40, alignItems: 'center' },
     emptyContainer: { alignItems: 'center', marginTop: 20 },
     syncIndicator: {

@@ -130,8 +130,8 @@ const SubjectsScreen = ({ user, navigation }) => {
             {/* Setting translucent to false forces the View to start BELOW the status bar on Android */}
             <StatusBar
                 barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-                backgroundColor={theme.background}
-                translucent={false}
+                backgroundColor="transparent"
+                translucent={true}
             />
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>

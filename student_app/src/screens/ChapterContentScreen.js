@@ -689,21 +689,23 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         <Text style={styles.scoreText}>Score: {score}</Text>
                     </View>
 
-                    <View style={styles.questionCard}>
+                    <View style={styles.questionCardContainer}>
                         <LinearGradient
-                            colors={['#4f46e5', '#818cf8']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.questionHeaderGradient}
-                        />
-                        {question.image_url && (
-                            <Image
-                                source={{ uri: `${BASE_URL}/uploads/${question.image_url}` }}
-                                style={styles.questionImage}
-                                resizeMode="contain"
-                            />
-                        )}
-                        <Text style={styles.questionText}>{decodeHtml(question.question)}</Text>
+                            colors={['#f8fafc', '#ffffff']}
+                            style={styles.questionCard}
+                        >
+                            <View style={styles.questionBadge}>
+                                <Text style={styles.questionBadgeText}>QUESTION</Text>
+                            </View>
+                            {question.image_url && (
+                                <Image
+                                    source={{ uri: `${BASE_URL}/uploads/${question.image_url}` }}
+                                    style={styles.questionImage}
+                                    resizeMode="contain"
+                                />
+                            )}
+                            <Text style={styles.questionText}>{decodeHtml(question.question)}</Text>
+                        </LinearGradient>
                     </View>
 
                     <View style={styles.optionsList}>
@@ -1428,36 +1430,47 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
     },
-    questionCard: {
-        backgroundColor: '#fff',
-        padding: 16,
-        paddingTop: 24, // Added space for gradient top
-        borderRadius: 16,
-        marginBottom: 12,
-        elevation: 6,
+    questionCardContainer: {
+        marginBottom: 16,
+        elevation: 8,
         shadowColor: '#4f46e5',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.1,
         shadowRadius: 10,
+        borderRadius: 20,
+        backgroundColor: 'white',
+    },
+    questionCard: {
+        padding: 20,
+        paddingTop: 30, // Space for badge
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: '#e2e8f0',
-        borderLeftWidth: 4,
-        borderLeftColor: '#4f46e5',
-        overflow: 'hidden',
     },
-    questionHeaderGradient: {
+    questionBadge: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 6,
+        top: -10,
+        left: 20,
+        backgroundColor: '#4f46e5',
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 8,
+        elevation: 4,
+    },
+    questionBadgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: '900',
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
     },
     questionText: {
-        fontSize: 19,
+        fontSize: 18,
         fontWeight: '800',
-        color: '#0f172a', // Deeper contrast
-        lineHeight: 26,
+        color: '#1e293b',
+        lineHeight: 25,
         fontFamily: 'NotoSans-Bold',
+        marginTop: 5,
     },
     questionImage: {
         width: '100%',

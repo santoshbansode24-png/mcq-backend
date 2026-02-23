@@ -1213,8 +1213,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingTop: 4,
+        paddingBottom: 4,
         // backgroundColor handled by theme
         borderBottomWidth: 1,
         // borderBottomColor handled by theme
@@ -1237,7 +1237,7 @@ const styles = StyleSheet.create({
     },
     tabContainer: {
         // backgroundColor handled by theme
-        paddingVertical: 8,
+        paddingVertical: 6,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
         // borderBottomColor handled by theme
@@ -1402,15 +1402,16 @@ const styles = StyleSheet.create({
         fontFamily: 'NotoSans-Regular',
     },
     quizContainer: {
-        padding: 20,
+        padding: 16,
     },
     progressContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 20,
+        marginBottom: 12,
+        alignItems: 'center',
     },
     progressText: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#64748b',
         fontWeight: '600',
         fontFamily: 'NotoSans-Bold',
@@ -1423,15 +1424,15 @@ const styles = StyleSheet.create({
     },
     questionCard: {
         backgroundColor: '#fff',
-        padding: 24,
-        borderRadius: 20,
-        marginBottom: 24,
-        elevation: 6,
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 12,
+        elevation: 4,
         shadowColor: '#4f46e5',
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
-        shadowRadius: 12,
-        borderWidth: 1.5,
+        shadowRadius: 8,
+        borderWidth: 1,
         borderColor: '#e2e8f0',
         overflow: 'hidden',
     },
@@ -1443,10 +1444,10 @@ const styles = StyleSheet.create({
         height: 6,
     },
     questionText: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '700',
-        color: '#134e4a', // Dark Teal Text
-        lineHeight: 28,
+        color: '#1e293b',
+        lineHeight: 22,
         fontFamily: 'NotoSans-Bold',
     },
     questionImage: {
@@ -1457,13 +1458,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#f0fdfa',
     },
     optionsList: {
-        marginBottom: 20,
+        marginBottom: 10,
     },
     optionButton: {
         backgroundColor: 'white',
-        padding: 16,
+        padding: 12,
         borderRadius: 12,
-        marginBottom: 10,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: '#e2e8f0',
     },
@@ -1476,7 +1477,7 @@ const styles = StyleSheet.create({
         borderColor: '#ef4444',
     },
     optionText: {
-        fontSize: 15,
+        fontSize: 14,
         color: '#334155',
         fontFamily: 'NotoSans-Regular',
     },
@@ -1485,10 +1486,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     explanationContainer: {
-        backgroundColor: '#f0fdf4',
-        padding: 16,
+        backgroundColor: '#f8fafc',
+        padding: 12,
         borderRadius: 12,
-        marginBottom: 20,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
     explanationTitle: {
         fontSize: 14,

@@ -1,3 +1,13 @@
 node_modules/
+.expo/
+dist/
+web-build/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 .env
 src/config/secrets.js
+android/
+ios/
+*.apk
+*.aab

@@ -678,78 +678,96 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         const question = quizQuestions[currentQuestionIndex];
         return (
-            <ScrollView contentContainerStyle={styles.quizContainer}>
-                <View style={styles.progressContainer}>
-                    <Text style={styles.progressText}>Set {currentSetIndex + 1} • Q{currentQuestionIndex + 1}/{quizQuestions.length}</Text>
-                    <Text style={styles.scoreText}>Score: {score}</Text>
-                </View>
-
-                <View style={styles.questionCard}>
-                    {question.image_url && (
-                        <Image
-                            source={{ uri: `${BASE_URL}/uploads/${question.image_url}` }}
-                            style={styles.questionImage}
-                            resizeMode="contain"
-                        />
-                    )}
-                    <Text style={styles.questionText}>{decodeHtml(question.question)}</Text>
-                </View>
-
-                <View style={styles.optionsList}>
-                    {['a', 'b', 'c', 'd'].map((opt) => (
-                        <TouchableOpacity
-                            key={opt}
-                            style={getOptionStyle(opt)}
-                            onPress={() => handleOptionSelect(opt)}
-                            disabled={selectedOption !== null}
-                        >
-                            <Text style={[
-                                styles.optionText,
-                                selectedOption && (opt === question.correct_answer || opt === selectedOption) ? styles.whiteText : null
-                            ]}>
-                                {opt.toUpperCase()}. {decodeHtml(question[`option_${opt}`])}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {showExplanation && (
-                    <View style={styles.explanationContainer}>
-                        <View style={styles.explanationHeader}>
-                            <Text style={styles.explanationEmoji}>💡</Text>
-                            <Text style={styles.explanationTitle}>Explanation</Text>
-                        </View>
-                        <Text style={styles.explanationText}>{decodeHtml(question.explanation) || 'No explanation available.'}</Text>
-
-                        <View style={styles.quizActionsRow}>
-                            {currentQuestionIndex > 0 && (
-                                <TouchableOpacity style={styles.prevButtonStylized} onPress={prevQuestion}>
-                                    <View style={styles.prevButtonContent}>
-                                        <Text style={styles.prevButtonIcon}>←</Text>
-                                        <Text style={styles.prevButtonTextStylized}>Prev</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity style={styles.nextButtonStylized} onPress={nextQuestion} activeOpacity={0.8}>
-                                <LinearGradient
-                                    colors={['#4f46e5', '#6366f1']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.nextButtonGradient}
-                                >
-                                    <Text style={styles.nextButtonTextStylized}>
-                                        {currentQuestionIndex === quizQuestions.length - 1 ? 'Finish Set 🏁' : 'Next Question →'}
-                                    </Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </View>
+            <View style={{ flex: 1, backgroundColor: theme.background }}>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={[styles.quizContainer, { paddingBottom: 20 }]}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.progressContainer}>
+                        <Text style={styles.progressText}>Set {currentSetIndex + 1} • Q{currentQuestionIndex + 1}/{quizQuestions.length}</Text>
+                        <Text style={styles.scoreText}>Score: {score}</Text>
                     </View>
-                )}
 
-                {/* Extra padding to prevent buttons from being hidden by tab bar */}
-                <View style={{ height: 100 }} />
-            </ScrollView>
+                    <View style={styles.questionCard}>
+                        {question.image_url && (
+                            <Image
+                                source={{ uri: `${BASE_URL}/uploads/${question.image_url}` }}
+                                style={styles.questionImage}
+                                resizeMode="contain"
+                            />
+                        )}
+                        <Text style={styles.questionText}>{decodeHtml(question.question)}</Text>
+                    </View>
+
+                    <View style={styles.optionsList}>
+                        {['a', 'b', 'c', 'd'].map((opt) => (
+                            <TouchableOpacity
+                                key={opt}
+                                style={getOptionStyle(opt)}
+                                onPress={() => handleOptionSelect(opt)}
+                                disabled={selectedOption !== null}
+                            >
+                                <Text style={[
+                                    styles.optionText,
+                                    selectedOption && (opt === question.correct_answer || opt === selectedOption) ? styles.whiteText : null
+                                ]}>
+                                    {opt.toUpperCase()}. {decodeHtml(question[`option_${opt}`])}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {showExplanation && (
+                        <View style={styles.explanationContainer}>
+                            <View style={styles.explanationHeader}>
+                                <Text style={styles.explanationEmoji}>💡</Text>
+                                <Text style={styles.explanationTitle}>Explanation</Text>
+                            </View>
+                            <Text style={styles.explanationText}>{decodeHtml(question.explanation) || 'No explanation available.'}</Text>
+                        </View>
+                    )}
+                </ScrollView>
+
+                {/* FIXED ACTIONS - No scrolling needed to find buttons */}
+                <View style={[styles.quizActionsRow, {
+                    paddingHorizontal: 20,
+                    paddingTop: 12,
+                    paddingBottom: Platform.OS === 'ios' ? 30 : 15,
+                    backgroundColor: theme.card,
+                    borderTopWidth: 1,
+                    borderTopColor: theme.border + '44'
+                }]}>
+                    <TouchableOpacity
+                        style={[styles.prevButtonStylized, currentQuestionIndex === 0 && { opacity: 0.3 }]}
+                        onPress={prevQuestion}
+                        disabled={currentQuestionIndex === 0}
+                    >
+                        <View style={styles.prevButtonContent}>
+                            <Text style={styles.prevButtonIcon}>←</Text>
+                            <Text style={styles.prevButtonTextStylized}>Prev</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.nextButtonStylized, !selectedOption && { opacity: 0.5 }]}
+                        onPress={nextQuestion}
+                        activeOpacity={0.8}
+                        disabled={!selectedOption}
+                    >
+                        <LinearGradient
+                            colors={!selectedOption ? ['#94a3b8', '#64748b'] : ['#4f46e5', '#6366f1']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.nextButtonGradient}
+                        >
+                            <Text style={styles.nextButtonTextStylized}>
+                                {currentQuestionIndex === quizQuestions.length - 1 ? 'Finish Set 🏁' : 'Next Question →'}
+                            </Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            </View>
         );
     };
 

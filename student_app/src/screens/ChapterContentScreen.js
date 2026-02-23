@@ -690,6 +690,12 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     </View>
 
                     <View style={styles.questionCard}>
+                        <LinearGradient
+                            colors={['#4f46e5', '#818cf8']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.questionHeaderGradient}
+                        />
                         {question.image_url && (
                             <Image
                                 source={{ uri: `${BASE_URL}/uploads/${question.image_url}` }}
@@ -1425,15 +1431,18 @@ const styles = StyleSheet.create({
     questionCard: {
         backgroundColor: '#fff',
         padding: 16,
+        paddingTop: 24, // Added space for gradient top
         borderRadius: 16,
         marginBottom: 12,
-        elevation: 4,
+        elevation: 6,
         shadowColor: '#4f46e5',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
         borderWidth: 1,
         borderColor: '#e2e8f0',
+        borderLeftWidth: 4,
+        borderLeftColor: '#4f46e5',
         overflow: 'hidden',
     },
     questionHeaderGradient: {
@@ -1444,10 +1453,10 @@ const styles = StyleSheet.create({
         height: 6,
     },
     questionText: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#1e293b',
-        lineHeight: 22,
+        fontSize: 19,
+        fontWeight: '800',
+        color: '#0f172a', // Deeper contrast
+        lineHeight: 26,
         fontFamily: 'NotoSans-Bold',
     },
     questionImage: {

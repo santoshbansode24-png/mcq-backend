@@ -715,22 +715,40 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
                 {showExplanation && (
                     <View style={styles.explanationContainer}>
-                        <Text style={styles.explanationTitle}>Explanation:</Text>
+                        <View style={styles.explanationHeader}>
+                            <Text style={styles.explanationEmoji}>💡</Text>
+                            <Text style={styles.explanationTitle}>Explanation</Text>
+                        </View>
                         <Text style={styles.explanationText}>{decodeHtml(question.explanation) || 'No explanation available.'}</Text>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+
+                        <View style={styles.quizActionsRow}>
                             {currentQuestionIndex > 0 && (
-                                <TouchableOpacity style={styles.prevButton} onPress={prevQuestion}>
-                                    <Text style={styles.prevButtonText}>Previous</Text>
+                                <TouchableOpacity style={styles.prevButtonStylized} onPress={prevQuestion}>
+                                    <View style={styles.prevButtonContent}>
+                                        <Text style={styles.prevButtonIcon}>←</Text>
+                                        <Text style={styles.prevButtonTextStylized}>Prev</Text>
+                                    </View>
                                 </TouchableOpacity>
                             )}
-                            <TouchableOpacity style={[styles.nextButton, { flex: 1 }]} onPress={nextQuestion}>
-                                <Text style={styles.nextButtonText}>
-                                    {currentQuestionIndex === quizQuestions.length - 1 ? 'Finish Set' : 'Next Question'}
-                                </Text>
+
+                            <TouchableOpacity style={styles.nextButtonStylized} onPress={nextQuestion} activeOpacity={0.8}>
+                                <LinearGradient
+                                    colors={['#4f46e5', '#6366f1']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.nextButtonGradient}
+                                >
+                                    <Text style={styles.nextButtonTextStylized}>
+                                        {currentQuestionIndex === quizQuestions.length - 1 ? 'Finish Set 🏁' : 'Next Question →'}
+                                    </Text>
+                                </LinearGradient>
                             </TouchableOpacity>
                         </View>
                     </View>
                 )}
+
+                {/* Extra padding to prevent buttons from being hidden by tab bar */}
+                <View style={{ height: 100 }} />
             </ScrollView>
         );
     };
@@ -1483,6 +1501,75 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
+    },
+    // Stylized Quiz UI Additions
+    quizActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginTop: 10,
+    },
+    prevButtonStylized: {
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#e2e8f0',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        height: 54,
+        justifyContent: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+    },
+    prevButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    prevButtonIcon: {
+        fontSize: 18,
+        color: '#64748b',
+        fontWeight: 'bold',
+    },
+    prevButtonTextStylized: {
+        color: '#64748b',
+        fontSize: 15,
+        fontWeight: '700',
+        fontFamily: 'NotoSans-Bold',
+    },
+    nextButtonStylized: {
+        flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+        height: 54,
+        elevation: 4,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    nextButtonGradient: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    nextButtonTextStylized: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '800',
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 0.5,
+    },
+    explanationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    explanationEmoji: {
+        fontSize: 18,
     },
     resultContainer: {
         flex: 1,

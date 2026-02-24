@@ -2,7 +2,7 @@
   "expo": {
     "name": "Veeru",
     "slug": "mcq-student-app",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -30,14 +30,13 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.veeru.app",
-      "versionCode": 9,
+      "versionCode": 10,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "NOTIFICATIONS",
-        "INTERNET",
-        "RECORD_AUDIO"
+        "INTERNET"
       ]
     },
     "web": {

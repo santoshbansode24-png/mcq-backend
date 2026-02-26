@@ -58,7 +58,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "./withUcropColors.js"
     ],
     "extra": {
       "eas": {

@@ -114,7 +114,7 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
 
                 // Validate crop Action
                 if (cropAction.originX < 0) cropAction.originX = 0;
-                if (cropAction.originY < 0) cropAction.originY = 0;
+                if (cropAction.originY < 0) originY = 0;
 
                 // Ensure we don't crop outside bounds due to floating point rounding
                 if (cropAction.originX + cropAction.width > actualWidth) cropAction.width = actualWidth - cropAction.originX;

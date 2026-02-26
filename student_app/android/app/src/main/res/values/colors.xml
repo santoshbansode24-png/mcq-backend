@@ -1,7 +1,14 @@
 <resources>
-  <color name="splashscreen_background">#4F46E5</color>
-  <color name="iconBackground">#4F46E5</color>
+  <color name="splashscreen_background">#0f172a</color>
+  <color name="iconBackground">#FFFFFF</color>
   <color name="colorPrimary">#023c69</color>
-  <color name="colorPrimaryDark">#4F46E5</color>
+  <color name="colorPrimaryDark">#0f172a</color>
+  <color name="ucrop_color_toolbar">#1E293B</color>
+  <color name="ucrop_color_statusbar">#0F172A</color>
+  <color name="ucrop_color_toolbar_widget">#FFFFFF</color>
+  <color name="ucrop_color_widget">#CBD5E1</color>
+  <color name="ucrop_color_widget_active">#FBBF24</color>
+  <color name="ucrop_color_widget_background">#1E293B</color>
+  <color name="ucrop_color_crop_background">#000000</color>
   <color name="notification_icon_color">#4F46E5</color>
 </resources>

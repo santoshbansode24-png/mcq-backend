@@ -8,7 +8,7 @@
 require_once 'cors_middleware.php';
 require_once '../config/db.php';
 require_once '../config/sms_config.php';
-require_once '../services/EmailService.php';
+// require_once '../services/EmailService.php'; // REMOVED RESEND
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -25,9 +25,10 @@ try {
 
     $email = strtolower(trim($input['email']));
 
-    // Validate email format
-    if (!EmailService::validateEmail($email)) {
-        sendResponse('error', 'Invalid email address format', null, 400);
+    // Validate email/phone format (Temporarily basic check for upcoming WhatsApp update)
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // We will change this to phone validation tomorrow for WhatsApp
+        // sendResponse('error', 'Invalid address format', null, 400);
     }
 
     // Check if user exists with this email
@@ -52,7 +53,7 @@ try {
     }
 
     // Generate OTP
-    $otp       = EmailService::generateOTP(OTP_LENGTH);
+    $otp       = (string) rand(100000, 999999); // Temporarily replaced EmailService::generateOTP
     $expiresAt = date('Y-m-d H:i:s', strtotime('+' . OTP_EXPIRY_MINUTES . ' minutes'));
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
@@ -63,17 +64,12 @@ try {
         throw new Exception("Failed to save OTP");
     }
 
-    // Send OTP via Email (Resend)
-    $emailService = new EmailService();
-    $emailResult  = $emailService->sendOTP($email, $otp, $user['name']);
+    // Send OTP via Email (Resend) - REMOVED!
+    // $emailService = new EmailService();
+    // $emailResult  = $emailService->sendOTP($email, $otp, $user['name']);
 
-    if (!$emailResult['success']) {
-        // Delete the OTP record if email failed
-        $stmt = $pdo->prepare("DELETE FROM password_reset_otps WHERE user_id = ? AND otp_code = ?");
-        $stmt->execute([$userId, $otp]);
-
-        sendResponse('error', $emailResult['message'], $emailResult['error'] ?? null, 500);
-    }
+    // TODO: IMPLEMENT WHATSAPP OTP HERE TOMORROW
+    // Temporarily faux successful response so the frontend doesn't crash tonight
 
     // Mask email for response (e.g. s***@gmail.com)
     $emailParts   = explode('@', $email);

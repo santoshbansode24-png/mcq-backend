@@ -4,17 +4,8 @@
  * Resend API credentials for sending OTP emails
  */
 
-// -----------------------------------------------
-// Resend Email API (replaces MSG91 SMS)
-// Get your API key from: https://resend.com/api-keys
-// -----------------------------------------------
-if (!defined('RESEND_API_KEY')) {
-    define('RESEND_API_KEY', 're_S5wgL2Xn_Kn5YGw4NTAzymSovXLm3LAzw');
-}
-
-if (!defined('RESEND_FROM_EMAIL')) {
-    define('RESEND_FROM_EMAIL', 'noreply@veeruapp.in');
-}
+// (Removed Resend credentials)
+// Tomorrow: Add Twilio or Interakt credentials here.
 
 // -----------------------------------------------
 // Legacy MSG91 (kept for reference, not used)

@@ -55,7 +55,6 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.5, // Optimize size for faster upload
-            base64: true,
         });
 
         if (!result.canceled) {

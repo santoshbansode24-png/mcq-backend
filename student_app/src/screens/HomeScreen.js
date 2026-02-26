@@ -268,7 +268,7 @@ const HomeScreen = ({ user, navigation, route }) => {
         return gradients[index % gradients.length];
     };
 
-    const renderSubjectItem = ({ item, index }) => {
+    const renderSubjectItem = useCallback(({ item, index }) => {
         const colors = getSubjectGradient(index);
 
         return (
@@ -308,7 +308,7 @@ const HomeScreen = ({ user, navigation, route }) => {
                 </LinearGradient>
             </TouchableOpacity>
         );
-    };
+    }, [navigation]);
 
     return (
         <View style={styles.container}>

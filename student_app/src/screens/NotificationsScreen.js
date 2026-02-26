@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
@@ -33,7 +33,7 @@ const NotificationsScreen = ({ navigation, user }) => {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
-    const renderItem = ({ item }) => (
+    const renderItem = useCallback(({ item }) => (
         <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.cardHeader}>
                 <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
@@ -42,7 +42,7 @@ const NotificationsScreen = ({ navigation, user }) => {
             <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
             <Text style={[styles.teacher, { color: theme.primary }]}>From: {item.teacher_name}</Text>
         </View>
-    );
+    ), [theme]);
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>

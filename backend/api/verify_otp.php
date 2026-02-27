@@ -1,12 +1,12 @@
 <?php
 /**
  * Verify OTP API
- * Verifies the OTP code entered by user (email-based)
+ * Verifies the OTP code entered by user (WhatsApp/Twilio-based)
  */
 
 require_once 'cors_middleware.php';
 require_once '../config/db.php';
-require_once '../services/EmailService.php';
+require_once '../config/sms_config.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -17,25 +17,51 @@ try {
     // Get JSON input
     $input = getJsonInput();
 
-    if (empty($input['email']) || empty($input['otp_code'])) {
-        sendResponse('error', 'Email and OTP code are required', null, 400);
+    if (empty($input['otp_code'])) {
+        sendResponse('error', 'OTP code is required', null, 400);
     }
 
-    $email   = strtolower(trim($input['email']));
+    $identifier = '';
+    if (!empty($input['email'])) {
+        $identifier = trim($input['email']);
+    } else if (!empty($input['mobile'])) {
+        $identifier = trim($input['mobile']);
+    } else if (!empty($input['phone'])) {
+        $identifier = trim($input['phone']);
+    } else {
+        sendResponse('error', 'Email or Phone address is required', null, 400);
+    }
+
+    $identifier = strtolower($identifier);
     $otpCode = trim($input['otp_code']);
 
-    // Find valid OTP (phone_number column stores email now)
+    // Find the user to get their phone number
+    $stmt = $pdo->prepare("SELECT user_id, mobile, phone FROM users WHERE email = ? OR mobile = ? OR phone = ?");
+    $stmt->execute([$identifier, $identifier, $identifier]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        sendResponse('error', 'Invalid account', null, 404);
+    }
+
+    $userPhone = !empty($user['mobile']) ? $user['mobile'] : $user['phone'];
+
+    if (empty($userPhone)) {
+        sendResponse('error', 'No phone number associated with this account', null, 404);
+    }
+
+    // Find valid OTP
     $stmt = $pdo->prepare("
-        SELECT id, user_id, verified
-        FROM password_reset_otps
-        WHERE phone_number = ?
-        AND otp_code = ?
-        AND expires_at > NOW()
-        AND verified = FALSE
-        ORDER BY created_at DESC
+        SELECT id, user_id, verified 
+        FROM password_reset_otps 
+        WHERE phone_number = ? 
+        AND otp_code = ? 
+        AND expires_at > NOW() 
+        AND verified = FALSE 
+        ORDER BY created_at DESC 
         LIMIT 1
     ");
-    $stmt->execute([$email, $otpCode]);
+    $stmt->execute([$userPhone, $otpCode]);
     $otpRecord = $stmt->fetch();
 
     if (!$otpRecord) {
@@ -43,23 +69,24 @@ try {
     }
 
     // Mark OTP as verified
-    $stmt = $pdo->prepare("UPDATE password_reset_otps SET verified = TRUE WHERE id = ?");
-    $stmt->execute([$otpRecord['id']]);
+    $updateStmt = $pdo->prepare("UPDATE password_reset_otps SET verified = TRUE WHERE id = ?");
+    $updateStmt->execute([$otpRecord['id']]);
 
     // Generate a temporary reset token (valid for 15 minutes)
     $resetToken  = bin2hex(random_bytes(32));
+    
     // We don't save reset_token in DB currently, it's just passed back to client
-    // For production, you'd save this in users or a reset_tokens table.
+    // For a future enhancement, it should be saved in users table or password_reset_tokens table.
 
-    // Get user details
-    $stmt = $pdo->prepare("SELECT user_id, name, email FROM users WHERE user_id = ?");
-    $stmt->execute([$otpRecord['user_id']]);
-    $user = $stmt->fetch();
+    // Get full user details
+    $userStmt = $pdo->prepare("SELECT user_id, name, email FROM users WHERE user_id = ?");
+    $userStmt->execute([$otpRecord['user_id']]);
+    $userDetails = $userStmt->fetch();
 
     sendResponse('success', 'OTP verified successfully', [
         "reset_token"             => $resetToken,
-        "user_id"                 => $user['user_id'],
-        "user_name"               => $user['name'],
+        "user_id"                 => $userDetails['user_id'],
+        "user_name"               => $userDetails['name'],
         "token_expires_in_minutes" => 15
     ], 200);
 

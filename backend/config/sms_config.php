@@ -8,6 +8,23 @@
 // Tomorrow: Add Twilio or Interakt credentials here.
 
 // -----------------------------------------------
+// Twilio WhatsApp API Credentials
+// -----------------------------------------------
+// Read from environment variables (for Railway Production)
+// or fallback to blank for manual local testing.
+if (!defined('TWILIO_ACCOUNT_SID')) {
+    define('TWILIO_ACCOUNT_SID', getenv('TWILIO_ACCOUNT_SID') ?: ''); 
+}
+
+if (!defined('TWILIO_AUTH_TOKEN')) {
+    define('TWILIO_AUTH_TOKEN', getenv('TWILIO_AUTH_TOKEN') ?: ''); 
+}
+
+if (!defined('TWILIO_WHATSAPP_NUMBER')) {
+    define('TWILIO_WHATSAPP_NUMBER', getenv('TWILIO_WHATSAPP_NUMBER') ?: '+14155238886'); 
+}
+
+// -----------------------------------------------
 // Legacy MSG91 (kept for reference, not used)
 // -----------------------------------------------
 if (!defined('MSG91_AUTH_KEY')) {

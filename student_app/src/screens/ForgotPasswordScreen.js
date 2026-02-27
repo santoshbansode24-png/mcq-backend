@@ -9,22 +9,22 @@ import { useTheme } from '../context/ThemeContext';
 const ForgotPasswordScreen = ({ navigation }) => {
     const { theme } = useTheme();
     const [step, setStep] = useState(1); // 1: Send OTP, 2: Verify & Reset
-    const [email, setEmail] = useState('');
+    const [mobile, setMobile] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSendOTP = async () => {
-        if (!email || !email.includes('@')) {
-            Alert.alert('Invalid Email', 'Please enter a valid email address');
+        if (!mobile || mobile.length < 10) {
+            Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number');
             return;
         }
 
         setLoading(true);
         try {
             const response = await axios.post(`${API_URL}/send_otp.php`, {
-                email: email.trim().toLowerCase()
+                mobile: mobile.trim()
             });
 
             if (response.data.status === 'success') {
@@ -34,7 +34,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                 Alert.alert('Error', response.data.message || 'Failed to send OTP');
             }
         } catch (error) {
-            console.error(error);
+            console.log("OTP Send Error:", error.response?.data || error.message);
             if (error.response) {
                 Alert.alert('Error', error.response.data.message || 'Failed to send OTP');
             } else {
@@ -63,7 +63,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         try {
             // Step 1: Verify OTP
             const verifyResponse = await axios.post(`${API_URL}/verify_otp.php`, {
-                email: email.trim().toLowerCase(),
+                mobile: mobile.trim(),
                 otp_code: otp
             });
 
@@ -87,7 +87,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                 Alert.alert('Error', resetResponse.data.message || 'Failed to reset password');
             }
         } catch (error) {
-            console.error(error);
+            console.log("OTP Verify Error:", error.response?.data || error.message);
             if (error.response) {
                 Alert.alert('Error', error.response.data.message || 'Failed to reset password');
             } else {
@@ -111,22 +111,23 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
                     <Text style={styles.title}>FORGOT PASSWORD</Text>
                     <Text style={styles.subtitle}>
-                        {step === 1 ? 'Enter your registered email address' : 'Enter OTP and new password'}
+                        {step === 1 ? 'Enter your registered mobile number' : 'Enter OTP and new password'}
                     </Text>
 
                     <View style={styles.card}>
                         {step === 1 ? (
                             <>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="mail-outline" size={20} color="#666" style={styles.icon} />
+                                    <Ionicons name="call-outline" size={20} color="#666" style={styles.icon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Email Address"
+                                        placeholder="Mobile Number"
                                         placeholderTextColor="#999"
-                                        keyboardType="email-address"
+                                        keyboardType="phone-pad"
                                         autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={setEmail}
+                                        maxLength={10}
+                                        value={mobile}
+                                        onChangeText={setMobile}
                                     />
                                 </View>
 

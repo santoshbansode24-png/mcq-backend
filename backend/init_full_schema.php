@@ -124,9 +124,74 @@ try {
         echo "✅ Dummy Chapter 'Real Numbers' added.<br>";
     }
 
-    echo "<h3>✅ Database is Fully Ready!</h3>";
+    echo "<h3>✅ Core Tables Ready!</h3>";
 
 } catch (PDOException $e) {
     echo "❌ SQL Error: " . $e->getMessage();
 }
+
+// ============================================
+// OTP TABLE SETUP (Added for Twilio WhatsApp)
+// ============================================
+echo "<h2>📱 Setting up OTP Table...</h2>";
+try {
+    $otpSql = "CREATE TABLE IF NOT EXISTS password_reset_otps (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        phone_number VARCHAR(20) NOT NULL,
+        otp_code VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        verified BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ip_address VARCHAR(45),
+        INDEX idx_phone_otp (phone_number, otp_code),
+        INDEX idx_expires (expires_at)
+    )";
+    $pdo->exec($otpSql);
+    echo "✅ Table 'password_reset_otps' is ready!<br>";
+
+    // Check columns
+    $cols = $pdo->query("SHOW COLUMNS FROM password_reset_otps")->fetchAll(PDO::FETCH_COLUMN);
+    echo "📋 Columns: " . implode(', ', $cols) . "<br>";
+
+    // Check users table has mobile column
+    $userCols = $pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
+    $hasMobile = in_array('mobile', $userCols);
+    echo "📱 users.mobile column: " . ($hasMobile ? '✅ Exists' : '⚠️ Missing - add it manually') . "<br>";
+    
+    // Count OTPs
+    $cnt = $pdo->query("SELECT COUNT(*) FROM password_reset_otps")->fetchColumn();
+    echo "📊 Existing OTP records: $cnt<br>";
+
+    // Clean expired
+    $del = $pdo->exec("DELETE FROM password_reset_otps WHERE expires_at < NOW()");
+    echo "🧹 Cleaned $del expired OTP records<br>";
+
+    echo "<h3>✅ OTP Table is Ready!</h3>";
+
+} catch (PDOException $e) {
+    echo "❌ OTP Table Error: " . $e->getMessage() . "<br>";
+    echo "💡 Try running without FK constraint...<br>";
+}
+
+// ============================================
+// TWILIO CREDENTIALS CHECK
+// ============================================
+echo "<h2>🔑 Twilio Credentials Check...</h2>";
+require_once 'config/sms_config.php';
+$sid    = defined('TWILIO_ACCOUNT_SID')    ? TWILIO_ACCOUNT_SID    : '';
+$token  = defined('TWILIO_AUTH_TOKEN')     ? TWILIO_AUTH_TOKEN      : '';
+$number = defined('TWILIO_WHATSAPP_NUMBER')? TWILIO_WHATSAPP_NUMBER : '';
+
+echo "Account SID: "   . (strlen($sid)    > 5 ? '✅ Set (' . substr($sid, 0, 6) . '...)' : '❌ NOT SET - Add TWILIO_ACCOUNT_SID in Railway Variables') . "<br>";
+echo "Auth Token: "    . (strlen($token)  > 5 ? '✅ Set'                                 : '❌ NOT SET - Add TWILIO_AUTH_TOKEN in Railway Variables')   . "<br>";
+echo "WhatsApp No: "   . (strlen($number) > 5 ? '✅ ' . $number                          : '❌ NOT SET - Add TWILIO_WHATSAPP_NUMBER in Railway Variables') . "<br>";
+
+if (strlen($sid) < 5 || strlen($token) < 5) {
+    echo "<br>⚠️ <strong>GO TO: Railway Dashboard → Your Service → Variables → Add the 3 Twilio variables</strong><br>";
+} else {
+    echo "<br>✅ <strong>Credentials loaded! Ready to send WhatsApp OTPs.</strong><br>";
+}
+
+echo "<br><strong>✅ ALL DONE!</strong>";
 ?>

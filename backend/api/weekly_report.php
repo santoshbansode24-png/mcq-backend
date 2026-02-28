@@ -55,78 +55,50 @@ foreach ($users as $user) {
     $userId    = $user['user_id'];
     $userName  = $user['name'] ?? 'Student';
     $userPhone = !empty($user['mobile']) ? $user['mobile'] : $user['phone'];
-    $classId   = $user['class_id'] ?? null;      // User's enrolled class
+    $classId   = $user['class_id'] ?? null;
 
-    // ── 1. Overall Syllabus Progress ──────────────────────────────────────
     try {
-        // Total content sets (MCQ + flashcard) across all chapters the user has access to
-        $stmtTotal = $pdo->prepare("
-            SELECT COUNT(*) as total
-            FROM content_progress
-            WHERE user_id = ?
-        ");
-        $stmtTotal->execute([$userId]);
-        $totalSets = (int)($stmtTotal->fetch()['total'] ?? 0);
-
-        $stmtDone = $pdo->prepare("
-            SELECT COUNT(*) as done
-            FROM content_progress
-            WHERE user_id = ? AND status = 'completed'
-        ");
-        $stmtDone->execute([$userId]);
-        $completedSets = (int)($stmtDone->fetch()['done'] ?? 0);
-
-        $remainingSets = max(0, $totalSets - $completedSets);
-        $overallPct   = $totalSets > 0 ? round(($completedSets / $totalSets) * 100) : 0;
-
-        // ── 2. Chapter-Level Progress via mcq_attempts (same as get_chapter_progress.php) ──
-        // A chapter is "completed" when user has attempted ALL its MCQs (100%)
-        // A chapter is "in_progress" when user has attempted SOME but not all
+        // ── 1. Chapter-Level Progress (from student_progress — real source of truth) ──
         $stmtChapterStats = $pdo->prepare("
             SELECT
-                SUM(CASE WHEN ch_stats.pct >= 100 THEN 1 ELSE 0 END) AS completed_chapters,
-                SUM(CASE WHEN ch_stats.pct > 0 AND ch_stats.pct < 100 THEN 1 ELSE 0 END) AS inprogress_chapters,
-                COUNT(*) AS total_chapters
-            FROM (
-                SELECT
-                    ch.chapter_id,
-                    COUNT(DISTINCT m.mcq_id)  AS total_mcqs,
-                    COUNT(DISTINCT ma.mcq_id) AS solved_mcqs,
-                    CASE
-                        WHEN COUNT(DISTINCT m.mcq_id) = 0 THEN 0
-                        ELSE ROUND(COUNT(DISTINCT ma.mcq_id) * 100.0 / COUNT(DISTINCT m.mcq_id), 1)
-                    END AS pct
-                FROM chapters ch
-                JOIN subjects s ON ch.subject_id = s.subject_id
-                LEFT JOIN mcqs m  ON ch.chapter_id = m.chapter_id
-                LEFT JOIN mcq_attempts ma
-                    ON ch.chapter_id = ma.chapter_id AND ma.user_id = ?
-                WHERE s.class_id = ?
-                GROUP BY ch.chapter_id
-            ) AS ch_stats
+                COUNT(DISTINCT ch.chapter_id)                              AS total_chapters,
+                COUNT(DISTINCT sp.chapter_id)                             AS completed_chapters,
+                ROUND(AVG(sp_best.best_pct), 0)                          AS avg_score
+            FROM chapters ch
+            JOIN subjects s ON ch.subject_id = s.subject_id
+            LEFT JOIN student_progress sp
+                ON ch.chapter_id = sp.chapter_id AND sp.user_id = ?
+            LEFT JOIN (
+                SELECT chapter_id, MAX(percentage) as best_pct
+                FROM student_progress
+                WHERE user_id = ?
+                GROUP BY chapter_id
+            ) sp_best ON ch.chapter_id = sp_best.chapter_id
+            WHERE s.class_id = ?
         ");
-        $stmtChapterStats->execute([$userId, $classId]);
+        $stmtChapterStats->execute([$userId, $userId, $classId]);
         $chapterStats = $stmtChapterStats->fetch();
 
-        $totalChapters      = (int)($chapterStats['total_chapters']      ?? 0);
-        $completedChapters  = (int)($chapterStats['completed_chapters']  ?? 0);
-        $inProgressChapters = (int)($chapterStats['inprogress_chapters'] ?? 0);
-        $remainingChapters  = max(0, $totalChapters - $completedChapters);
+        $totalChapters     = (int)($chapterStats['total_chapters']     ?? 0);
+        $completedChapters = (int)($chapterStats['completed_chapters'] ?? 0);
+        $remainingChapters = max(0, $totalChapters - $completedChapters);
+        $overallPct        = $totalChapters > 0
+                             ? round(($completedChapters / $totalChapters) * 100)
+                             : 0;
 
-        // ── 3. This Week's MCQ Scores ─────────────────────────────────────
+        // ── 2. This Week's Scores (from student_progress, last 7 days) ────────
         $weekStart = date('Y-m-d H:i:s', strtotime('-7 days'));
         $stmtWeek  = $pdo->prepare("
-            SELECT 
-                c.chapter_name,
-                COUNT(ma.attempt_id)                                          AS total_attempts,
-                SUM(CASE WHEN ma.is_correct = 1 THEN 1 ELSE 0 END)           AS correct_answers,
-                ROUND(SUM(CASE WHEN ma.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 
-                      / COUNT(ma.attempt_id), 0)                              AS score_pct
-            FROM mcq_attempts ma
-            JOIN chapters c ON ma.chapter_id = c.chapter_id
-            WHERE ma.user_id = ? AND ma.attempted_at >= ?
-            GROUP BY ma.chapter_id, c.chapter_name
-            ORDER BY MAX(ma.attempted_at) DESC
+            SELECT
+                ch.chapter_name,
+                MAX(sp.percentage) AS score_pct,
+                sp.mcq_score,
+                sp.total_mcq
+            FROM student_progress sp
+            JOIN chapters ch ON sp.chapter_id = ch.chapter_id
+            WHERE sp.user_id = ? AND sp.completed_at >= ?
+            GROUP BY sp.chapter_id, ch.chapter_name, sp.mcq_score, sp.total_mcq
+            ORDER BY MAX(sp.completed_at) DESC
             LIMIT 5
         ");
         $stmtWeek->execute([$userId, $weekStart]);
@@ -136,12 +108,9 @@ foreach ($users as $user) {
         $message = buildWeeklyMessage(
             $userName,
             $overallPct,
-            $completedSets,
-            $remainingSets,
             $completedChapters,
             $totalChapters,
             $remainingChapters,
-            $inProgressChapters,
             $weeklyScores
         );
 
@@ -184,8 +153,7 @@ echo json_encode([
 // ─── Message Builder ──────────────────────────────────────────────────────────
 function buildWeeklyMessage(
     $name, $overallPct,
-    $completedSets, $remainingSets,
-    $completedChapters, $totalChapters, $remainingChapters, $inProgressChapters,
+    $completedChapters, $totalChapters, $remainingChapters,
     $weeklyScores
 ) {
     $emoji      = $overallPct >= 80 ? '🔥' : ($overallPct >= 50 ? '📈' : '💪');
@@ -199,21 +167,16 @@ function buildWeeklyMessage(
     // ── Chapter-Level Progress ────────────────────────────────────────────
     $msg .= "📖 *Chapter Progress*\n";
     $msg .= "✅ Completed: *{$completedChapters} of {$totalChapters} chapters*\n";
-    if ($inProgressChapters > 0) {
-        $msg .= "⏳ In Progress: *{$inProgressChapters} chapter" . ($inProgressChapters > 1 ? 's' : '') . "*\n";
-    }
     $msg .= "📌 Remaining: *{$remainingChapters} chapter" . ($remainingChapters !== 1 ? 's' : '') . " to complete*\n\n";
 
-    // ── Set-Level / Overall Percentage ───────────────────────────────────
+    // ── Overall % Progress Bar ────────────────────────────────────────────
     $msg .= "📊 *Overall Syllabus*\n";
-    // Progress bar visual
     $filled = (int)($overallPct / 10);
     $empty  = 10 - $filled;
     $bar    = str_repeat('█', $filled) . str_repeat('░', $empty);
-    $msg   .= "  [{$bar}] *{$overallPct}% done*\n";
-    $msg   .= "  ({$completedSets} sets completed, {$remainingSets} sets left)\n\n";
+    $msg   .= "  [{$bar}] *{$overallPct}% done*\n\n";
 
-    // ── This Week's MCQ Scores ────────────────────────────────────────────
+    // ── This Week's Scores ────────────────────────────────────────────────
     if (!empty($weeklyScores)) {
         $msg .= "🏆 *This Week's Scores*\n";
         foreach ($weeklyScores as $s) {
@@ -225,7 +188,7 @@ function buildWeeklyMessage(
         }
         $msg .= "\n";
     } else {
-        $msg .= "📝 *No MCQs attempted this week.*\n";
+        $msg .= "📝 *No quizzes this week.*\n";
         $msg .= "Try a chapter today — just 10 mins a day!\n\n";
     }
 

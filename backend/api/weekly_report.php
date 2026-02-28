@@ -79,42 +79,39 @@ foreach ($users as $user) {
         $remainingSets = max(0, $totalSets - $completedSets);
         $overallPct   = $totalSets > 0 ? round(($completedSets / $totalSets) * 100) : 0;
 
-        // ── 2. Chapter-Level Progress (filtered by user's class) ─────────
-        // Total chapters for THIS user's class only
-        $stmtTotalChapters = $pdo->prepare("
-            SELECT COUNT(*) as total
-            FROM chapters ch
-            JOIN subjects s ON ch.subject_id = s.subject_id
-            WHERE s.class_id = ?
+        // ── 2. Chapter-Level Progress via mcq_attempts (same as get_chapter_progress.php) ──
+        // A chapter is "completed" when user has attempted ALL its MCQs (100%)
+        // A chapter is "in_progress" when user has attempted SOME but not all
+        $stmtChapterStats = $pdo->prepare("
+            SELECT
+                SUM(CASE WHEN ch_stats.pct >= 100 THEN 1 ELSE 0 END) AS completed_chapters,
+                SUM(CASE WHEN ch_stats.pct > 0 AND ch_stats.pct < 100 THEN 1 ELSE 0 END) AS inprogress_chapters,
+                COUNT(*) AS total_chapters
+            FROM (
+                SELECT
+                    ch.chapter_id,
+                    COUNT(DISTINCT m.mcq_id)  AS total_mcqs,
+                    COUNT(DISTINCT ma.mcq_id) AS solved_mcqs,
+                    CASE
+                        WHEN COUNT(DISTINCT m.mcq_id) = 0 THEN 0
+                        ELSE ROUND(COUNT(DISTINCT ma.mcq_id) * 100.0 / COUNT(DISTINCT m.mcq_id), 1)
+                    END AS pct
+                FROM chapters ch
+                JOIN subjects s ON ch.subject_id = s.subject_id
+                LEFT JOIN mcqs m  ON ch.chapter_id = m.chapter_id
+                LEFT JOIN mcq_attempts ma
+                    ON ch.chapter_id = ma.chapter_id AND ma.user_id = ?
+                WHERE s.class_id = ?
+                GROUP BY ch.chapter_id
+            ) AS ch_stats
         ");
-        $stmtTotalChapters->execute([$classId]);
-        $totalChapters = (int)($stmtTotalChapters->fetch()['total'] ?? 0);
+        $stmtChapterStats->execute([$userId, $classId]);
+        $chapterStats = $stmtChapterStats->fetch();
 
-        // Chapters completed by this user (within their class only)
-        $stmtCompletedChapters = $pdo->prepare("
-            SELECT COUNT(DISTINCT cp.chapter_id) as done
-            FROM content_progress cp
-            JOIN chapters ch ON cp.chapter_id = ch.chapter_id
-            JOIN subjects s ON ch.subject_id = s.subject_id
-            WHERE cp.user_id = ? AND cp.status = 'completed'
-              AND s.class_id = ?
-        ");
-        $stmtCompletedChapters->execute([$userId, $classId]);
-        $completedChapters = (int)($stmtCompletedChapters->fetch()['done'] ?? 0);
-
-        // Chapters in progress (within their class only)
-        $stmtInProgress = $pdo->prepare("
-            SELECT COUNT(DISTINCT cp.chapter_id) as inprog
-            FROM content_progress cp
-            JOIN chapters ch ON cp.chapter_id = ch.chapter_id
-            JOIN subjects s ON ch.subject_id = s.subject_id
-            WHERE cp.user_id = ? AND cp.status = 'in_progress'
-              AND s.class_id = ?
-        ");
-        $stmtInProgress->execute([$userId, $classId]);
-        $inProgressChapters = (int)($stmtInProgress->fetch()['inprog'] ?? 0);
-
-        $remainingChapters = max(0, $totalChapters - $completedChapters);
+        $totalChapters      = (int)($chapterStats['total_chapters']      ?? 0);
+        $completedChapters  = (int)($chapterStats['completed_chapters']  ?? 0);
+        $inProgressChapters = (int)($chapterStats['inprogress_chapters'] ?? 0);
+        $remainingChapters  = max(0, $totalChapters - $completedChapters);
 
         // ── 3. This Week's MCQ Scores ─────────────────────────────────────
         $weekStart = date('Y-m-d H:i:s', strtotime('-7 days'));

@@ -117,7 +117,7 @@ foreach ($users as $user) {
             JOIN chapters c ON ma.chapter_id = c.chapter_id
             WHERE ma.user_id = ? AND ma.attempted_at >= ?
             GROUP BY ma.chapter_id, c.chapter_name
-            ORDER BY ma.attempted_at DESC
+            ORDER BY MAX(ma.attempted_at) DESC
             LIMIT 5
         ");
         $stmtWeek->execute([$userId, $weekStart]);

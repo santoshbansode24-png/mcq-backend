@@ -1,41 +1,58 @@
 <?php
-// Debug: Check student_progress for user 35
+// Master Debug: Check ALL progress tables for a user
 require_once '../config/db.php';
 header('Content-Type: application/json');
 
 $uid = isset($_GET['user_id']) ? intval($_GET['user_id']) : 35;
 
-// Check student_progress
-$stmt = $pdo->prepare("
-    SELECT sp.chapter_id, ch.chapter_name, sp.mcq_score, sp.total_mcq, sp.percentage, sp.completed_at
-    FROM student_progress sp
-    JOIN chapters ch ON sp.chapter_id = ch.chapter_id
-    WHERE sp.user_id = ?
-    ORDER BY sp.completed_at DESC
-    LIMIT 20
-");
-$stmt->execute([$uid]);
-$rows = $stmt->fetchAll();
+// User info
+$stmt = $pdo->prepare("SELECT user_id, name, mobile, class_id FROM users WHERE user_id = ? OR mobile = ?");
+$stmt->execute([$uid, $uid]);
+$user = $stmt->fetch();
+$realUid = $user['user_id'] ?? $uid;
+$classId  = $user['class_id'] ?? null;
 
-// Check user class
-$stmt2 = $pdo->prepare("SELECT user_id, name, class_id FROM users WHERE user_id = ?");
-$stmt2->execute([$uid]);
-$user = $stmt2->fetch();
-
-// Total chapters in user class
-$stmt3 = $pdo->prepare("
-    SELECT COUNT(DISTINCT ch.chapter_id) as total
-    FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id
-    WHERE s.class_id = ?
+// content_progress (MCQ/flashcard set completion - what app writes)
+$stmt1 = $pdo->prepare("
+    SELECT cp.chapter_id, ch.chapter_name, cp.content_type, cp.status, cp.score, cp.total
+    FROM content_progress cp
+    JOIN chapters ch ON cp.chapter_id = ch.chapter_id
+    WHERE cp.user_id = ?
+    ORDER BY cp.updated_at DESC LIMIT 30
 ");
-$stmt3->execute([$user['class_id'] ?? 0]);
-$totalChapters = $stmt3->fetch()['total'] ?? 0;
+$stmt1->execute([$realUid]);
+$contentProgress = $stmt1->fetchAll();
+
+// Completed chapters from content_progress
+$stmt2 = $pdo->prepare("SELECT COUNT(DISTINCT chapter_id) as done FROM content_progress WHERE user_id = ? AND status = 'completed'");
+$stmt2->execute([$realUid]);
+$completedFromCP = $stmt2->fetch()['done'] ?? 0;
+
+// mcq_attempts
+$stmt3 = $pdo->prepare("SELECT COUNT(DISTINCT chapter_id) as chapters, COUNT(*) as total FROM mcq_attempts WHERE user_id = ?");
+$stmt3->execute([$realUid]);
+$mcqAttempts = $stmt3->fetch();
+
+// student_progress
+$stmt4 = $pdo->prepare("SELECT COUNT(DISTINCT chapter_id) as chapters, COUNT(*) as total FROM student_progress WHERE user_id = ?");
+$stmt4->execute([$realUid]);
+$studentProgress = $stmt4->fetch();
+
+// Total chapters in class
+$totalChapters = 0;
+if ($classId) {
+    $stmt5 = $pdo->prepare("SELECT COUNT(DISTINCT ch.chapter_id) as total FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id WHERE s.class_id = ?");
+    $stmt5->execute([$classId]);
+    $totalChapters = $stmt5->fetch()['total'] ?? 0;
+}
 
 echo json_encode([
-    'user' => $user,
-    'total_chapters_in_class' => $totalChapters,
-    'student_progress_count' => count($rows),
-    'entries' => $rows,
-    'commit' => '02a06bd-student_progress-fix',
+    'deploy_marker'      => 'v5-content_progress-fix',
+    'queried_uid'        => $uid,
+    'user'               => $user,
+    'total_chapters'     => $totalChapters,
+    'content_progress'   => ['completed_chapters' => $completedFromCP, 'entries_count' => count($contentProgress), 'entries' => $contentProgress],
+    'mcq_attempts'       => $mcqAttempts,
+    'student_progress'   => $studentProgress,
 ], JSON_PRETTY_PRINT);
 ?>

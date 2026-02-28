@@ -58,47 +58,44 @@ foreach ($users as $user) {
     $classId   = $user['class_id'] ?? null;
 
     try {
-        // ── 1. Chapter-Level Progress (from student_progress — real source of truth) ──
-        $stmtChapterStats = $pdo->prepare("
+        // ── 1. Chapter completion via content_progress ──────────────────
+        // content_progress is written by mark_set_completed.php (what the app calls)
+        // A chapter is "completed" = it has AT LEAST ONE completed set in content_progress
+        $stmtChapters = $pdo->prepare("
             SELECT
-                COUNT(DISTINCT ch.chapter_id)                              AS total_chapters,
-                COUNT(DISTINCT sp.chapter_id)                             AS completed_chapters,
-                ROUND(AVG(sp_best.best_pct), 0)                          AS avg_score
+                COUNT(DISTINCT ch.chapter_id)                         AS total_chapters,
+                COUNT(DISTINCT CASE WHEN cp.status = 'completed'
+                               THEN cp.chapter_id END)                AS completed_chapters
             FROM chapters ch
             JOIN subjects s ON ch.subject_id = s.subject_id
-            LEFT JOIN student_progress sp
-                ON ch.chapter_id = sp.chapter_id AND sp.user_id = ?
-            LEFT JOIN (
-                SELECT chapter_id, MAX(percentage) as best_pct
-                FROM student_progress
-                WHERE user_id = ?
-                GROUP BY chapter_id
-            ) sp_best ON ch.chapter_id = sp_best.chapter_id
+            LEFT JOIN content_progress cp
+                ON ch.chapter_id = cp.chapter_id AND cp.user_id = ?
             WHERE s.class_id = ?
         ");
-        $stmtChapterStats->execute([$userId, $userId, $classId]);
-        $chapterStats = $stmtChapterStats->fetch();
+        $stmtChapters->execute([$userId, $classId]);
+        $chapRow = $stmtChapters->fetch();
 
-        $totalChapters     = (int)($chapterStats['total_chapters']     ?? 0);
-        $completedChapters = (int)($chapterStats['completed_chapters'] ?? 0);
+        $totalChapters     = (int)($chapRow['total_chapters']     ?? 0);
+        $completedChapters = (int)($chapRow['completed_chapters'] ?? 0);
         $remainingChapters = max(0, $totalChapters - $completedChapters);
         $overallPct        = $totalChapters > 0
                              ? round(($completedChapters / $totalChapters) * 100)
                              : 0;
 
-        // ── 2. This Week's Scores (from student_progress, last 7 days) ────────
+        // ── 2. This week's scores from content_progress ─────────────────
         $weekStart = date('Y-m-d H:i:s', strtotime('-7 days'));
         $stmtWeek  = $pdo->prepare("
             SELECT
                 ch.chapter_name,
-                MAX(sp.percentage) AS score_pct,
-                sp.mcq_score,
-                sp.total_mcq
-            FROM student_progress sp
-            JOIN chapters ch ON sp.chapter_id = ch.chapter_id
-            WHERE sp.user_id = ? AND sp.completed_at >= ?
-            GROUP BY sp.chapter_id, ch.chapter_name, sp.mcq_score, sp.total_mcq
-            ORDER BY MAX(sp.completed_at) DESC
+                MAX(ROUND(cp.score * 100.0 / NULLIF(cp.total, 0), 0)) AS score_pct
+            FROM content_progress cp
+            JOIN chapters ch ON cp.chapter_id = ch.chapter_id
+            WHERE cp.user_id = ?
+              AND cp.content_type = 'mcq'
+              AND cp.updated_at >= ?
+              AND cp.total > 0
+            GROUP BY cp.chapter_id, ch.chapter_name
+            ORDER BY MAX(cp.updated_at) DESC
             LIMIT 5
         ");
         $stmtWeek->execute([$userId, $weekStart]);

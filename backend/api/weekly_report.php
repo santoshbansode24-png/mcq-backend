@@ -208,7 +208,8 @@ function buildWeeklyMessage(
 
     $msg .= "{$emoji} _{$motiveLine}_\n";
     $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
-    $msg .= "🎯 Open Veeru App to continue →";
+    $msg .= "🎯 *Open Veeru App to continue* →\n";
+    $msg .= "https://play.google.com/store/apps/details?id=com.veeru.app";
 
     return $msg;
 }

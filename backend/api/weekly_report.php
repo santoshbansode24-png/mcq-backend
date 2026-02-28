@@ -36,10 +36,27 @@ $onlyUser = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
 // ─── Fetch Users ──────────────────────────────────────────────────────────────
 try {
     if ($onlyUser) {
+        // Single user — exact user_id
         $stmt = $pdo->prepare("SELECT user_id, name, mobile, phone, class_id FROM users WHERE user_id = ? AND (mobile IS NOT NULL OR phone IS NOT NULL)");
         $stmt->execute([$onlyUser]);
     } else {
-        $stmt = $pdo->prepare("SELECT user_id, name, mobile, phone, class_id FROM users WHERE mobile IS NOT NULL OR phone IS NOT NULL");
+        // All users — deduplicate by phone number, pick the account with MOST content_progress data
+        $stmt = $pdo->prepare("
+            SELECT u.user_id, u.name, u.mobile, u.phone, u.class_id
+            FROM users u
+            INNER JOIN (
+                SELECT
+                    COALESCE(mobile, phone) AS phone_key,
+                    (SELECT user_id FROM users u2
+                     WHERE COALESCE(u2.mobile, u2.phone) = COALESCE(u.mobile, u.phone)
+                     ORDER BY (SELECT COUNT(*) FROM content_progress cp WHERE cp.user_id = u2.user_id) DESC, u2.user_id ASC
+                     LIMIT 1) AS best_user_id
+                FROM users u
+                WHERE mobile IS NOT NULL OR phone IS NOT NULL
+                GROUP BY COALESCE(mobile, phone)
+            ) dedup ON u.user_id = dedup.best_user_id
+            WHERE u.mobile IS NOT NULL OR u.phone IS NOT NULL
+        ");
         $stmt->execute();
     }
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);

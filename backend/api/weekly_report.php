@@ -75,10 +75,36 @@ foreach ($users as $user) {
         $stmtDone->execute([$userId]);
         $completedSets = (int)($stmtDone->fetch()['done'] ?? 0);
 
-        $remainingSets      = max(0, $totalSets - $completedSets);
-        $overallPct         = $totalSets > 0 ? round(($completedSets / $totalSets) * 100) : 0;
+        $remainingSets = max(0, $totalSets - $completedSets);
+        $overallPct   = $totalSets > 0 ? round(($completedSets / $totalSets) * 100) : 0;
 
-        // ── 2. This Week's MCQ Scores ─────────────────────────────────────
+        // ── 2. Chapter-Level Progress ─────────────────────────────────────
+        // Total chapters in the system
+        $stmtTotalChapters = $pdo->prepare("SELECT COUNT(*) as total FROM chapters");
+        $stmtTotalChapters->execute();
+        $totalChapters = (int)($stmtTotalChapters->fetch()['total'] ?? 0);
+
+        // Chapters where user has completed AT LEAST ONE content set
+        $stmtCompletedChapters = $pdo->prepare("
+            SELECT COUNT(DISTINCT chapter_id) as done
+            FROM content_progress
+            WHERE user_id = ? AND status = 'completed'
+        ");
+        $stmtCompletedChapters->execute([$userId]);
+        $completedChapters = (int)($stmtCompletedChapters->fetch()['done'] ?? 0);
+
+        // Chapters in progress (started but not finished)
+        $stmtInProgress = $pdo->prepare("
+            SELECT COUNT(DISTINCT chapter_id) as inprog
+            FROM content_progress
+            WHERE user_id = ? AND status = 'in_progress'
+        ");
+        $stmtInProgress->execute([$userId]);
+        $inProgressChapters = (int)($stmtInProgress->fetch()['inprog'] ?? 0);
+
+        $remainingChapters = max(0, $totalChapters - $completedChapters);
+
+        // ── 3. This Week's MCQ Scores ─────────────────────────────────────
         $weekStart = date('Y-m-d H:i:s', strtotime('-7 days'));
         $stmtWeek  = $pdo->prepare("
             SELECT 
@@ -97,8 +123,18 @@ foreach ($users as $user) {
         $stmtWeek->execute([$userId, $weekStart]);
         $weeklyScores = $stmtWeek->fetchAll(PDO::FETCH_ASSOC);
 
-        // ── 3. Build the WhatsApp Message ─────────────────────────────────
-        $message = buildWeeklyMessage($userName, $overallPct, $completedSets, $remainingSets, $weeklyScores);
+        // ── 4. Build the WhatsApp Message ─────────────────────────────────
+        $message = buildWeeklyMessage(
+            $userName,
+            $overallPct,
+            $completedSets,
+            $remainingSets,
+            $completedChapters,
+            $totalChapters,
+            $remainingChapters,
+            $inProgressChapters,
+            $weeklyScores
+        );
 
         // ── 4. Send or Dry-Run ────────────────────────────────────────────
         if ($dryRun) {
@@ -137,7 +173,12 @@ echo json_encode([
 ]);
 
 // ─── Message Builder ──────────────────────────────────────────────────────────
-function buildWeeklyMessage($name, $overallPct, $completed, $remaining, $weeklyScores) {
+function buildWeeklyMessage(
+    $name, $overallPct,
+    $completedSets, $remainingSets,
+    $completedChapters, $totalChapters, $remainingChapters, $inProgressChapters,
+    $weeklyScores
+) {
     $emoji      = $overallPct >= 80 ? '🔥' : ($overallPct >= 50 ? '📈' : '💪');
     $motiveLine = getMotivationalLine($overallPct);
 
@@ -146,32 +187,40 @@ function buildWeeklyMessage($name, $overallPct, $completed, $remaining, $weeklyS
     $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
     $msg .= "Hi *{$name}*! Here's your week:\n\n";
 
-    $msg .= "📊 *Syllabus Progress*\n";
-    $msg .= "✅ Completed: *{$completed} sets* ({$overallPct}%)\n";
-    $msg .= "📌 Remaining: *{$remaining} sets*\n";
+    // ── Chapter-Level Progress ────────────────────────────────────────────
+    $msg .= "📖 *Chapter Progress*\n";
+    $msg .= "✅ Completed: *{$completedChapters} of {$totalChapters} chapters*\n";
+    if ($inProgressChapters > 0) {
+        $msg .= "⏳ In Progress: *{$inProgressChapters} chapter" . ($inProgressChapters > 1 ? 's' : '') . "*\n";
+    }
+    $msg .= "📌 Remaining: *{$remainingChapters} chapter" . ($remainingChapters !== 1 ? 's' : '') . " to complete*\n\n";
 
+    // ── Set-Level / Overall Percentage ───────────────────────────────────
+    $msg .= "📊 *Overall Syllabus*\n";
     // Progress bar visual
-    $filled  = (int)($overallPct / 10);
-    $empty   = 10 - $filled;
-    $bar     = str_repeat('█', $filled) . str_repeat('░', $empty);
-    $msg    .= "  [{$bar}] {$overallPct}%\n\n";
+    $filled = (int)($overallPct / 10);
+    $empty  = 10 - $filled;
+    $bar    = str_repeat('█', $filled) . str_repeat('░', $empty);
+    $msg   .= "  [{$bar}] *{$overallPct}% done*\n";
+    $msg   .= "  ({$completedSets} sets completed, {$remainingSets} sets left)\n\n";
 
+    // ── This Week's MCQ Scores ────────────────────────────────────────────
     if (!empty($weeklyScores)) {
         $msg .= "🏆 *This Week's Scores*\n";
         foreach ($weeklyScores as $s) {
             $scoreEmoji = $s['score_pct'] >= 80 ? '🌟' : ($s['score_pct'] >= 60 ? '👍' : '📝');
-            $chName     = strlen($s['chapter_name']) > 25
-                          ? substr($s['chapter_name'], 0, 22) . '...'
+            $chName     = strlen($s['chapter_name']) > 22
+                          ? substr($s['chapter_name'], 0, 20) . '...'
                           : $s['chapter_name'];
             $msg       .= "  {$scoreEmoji} {$chName}: *{$s['score_pct']}%*\n";
         }
         $msg .= "\n";
     } else {
         $msg .= "📝 *No MCQs attempted this week.*\n";
-        $msg .= "Try a chapter today — 10 mins a day makes a difference!\n\n";
+        $msg .= "Try a chapter today — just 10 mins a day!\n\n";
     }
 
-    $msg .= "{$emoji} {$motiveLine}\n";
+    $msg .= "{$emoji} _{$motiveLine}_\n";
     $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
     $msg .= "🎯 Open Veeru App to continue →";
 

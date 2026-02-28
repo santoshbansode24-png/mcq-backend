@@ -1,0 +1,217 @@
+<?php
+/**
+ * Admin — Weekly WhatsApp Report Manager
+ * Veeru App
+ *
+ * Lets admin preview and manually trigger weekly WhatsApp reports.
+ */
+
+session_start();
+// Basic admin guard (reuse your existing admin auth if available)
+// if (!isset($_SESSION['admin_logged_in'])) { header('Location: login.php'); exit; }
+
+$secret    = getenv('CRON_SECRET') ?: 'veeru_weekly_2026';
+$apiBase   = 'https://api.veeruapp.in/backend/api';
+$previewUrl = "{$apiBase}/weekly_report.php?secret={$secret}&dry_run=1";
+$sendAllUrl = "{$apiBase}/weekly_report.php?secret={$secret}";
+$sendOneUrl = "{$apiBase}/weekly_report.php?secret={$secret}&user_id=";
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly WhatsApp Reports — Veeru Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1e293b, #0f172a); padding: 24px 32px; border-bottom: 1px solid #334155; }
+  .header h1 { font-size: 22px; color: #38bdf8; }
+  .header p  { color: #94a3b8; font-size: 14px; margin-top: 4px; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
+
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .card h2 { font-size: 16px; color: #38bdf8; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+  .btn-green  { background: #16a34a; color: #fff; }
+  .btn-green:hover  { background: #15803d; }
+  .btn-blue   { background: #0284c7; color: #fff; }
+  .btn-blue:hover   { background: #0369a1; }
+  .btn-yellow { background: #d97706; color: #fff; }
+  .btn-yellow:hover { background: #b45309; }
+  .btn-red    { background: #dc2626; color: #fff; }
+  .btn-red:hover    { background: #b91c1c; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .preview-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; color: #a3e635; max-height: 400px; overflow-y: auto; }
+
+  .user-test { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .user-test input { flex: 1; min-width: 120px; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; }
+  .user-test input:focus { outline: none; border-color: #38bdf8; }
+
+  .status-ok  { color: #4ade80; }
+  .status-err { color: #f87171; }
+
+  .cron-info { background: #1e3a5f; border: 1px solid #1d4ed8; border-radius: 8px; padding: 16px; }
+  .cron-info code { display: block; background: #0f172a; padding: 10px 14px; border-radius: 6px; margin-top: 8px; font-family: monospace; font-size: 13px; color: #38bdf8; word-break: break-all; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff44; border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155; }
+  td { padding: 8px 12px; border-bottom: 1px solid #1e293b; }
+  tr:hover td { background: #1e2d45; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 Weekly WhatsApp Report Manager</h1>
+  <p>Send personalized weekly progress reports to all Veeru users via WhatsApp</p>
+</div>
+
+<div class="container">
+
+  <!-- Sample Message Preview -->
+  <div class="card">
+    <h2>👁️ Preview Sample Message</h2>
+    <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">
+      See exactly what your users will receive before sending. Uses dry_run mode — no messages sent.
+    </p>
+    <button class="btn btn-blue" onclick="previewAll()">
+      <span id="previewSpinner" style="display:none" class="spinner"></span>
+      🔍 Preview All Users (Dry Run)
+    </button>
+    <div id="previewResult" class="preview-box" style="display:none"></div>
+  </div>
+
+  <!-- Test Single User -->
+  <div class="card">
+    <h2>🧪 Test — Send to One User</h2>
+    <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">
+      Enter a User ID to send a real WhatsApp message to that one user only.
+    </p>
+    <div class="user-test">
+      <input type="number" id="testUserId" placeholder="Enter User ID (e.g. 1)" min="1">
+      <button class="btn btn-yellow" onclick="sendToOne()">
+        <span id="oneSpinner" style="display:none" class="spinner"></span>
+        📤 Send to This User
+      </button>
+    </div>
+    <div id="oneResult" class="preview-box" style="display:none; margin-top:12px;"></div>
+  </div>
+
+  <!-- Send to All -->
+  <div class="card">
+    <h2>🚀 Send to ALL Users</h2>
+    <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">
+      ⚠️ This sends a real WhatsApp message to every user with a mobile number.
+      Make sure you've previewed first!
+    </p>
+    <button class="btn btn-red" onclick="sendAll()">
+      <span id="allSpinner" style="display:none" class="spinner"></span>
+      📣 Send Weekly Report to ALL Users
+    </button>
+    <div id="allResult" style="display:none; margin-top:16px;">
+      <table>
+        <thead>
+          <tr><th>User ID</th><th>Name</th><th>Phone</th><th>Status</th></tr>
+        </thead>
+        <tbody id="allResultBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cron Setup -->
+  <div class="card">
+    <h2>⏰ Automated Weekly Schedule Setup</h2>
+    <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">
+      Use <strong>cron-job.org</strong> (free) to automatically send reports every Sunday at 7 PM IST.
+    </p>
+    <div class="cron-info">
+      <p style="color:#93c5fd; font-size:13px; font-weight:600;">Step 1 — Sign up free at:</p>
+      <code>https://cron-job.org</code>
+
+      <p style="color:#93c5fd; font-size:13px; font-weight:600; margin-top:12px;">Step 2 — Create a new cron job with this URL:</p>
+      <code><?php echo htmlspecialchars("{$sendAllUrl}"); ?></code>
+
+      <p style="color:#93c5fd; font-size:13px; font-weight:600; margin-top:12px;">Step 3 — Set schedule to:</p>
+      <code>Every Sunday at 13:30 UTC  (= 7:00 PM IST)</code>
+
+      <p style="color:#93c5fd; font-size:13px; font-weight:600; margin-top:12px;">Step 4 — Add CRON_SECRET to Railway env vars:</p>
+      <code>CRON_SECRET = veeru_weekly_2026</code>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const apiBase   = '<?php echo $apiBase;   ?>';
+const secret    = '<?php echo $secret;    ?>';
+
+function showSpinner(id, show) {
+  document.getElementById(id).style.display = show ? 'inline-block' : 'none';
+}
+
+async function previewAll() {
+  showSpinner('previewSpinner', true);
+  const box = document.getElementById('previewResult');
+  box.style.display = 'block';
+  box.textContent = 'Loading preview...';
+  try {
+    const res  = await fetch(`${apiBase}/weekly_report.php?secret=${secret}&dry_run=1`);
+    const data = await res.json();
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch(e) {
+    box.textContent = 'Error: ' + e.message;
+  }
+  showSpinner('previewSpinner', false);
+}
+
+async function sendToOne() {
+  const uid = document.getElementById('testUserId').value;
+  if (!uid) { alert('Please enter a User ID'); return; }
+  showSpinner('oneSpinner', true);
+  const box = document.getElementById('oneResult');
+  box.style.display = 'block';
+  box.textContent = 'Sending...';
+  try {
+    const res  = await fetch(`${apiBase}/weekly_report.php?secret=${secret}&user_id=${uid}`);
+    const data = await res.json();
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch(e) {
+    box.textContent = 'Error: ' + e.message;
+  }
+  showSpinner('oneSpinner', false);
+}
+
+async function sendAll() {
+  if (!confirm('⚠️ This will send WhatsApp messages to ALL users. Are you sure?')) return;
+  showSpinner('allSpinner', true);
+  document.getElementById('allResult').style.display = 'none';
+  try {
+    const res  = await fetch(`${apiBase}/weekly_report.php?secret=${secret}`);
+    const data = await res.json();
+    const tbody = document.getElementById('allResultBody');
+    tbody.innerHTML = '';
+    (data.results || []).forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.user_id}</td>
+        <td>${r.name}</td>
+        <td>${r.phone || '—'}</td>
+        <td class="${r.sent ? 'status-ok' : 'status-err'}">${r.sent ? '✅ Sent' : (r.error ? '❌ ' + r.error : '❌ Failed')}</td>
+      `;
+      tbody.appendChild(row);
+    });
+    document.getElementById('allResult').style.display = 'block';
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+  showSpinner('allSpinner', false);
+}
+</script>
+</body>
+</html>

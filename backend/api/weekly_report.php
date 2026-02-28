@@ -36,10 +36,10 @@ $onlyUser = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
 // ─── Fetch Users ──────────────────────────────────────────────────────────────
 try {
     if ($onlyUser) {
-        $stmt = $pdo->prepare("SELECT user_id, name, mobile, phone FROM users WHERE user_id = ? AND (mobile IS NOT NULL OR phone IS NOT NULL)");
+        $stmt = $pdo->prepare("SELECT user_id, name, mobile, phone, class_id FROM users WHERE user_id = ? AND (mobile IS NOT NULL OR phone IS NOT NULL)");
         $stmt->execute([$onlyUser]);
     } else {
-        $stmt = $pdo->prepare("SELECT user_id, name, mobile, phone FROM users WHERE mobile IS NOT NULL OR phone IS NOT NULL");
+        $stmt = $pdo->prepare("SELECT user_id, name, mobile, phone, class_id FROM users WHERE mobile IS NOT NULL OR phone IS NOT NULL");
         $stmt->execute();
     }
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -55,6 +55,7 @@ foreach ($users as $user) {
     $userId    = $user['user_id'];
     $userName  = $user['name'] ?? 'Student';
     $userPhone = !empty($user['mobile']) ? $user['mobile'] : $user['phone'];
+    $classId   = $user['class_id'] ?? null;      // User's enrolled class
 
     // ── 1. Overall Syllabus Progress ──────────────────────────────────────
     try {
@@ -78,28 +79,39 @@ foreach ($users as $user) {
         $remainingSets = max(0, $totalSets - $completedSets);
         $overallPct   = $totalSets > 0 ? round(($completedSets / $totalSets) * 100) : 0;
 
-        // ── 2. Chapter-Level Progress ─────────────────────────────────────
-        // Total chapters in the system
-        $stmtTotalChapters = $pdo->prepare("SELECT COUNT(*) as total FROM chapters");
-        $stmtTotalChapters->execute();
+        // ── 2. Chapter-Level Progress (filtered by user's class) ─────────
+        // Total chapters for THIS user's class only
+        $stmtTotalChapters = $pdo->prepare("
+            SELECT COUNT(*) as total
+            FROM chapters ch
+            JOIN subjects s ON ch.subject_id = s.subject_id
+            WHERE s.class_id = ?
+        ");
+        $stmtTotalChapters->execute([$classId]);
         $totalChapters = (int)($stmtTotalChapters->fetch()['total'] ?? 0);
 
-        // Chapters where user has completed AT LEAST ONE content set
+        // Chapters completed by this user (within their class only)
         $stmtCompletedChapters = $pdo->prepare("
-            SELECT COUNT(DISTINCT chapter_id) as done
-            FROM content_progress
-            WHERE user_id = ? AND status = 'completed'
+            SELECT COUNT(DISTINCT cp.chapter_id) as done
+            FROM content_progress cp
+            JOIN chapters ch ON cp.chapter_id = ch.chapter_id
+            JOIN subjects s ON ch.subject_id = s.subject_id
+            WHERE cp.user_id = ? AND cp.status = 'completed'
+              AND s.class_id = ?
         ");
-        $stmtCompletedChapters->execute([$userId]);
+        $stmtCompletedChapters->execute([$userId, $classId]);
         $completedChapters = (int)($stmtCompletedChapters->fetch()['done'] ?? 0);
 
-        // Chapters in progress (started but not finished)
+        // Chapters in progress (within their class only)
         $stmtInProgress = $pdo->prepare("
-            SELECT COUNT(DISTINCT chapter_id) as inprog
-            FROM content_progress
-            WHERE user_id = ? AND status = 'in_progress'
+            SELECT COUNT(DISTINCT cp.chapter_id) as inprog
+            FROM content_progress cp
+            JOIN chapters ch ON cp.chapter_id = ch.chapter_id
+            JOIN subjects s ON ch.subject_id = s.subject_id
+            WHERE cp.user_id = ? AND cp.status = 'in_progress'
+              AND s.class_id = ?
         ");
-        $stmtInProgress->execute([$userId]);
+        $stmtInProgress->execute([$userId, $classId]);
         $inProgressChapters = (int)($stmtInProgress->fetch()['inprog'] ?? 0);
 
         $remainingChapters = max(0, $totalChapters - $completedChapters);

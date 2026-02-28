@@ -29,7 +29,11 @@ class TwilioService {
         return $this->sendWhatsAppMessage($toPhone, $message);
     }
 
-    private function sendWhatsAppMessage($toPhone, $message) {
+    public function sendWhatsAppNotificationWithMedia($toPhone, $message, $mediaUrl = '') {
+        return $this->sendWhatsAppMessage($toPhone, $message, $mediaUrl);
+    }
+
+    private function sendWhatsAppMessage($toPhone, $message, $mediaUrl = '') {
         if (empty($this->accountSid) || empty($this->authToken)) {
             error_log("Twilio credentials not configured in sms_config.php.");
             return false;
@@ -45,6 +49,11 @@ class TwilioService {
             'To'   => 'whatsapp:' . $toPhone,
             'Body' => $message
         ];
+
+        // Attach logo/media if provided
+        if (!empty($mediaUrl)) {
+            $data['MediaUrl'] = $mediaUrl;
+        }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);

@@ -139,7 +139,8 @@ foreach ($users as $user) {
                 'dry_run'   => true,
             ];
         } else {
-            $sent = $twilio->sendWhatsAppNotification($userPhone, $message);
+            $logoUrl = 'https://api.veeruapp.in/backend/public/veeru_logo.png';
+            $sent = $twilio->sendWhatsAppNotificationWithMedia($userPhone, $message, $logoUrl);
             $results[] = [
                 'user_id' => $userId,
                 'name'    => $userName,

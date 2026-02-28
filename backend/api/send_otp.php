@@ -2,6 +2,7 @@
 /**
  * Send OTP API
  * Generates and sends OTP to user's WhatsApp via Twilio
+ * v2.1 - Accepts mobile/phone/email fields, sends via Twilio WhatsApp
  */
 
 require_once 'cors_middleware.php';

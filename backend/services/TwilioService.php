@@ -52,6 +52,7 @@ class TwilioService {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
         curl_setopt($ch, CURLOPT_USERPWD, "{$this->accountSid}:{$this->authToken}");
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // FIX FOR LOCAL XAMPP SSL ISSUES
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

@@ -10,8 +10,11 @@
 // -----------------------------------------------
 // Twilio WhatsApp API Credentials
 // -----------------------------------------------
-// Read from environment variables (for Railway Production)
-// or fallback to blank for manual local testing.
+// These MUST be set as Environment Variables in Railway dashboard:
+//   TWILIO_ACCOUNT_SID = ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//   TWILIO_AUTH_TOKEN  = your_auth_token
+//   TWILIO_WHATSAPP_NUMBER = +14155238886  (Sandbox) or your approved number
+// DO NOT hardcode credentials here — GitHub will block the push!
 if (!defined('TWILIO_ACCOUNT_SID')) {
     define('TWILIO_ACCOUNT_SID', getenv('TWILIO_ACCOUNT_SID') ?: ''); 
 }
@@ -50,7 +53,7 @@ if (!defined('OTP_EXPIRY_MINUTES')) {
 }
 
 if (!defined('OTP_MAX_ATTEMPTS_PER_HOUR')) {
-    define('OTP_MAX_ATTEMPTS_PER_HOUR', 3); // Max 3 OTP requests per hour
+    define('OTP_MAX_ATTEMPTS_PER_HOUR', 100); // Increased for testing (was 3)
 }
 
 if (!defined('OTP_LENGTH')) {

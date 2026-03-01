@@ -53,7 +53,7 @@ if (!defined('OTP_EXPIRY_MINUTES')) {
 }
 
 if (!defined('OTP_MAX_ATTEMPTS_PER_HOUR')) {
-    define('OTP_MAX_ATTEMPTS_PER_HOUR', 100); // Increased for testing (was 3)
+    define('OTP_MAX_ATTEMPTS_PER_HOUR', 3); // Max 3 OTP requests per hour per number
 }
 
 if (!defined('OTP_LENGTH')) {

@@ -5,10 +5,10 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
     StatusBar,
     Platform,
-    BackHandler
+    BackHandler,
+    Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,6 +16,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
 import { BASE_URL } from '../api/config';
 import MathJaxWebView from '../components/MathJaxWebView';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 const MyExamTestScreen = ({ navigation, route }) => {
     const { questions, totalQuestions, subjectName } = route.params;
@@ -42,8 +45,8 @@ const MyExamTestScreen = ({ navigation, route }) => {
     useEffect(() => {
         const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
             if (!showResults) {
-                // Show confirmation dialog
-                return true; // Prevent default back behavior
+                // Return true to prevent default back behavior
+                return true;
             }
             return false;
         });
@@ -57,7 +60,6 @@ const MyExamTestScreen = ({ navigation, route }) => {
     };
 
     const handleAnswer = (optionKey) => {
-        // Don't allow changing answer after selection
         if (selectedAnswers[currentIndex]) return;
 
         setSelectedAnswers(prev => ({
@@ -65,7 +67,6 @@ const MyExamTestScreen = ({ navigation, route }) => {
             [currentIndex]: optionKey
         }));
 
-        // Show explanation immediately
         setShowExplanation(prev => ({
             ...prev,
             [currentIndex]: true
@@ -141,34 +142,40 @@ const MyExamTestScreen = ({ navigation, route }) => {
         const percentage = ((correct / questions.length) * 100).toFixed(1);
 
         return (
-            <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.resultsContent}>
+            <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.resultsContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.resultsHeader}>
                     <Text style={styles.resultsEmoji}>
                         {percentage >= 75 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
                     </Text>
                     <Text style={styles.resultsTitle}>Test Completed!</Text>
                     <Text style={styles.resultsScore}>{correct} / {questions.length}</Text>
-                    <Text style={styles.resultsPercentage}>{percentage}%</Text>
+                    <Text style={styles.resultsPercentage}>You scored {percentage}%</Text>
                 </View>
 
                 <View style={styles.statsGrid}>
-                    <View style={[styles.statCard, { backgroundColor: '#dcfce7' }]}>
+                    <View style={[styles.statCard, { backgroundColor: '#dcfce7', borderColor: '#bbf7d0', borderWidth: 1 }]}>
+                        <Ionicons name="checkmark-circle" size={24} color="#16a34a" style={{ marginBottom: 4 }} />
                         <Text style={[styles.statNumber, { color: '#16a34a' }]}>{correct}</Text>
-                        <Text style={[styles.statLabel, { color: '#16a34a' }]}>Correct</Text>
+                        <Text style={[styles.statLabel, { color: '#15803d' }]}>Correct</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: '#fee2e2' }]}>
+                    <View style={[styles.statCard, { backgroundColor: '#fee2e2', borderColor: '#fecaca', borderWidth: 1 }]}>
+                        <Ionicons name="close-circle" size={24} color="#dc2626" style={{ marginBottom: 4 }} />
                         <Text style={[styles.statNumber, { color: '#dc2626' }]}>{incorrect}</Text>
-                        <Text style={[styles.statLabel, { color: '#dc2626' }]}>Incorrect</Text>
+                        <Text style={[styles.statLabel, { color: '#b91c1c' }]}>Incorrect</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: '#fef3c7' }]}>
-                        <Text style={[styles.statNumber, { color: '#ca8a04' }]}>{unanswered}</Text>
-                        <Text style={[styles.statLabel, { color: '#ca8a04' }]}>Skipped</Text>
+                    <View style={[styles.statCard, { backgroundColor: '#fef3c7', borderColor: '#fde68a', borderWidth: 1 }]}>
+                        <Ionicons name="remove-circle" size={24} color="#d97706" style={{ marginBottom: 4 }} />
+                        <Text style={[styles.statNumber, { color: '#d97706' }]}>{unanswered}</Text>
+                        <Text style={[styles.statLabel, { color: '#b45309' }]}>Skipped</Text>
                     </View>
                 </View>
 
                 <View style={styles.timeCard}>
-                    <Text style={styles.timeLabel}>Time Taken</Text>
-                    <Text style={styles.timeValue}>{formatTime(timeElapsed)}</Text>
+                    <Ionicons name="time-outline" size={28} color="#64748b" style={{ marginRight: 12 }} />
+                    <View>
+                        <Text style={styles.timeLabel}>Total Time Taken</Text>
+                        <Text style={styles.timeValue}>{formatTime(timeElapsed)}</Text>
+                    </View>
                 </View>
 
                 <Text style={styles.reviewTitle}>Review Answers</Text>
@@ -187,34 +194,56 @@ const MyExamTestScreen = ({ navigation, route }) => {
                                     !wasAnswered ? styles.reviewBadgeSkipped :
                                         isCorrect ? styles.reviewBadgeCorrect : styles.reviewBadgeWrong
                                 ]}>
-                                    <Text style={styles.reviewBadgeText}>
+                                    <Text style={[styles.reviewBadgeText,
+                                    !wasAnswered ? { color: '#b45309' } :
+                                        isCorrect ? { color: '#15803d' } : { color: '#b91c1c' }
+                                    ]}>
                                         {!wasAnswered ? 'Skipped' : isCorrect ? 'Correct' : 'Wrong'}
                                     </Text>
                                 </View>
                             </View>
 
-                            <Text style={styles.reviewQuestion}>{decodeHtml(question.question)}</Text>
+                            <MathJaxWebView
+                                content={decodeHtml(question.question)}
+                                textColor="#0f172a"
+                                fontSize="15px"
+                            />
 
                             {wasAnswered && !isCorrect && (
-                                <View style={styles.answerInfo}>
+                                <View style={[styles.answerInfo, { marginTop: 12 }]}>
                                     <Text style={styles.answerInfoLabel}>Your Answer:</Text>
-                                    <Text style={styles.answerInfoWrong}>
-                                        {decodeHtml(question[`option_${userAnswer}`])}
-                                    </Text>
+                                    <View style={[styles.answerBox, { backgroundColor: '#fee2e2', borderColor: '#fecaca' }]}>
+                                        <MathJaxWebView
+                                            content={decodeHtml(question[`option_${userAnswer}`])}
+                                            textColor="#b91c1c"
+                                            fontSize="14px"
+                                        />
+                                    </View>
                                 </View>
                             )}
 
-                            <View style={styles.answerInfo}>
+                            <View style={[styles.answerInfo, !wasAnswered || isCorrect ? { marginTop: 12 } : null]}>
                                 <Text style={styles.answerInfoLabel}>Correct Answer:</Text>
-                                <Text style={styles.answerInfoCorrect}>
-                                    {decodeHtml(question[`option_${question.correct_answer}`])}
-                                </Text>
+                                <View style={[styles.answerBox, { backgroundColor: '#dcfce7', borderColor: '#bbf7d0' }]}>
+                                    <MathJaxWebView
+                                        content={decodeHtml(question[`option_${question.correct_answer}`])}
+                                        textColor="#15803d"
+                                        fontSize="14px"
+                                    />
+                                </View>
                             </View>
 
                             {question.explanation && (
                                 <View style={styles.explanationBox}>
-                                    <Text style={styles.explanationTitle}>Explanation:</Text>
-                                    <Text style={styles.explanationText}>{decodeHtml(question.explanation)}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                        <Ionicons name="bulb" size={18} color="#0369a1" style={{ marginRight: 6 }} />
+                                        <Text style={styles.explanationTitle}>Explanation</Text>
+                                    </View>
+                                    <MathJaxWebView
+                                        content={decodeHtml(question.explanation)}
+                                        textColor="#0369a1"
+                                        fontSize="14px"
+                                    />
                                 </View>
                             )}
                         </View>
@@ -222,10 +251,11 @@ const MyExamTestScreen = ({ navigation, route }) => {
                 })}
 
                 <TouchableOpacity
-                    style={styles.homeButton}
+                    style={styles.homeButtonWrapper}
                     onPress={() => navigation.navigate('Home')}
+                    activeOpacity={0.8}
                 >
-                    <LinearGradient colors={['#00c6ff', '#0072ff']} style={styles.homeButtonGradient}>
+                    <LinearGradient colors={['#4f46e5', '#6366f1']} style={styles.homeButtonGradient}>
                         <Text style={styles.homeButtonText}>Back to Home</Text>
                     </LinearGradient>
                 </TouchableOpacity>
@@ -237,7 +267,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
         return (
             <View style={styles.mainWrapper}>
                 <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
-                <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+                <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
                     {renderResults()}
                 </SafeAreaView>
             </View>
@@ -251,26 +281,30 @@ const MyExamTestScreen = ({ navigation, route }) => {
         <View style={styles.mainWrapper}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
-            <LinearGradient colors={['#00c6ff', '#0072ff']} style={styles.headerGradient}>
+            <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.headerGradient}>
                 <SafeAreaView edges={['top']} style={styles.headerSafe}>
                     <View style={styles.testHeader}>
                         <View style={styles.testHeaderTop}>
-                            <Text style={styles.testSubject}>{subjectName}</Text>
-                            <Text style={styles.timer}>⏱️ {formatTime(timeElapsed)}</Text>
+                            <View style={{ flex: 1, marginRight: 10 }}>
+                                <Text style={styles.testSubject} numberOfLines={1}>{subjectName}</Text>
+                            </View>
+                            <View style={styles.timerBadge}>
+                                <Ionicons name="timer-outline" size={16} color="white" style={{ marginRight: 4 }} />
+                                <Text style={styles.timer}>{formatTime(timeElapsed)}</Text>
+                            </View>
                         </View>
                         <View style={styles.progressBarContainer}>
                             <View style={[styles.progressBar, { width: `${progress}%` }]} />
                         </View>
                         <Text style={styles.questionCounter}>
-                            Question {currentIndex + 1} of {questions.length}
+                            Question <Text style={{ fontFamily: 'NotoSans-Bold' }}>{currentIndex + 1}</Text> of {questions.length}
                         </Text>
                     </View>
                 </SafeAreaView>
             </LinearGradient>
 
-            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.questionCard}>
-                    {/* Render Image if exists */}
                     {currentQuestion.image_url ? (
                         <Image
                             source={{ uri: `${BASE_URL}/uploads/${currentQuestion.image_url}` }}
@@ -279,10 +313,9 @@ const MyExamTestScreen = ({ navigation, route }) => {
                         />
                     ) : null}
 
-                    {/* Render Question Text using MathJax if it might contain math */}
                     <MathJaxWebView
                         content={decodeHtml(currentQuestion.question)}
-                        textColor="#4c1d95"
+                        textColor="#0f172a"
                         fontSize="18px"
                     />
                 </View>
@@ -294,20 +327,26 @@ const MyExamTestScreen = ({ navigation, route }) => {
                             style={getOptionStyle(opt)}
                             onPress={() => handleAnswer(opt)}
                             disabled={!!selectedAnswers[currentIndex]}
+                            activeOpacity={0.7}
                         >
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }} pointerEvents="none">
-                                <Text style={[
-                                    styles.optionText,
-                                    selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) && styles.optionTextSelected,
-                                    { marginRight: 8 }
+                            <View style={styles.optionContent} pointerEvents="none">
+                                <View style={[
+                                    styles.optionLetterBox,
+                                    selectedAnswers[currentIndex] && opt === currentQuestion.correct_answer ? { backgroundColor: '#16a34a' } :
+                                        selectedAnswers[currentIndex] === opt ? { backgroundColor: '#dc2626' } : null
                                 ]}>
-                                    {opt.toUpperCase()}.
-                                </Text>
+                                    <Text style={[
+                                        styles.optionText,
+                                        selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) ? styles.optionTextSelected : null
+                                    ]}>
+                                        {opt.toUpperCase()}
+                                    </Text>
+                                </View>
                                 <View style={{ flex: 1 }}>
                                     <MathJaxWebView
                                         content={decodeHtml(currentQuestion[`option_${opt}`])}
                                         textColor={selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) ? '#0f172a' : '#475569'}
-                                        fontSize="14px"
+                                        fontSize="15px"
                                     />
                                 </View>
                             </View>
@@ -315,17 +354,27 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     ))}
                 </View>
 
-                {/* Show explanation after answer is selected */}
                 {showExplanation[currentIndex] && (
                     <View style={styles.explanationContainer}>
-                        <Text style={styles.explanationTitle}>
-                            {selectedAnswers[currentIndex] === currentQuestion.correct_answer ? '✅ Correct!' : '❌ Wrong!'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                            {selectedAnswers[currentIndex] === currentQuestion.correct_answer ? (
+                                <Ionicons name="checkmark-circle" size={24} color="#16a34a" style={{ marginRight: 8 }} />
+                            ) : (
+                                <Ionicons name="close-circle" size={24} color="#dc2626" style={{ marginRight: 8 }} />
+                            )}
+                            <Text style={[styles.explanationTitle, selectedAnswers[currentIndex] === currentQuestion.correct_answer ? { color: '#16a34a' } : { color: '#dc2626' }]}>
+                                {selectedAnswers[currentIndex] === currentQuestion.correct_answer ? 'Correct!' : 'Incorrect!'}
+                            </Text>
+                        </View>
                         {currentQuestion.explanation && (
-                            <>
-                                <Text style={styles.explanationLabel}>Explanation:</Text>
-                                <Text style={styles.explanationText}>{decodeHtml(currentQuestion.explanation)}</Text>
-                            </>
+                            <View style={styles.explanationDetailBox}>
+                                <Text style={styles.explanationLabel}>Explanation</Text>
+                                <MathJaxWebView
+                                    content={decodeHtml(currentQuestion.explanation)}
+                                    textColor="#1e293b"
+                                    fontSize="14px"
+                                />
+                            </View>
                         )}
                     </View>
                 )}
@@ -336,27 +385,26 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     style={[styles.navButtonWrapper, currentIndex === 0 && styles.navButtonDisabled]}
                     onPress={previousQuestion}
                     disabled={currentIndex === 0}
+                    activeOpacity={0.8}
                 >
-                    <LinearGradient
-                        colors={['#ef4444', '#b91c1c']}
-                        style={styles.navButtonGradient}
-                    >
-                        <Text style={styles.navButtonTextWhite}>
-                            ← Previous
-                        </Text>
-                    </LinearGradient>
+                    <View style={styles.prevButton}>
+                        <Ionicons name="arrow-back" size={20} color="#64748b" style={{ marginRight: 6 }} />
+                        <Text style={styles.prevButtonText}>Previous</Text>
+                    </View>
                 </TouchableOpacity>
 
                 {currentIndex === questions.length - 1 ? (
-                    <TouchableOpacity style={styles.navButtonWrapper} onPress={submitTest}>
-                        <LinearGradient colors={['#22c55e', '#15803d']} style={styles.navButtonGradient}>
+                    <TouchableOpacity style={[styles.navButtonWrapper, { flex: 1.5 }]} onPress={submitTest} activeOpacity={0.8}>
+                        <LinearGradient colors={['#10b981', '#059669']} style={styles.navButtonGradient}>
                             <Text style={styles.submitButtonText}>Submit Test</Text>
+                            <Ionicons name="checkmark-done" size={20} color="white" style={{ marginLeft: 6 }} />
                         </LinearGradient>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={styles.navButtonWrapper} onPress={nextQuestion}>
-                        <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.navButtonGradient}>
-                            <Text style={styles.navButtonTextWhite}>Next →</Text>
+                    <TouchableOpacity style={[styles.navButtonWrapper, { flex: 1.5 }]} onPress={nextQuestion} activeOpacity={0.8}>
+                        <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.navButtonGradient}>
+                            <Text style={styles.navButtonTextWhite}>Next</Text>
+                            <Ionicons name="arrow-forward" size={20} color="white" style={{ marginLeft: 6 }} />
                         </LinearGradient>
                     </TouchableOpacity>
                 )}
@@ -371,36 +419,47 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     headerGradient: {
-        paddingBottom: 15,
+        paddingBottom: 25,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
     },
     headerSafe: {
         backgroundColor: 'transparent',
     },
     testHeader: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
+        paddingTop: 10,
     },
     testHeaderTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 20,
     },
     testSubject: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 20,
         color: 'white',
+        fontFamily: 'NotoSans-Bold',
+    },
+    timerBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
     },
     timer: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 14,
         color: 'white',
+        fontFamily: 'NotoSans-Bold',
     },
     progressBarContainer: {
         height: 6,
-        backgroundColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: 'rgba(255,255,255,0.25)',
         borderRadius: 3,
         overflow: 'hidden',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     progressBar: {
         height: '100%',
@@ -410,95 +469,114 @@ const styles = StyleSheet.create({
     questionCounter: {
         fontSize: 13,
         color: 'rgba(255,255,255,0.9)',
+        fontFamily: 'NotoSans-Regular',
         textAlign: 'center',
     },
     container: {
         flex: 1,
     },
     scrollContent: {
-        padding: 20,
+        padding: 24,
         paddingBottom: 150,
+        marginTop: -20,
     },
     questionCard: {
         backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 18,
-        marginBottom: 20,
-        elevation: 3,
-        shadowColor: '#7c3aed',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        borderWidth: 3,
-        borderColor: '#c084fc',
-        borderStyle: 'solid',
-    },
-    questionText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#4c1d95', // Deep Purple Text for contrast
-        lineHeight: 28,
+        borderRadius: 24,
+        padding: 24,
+        marginBottom: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
+        elevation: 8,
     },
     questionImage: {
         width: '100%',
         height: 200,
-        marginBottom: 16,
-        borderRadius: 8,
+        marginBottom: 20,
+        borderRadius: 12,
+        backgroundColor: '#f1f5f9',
     },
     optionsList: {
-        gap: 8,
+        gap: 12,
     },
     optionButton: {
-        backgroundColor: 'white',
-        borderRadius: 12,
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
         padding: 6,
-        borderWidth: 2,
-        borderColor: '#cbd5e1',
+        borderWidth: 1.5,
+        borderColor: '#e2e8f0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+        elevation: 1,
     },
-    selectedOption: {
-        borderColor: '#0072ff',
-        backgroundColor: '#eff6ff',
+    optionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+    },
+    optionLetterBox: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
     },
     correctOption: {
-        borderColor: '#16a34a',
-        backgroundColor: '#dcfce7',
+        borderColor: '#10b981',
+        backgroundColor: '#f0fdf4',
     },
     wrongOption: {
-        borderColor: '#dc2626',
-        backgroundColor: '#fee2e2',
+        borderColor: '#ef4444',
+        backgroundColor: '#fef2f2',
     },
     optionText: {
-        fontSize: 15,
-        color: '#475569',
-        lineHeight: 22,
+        fontSize: 14,
+        color: '#64748b',
+        fontFamily: 'NotoSans-Bold',
     },
     optionTextSelected: {
-        fontWeight: '600',
-        color: '#0f172a',
+        color: 'white',
     },
     explanationContainer: {
-        backgroundColor: '#f0fdf4',
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        marginTop: 24,
         marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
     },
     explanationTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#166534',
-        marginBottom: 8,
+        fontSize: 18,
+        fontFamily: 'NotoSans-Bold',
+    },
+    explanationDetailBox: {
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
     explanationLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#166534',
-        marginBottom: 4,
-    },
-    explanationText: {
-        fontSize: 14,
-        color: '#166534',
-        lineHeight: 20,
+        fontSize: 12,
+        color: '#64748b',
+        fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
     },
     navigationBar: {
         position: 'absolute',
@@ -506,21 +584,42 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         flexDirection: 'row',
-        backgroundColor: 'white',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        paddingBottom: Platform.OS === 'ios' ? 50 : 40, // Increased to prevent overlap
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
         borderTopWidth: 1,
-        borderTopColor: '#e2e8f0',
-        gap: 12,
+        borderTopColor: '#f1f5f9',
+        gap: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
+        elevation: 20,
     },
     navButtonWrapper: {
         flex: 1,
-        borderRadius: 12,
+        borderRadius: 16,
         overflow: 'hidden',
     },
+    prevButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    prevButtonText: {
+        fontSize: 15,
+        fontFamily: 'NotoSans-Bold',
+        color: '#64748b',
+    },
     navButtonGradient: {
-        paddingVertical: 14,
+        flexDirection: 'row',
+        paddingVertical: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -529,12 +628,12 @@ const styles = StyleSheet.create({
     },
     navButtonTextWhite: {
         fontSize: 15,
-        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
         color: 'white',
     },
     submitButtonText: {
         fontSize: 15,
-        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
         color: 'white',
     },
     resultsContainer: {
@@ -542,103 +641,120 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     resultsContent: {
-        padding: 20,
+        padding: 24,
+        paddingTop: Platform.OS === 'ios' ? 20 : 40,
         paddingBottom: 40,
     },
     resultsHeader: {
         alignItems: 'center',
-        marginBottom: 30,
-        paddingVertical: 20,
+        marginBottom: 32,
+        paddingVertical: 10,
     },
     resultsEmoji: {
-        fontSize: 60,
-        marginBottom: 15,
+        fontSize: 70,
+        marginBottom: 16,
     },
     resultsTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 28,
+        fontFamily: 'NotoSans-Bold',
         color: '#0f172a',
-        marginBottom: 10,
+        marginBottom: 8,
     },
     resultsScore: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#0072ff',
-        marginBottom: 5,
+        fontSize: 36,
+        fontFamily: 'NotoSans-Bold',
+        color: '#4f46e5',
+        marginBottom: 4,
     },
     resultsPercentage: {
-        fontSize: 20,
-        fontWeight: '600',
+        fontSize: 16,
+        fontFamily: 'NotoSans-Regular',
         color: '#64748b',
     },
     statsGrid: {
         flexDirection: 'row',
-        gap: 10,
-        marginBottom: 20,
+        gap: 12,
+        marginBottom: 24,
     },
     statCard: {
         flex: 1,
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
         alignItems: 'center',
     },
     statNumber: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: 24,
+        fontFamily: 'NotoSans-Bold',
         marginBottom: 4,
     },
     statLabel: {
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
     },
     timeCard: {
+        flexDirection: 'row',
         backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 16,
+        padding: 20,
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 40,
         borderWidth: 1,
         borderColor: '#e2e8f0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 2,
     },
     timeLabel: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#64748b',
+        fontFamily: 'NotoSans-Regular',
         marginBottom: 4,
     },
     timeValue: {
         fontSize: 24,
-        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
         color: '#0f172a',
     },
     reviewTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
         color: '#0f172a',
-        marginBottom: 15,
+        marginBottom: 20,
     },
     reviewCard: {
         backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 20,
         borderWidth: 1,
         borderColor: '#e2e8f0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 2,
     },
     reviewHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
     },
     reviewQuestionNumber: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 15,
+        fontFamily: 'NotoSans-Bold',
         color: '#64748b',
     },
     reviewBadge: {
         paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 6,
+        borderRadius: 8,
     },
     reviewBadgeCorrect: {
         backgroundColor: '#dcfce7',
@@ -651,64 +767,58 @@ const styles = StyleSheet.create({
     },
     reviewBadgeText: {
         fontSize: 12,
-        fontWeight: '600',
-    },
-    reviewQuestion: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#0f172a',
-        marginBottom: 12,
-        lineHeight: 22,
+        fontFamily: 'NotoSans-Bold',
     },
     answerInfo: {
-        marginBottom: 10,
+        marginTop: 0,
     },
     answerInfoLabel: {
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
         color: '#64748b',
-        marginBottom: 4,
+        textTransform: 'uppercase',
+        marginBottom: 8,
     },
-    answerInfoCorrect: {
-        fontSize: 14,
-        color: '#16a34a',
-        fontWeight: '500',
-    },
-    answerInfoWrong: {
-        fontSize: 14,
-        color: '#dc2626',
-        fontWeight: '500',
+    answerBox: {
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderLeftWidth: 4,
     },
     explanationBox: {
-        backgroundColor: '#f0fdf4',
-        borderRadius: 8,
-        padding: 12,
-        marginTop: 8,
+        backgroundColor: '#f0f9ff',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 16,
+        borderWidth: 1,
+        borderColor: '#e0f2fe',
+        borderLeftWidth: 4,
+        borderLeftColor: '#0ea5e9',
     },
     explanationTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#166534',
-        marginBottom: 4,
-    },
-    explanationText: {
         fontSize: 14,
-        color: '#166534',
-        lineHeight: 20,
+        fontFamily: 'NotoSans-Bold',
+        color: '#0369a1',
     },
-    homeButton: {
-        borderRadius: 12,
+    homeButtonWrapper: {
+        borderRadius: 16,
         overflow: 'hidden',
-        marginTop: 20,
+        marginTop: 10,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        elevation: 8,
     },
     homeButtonGradient: {
-        paddingVertical: 16,
+        paddingVertical: 18,
         alignItems: 'center',
     },
     homeButtonText: {
         fontSize: 16,
-        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
         color: 'white',
+        letterSpacing: 0.5,
     },
 });
 

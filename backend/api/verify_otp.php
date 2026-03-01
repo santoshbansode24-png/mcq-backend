@@ -72,11 +72,13 @@ try {
     $updateStmt = $pdo->prepare("UPDATE password_reset_otps SET verified = TRUE WHERE id = ?");
     $updateStmt->execute([$otpRecord['id']]);
 
-    // Generate a temporary reset token (valid for 15 minutes)
-    $resetToken  = bin2hex(random_bytes(32));
-    
-    // We don't save reset_token in DB currently, it's just passed back to client
-    // For a future enhancement, it should be saved in users table or password_reset_tokens table.
+    // Generate a secure reset token (valid for 15 minutes) and save it to DB
+    $resetToken      = bin2hex(random_bytes(32));
+    $tokenExpiresAt  = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+    $saveToken = $pdo->prepare("UPDATE password_reset_otps SET reset_token = ?, token_expires_at = ? WHERE id = ?");
+    $saveToken->execute([$resetToken, $tokenExpiresAt, $otpRecord['id']]);
+
 
     // Get full user details
     $userStmt = $pdo->prepare("SELECT user_id, name, email FROM users WHERE user_id = ?");

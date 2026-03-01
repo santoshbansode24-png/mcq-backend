@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, ScrollView, Modal, FlatList, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar, ScrollView, Modal, FlatList, KeyboardAvoidingView, Platform, Dimensions, Linking } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { registerUser } from '../api/auth';
 import { fetchClasses } from '../api/classes';
-import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import config, { API_URL, BASE_URL } from '../api/config';
+import config from '../api/config';
+
+const { width, height } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }) => {
+    // states
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [mobile, setMobile] = useState('');
@@ -15,26 +18,19 @@ const RegisterScreen = ({ navigation }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // New Fields
     const [schoolName, setSchoolName] = useState('');
-    const [selectedBoard, setSelectedBoard] = useState('CBSE'); // Default to CBSE
-    const [selectedClass, setSelectedClass] = useState(null); // {class_id, class_name}
+    const [selectedBoard, setSelectedBoard] = useState('CBSE');
+    const [selectedClass, setSelectedClass] = useState(null);
 
-    // Class Data
     const [classes, setClasses] = useState([]);
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [showClassModal, setShowClassModal] = useState(false);
-
-    // Loading state is already defined above
     const [loading, setLoading] = useState(false);
 
-
-
-    // Reset Classes when board changes
     useEffect(() => {
         if (selectedBoard) {
             loadClassesData(selectedBoard);
-            setSelectedClass(null); // Reset class selection
+            setSelectedClass(null);
         } else {
             setClasses([]);
         }
@@ -43,13 +39,12 @@ const RegisterScreen = ({ navigation }) => {
     const loadClassesData = async (board) => {
         setLoadingClasses(true);
         try {
-            // Fetch classes using the optimized service with caching
             const response = await fetchClasses(board);
             if (response && (response.status === 'success' || Array.isArray(response))) {
                 const classData = response.data || response;
                 setClasses(classData);
             } else {
-                setClasses([]); // No classes for this board yet
+                setClasses([]);
             }
         } catch (error) {
             console.error("Failed to load classes", error);
@@ -60,7 +55,6 @@ const RegisterScreen = ({ navigation }) => {
     };
 
     const handleRegister = async () => {
-        // Trim inputs
         const trimmedName = name.trim();
         const trimmedEmail = email.trim();
         const trimmedMobile = mobile.trim();
@@ -127,160 +121,223 @@ const RegisterScreen = ({ navigation }) => {
             }}
         >
             <Text style={styles.classItemText}>{item?.class_name || 'Unknown Class'}</Text>
-            {selectedClass?.class_id === item?.class_id && <Ionicons name="checkmark" size={20} color="#4f46e5" />}
+            {selectedClass?.class_id === item?.class_id && <Ionicons name="checkmark-circle" size={24} color="#4f46e5" />}
         </TouchableOpacity>
     );
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#f5f7fa' }}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={{ flex: 1 }}
-            >
-                <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-                    <StatusBar barStyle="light-content" />
-                    <View style={[styles.header, { backgroundColor: '#4f46e5' }]}>
-                        <Text style={styles.headerTitle}>Create Account</Text>
-                        <Text style={styles.headerSubtitle}>Join Veeru and Learn Smarter</Text>
-                    </View>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
+        >
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-                    <View style={styles.formContainer}>
-                        <View style={styles.form}>
-                            <Text style={styles.label}>FULL NAME</Text>
+            <LinearGradient
+                colors={['#4f46e5', '#3b82f6', '#f8fafc']}
+                locations={[0, 0.35, 1]}
+                style={styles.backgroundGradient}
+            />
+
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.headerContainer}>
+                    <Text style={styles.welcomeText}>Create Account</Text>
+                    <Text style={styles.subtitle}>Join Veeru and Learn Smarter</Text>
+                </View>
+
+                <View style={styles.formContainer}>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>FULL NAME</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="person-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="John Doe"
+                                placeholderTextColor="#94a3b8"
                                 value={name}
                                 onChangeText={setName}
                                 autoCapitalize="words"
                             />
+                        </View>
+                    </View>
 
-                            <Text style={styles.label}>EMAIL ADDRESS</Text>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>EMAIL ADDRESS</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="student@example.com"
+                                placeholderTextColor="#94a3b8"
                                 value={email}
                                 onChangeText={setEmail}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
+                        </View>
+                    </View>
 
-                            <Text style={styles.label}>MOBILE NUMBER <Text style={{ color: 'red' }}>*</Text></Text>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>MOBILE NUMBER <Text style={{ color: '#ef4444' }}>*</Text></Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="call-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="9876543210"
+                                placeholderTextColor="#94a3b8"
                                 value={mobile}
                                 onChangeText={setMobile}
                                 keyboardType="phone-pad"
                                 maxLength={10}
                             />
+                        </View>
+                    </View>
 
-                            <Text style={styles.label}>SCHOOL NAME</Text>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>SCHOOL NAME</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="school-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="Enter your school name"
+                                placeholderTextColor="#94a3b8"
                                 value={schoolName}
                                 onChangeText={setSchoolName}
                             />
+                        </View>
+                    </View>
 
-                            {/* Board Selection */}
-                            <Text style={styles.label}>SELECT BOARD / MEDIUM</Text>
-                            <View style={styles.boardContainer}>
-                                {[
-                                    { id: 'CBSE', label: 'CBSE' },
-                                    { id: 'STATE_MARATHI', label: 'State (Marathi)' },
-                                    { id: 'STATE_SEMI', label: 'State (Semi)' }
-                                ].map((board) => (
-                                    <TouchableOpacity
-                                        key={board.id}
-                                        style={[styles.boardBtn, selectedBoard === board.id && styles.boardBtnActive]}
-                                        onPress={() => setSelectedBoard(board.id)}
-                                    >
-                                        <Text style={[styles.boardText, selectedBoard === board.id && styles.boardTextActive, { textAlign: 'center', fontSize: 12 }]}>
-                                            {board.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>SELECT BOARD / MEDIUM</Text>
+                        <View style={styles.boardContainer}>
+                            {[
+                                { id: 'CBSE', label: 'CBSE' },
+                                { id: 'STATE_MARATHI', label: 'State\n(Marathi)' },
+                                { id: 'STATE_SEMI', label: 'State\n(Semi)' }
+                            ].map((board) => (
+                                <TouchableOpacity
+                                    key={board.id}
+                                    style={[styles.boardBtn, selectedBoard === board.id && styles.boardBtnActive]}
+                                    onPress={() => setSelectedBoard(board.id)}
+                                >
+                                    <Text style={[styles.boardText, selectedBoard === board.id && styles.boardTextActive]}>
+                                        {board.label}
+                                    </Text>
+                                    {selectedBoard === board.id && (
+                                        <View style={styles.boardCheckIcon}>
+                                            <Ionicons name="checkmark-circle" size={14} color="#4f46e5" />
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
 
-                            {/* Class Selection */}
-                            <Text style={styles.label}>CLASS</Text>
-                            <TouchableOpacity
-                                style={[styles.dropdownBtn, !selectedBoard && { opacity: 0.5, backgroundColor: '#f3f4f6' }]}
-                                onPress={() => {
-                                    if (!selectedBoard) {
-                                        Alert.alert("Select Board First", "Please select a board to see available classes.");
-                                        return;
-                                    }
-                                    setShowClassModal(true);
-                                }}
-                                disabled={!selectedBoard}
-                            >
-                                <Text style={[styles.dropdownText, !selectedClass && { color: '#9ca3af' }]}>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>CLASS</Text>
+                        <TouchableOpacity
+                            style={[
+                                styles.dropdownBtn,
+                                !selectedBoard && { opacity: 0.5, backgroundColor: '#f1f5f9' }
+                            ]}
+                            onPress={() => {
+                                if (!selectedBoard) {
+                                    Alert.alert("Select Board First", "Please select a board to see available classes.");
+                                    return;
+                                }
+                                setShowClassModal(true);
+                            }}
+                            disabled={!selectedBoard}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons name="easel-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                <Text style={[styles.dropdownText, !selectedClass && { color: '#94a3b8' }]}>
                                     {selectedClass ? selectedClass.class_name : (selectedBoard ? "Select your class" : "Select Board first")}
                                 </Text>
-                                <Ionicons name="chevron-down" size={20} color="#6b7280" />
-                            </TouchableOpacity>
-
-                            <Text style={styles.label}>PASSWORD</Text>
-                            <View style={styles.passwordContainer}>
-                                <TextInput
-                                    style={styles.passwordInput}
-                                    placeholder="Create a password"
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    secureTextEntry={!showPassword}
-                                />
-                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                                    <Ionicons name={showPassword ? "eye" : "eye-off"} size={22} color="#6b7280" />
-                                </TouchableOpacity>
                             </View>
+                            <Ionicons name="chevron-down" size={20} color="#64748b" />
+                        </TouchableOpacity>
+                    </View>
 
-                            <Text style={styles.label}>CONFIRM PASSWORD</Text>
-                            <View style={styles.passwordContainer}>
-                                <TextInput
-                                    style={styles.passwordInput}
-                                    placeholder="Confirm password"
-                                    value={confirmPassword}
-                                    onChangeText={setConfirmPassword}
-                                    secureTextEntry={!showConfirmPassword}
-                                />
-                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
-                                    <Ionicons name={showConfirmPassword ? "eye" : "eye-off"} size={22} color="#6b7280" />
-                                </TouchableOpacity>
-                            </View>
-
-                            <TouchableOpacity
-                                style={styles.button}
-                                onPress={handleRegister}
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.buttonText}>Register</Text>
-                                )}
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
-                                <Text style={styles.loginText}>Already have an account? <Text style={styles.loginHighlight}>Login</Text></Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={() => Linking.openURL(`${config.ROOT_URL}/privacy.php`)}
-                                style={{ marginTop: 20, alignItems: 'center' }}
-                            >
-                                <Text style={{ color: '#666', fontSize: 12, textAlign: 'center' }}>
-                                    By registering, you agree to our {"\n"}
-                                    <Text style={{ color: '#4f46e5', textDecorationLine: 'underline' }}>Privacy Policy</Text> and <Text style={{ color: '#4f46e5', textDecorationLine: 'underline' }}>Terms of Service</Text>
-                                </Text>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>PASSWORD</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Create a password"
+                                placeholderTextColor="#94a3b8"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                            />
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                                <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#94a3b8" />
                             </TouchableOpacity>
                         </View>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
 
-            {/* Class Selection Modal - Moved Outside ScrollView */}
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>CONFIRM PASSWORD</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="shield-checkmark-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Confirm password"
+                                placeholderTextColor="#94a3b8"
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry={!showConfirmPassword}
+                            />
+                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                                <Ionicons name={showConfirmPassword ? "eye-off" : "eye"} size={20} color="#94a3b8" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity
+                        style={styles.buttonShadow}
+                        activeOpacity={0.8}
+                        onPress={handleRegister}
+                        disabled={loading}
+                    >
+                        <LinearGradient
+                            colors={['#4f46e5', '#6366f1']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.registerButton}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.registerButtonText}>REGISTER</Text>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <View style={styles.loginContainer}>
+                        <Text style={styles.loginText}>Already have an account? </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.loginLink}>LOGIN HERE</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                <TouchableOpacity
+                    onPress={() => Linking.openURL(`${config.ROOT_URL}/privacy.php`)}
+                    style={styles.privacyContainer}
+                >
+                    <Text style={styles.privacyText}>
+                        By registering, you agree to our{"\n"}
+                        <Text style={styles.privacyLink}>Privacy Policy</Text> and <Text style={styles.privacyLink}>Terms of Service</Text>
+                    </Text>
+                </TouchableOpacity>
+            </ScrollView>
+
             <Modal
                 visible={showClassModal}
                 transparent={true}
@@ -291,187 +348,237 @@ const RegisterScreen = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Select Class</Text>
-                            <TouchableOpacity onPress={() => setShowClassModal(false)}>
-                                <Ionicons name="close" size={24} color="#333" />
+                            <TouchableOpacity onPress={() => setShowClassModal(false)} style={styles.closeBtn}>
+                                <Ionicons name="close" size={24} color="#64748b" />
                             </TouchableOpacity>
                         </View>
                         {loadingClasses ? (
-                            <ActivityIndicator size="large" color="#4f46e5" style={{ margin: 20 }} />
+                            <ActivityIndicator size="large" color="#4f46e5" style={{ margin: 40 }} />
                         ) : (
                             <FlatList
                                 data={Array.isArray(classes) ? classes : []}
                                 renderItem={renderClassItem}
                                 keyExtractor={(item, index) => item?.class_id ? item.class_id.toString() : index.toString()}
-                                style={{ maxHeight: 300 }}
+                                style={{ maxHeight: height * 0.5 }}
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ padding: 10 }}
+                                ListEmptyComponent={() => (
+                                    <View style={{ padding: 30, alignItems: 'center' }}>
+                                        <Ionicons name="folder-open-outline" size={48} color="#cbd5e1" />
+                                        <Text style={{ marginTop: 10, color: '#94a3b8', fontFamily: 'NotoSans-Regular' }}>No classes found</Text>
+                                    </View>
+                                )}
                             />
                         )}
                     </View>
                 </View>
             </Modal>
-        </View>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+        backgroundColor: '#f8fafc',
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: height * 0.5,
+    },
+    scrollContent: {
         flexGrow: 1,
-        backgroundColor: '#f5f7fa',
-        paddingBottom: 40
-    },
-    header: {
-        paddingTop: 80,
-        paddingBottom: 50,
+        justifyContent: 'center',
         paddingHorizontal: 24,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        paddingTop: Platform.OS === 'ios' ? 70 : 90,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 150,
     },
-    headerTitle: {
+    headerContainer: {
+        alignItems: 'flex-start',
+        marginBottom: 30,
+        paddingHorizontal: 10,
+    },
+    welcomeText: {
         fontSize: 32,
-        fontWeight: 'bold',
         color: '#fff',
-        marginBottom: 8,
         fontFamily: 'NotoSans-Bold',
+        marginBottom: 8,
+        textShadowColor: 'rgba(0, 0, 0, 0.1)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
-    headerSubtitle: {
+    subtitle: {
         fontSize: 16,
-        color: 'rgba(255, 255, 255, 0.9)',
+        color: 'rgba(255,255,255,0.9)',
         fontFamily: 'NotoSans-Regular',
+        textShadowColor: 'rgba(0, 0, 0, 0.1)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
     },
     formContainer: {
-        flex: 1,
-        paddingHorizontal: 24,
-        marginTop: -30,
-    },
-    form: {
-        backgroundColor: '#fff',
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
         padding: 24,
-        borderRadius: 20,
-        elevation: 5,
-        marginBottom: 30,
-        paddingTop: 10
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 15 },
+        shadowOpacity: 0.1,
+        shadowRadius: 30,
+        elevation: 8,
+    },
+    inputWrapper: {
+        marginBottom: 20,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#374151',
-        marginBottom: 8,
-        marginTop: 16,
+        fontSize: 12,
+        color: '#64748b',
         fontFamily: 'NotoSans-Bold',
+        marginBottom: 8,
+        marginLeft: 4,
+        letterSpacing: 0.5,
     },
-    input: {
-        backgroundColor: '#f9fafb',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        borderRadius: 12,
-        padding: 16,
-        fontSize: 16,
-        color: '#1f2937',
-        fontFamily: 'NotoSans-Regular',
-    },
-    passwordContainer: {
-        backgroundColor: '#f9fafb',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        borderRadius: 12,
+    inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingRight: 12,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        paddingHorizontal: 16,
+        height: 56,
     },
-    passwordInput: {
+    inputIcon: {
+        marginRight: 10,
+    },
+    input: {
         flex: 1,
-        padding: 16,
         fontSize: 16,
-        color: '#1f2937',
+        color: '#0f172a',
         fontFamily: 'NotoSans-Regular',
+        height: '100%',
     },
     eyeIcon: {
-        padding: 4,
+        padding: 10,
     },
     boardContainer: {
         flexDirection: 'row',
         gap: 12,
+        justifyContent: 'space-between',
     },
     boardBtn: {
         flex: 1,
-        padding: 14,
-        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 6,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
-        backgroundColor: '#f9fafb',
+        borderColor: '#e2e8f0',
+        backgroundColor: '#f1f5f9',
         alignItems: 'center',
+        justifyContent: 'center',
     },
     boardBtnActive: {
-        backgroundColor: '#e0e7ff',
+        backgroundColor: '#eef2ff',
         borderColor: '#4f46e5',
         borderWidth: 2,
     },
     boardText: {
-        color: '#6b7280',
-        fontWeight: '600',
+        color: '#64748b',
+        fontSize: 12,
         fontFamily: 'NotoSans-Bold',
+        textAlign: 'center',
+        lineHeight: 18,
     },
     boardTextActive: {
         color: '#4f46e5',
-        fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
     },
+    boardCheckIcon: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+    },
     dropdownBtn: {
-        backgroundColor: '#f9fafb',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        borderRadius: 12,
-        padding: 16,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#f1f5f9',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        paddingHorizontal: 16,
+        height: 56,
     },
     dropdownText: {
         fontSize: 16,
-        color: '#1f2937',
+        color: '#0f172a',
         fontFamily: 'NotoSans-Regular',
     },
-    button: {
-        backgroundColor: '#4f46e5',
-        paddingVertical: 18,
-        borderRadius: 14,
-        alignItems: 'center',
-        marginTop: 32,
+    buttonShadow: {
         shadowColor: '#4f46e5',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+        marginTop: 12,
+        marginBottom: 24,
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-        fontFamily: 'NotoSans-Bold',
-    },
-    loginLink: {
-        marginTop: 20,
+    registerButton: {
+        height: 56,
+        borderRadius: 16,
+        justifyContent: 'center',
         alignItems: 'center',
-        padding: 10,
+    },
+    registerButtonText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
+    },
+    loginContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     loginText: {
-        color: '#6b7280',
-        fontSize: 15,
+        color: '#64748b',
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
     },
-    loginHighlight: {
+    loginLink: {
         color: '#4f46e5',
-        fontWeight: 'bold',
+        fontSize: 14,
+        fontFamily: 'NotoSans-Bold',
+    },
+    privacyContainer: {
+        marginTop: 30,
+        alignItems: 'center',
+    },
+    privacyText: {
+        color: '#94a3b8',
+        fontSize: 12,
+        fontFamily: 'NotoSans-Regular',
+        textAlign: 'center',
+        lineHeight: 18,
+    },
+    privacyLink: {
+        color: '#6366f1',
+        textDecorationLine: 'underline',
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        padding: 24,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        maxHeight: '60%',
-        paddingBottom: 20
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+        maxHeight: height * 0.7,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -479,24 +586,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#f3f4f6',
+        borderBottomColor: '#f1f5f9',
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#111827',
+        color: '#0f172a',
+        fontFamily: 'NotoSans-Bold',
+    },
+    closeBtn: {
+        padding: 4,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 20,
     },
     classItem: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f3f4f6',
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
     classItemText: {
         fontSize: 16,
-        color: '#374151',
-    }
+        color: '#334155',
+        fontFamily: 'NotoSans-Regular',
+    },
 });
 
 export default RegisterScreen;

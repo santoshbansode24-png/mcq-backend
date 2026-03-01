@@ -16,33 +16,35 @@ try {
     // Get JSON input
     $input = getJsonInput();
     
-    if (empty($input['user_id']) || empty($input['new_password'])) {
-        sendResponse('error', 'User ID and new password are required', null, 400);
+    if (empty($input['user_id']) || empty($input['new_password']) || empty($input['reset_token'])) {
+        sendResponse('error', 'User ID, reset token, and new password are required', null, 400);
     }
     
-    $userId = intval($input['user_id']);
+    $userId      = intval($input['user_id']);
     $newPassword = trim($input['new_password']);
+    $resetToken  = trim($input['reset_token']);
     
     // Validate password strength
     if (strlen($newPassword) < 6) {
         sendResponse('error', 'Password must be at least 6 characters long', null, 400);
     }
     
-    // Optional: Check if there's a recent verified OTP for this user
+    // Validate reset_token: must exist in DB, belong to this user, not expired, and have been OTP-verified
     $stmt = $pdo->prepare("
         SELECT id 
         FROM password_reset_otps 
         WHERE user_id = ? 
+        AND reset_token = ?
         AND verified = TRUE 
-        AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+        AND token_expires_at > NOW()
         ORDER BY created_at DESC 
         LIMIT 1
     ");
-    $stmt->execute([$userId]);
+    $stmt->execute([$userId, $resetToken]);
     $otpRecord = $stmt->fetch();
     
     if (!$otpRecord) {
-        sendResponse('error', 'Invalid or expired reset session. Please request a new OTP.', null, 403);
+        sendResponse('error', 'Invalid or expired reset token. Please request a new OTP.', null, 403);
     }
     
     // Hash the new password

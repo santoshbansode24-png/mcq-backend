@@ -77,6 +77,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             // NOTE: sendResponse() wraps data inside a 'data' key: { status, message, data: { user_id, ... } }
             const resetResponse = await axios.post(`${API_URL}/reset_password.php`, {
                 user_id: verifyResponse.data.data?.user_id,
+                reset_token: verifyResponse.data.data?.reset_token,
                 new_password: newPassword
             });
 

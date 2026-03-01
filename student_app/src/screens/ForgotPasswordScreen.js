@@ -102,29 +102,39 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
         >
-            <LinearGradient colors={['#4c669f', '#3b5998', '#192f6a']} style={styles.background}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <Ionicons name="arrow-back" size={24} color="white" />
-                    </TouchableOpacity>
+            <LinearGradient
+                colors={['#4f46e5', '#3b82f6', '#f8fafc']}
+                locations={[0, 0.4, 1]}
+                style={styles.backgroundGradient}
+            />
 
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Ionicons name="arrow-back" size={24} color="white" />
+                </TouchableOpacity>
+
+                <View style={styles.headerContainer}>
                     <Text style={styles.title}>FORGOT PASSWORD</Text>
                     <Text style={styles.subtitle}>
                         {step === 1 ? 'Enter your registered mobile number' : 'Enter OTP and new password'}
                     </Text>
+                </View>
 
-                    <View style={styles.card}>
-                        {step === 1 ? (
-                            <>
+                <View style={styles.formContainer}>
+                    {step === 1 ? (
+                        <>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>MOBILE NUMBER</Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="call-outline" size={20} color="#666" style={styles.icon} />
+                                    <Ionicons name="call-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Mobile Number"
-                                        placeholderTextColor="#999"
+                                        placeholder="10-digit mobile number"
+                                        placeholderTextColor="#94a3b8"
                                         keyboardType="phone-pad"
                                         autoCapitalize="none"
                                         maxLength={10}
@@ -132,83 +142,208 @@ const ForgotPasswordScreen = ({ navigation }) => {
                                         onChangeText={setMobile}
                                     />
                                 </View>
+                            </View>
 
-                                <TouchableOpacity
-                                    style={styles.button}
-                                    onPress={handleSendOTP}
-                                    disabled={loading}
+                            <TouchableOpacity
+                                style={styles.buttonShadow}
+                                activeOpacity={0.8}
+                                onPress={handleSendOTP}
+                                disabled={loading}
+                            >
+                                <LinearGradient
+                                    colors={['#4f46e5', '#6366f1']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.actionButton}
                                 >
-                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>SEND OTP</Text>}
-                                </TouchableOpacity>
-                            </>
-                        ) : (
-                            <>
+                                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>SEND OTP</Text>}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>ENTER OTP</Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="key-outline" size={20} color="#666" style={styles.icon} />
+                                    <Ionicons name="key-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Enter OTP"
-                                        placeholderTextColor="#999"
+                                        placeholder="6-digit OTP"
+                                        placeholderTextColor="#94a3b8"
                                         keyboardType="number-pad"
                                         maxLength={6}
                                         value={otp}
                                         onChangeText={setOtp}
                                     />
                                 </View>
+                            </View>
 
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>NEW PASSWORD</Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.icon} />
+                                    <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="New Password"
-                                        placeholderTextColor="#999"
+                                        placeholderTextColor="#94a3b8"
                                         secureTextEntry
                                         value={newPassword}
                                         onChangeText={setNewPassword}
                                     />
                                 </View>
+                            </View>
 
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.icon} />
+                                    <Ionicons name="shield-checkmark-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Confirm New Password"
-                                        placeholderTextColor="#999"
+                                        placeholder="Confirm Password"
+                                        placeholderTextColor="#94a3b8"
                                         secureTextEntry
                                         value={confirmPassword}
                                         onChangeText={setConfirmPassword}
                                     />
                                 </View>
+                            </View>
 
-                                <TouchableOpacity
-                                    style={styles.button}
-                                    onPress={handleResetPassword}
-                                    disabled={loading}
+                            <TouchableOpacity
+                                style={styles.buttonShadow}
+                                activeOpacity={0.8}
+                                onPress={handleResetPassword}
+                                disabled={loading}
+                            >
+                                <LinearGradient
+                                    colors={['#4f46e5', '#6366f1']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.actionButton}
                                 >
-                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>RESET PASSWORD</Text>}
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
-                </ScrollView>
-            </LinearGradient>
+                                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>RESET PASSWORD</Text>}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    background: { flex: 1 },
-    scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-    backButton: { position: 'absolute', top: 40, left: 20, zIndex: 10 },
-    title: { fontSize: 32, fontWeight: 'bold', color: 'white', textAlign: 'center', marginBottom: 10, marginTop: 60, fontFamily: 'NotoSans-Bold' },
-    subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 40, fontFamily: 'NotoSans-Regular' },
-    card: { backgroundColor: 'white', borderRadius: 20, padding: 30, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ddd', marginBottom: 20, paddingBottom: 5 },
-    icon: { marginRight: 10 },
-    input: { flex: 1, fontSize: 16, color: '#333', paddingVertical: 10, fontFamily: 'NotoSans-Regular' },
-    button: { backgroundColor: '#4c669f', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-    buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
+    container: {
+        flex: 1,
+        backgroundColor: '#f8fafc',
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: Platform.OS === 'ios' ? 400 : 350,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingTop: Platform.OS === 'ios' ? 60 : 80,
+        paddingBottom: 40,
+    },
+    backButton: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 60 : 40,
+        left: 20,
+        zIndex: 10,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 20,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 30,
+        marginTop: 20,
+    },
+    title: {
+        fontSize: 28,
+        color: '#fff',
+        fontFamily: 'NotoSans-Bold',
+        marginBottom: 5,
+        textShadowColor: 'rgba(0, 0, 0, 0.1)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: 'rgba(255,255,255,0.9)',
+        fontFamily: 'NotoSans-Regular',
+        textAlign: 'center',
+    },
+    formContainer: {
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        padding: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 15 },
+        shadowOpacity: 0.1,
+        shadowRadius: 30,
+        elevation: 8,
+    },
+    inputWrapper: {
+        marginBottom: 20,
+    },
+    label: {
+        fontSize: 12,
+        color: '#64748b',
+        fontFamily: 'NotoSans-Bold',
+        marginBottom: 8,
+        marginLeft: 4,
+        letterSpacing: 0.5,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f1f5f9',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        paddingHorizontal: 16,
+        height: 56,
+    },
+    inputIcon: {
+        marginRight: 10,
+    },
+    input: {
+        flex: 1,
+        fontSize: 16,
+        color: '#0f172a',
+        fontFamily: 'NotoSans-Regular',
+        height: '100%',
+    },
+    buttonShadow: {
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+        marginTop: 10,
+    },
+    actionButton: {
+        height: 56,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    actionButtonText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
+    },
 });
 
 export default ForgotPasswordScreen;

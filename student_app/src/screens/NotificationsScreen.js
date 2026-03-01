@@ -29,40 +29,61 @@ const NotificationsScreen = ({ navigation, user }) => {
     };
 
     const formatDate = (dateString) => {
-        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     const renderItem = useCallback(({ item }) => (
-        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <View style={styles.card}>
             <View style={styles.cardHeader}>
-                <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
-                <Text style={[styles.date, { color: theme.textSecondary }]}>{formatDate(item.created_at)}</Text>
+                <View style={styles.iconContainer}>
+                    <Text style={styles.iconText}>🔔</Text>
+                </View>
+                <View style={styles.titleContainer}>
+                    <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{item.title}</Text>
+                    <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+                </View>
             </View>
-            <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
-            <Text style={[styles.teacher, { color: theme.primary }]}>From: {item.teacher_name}</Text>
+            <View style={styles.cardBody}>
+                <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
+                <View style={styles.teacherBadge}>
+                    <Text style={styles.teacher}>Sent by: {item.teacher_name}</Text>
+                </View>
+            </View>
         </View>
     ), [theme]);
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
-            <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+        <View style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
+            <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
+                    <View style={styles.backButtonInner}>
+                        <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
+                    </View>
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Notifications</Text>
+                <View>
+                    <Text style={[styles.headerSubtitle, { color: theme.primary }]}>SCHOOL UPDATES</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Notifications</Text>
+                </View>
             </View>
 
             {loading ? (
-                <ActivityIndicator size="large" color={theme.primary} style={styles.loader} />
+                <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color={theme.primary} />
+                </View>
             ) : (
                 <FlatList
                     data={notifications}
                     renderItem={renderItem}
-                    keyExtractor={item => item.notification_id.toString()}
+                    keyExtractor={item => item.notification_id?.toString() || Math.random().toString()}
                     contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
                     ListEmptyComponent={
-                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No notifications yet.</Text>
+                        <View style={styles.centerContainer}>
+                            <Text style={{ fontSize: 40, marginBottom: 10 }}>📭</Text>
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No new notifications.</Text>
+                            <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 4, fontFamily: 'NotoSans-Regular' }}>You're all caught up!</Text>
+                        </View>
                     }
                     onRefresh={loadNotifications}
                     refreshing={loading}
@@ -79,67 +100,118 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        paddingTop: 50,
-        borderBottomWidth: 1,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 16,
     },
     backButton: {
-        padding: 8,
-        marginRight: 8,
+        marginRight: 16,
+    },
+    backButtonInner: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(100,116,139,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    headerSubtitle: {
+        fontSize: 10,
+        fontWeight: '800',
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 24,
+        fontWeight: '800',
+        fontFamily: 'NotoSans-Bold',
     },
-    loader: {
-        marginTop: 20,
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 100,
     },
     listContent: {
-        padding: 16,
+        padding: 20,
+        paddingBottom: 100,
     },
     card: {
-        borderRadius: 12,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        marginBottom: 16,
         padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        elevation: 2,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
     cardHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
+        alignItems: 'flex-start',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
+        paddingBottom: 12,
+        marginBottom: 12,
+    },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#eef2ff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    iconText: {
+        fontSize: 20,
+    },
+    titleContainer: {
+        flex: 1,
     },
     title: {
         fontSize: 16,
-        fontWeight: 'bold',
-        flex: 1,
-        marginRight: 8,
+        fontFamily: 'NotoSans-Bold',
+        marginBottom: 4,
     },
     date: {
-        fontSize: 12,
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    cardBody: {
+        paddingLeft: 52,
     },
     message: {
         fontSize: 14,
-        marginBottom: 8,
-        lineHeight: 20,
+        lineHeight: 22,
+        fontFamily: 'NotoSans-Regular',
+        marginBottom: 12,
+    },
+    teacherBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#eff6ff',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
     teacher: {
-        fontSize: 12,
-        fontWeight: '600',
-        fontStyle: 'italic',
+        fontSize: 11,
+        color: '#3b82f6',
+        fontFamily: 'NotoSans-Bold',
     },
     emptyText: {
-        textAlign: 'center',
-        marginTop: 40,
         fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
     }
 });
 

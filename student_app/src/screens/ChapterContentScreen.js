@@ -867,13 +867,16 @@ const ChapterContentScreen = ({ navigation, route }) => {
         const tabData = getTabSpecificData(activeTab);
         if (loading && tabData.length === 0) return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
 
+        // Add bottom padding to all scrollable content so it doesn't get hidden behind bottom tab navigator
+        const contentContainerPadding = { paddingBottom: 120 };
+
         if (activeTab === 'MCQs') {
             if (quizMode) return renderQuiz();
 
             if (mcqSets.length === 0) {
                 return (
                     <ScrollView
-                        contentContainerStyle={styles.emptyContainer}
+                        contentContainerStyle={[styles.emptyContainer, contentContainerPadding]}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     >
                         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No MCQs available for this chapter.</Text>
@@ -883,11 +886,13 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
             return (
                 <ScrollView
-                    contentContainerStyle={styles.setsContainer}
+                    contentContainerStyle={[styles.setsContainer, contentContainerPadding]}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
-                    <Text style={[styles.quizTitle, { color: theme.text }]}>MCQ Practice Sets</Text>
-                    <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Select a set to start practicing</Text>
+                    <View style={styles.sectionHeader}>
+                        <Text style={[styles.quizTitle, { color: theme.text }]}>MCQ Practice Sets</Text>
+                        <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Select a set to start practicing</Text>
+                    </View>
 
                     <View style={styles.setsGrid}>
                         {mcqSets.map((set, index) => {
@@ -906,6 +911,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                         }
                                     ]}
                                     onPress={() => startQuiz(index)}
+                                    activeOpacity={0.8}
                                 >
                                     <View style={[styles.setIcon, { backgroundColor: 'white' }, isSolved && { backgroundColor: '#dcfce7' }]}>
                                         <Text style={[styles.setIconText, { color: color.text }, isSolved && { color: '#16a34a' }]}>
@@ -937,7 +943,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
             if (flashcardSets.length === 0) {
                 return (
                     <ScrollView
-                        contentContainerStyle={styles.emptyContainer}
+                        contentContainerStyle={[styles.emptyContainer, contentContainerPadding]}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     >
                         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No Flashcards available for this chapter.</Text>
@@ -947,11 +953,13 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
             return (
                 <ScrollView
-                    contentContainerStyle={styles.setsContainer}
+                    contentContainerStyle={[styles.setsContainer, contentContainerPadding]}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
-                    <Text style={[styles.quizTitle, { color: theme.text }]}>Flashcard Sets</Text>
-                    <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Select a set to start learning</Text>
+                    <View style={styles.sectionHeader}>
+                        <Text style={[styles.quizTitle, { color: theme.text }]}>Flashcard Sets</Text>
+                        <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Select a set to start learning</Text>
+                    </View>
 
                     <View style={styles.setsGrid}>
                         {flashcardSets.map((set, index) => {
@@ -981,6 +989,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                             activeTask: activeTask // Add timer context
                                         });
                                     }}
+                                    activeOpacity={0.8}
                                 >
                                     <View style={[styles.setIcon, { backgroundColor: 'white' }, isSolved && { backgroundColor: '#dcfce7' }]}>
                                         <Text style={[styles.setIconText, { color: color.text }, isSolved && { color: '#16a34a' }]}>
@@ -1008,7 +1017,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
             if (revisionDataItems.length === 0) {
                 return (
                     <ScrollView
-                        contentContainerStyle={styles.emptyContainer}
+                        contentContainerStyle={[styles.emptyContainer, contentContainerPadding]}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     >
                         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No Quick Revision notes available.</Text>
@@ -1018,20 +1027,20 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
             return (
                 <ScrollView
-                    contentContainerStyle={styles.listContainer}
+                    contentContainerStyle={[styles.listContainer, contentContainerPadding]}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
-                    <View style={{ marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={styles.sectionHeaderRow}>
                         <View>
                             <Text style={[styles.quizTitle, { color: theme.text }]}>Quick Revision</Text>
                             <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Key points for {chapter.chapter_name}</Text>
                         </View>
                         <TouchableOpacity
                             onPress={() => setVoiceModalVisible(true)}
-                            style={{ backgroundColor: '#e0e7ff', padding: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center' }}
+                            style={styles.voiceButton}
                         >
-                            <Text style={{ fontSize: 16 }}>🗣️</Text>
-                            <Text style={{ marginLeft: 5, color: '#4f46e5', fontWeight: 'bold', fontSize: 12 }}>VOICE</Text>
+                            <Text style={styles.voiceIcon}>🗣️</Text>
+                            <Text style={styles.voiceText}>VOICE</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -1091,7 +1100,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 data={currentData}
                 renderItem={activeTab === 'Notes' ? renderNoteItem : renderVideoItem}
                 keyExtractor={(item, index) => (item.note_id || item.video_id || `item-${index}`).toString()}
-                contentContainerStyle={styles.listContainer}
+                contentContainerStyle={[styles.listContainer, contentContainerPadding]}
                 maxToRenderPerBatch={10}
                 windowSize={5}
                 removeClippedSubviews={Platform.OS === 'android'}
@@ -1099,7 +1108,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 onRefresh={onRefresh}
                 ListHeaderComponent={null}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
+                    <View style={[styles.emptyContainer, contentContainerPadding]}>
                         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No {activeTab.toLowerCase()} found.</Text>
                     </View>
                 }
@@ -1111,17 +1120,19 @@ const ChapterContentScreen = ({ navigation, route }) => {
         <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
 
-            <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right', 'bottom']}>
+            <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
                 {downloading && (
                     <View style={styles.loadingOverlay}>
                         <View style={styles.loadingBox}>
-                            <ActivityIndicator size="large" color="#4A90E2" />
+                            <ActivityIndicator size="large" color="#4f46e5" />
                             <Text style={styles.loadingText}>Downloading...</Text>
                             <Text style={styles.loadingText}>{Math.round(downloadProgress * 100)}%</Text>
                         </View>
                     </View>
                 )}
-                <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+
+                {/* Modern Header */}
+                <View style={[styles.header, { backgroundColor: theme.background }]}>
                     <TouchableOpacity onPress={() => {
                         if (isTaskActive) {
                             Alert.alert(
@@ -1136,11 +1147,16 @@ const ChapterContentScreen = ({ navigation, route }) => {
                             navigation.goBack();
                         }
                     }} style={styles.backButton}>
-                        <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
+                        <View style={styles.backButtonInner}>
+                            <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
+                        </View>
                     </TouchableOpacity>
 
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{chapter?.chapter_name || 'Content'}</Text>
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={[styles.headerSubtitle, { color: theme.primary }]}>CHAPTER</Text>
+                        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
+                            {chapter?.chapter_name || 'Content'}
+                        </Text>
                     </View>
 
                     {isTaskActive && (
@@ -1153,15 +1169,21 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     )}
                 </View>
 
-                <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-                    <View style={styles.tabsRow}>
+                {/* Modern Pills Navigation */}
+                <View style={styles.tabContainer}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.tabsRow}
+                        bounces={true}
+                    >
                         {(() => {
                             const tabs = [
-                                { id: 'MCQs', icon: '📝', label: t('mcqs'), color: '#3b82f6' },
-                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981' },
-                                { id: 'QuickRevision', icon: '⚡', label: t('revision'), color: '#f59e0b' },
-                                { id: 'Videos', icon: '🎥', label: t('videos'), color: '#ef4444' },
-                                { id: 'Notes', icon: '📄', label: t('notes'), color: '#8b5cf6' },
+                                { id: 'MCQs', icon: '📝', label: t('mcqs') || 'MCQs', color: '#3b82f6', bg: '#eff6ff' },
+                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards') || 'Flashcards', color: '#10b981', bg: '#ecfdf5' },
+                                { id: 'QuickRevision', icon: '⚡', label: t('revision') || 'Revision', color: '#f59e0b', bg: '#fffbeb' },
+                                { id: 'Videos', icon: '🎥', label: t('videos') || 'Videos', color: '#ef4444', bg: '#fef2f2' },
+                                { id: 'Notes', icon: '📄', label: t('notes') || 'Notes', color: '#8b5cf6', bg: '#f5f3ff' },
                             ];
                             return tabs.map((tab) => {
                                 const isActive = activeTab === tab.id;
@@ -1169,47 +1191,39 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                     <TouchableOpacity
                                         key={tab.id}
                                         style={[
-                                            styles.tile,
+                                            styles.pill,
                                             {
-                                                backgroundColor: isActive ? tab.color : theme.card,
-                                                borderColor: tab.color,
-                                                elevation: isActive ? 8 : 2,
-                                                shadowColor: tab.color,
-                                                transform: [{ translateY: isActive ? -4 : 0 }]
+                                                backgroundColor: isActive ? tab.color : (isDarkMode ? '#1e293b' : '#f8fafc'),
+                                                borderColor: isActive ? tab.color : (isDarkMode ? '#334155' : '#e2e8f0'),
                                             }
                                         ]}
                                         onPress={() => setActiveTab(tab.id)}
-                                        activeOpacity={0.9}
+                                        activeOpacity={0.8}
                                     >
-                                        <Text style={[styles.tileIcon, { fontSize: 20 }]}>{tab.icon}</Text>
+                                        <Text style={[styles.pillIcon, { opacity: isActive ? 1 : 0.8 }]}>{tab.icon}</Text>
                                         <Text style={[
-                                            styles.tileText,
-                                            {
-                                                color: isActive ? 'white' : tab.color,
-                                                fontWeight: 'bold',
-                                                fontSize: 11
-                                            }
-                                        ]} numberOfLines={1}>
+                                            styles.pillText,
+                                            { color: isActive ? 'white' : theme.textSecondary }
+                                        ]}>
                                             {tab.label}
                                         </Text>
                                     </TouchableOpacity>
                                 );
                             });
                         })()}
-                    </View>
+                    </ScrollView>
                 </View>
 
+                {/* Main Content Area */}
                 {renderContent()}
 
                 <VoiceSelectorModal
                     visible={voiceModalVisible}
                     onClose={() => setVoiceModalVisible(false)}
                     onVoiceSelected={() => {
-                        // Optional: Ensure current playback stops or restarts with new voice
                         stopTTS();
                     }}
                 />
-
             </SafeAreaView>
         </View>
     );
@@ -1218,82 +1232,73 @@ const ChapterContentScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     mainWrapper: {
         flex: 1,
-        // backgroundColor handled by theme
     },
     container: {
         flex: 1,
-        // backgroundColor handled by theme
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingTop: 4,
-        paddingBottom: 4,
-        // backgroundColor handled by theme
-        borderBottomWidth: 1,
-        // borderBottomColor handled by theme
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'android' ? 20 : 10,
+        paddingBottom: 16,
     },
     backButton: {
-        padding: 5,
-        marginRight: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backButtonInner: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(100,116,139,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
+    },
+    headerSubtitle: {
+        fontSize: 10,
+        fontWeight: '800',
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        flex: 1,
+        fontSize: 20,
+        fontWeight: '800',
         fontFamily: 'NotoSans-Bold',
-        textTransform: 'uppercase',
     },
     tabContainer: {
-        // backgroundColor handled by theme
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 0,
         borderBottomWidth: 1,
-        // borderBottomColor handled by theme
+        borderBottomColor: 'rgba(100,116,139,0.1)',
     },
     tabsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 6,
+        paddingHorizontal: 20,
+        gap: 10,
     },
-    tile: {
-        flex: 1,
-        paddingVertical: 8,
-        justifyContent: 'center',
+    pill: {
+        flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 12,
-        backgroundColor: '#F8FAFC',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 100,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
-    activeTile: {
-        backgroundColor: '#4F46E5',
-        borderColor: '#4F46E5',
-        elevation: 2,
-        shadowColor: '#4F46E5',
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
+    pillIcon: {
+        fontSize: 14,
+        marginRight: 6,
     },
-    tileIcon: {
-        fontSize: 18,
-        marginBottom: 2,
-    },
-    tileText: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: '#64748B',
-        textAlign: 'center',
+    pillText: {
+        fontSize: 13,
+        fontWeight: '700',
         fontFamily: 'NotoSans-Bold',
-    },
-    activeTileText: {
-        color: 'white',
-        fontWeight: 'bold',
     },
     loader: {
         marginTop: 50,
@@ -1303,14 +1308,14 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: 'white',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
         marginBottom: 16,
         elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowRadius: 8,
         borderWidth: 1,
         borderColor: '#f1f5f9',
     },
@@ -1343,59 +1348,96 @@ const styles = StyleSheet.create({
     },
     emptyContainer: {
         alignItems: 'center',
-        marginTop: 50,
+        justifyContent: 'center',
+        marginTop: 80,
     },
     emptyText: {
-        fontSize: 16,
-        // color handled by theme
-        fontStyle: 'italic',
+        fontSize: 15,
         fontFamily: 'NotoSans-Regular',
     },
     setsContainer: {
         padding: 20,
+        paddingTop: 10,
+    },
+    sectionHeader: {
+        marginBottom: 20,
+    },
+    sectionHeaderRow: {
+        marginBottom: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    voiceButton: {
+        backgroundColor: '#e0e7ff',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        flexDirection: 'row',
         alignItems: 'center',
+    },
+    voiceIcon: {
+        fontSize: 16,
+    },
+    voiceText: {
+        marginLeft: 6,
+        color: '#4f46e5',
+        fontWeight: 'bold',
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
     },
     setsGrid: {
         width: '100%',
     },
     setCard: {
         backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 20,
+        padding: 18,
         marginBottom: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        elevation: 2,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
     },
     setIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         backgroundColor: '#e0e7ff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     setIconText: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#4f46e5',
         fontFamily: 'NotoSans-Bold',
     },
-    setCardTitle: {
-        fontSize: 16,
+    setTitle: {
+        fontSize: 17,
         fontWeight: 'bold',
         color: '#1e293b',
         fontFamily: 'NotoSans-Bold',
+        marginBottom: 2,
     },
-    setCardSubtitle: {
+    setSubtitle: {
         fontSize: 13,
         color: '#64748b',
         fontFamily: 'NotoSans-Regular',
+    },
+    setArrow: {
+        marginLeft: 'auto',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     playIcon: {
         marginLeft: 'auto',
@@ -1403,17 +1445,13 @@ const styles = StyleSheet.create({
         color: '#cbd5e1',
     },
     quizTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        // color handled by theme
+        fontSize: 22,
+        fontWeight: '900',
         marginBottom: 4,
-        marginTop: 10,
         fontFamily: 'NotoSans-Bold',
     },
     quizSubtitle: {
         fontSize: 14,
-        // color handled by theme
-        marginBottom: 20,
         fontFamily: 'NotoSans-Regular',
     },
     quizContainer: {

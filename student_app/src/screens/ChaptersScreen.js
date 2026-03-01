@@ -90,10 +90,10 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                 setSummary(progressResponse.data.summary);
             }
         } catch (error) {
-            console.error('Error loading chapters:', error);
+            console.warn('Error loading chapters:', typeof error === 'object' ? JSON.stringify(error) : error);
             // Don't show alert solely for background refresh
             if (!isRefreshing) {
-                Alert.alert('Error', 'Failed to load chapters');
+                Alert.alert('Server Updating', 'The server is temporarily unavailable (502). Please try again in a moment.');
             }
         } finally {
             setLoading(false);

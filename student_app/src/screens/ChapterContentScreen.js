@@ -125,7 +125,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const { theme, isDarkMode } = useTheme();
     const { t } = useLanguage();
     const { chapter, activeTask } = route.params || {}; // activeTask contains timer info
-    const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'Flashcards'); // Use initialTab if passed
+    const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'MCQs'); // Use initialTab if passed
     const [downloading, setDownloading] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -1157,8 +1157,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     <View style={styles.tabsRow}>
                         {(() => {
                             const tabs = [
-                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981' },
                                 { id: 'MCQs', icon: '📝', label: t('mcqs'), color: '#3b82f6' },
+                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards'), color: '#10b981' },
                                 { id: 'QuickRevision', icon: '⚡', label: t('revision'), color: '#f59e0b' },
                                 { id: 'Videos', icon: '🎥', label: t('videos'), color: '#ef4444' },
                                 { id: 'Notes', icon: '📄', label: t('notes'), color: '#8b5cf6' },

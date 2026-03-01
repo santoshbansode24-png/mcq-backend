@@ -1169,21 +1169,16 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     )}
                 </View>
 
-                {/* Modern Pills Navigation */}
-                <View style={styles.tabContainer}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.tabsRow}
-                        bounces={true}
-                    >
+                {/* Fixed Square Tiles Navigation */}
+                <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+                    <View style={styles.tabsRow}>
                         {(() => {
                             const tabs = [
-                                { id: 'MCQs', icon: '📝', label: t('mcqs') || 'MCQs', color: '#3b82f6', bg: '#eff6ff' },
-                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards') || 'Flashcards', color: '#10b981', bg: '#ecfdf5' },
-                                { id: 'QuickRevision', icon: '⚡', label: t('revision') || 'Revision', color: '#f59e0b', bg: '#fffbeb' },
-                                { id: 'Videos', icon: '🎥', label: t('videos') || 'Videos', color: '#ef4444', bg: '#fef2f2' },
-                                { id: 'Notes', icon: '📄', label: t('notes') || 'Notes', color: '#8b5cf6', bg: '#f5f3ff' },
+                                { id: 'MCQs', icon: '📝', label: t('mcqs') || 'MCQs', color: '#3b82f6' },
+                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards') || 'Flashcards', color: '#10b981' },
+                                { id: 'QuickRevision', icon: '⚡', label: t('revision') || 'Revision', color: '#f59e0b' },
+                                { id: 'Videos', icon: '🎥', label: t('videos') || 'Videos', color: '#ef4444' },
+                                { id: 'Notes', icon: '📄', label: t('notes') || 'Notes', color: '#8b5cf6' },
                             ];
                             return tabs.map((tab) => {
                                 const isActive = activeTab === tab.id;
@@ -1191,27 +1186,34 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                     <TouchableOpacity
                                         key={tab.id}
                                         style={[
-                                            styles.pill,
+                                            styles.tile,
                                             {
-                                                backgroundColor: isActive ? tab.color : (isDarkMode ? '#1e293b' : '#f8fafc'),
-                                                borderColor: isActive ? tab.color : (isDarkMode ? '#334155' : '#e2e8f0'),
+                                                backgroundColor: isActive ? tab.color : theme.card,
+                                                borderColor: tab.color,
+                                                elevation: isActive ? 6 : 1,
+                                                shadowColor: tab.color,
+                                                transform: [{ translateY: isActive ? -4 : 0 }]
                                             }
                                         ]}
                                         onPress={() => setActiveTab(tab.id)}
-                                        activeOpacity={0.8}
+                                        activeOpacity={0.9}
                                     >
-                                        <Text style={[styles.pillIcon, { opacity: isActive ? 1 : 0.8 }]}>{tab.icon}</Text>
+                                        <Text style={[styles.tileIcon, { opacity: isActive ? 1 : 0.8 }]}>{tab.icon}</Text>
                                         <Text style={[
-                                            styles.pillText,
-                                            { color: isActive ? 'white' : theme.textSecondary }
-                                        ]}>
+                                            styles.tileText,
+                                            {
+                                                color: isActive ? 'white' : tab.color,
+                                                fontWeight: 'bold',
+                                                fontSize: 10
+                                            }
+                                        ]} numberOfLines={1}>
                                             {tab.label}
                                         </Text>
                                     </TouchableOpacity>
                                 );
                             });
                         })()}
-                    </ScrollView>
+                    </View>
                 </View>
 
                 {/* Main Content Area */}
@@ -1273,32 +1275,48 @@ const styles = StyleSheet.create({
         fontFamily: 'NotoSans-Bold',
     },
     tabContainer: {
-        paddingVertical: 12,
-        paddingHorizontal: 0,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(100,116,139,0.1)',
     },
     tabsRow: {
         flexDirection: 'row',
-        paddingHorizontal: 20,
-        gap: 10,
+        justifyContent: 'space-between',
+        gap: 6,
     },
-    pill: {
-        flexDirection: 'row',
+    tile: {
+        flex: 1,
+        paddingVertical: 8,
+        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 100,
+        borderRadius: 12,
+        backgroundColor: '#F8FAFC',
         borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
-    pillIcon: {
-        fontSize: 14,
-        marginRight: 6,
+    activeTile: {
+        backgroundColor: '#4F46E5',
+        borderColor: '#4F46E5',
+        elevation: 2,
+        shadowColor: '#4F46E5',
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
-    pillText: {
-        fontSize: 13,
-        fontWeight: '700',
+    tileIcon: {
+        fontSize: 18,
+        marginBottom: 2,
+    },
+    tileText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#64748B',
+        textAlign: 'center',
         fontFamily: 'NotoSans-Bold',
+    },
+    activeTileText: {
+        color: 'white',
+        fontWeight: 'bold',
     },
     loader: {
         marginTop: 50,

@@ -43,6 +43,12 @@ export const SmartCacheService = {
 
             console.log(`[SmartCache] 🔄 Starting bulk sync for class ${classId} (Priority: ${isPriority})...`);
 
+            if (isPriority) {
+                // Clear any old queue if user manually forces a priority sync (e.g. changing class)
+                await AsyncStorage.removeItem(SYNC_QUEUE_KEY);
+                console.log(`[SmartCache] 🧹 Cleared old sync queue for priority sync`);
+            }
+
             // 1. Sync Subjects
             const subjectRes = await fetchSubjects(classId, true);
             if (subjectRes.status !== 'success') return;
@@ -138,7 +144,7 @@ export const SmartCacheService = {
             if (mcqRes && mcqRes.status === 'success' && Array.isArray(mcqRes.data)) {
                 mcqRes.data.forEach(item => {
                     if (item.image_url) {
-                        const imgUri = `${BASE_URL}/uploads/${item.image_url}`;
+                        const imgUri = item.image_url.startsWith('http') ? item.image_url : `${BASE_URL}/uploads/${item.image_url}`;
                         Image.prefetch(imgUri).catch(e => console.warn('[SmartCache] Image prefetch failed:', imgUri));
                     }
                 });

@@ -1241,9 +1241,9 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'android' ? 20 : 10,
-        paddingBottom: 16,
+        paddingHorizontal: 16,
+        paddingTop: 4,
+        paddingBottom: 6,
     },
     backButton: {
         justifyContent: 'center',

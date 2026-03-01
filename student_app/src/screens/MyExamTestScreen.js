@@ -18,10 +18,13 @@ import { BASE_URL } from '../api/config';
 import MathJaxWebView from '../components/MathJaxWebView';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useTheme } from '../context/ThemeContext';
+
 const { width } = Dimensions.get('window');
 
 const MyExamTestScreen = ({ navigation, route }) => {
     const { questions, totalQuestions, subjectName } = route.params;
+    const { theme, isDarkMode } = useTheme();
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -281,7 +284,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
         <View style={styles.mainWrapper}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
-            <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.headerGradient}>
+            <LinearGradient colors={['#7c3aed', '#6d28d9']} style={styles.headerGradient}>
                 <SafeAreaView edges={['top']} style={styles.headerSafe}>
                     <View style={styles.testHeader}>
                         <View style={styles.testHeaderTop}>
@@ -315,43 +318,72 @@ const MyExamTestScreen = ({ navigation, route }) => {
 
                     <MathJaxWebView
                         content={decodeHtml(currentQuestion.question)}
-                        textColor="#0f172a"
+                        textColor="#1e293b"
                         fontSize="18px"
+                        backgroundColor="transparent"
                     />
                 </View>
 
                 <View style={styles.optionsList}>
-                    {['a', 'b', 'c', 'd'].map((opt) => (
-                        <TouchableOpacity
-                            key={opt}
-                            style={getOptionStyle(opt)}
-                            onPress={() => handleAnswer(opt)}
-                            disabled={!!selectedAnswers[currentIndex]}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.optionContent} pointerEvents="none">
-                                <View style={[
-                                    styles.optionLetterBox,
-                                    selectedAnswers[currentIndex] && opt === currentQuestion.correct_answer ? { backgroundColor: '#16a34a' } :
-                                        selectedAnswers[currentIndex] === opt ? { backgroundColor: '#dc2626' } : null
-                                ]}>
-                                    <Text style={[
-                                        styles.optionText,
-                                        selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) ? styles.optionTextSelected : null
-                                    ]}>
-                                        {opt.toUpperCase()}
-                                    </Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <MathJaxWebView
-                                        content={decodeHtml(currentQuestion[`option_${opt}`])}
-                                        textColor={selectedAnswers[currentIndex] && (opt === currentQuestion.correct_answer || opt === selectedAnswers[currentIndex]) ? '#0f172a' : '#475569'}
-                                        fontSize="15px"
-                                    />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                    {['a', 'b', 'c', 'd'].map((opt) => {
+                        const isSelected = selectedAnswers[currentIndex] === opt;
+                        const isCorrectAnswer = opt === currentQuestion.correct_answer;
+                        const hasAnswered = !!selectedAnswers[currentIndex];
+
+                        let gradientColors = isDarkMode ? ['#1e293b', '#334155'] : ['#ffffff', '#f8fafc'];
+                        let borderColor = isDarkMode ? '#334155' : '#e2e8f0';
+                        const themePrimary = '#7c3aed';
+                        const themePrimaryLight = '#c4b5fd';
+
+                        if (hasAnswered) {
+                            if (isCorrectAnswer) {
+                                gradientColors = ['#ecfdf5', '#d1fae5'];
+                                borderColor = '#10b981';
+                            } else if (isSelected && !isCorrectAnswer) {
+                                gradientColors = ['#fef2f2', '#fee2e2'];
+                                borderColor = '#ef4444';
+                            }
+                        } else if (isSelected) {
+                            borderColor = themePrimary;
+                            gradientColors = ['#f3e8ff', '#e9d5ff'];
+                        }
+
+                        return (
+                            <TouchableOpacity
+                                key={opt}
+                                style={[styles.optionButton, { borderColor }]}
+                                onPress={() => handleAnswer(opt)}
+                                disabled={!!selectedAnswers[currentIndex]}
+                                activeOpacity={0.7}
+                            >
+                                <LinearGradient colors={gradientColors} style={styles.optionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                                    <View style={styles.optionContent} pointerEvents="none">
+                                        <View style={[
+                                            styles.optionLetterBox,
+                                            hasAnswered && isCorrectAnswer ? { backgroundColor: '#10b981' } :
+                                                hasAnswered && isSelected ? { backgroundColor: '#ef4444' } :
+                                                    { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }
+                                        ]}>
+                                            <Text style={[
+                                                styles.optionText,
+                                                hasAnswered && (isCorrectAnswer || isSelected) ? styles.optionTextSelected : { color: isDarkMode ? '#cbd5e1' : '#64748b' }
+                                            ]}>
+                                                {opt.toUpperCase()}
+                                            </Text>
+                                        </View>
+                                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                                            <MathJaxWebView
+                                                content={decodeHtml(currentQuestion[`option_${opt}`])}
+                                                textColor={hasAnswered && (isCorrectAnswer || isSelected) ? '#0f172a' : (isDarkMode ? '#f1f5f9' : '#334155')}
+                                                fontSize="16px"
+                                                backgroundColor="transparent"
+                                            />
+                                        </View>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
 
                 {showExplanation[currentIndex] && (
@@ -402,8 +434,8 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     </TouchableOpacity>
                 ) : (
                     <TouchableOpacity style={[styles.navButtonWrapper, { flex: 1.5 }]} onPress={nextQuestion} activeOpacity={0.8}>
-                        <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.navButtonGradient}>
-                            <Text style={styles.navButtonTextWhite}>Next</Text>
+                        <LinearGradient colors={['#7c3aed', '#6d28d9']} style={styles.navButtonGradient}>
+                            <Text style={styles.navButtonTextWhite}>Next Question</Text>
                             <Ionicons name="arrow-forward" size={20} color="white" style={{ marginLeft: 6 }} />
                         </LinearGradient>
                     </TouchableOpacity>
@@ -476,9 +508,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 24,
+        padding: 20,
         paddingBottom: 150,
-        marginTop: -20,
+        marginTop: -25,
     },
     questionCard: {
         backgroundColor: 'white',
@@ -499,46 +531,41 @@ const styles = StyleSheet.create({
         backgroundColor: '#f1f5f9',
     },
     optionsList: {
-        gap: 12,
+        gap: 16,
     },
     optionButton: {
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        padding: 6,
-        borderWidth: 1.5,
-        borderColor: '#e2e8f0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 4,
-        elevation: 1,
+        borderRadius: 20,
+        borderWidth: 2,
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+        overflow: 'hidden',
+    },
+    optionGradient: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
     },
     optionContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 6,
-        paddingVertical: 4,
     },
     optionLetterBox: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        backgroundColor: '#f1f5f9',
+        width: 38,
+        height: 38,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
-    },
-    correctOption: {
-        borderColor: '#10b981',
-        backgroundColor: '#f0fdf4',
-    },
-    wrongOption: {
-        borderColor: '#ef4444',
-        backgroundColor: '#fef2f2',
+        marginRight: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
     optionText: {
-        fontSize: 14,
-        color: '#64748b',
+        fontSize: 16,
         fontFamily: 'NotoSans-Bold',
     },
     optionTextSelected: {

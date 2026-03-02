@@ -114,6 +114,10 @@ $sendOneUrl = "{$apiBase}/weekly_report.php?secret={$secret}&user_id=";
       <span id="allSpinner" style="display:none" class="spinner"></span>
       📣 Send Weekly Report to ALL Users
     </button>
+    <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="forceSend">
+      <label for="forceSend" style="font-size: 13px; color: #94a3b8;">Force send (bypass Sunday rule & duplicate check)</label>
+    </div>
     <div id="allResult" style="display:none; margin-top:16px;">
       <table>
         <thead>
@@ -191,8 +195,9 @@ async function sendAll() {
   if (!confirm('⚠️ This will send WhatsApp messages to ALL users. Are you sure?')) return;
   showSpinner('allSpinner', true);
   document.getElementById('allResult').style.display = 'none';
+  const force = document.getElementById('forceSend') && document.getElementById('forceSend').checked ? '&force=1' : '';
   try {
-    const res  = await fetch(`${apiBase}/weekly_report.php?secret=${secret}`);
+    const res  = await fetch(`${apiBase}/weekly_report.php?secret=${secret}${force}`);
     const data = await res.json();
     const tbody = document.getElementById('allResultBody');
     tbody.innerHTML = '';

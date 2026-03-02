@@ -32,6 +32,30 @@ if ($providedSecret !== $expectedSecret) {
 
 $dryRun   = isset($_GET['dry_run']) && $_GET['dry_run'] == '1';
 $onlyUser = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
+$force    = isset($_GET['force']) && $_GET['force'] == '1';
+
+// ─── Enforce Sunday-only (unless testing/forced) ──────────────────────────────
+$tz = new DateTimeZone('Asia/Kolkata');
+$now = new DateTime('now', $tz);
+$isSunday = ($now->format('w') == 0);
+
+if (!$isSunday && !$dryRun && !$onlyUser && !$force) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Reports can only be sent on Sundays. Use &force=1 to bypass.']);
+    exit;
+}
+
+// ─── Ensure Log Table Exists ──────────────────────────────────────────────────
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS weekly_report_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        year_week VARCHAR(10) NOT NULL,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY user_week_unique (user_id, year_week)
+    )
+");
+$currentYearWeek = $now->format('o-W'); // e.g. 2026-09
 
 // ─── Fetch Users ──────────────────────────────────────────────────────────────
 try {
@@ -138,8 +162,29 @@ foreach ($users as $user) {
                 'dry_run'   => true,
             ];
         } else {
+            // Check if already sent this week (unless forced)
+            if (!$force) {
+                $stmtCheckLog = $pdo->prepare("SELECT 1 FROM weekly_report_logs WHERE user_id = ? AND year_week = ?");
+                $stmtCheckLog->execute([$userId, $currentYearWeek]);
+                if ($stmtCheckLog->fetch()) {
+                    $results[] = [
+                        'user_id' => $userId,
+                        'name'    => $userName,
+                        'error'   => 'Already sent this week',
+                    ];
+                    continue; // Skip sending
+                }
+            }
+
             $logoUrl = 'https://api.veeruapp.in/backend/public/veeru_logo.png';
             $sent = $twilio->sendWhatsAppNotificationWithMedia($userPhone, $message, $logoUrl);
+            
+            if ($sent) {
+                // Log success
+                $stmtLog = $pdo->prepare("INSERT IGNORE INTO weekly_report_logs (user_id, year_week) VALUES (?, ?)");
+                $stmtLog->execute([$userId, $currentYearWeek]);
+            }
+
             $results[] = [
                 'user_id' => $userId,
                 'name'    => $userName,

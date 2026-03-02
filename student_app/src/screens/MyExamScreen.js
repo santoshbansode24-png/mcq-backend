@@ -214,12 +214,14 @@ const MyExamScreen = ({ navigation, route, user }) => {
                         <View style={styles.subjectGrid}>
                             {subjects.map((subject, index) => {
                                 const gradients = [
-                                    ['#FF9A9E', '#FECFEF'],
-                                    ['#a18cd1', '#fbc2eb'],
-                                    ['#84fab0', '#8fd3f4'],
-                                    ['#a6c0fe', '#f68084'],
-                                    ['#ffecd2', '#fcb69f'],
-                                    ['#ff9a9e', '#fad0c4']
+                                    ['#FF416C', '#FF4B2B'], // Red-Orange
+                                    ['#4776E6', '#8E54E9'], // Purple-Blue
+                                    ['#00B4DB', '#0083B0'], // Sky-Blue
+                                    ['#11998E', '#38EF7D'], // Green
+                                    ['#F7971E', '#FFD200'], // Golden-Yellow
+                                    ['#EC008C', '#FC6767'], // Pink-Red
+                                    ['#1A2980', '#26D0CE'], // Deep Sea Space
+                                    ['#F09819', '#EDDE5D'], // Sun
                                 ];
                                 const colors = gradients[index % gradients.length];
                                 const isSelected = selectedSubjects.some(s => s.subject_id === subject.subject_id);
@@ -232,13 +234,13 @@ const MyExamScreen = ({ navigation, route, user }) => {
                                         activeOpacity={0.7}
                                     >
                                         <LinearGradient
-                                            colors={isSelected ? ['#0072ff', '#00c6ff'] : colors}
+                                            colors={isSelected ? ['#1e293b', '#0f172a'] : colors}
                                             style={styles.subjectGradient}
                                         >
-                                            <Text style={styles.subjectIcon}>{subject.subject_name.charAt(0)}</Text>
+                                            <Text style={styles.subjectIcon}>{subject.subject_name.charAt(0).toUpperCase()}</Text>
                                             <Text style={styles.subjectName}>{subject.subject_name}</Text>
                                             {isSelected && (
-                                                <View style={styles.selectedBadge}>
+                                                <View style={[styles.selectedBadge, { backgroundColor: '#10b981' }]}>
                                                     <Text style={styles.selectedBadgeText}>✓</Text>
                                                 </View>
                                             )}
@@ -440,37 +442,46 @@ const styles = StyleSheet.create({
     },
     subjectCard: {
         width: '48%',
-        borderRadius: 16,
+        backgroundColor: 'white',
+        borderRadius: 20,
         overflow: 'hidden',
-        elevation: 4,
+        elevation: 6,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
     },
     subjectCardSelected: {
-        elevation: 8,
-        shadowOpacity: 0.3,
-        transform: [{ scale: 1.02 }],
+        elevation: 12,
+        shadowOpacity: 0.4,
+        transform: [{ scale: 1.05 }],
     },
     subjectGradient: {
-        padding: 24,
+        flex: 1,
+        padding: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 120,
+        minHeight: 140,
     },
     subjectIcon: {
-        fontSize: 36,
-        marginBottom: 8,
+        fontSize: 48,
+        fontWeight: '900',
+        color: 'white',
+        marginBottom: 12,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     subjectName: {
         fontSize: 15,
-        fontWeight: 'bold',
+        fontWeight: '900',
         color: 'white',
         textAlign: 'center',
-        textShadowColor: 'rgba(0, 0, 0, 0.2)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     chapterList: {
         gap: 10,
@@ -588,19 +599,22 @@ const styles = StyleSheet.create({
     },
     selectedBadge: {
         position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        top: 12,
+        right: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: 'white',
+        elevation: 4,
     },
     selectedBadgeText: {
         color: 'white',
-        fontWeight: 'bold',
-        fontSize: 14,
+        fontWeight: '900',
+        fontSize: 15,
     },
     groupContainer: {
         marginBottom: 15,

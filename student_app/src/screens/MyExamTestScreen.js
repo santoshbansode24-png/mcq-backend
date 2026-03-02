@@ -317,9 +317,9 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     ) : null}
 
                     <MathJaxWebView
-                        content={decodeHtml(currentQuestion.question)}
-                        textColor="#1e293b"
-                        fontSize="14px"
+                        content={`<div style="font-weight: 500; color: #000000;">${decodeHtml(currentQuestion.question)}</div>`}
+                        textColor="#000000"
+                        fontSize="17px"
                         backgroundColor="transparent"
                     />
                 </View>
@@ -373,9 +373,9 @@ const MyExamTestScreen = ({ navigation, route }) => {
                                         </View>
                                         <View style={{ flex: 1, justifyContent: 'center' }}>
                                             <MathJaxWebView
-                                                content={decodeHtml(currentQuestion[`option_${opt}`])}
-                                                textColor={hasAnswered && (isCorrectAnswer || isSelected) ? '#0f172a' : (isDarkMode ? '#f1f5f9' : '#334155')}
-                                                fontSize="14px"
+                                                content={`<div style="font-weight: 500; line-height: 1.4;">${decodeHtml(currentQuestion[`option_${opt}`])}</div>`}
+                                                textColor={hasAnswered && (isCorrectAnswer || isSelected) ? '#000000' : (isDarkMode ? '#ffffff' : '#020617')}
+                                                fontSize="16px"
                                                 backgroundColor="transparent"
                                             />
                                         </View>
@@ -514,14 +514,16 @@ const styles = StyleSheet.create({
     },
     questionCard: {
         backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
         elevation: 4,
+        borderWidth: 1,
+        borderColor: '#e9d5ff',
     },
     questionImage: {
         width: '100%',
@@ -534,12 +536,12 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     optionButton: {
-        borderRadius: 12,
-        borderWidth: 1,
+        borderRadius: 16,
+        borderWidth: 1.5,
         shadowColor: '#7c3aed',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
         elevation: 2,
         overflow: 'hidden',
     },
@@ -565,7 +567,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     optionText: {
-        fontSize: 13,
+        fontSize: 15,
         fontFamily: 'NotoSans-Bold',
     },
     optionTextSelected: {
@@ -607,46 +609,46 @@ const styles = StyleSheet.create({
     },
     navigationBar: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        bottom: Platform.OS === 'ios' ? 24 : 16,
+        left: 16,
+        right: 16,
         flexDirection: 'row',
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        paddingHorizontal: 12,
+        backgroundColor: '#ffffff',
+        paddingHorizontal: 8,
         paddingVertical: 8,
-        paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-        borderTopWidth: 1,
-        borderTopColor: '#f1f5f9',
-        gap: 8,
+        borderRadius: 24,
+        gap: 12,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.05,
-        shadowRadius: 20,
-        elevation: 20,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
     navButtonWrapper: {
         flex: 1,
-        borderRadius: 10,
+        borderRadius: 18,
         overflow: 'hidden',
     },
     prevButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        backgroundColor: '#f1f5f9',
-        borderRadius: 10,
+        paddingVertical: 14,
+        backgroundColor: '#f8fafc',
+        borderRadius: 18,
         borderWidth: 1,
         borderColor: '#e2e8f0',
     },
     prevButtonText: {
-        fontSize: 13,
+        fontSize: 15,
         fontFamily: 'NotoSans-Bold',
-        color: '#64748b',
+        color: '#475569',
     },
     navButtonGradient: {
         flexDirection: 'row',
-        paddingVertical: 10,
+        paddingVertical: 14,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -654,12 +656,12 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     navButtonTextWhite: {
-        fontSize: 13,
+        fontSize: 15,
         fontFamily: 'NotoSans-Bold',
         color: 'white',
     },
     submitButtonText: {
-        fontSize: 13,
+        fontSize: 15,
         fontFamily: 'NotoSans-Bold',
         color: 'white',
     },

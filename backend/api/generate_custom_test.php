@@ -62,12 +62,18 @@ try {
         ORDER BY RAND()
         LIMIT ?
     ";
-
     $stmt = $pdo->prepare($sql);
     
-    // Bind params: first all IDs, then the limit
-    $params = array_merge($clean_ids, [$limit]);
-    $stmt->execute($params);
+    // Bind all chapter IDs as integers
+    $index = 1;
+    foreach ($clean_ids as $id) {
+        $stmt->bindValue($index++, $id, PDO::PARAM_INT);
+    }
+    
+    // Bind LIMIT as integer (CRITICAL for strict MySQL)
+    $stmt->bindValue($index, $limit, PDO::PARAM_INT);
+    
+    $stmt->execute();
     
     $mcqs = $stmt->fetchAll();
 

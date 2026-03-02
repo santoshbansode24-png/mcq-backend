@@ -182,8 +182,16 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                 allRevision = [...allRevision, ...res.revision];
             });
 
-            // 2. Filter/Randomize
-            const shuffle = (array) => array.sort(() => 0.5 - Math.random());
+            // 2. Filter/Randomize (Using Fisher-Yates shuffle for true randomness)
+            const shuffle = (array) => {
+                let currentIndex = array.length, randomIndex;
+                while (currentIndex !== 0) {
+                    randomIndex = Math.floor(Math.random() * currentIndex);
+                    currentIndex--;
+                    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+                }
+                return array;
+            };
 
             let finalMCQs = [];
             let finalShort = [];

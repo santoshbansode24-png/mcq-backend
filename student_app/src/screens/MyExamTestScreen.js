@@ -319,7 +319,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     <MathJaxWebView
                         content={decodeHtml(currentQuestion.question)}
                         textColor="#1e293b"
-                        fontSize="18px"
+                        fontSize="14px"
                         backgroundColor="transparent"
                     />
                 </View>
@@ -375,7 +375,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
                                             <MathJaxWebView
                                                 content={decodeHtml(currentQuestion[`option_${opt}`])}
                                                 textColor={hasAnswered && (isCorrectAnswer || isSelected) ? '#0f172a' : (isDarkMode ? '#f1f5f9' : '#334155')}
-                                                fontSize="16px"
+                                                fontSize="14px"
                                                 backgroundColor="transparent"
                                             />
                                         </View>
@@ -451,25 +451,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     headerGradient: {
-        paddingBottom: 25,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
+        paddingBottom: 10,
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
     },
     headerSafe: {
         backgroundColor: 'transparent',
     },
     testHeader: {
-        paddingHorizontal: 24,
-        paddingTop: 10,
+        paddingHorizontal: 12,
+        paddingTop: 2,
     },
     testHeaderTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 8,
     },
     testSubject: {
-        fontSize: 20,
+        fontSize: 16,
         color: 'white',
         fontFamily: 'NotoSans-Bold',
     },
@@ -477,29 +477,29 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
     },
     timer: {
-        fontSize: 14,
+        fontSize: 12,
         color: 'white',
         fontFamily: 'NotoSans-Bold',
     },
     progressBarContainer: {
-        height: 6,
+        height: 4,
         backgroundColor: 'rgba(255,255,255,0.25)',
-        borderRadius: 3,
+        borderRadius: 2,
         overflow: 'hidden',
-        marginBottom: 10,
+        marginBottom: 4,
     },
     progressBar: {
         height: '100%',
         backgroundColor: 'white',
-        borderRadius: 3,
+        borderRadius: 2,
     },
     questionCounter: {
-        fontSize: 13,
+        fontSize: 11,
         color: 'rgba(255,255,255,0.9)',
         fontFamily: 'NotoSans-Regular',
         textAlign: 'center',
@@ -508,56 +508,56 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 20,
-        paddingBottom: 150,
-        marginTop: -25,
+        padding: 12,
+        paddingBottom: 100,
+        marginTop: -10,
     },
     questionCard: {
         backgroundColor: 'white',
-        borderRadius: 24,
-        padding: 24,
-        marginBottom: 24,
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 12,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.08,
-        shadowRadius: 20,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 4,
     },
     questionImage: {
         width: '100%',
-        height: 200,
-        marginBottom: 20,
-        borderRadius: 12,
+        height: 100,
+        marginBottom: 8,
+        borderRadius: 8,
         backgroundColor: '#f1f5f9',
     },
     optionsList: {
-        gap: 16,
+        gap: 8,
     },
     optionButton: {
-        borderRadius: 20,
-        borderWidth: 2,
+        borderRadius: 12,
+        borderWidth: 1,
         shadowColor: '#7c3aed',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
         overflow: 'hidden',
     },
     optionGradient: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
     },
     optionContent: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     optionLetterBox: {
-        width: 38,
-        height: 38,
-        borderRadius: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     optionText: {
-        fontSize: 16,
+        fontSize: 13,
         fontFamily: 'NotoSans-Bold',
     },
     optionTextSelected: {
@@ -612,12 +612,12 @@ const styles = StyleSheet.create({
         right: 0,
         flexDirection: 'row',
         backgroundColor: 'rgba(255,255,255,0.95)',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        paddingBottom: Platform.OS === 'ios' ? 20 : 10,
         borderTopWidth: 1,
         borderTopColor: '#f1f5f9',
-        gap: 16,
+        gap: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.05,
@@ -626,27 +626,27 @@ const styles = StyleSheet.create({
     },
     navButtonWrapper: {
         flex: 1,
-        borderRadius: 16,
+        borderRadius: 10,
         overflow: 'hidden',
     },
     prevButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
+        paddingVertical: 10,
         backgroundColor: '#f1f5f9',
-        borderRadius: 16,
+        borderRadius: 10,
         borderWidth: 1,
         borderColor: '#e2e8f0',
     },
     prevButtonText: {
-        fontSize: 15,
+        fontSize: 13,
         fontFamily: 'NotoSans-Bold',
         color: '#64748b',
     },
     navButtonGradient: {
         flexDirection: 'row',
-        paddingVertical: 16,
+        paddingVertical: 10,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -654,12 +654,12 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     navButtonTextWhite: {
-        fontSize: 15,
+        fontSize: 13,
         fontFamily: 'NotoSans-Bold',
         color: 'white',
     },
     submitButtonText: {
-        fontSize: 15,
+        fontSize: 13,
         fontFamily: 'NotoSans-Bold',
         color: 'white',
     },

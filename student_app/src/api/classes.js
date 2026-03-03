@@ -5,17 +5,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const fetchClasses = async (board = null, forceRefresh = false) => {
     const cacheKey = board ? `classes_${board}` : 'classes_all';
+    const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
     try {
         // 1. Try to load from cache first if not forcing refresh
         if (!forceRefresh) {
-            const cachedData = await AsyncStorage.getItem(cacheKey);
-            if (cachedData) {
-                console.log(`[Classes] Loading ${cacheKey} from cache`);
-                // Background refresh: don't return here if we want to ensure fresh data eventually,
-                // but for speed, we return cached data and let the caller handle it.
-                // For now, let's return cached data immediately.
-                return JSON.parse(cachedData);
+            const cachedRaw = await AsyncStorage.getItem(cacheKey);
+            if (cachedRaw) {
+                const cached = JSON.parse(cachedRaw);
+                const now = Date.now();
+                // Only use cache if it has a timestamp AND it's still fresh
+                if (cached._cachedAt && (now - cached._cachedAt) < CACHE_TTL_MS) {
+                    console.log(`[Classes] Loading ${cacheKey} from cache (age: ${Math.round((now - cached._cachedAt) / 1000)}s)`);
+                    return cached.data;
+                } else {
+                    console.log(`[Classes] Cache expired for ${cacheKey}, refetching...`);
+                    await AsyncStorage.removeItem(cacheKey);
+                }
             }
         }
 
@@ -27,8 +33,11 @@ export const fetchClasses = async (board = null, forceRefresh = false) => {
         });
 
         if (response.data && response.data.status === 'success') {
-            // 3. Save to cache
-            await AsyncStorage.setItem(cacheKey, JSON.stringify(response.data));
+            // 3. Save to cache with timestamp
+            await AsyncStorage.setItem(cacheKey, JSON.stringify({
+                _cachedAt: Date.now(),
+                data: response.data
+            }));
             return response.data;
         }
 
@@ -38,11 +47,15 @@ export const fetchClasses = async (board = null, forceRefresh = false) => {
 
         // Final fallback: try cache even if forceRefresh was true
         const fallbackCached = await AsyncStorage.getItem(cacheKey);
-        if (fallbackCached) return JSON.parse(fallbackCached);
+        if (fallbackCached) {
+            const cached = JSON.parse(fallbackCached);
+            return cached.data || cached; // support both old and new format
+        }
 
         throw error.response ? error.response.data : new Error(error.message || 'Network Error');
     }
 };
+
 
 export const updateStudentClass = async (userId, classId, boardId) => {
     try {

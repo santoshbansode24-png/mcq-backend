@@ -34,7 +34,7 @@ try {
         $params[] = $boardInfo;
     }
     
-    $sql .= " ORDER BY class_id ASC";
+    $sql .= " ORDER BY CAST(REGEXP_REPLACE(class_name, '[^0-9]', '') AS UNSIGNED) ASC, class_name ASC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

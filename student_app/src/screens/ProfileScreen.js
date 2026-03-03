@@ -43,13 +43,13 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
     useFocusEffect(
         React.useCallback(() => {
-            loadClasses(currentBoard);
+            loadClasses(currentBoard, true);
         }, [currentBoard])
     );
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
-        loadClasses(currentBoard).then(() => setRefreshing(false));
+        loadClasses(currentBoard, true).then(() => setRefreshing(false));
     }, [currentBoard]);
 
     const loadClasses = async (board, forceRefresh = false) => {

@@ -39,7 +39,7 @@ const RegisterScreen = ({ navigation }) => {
     const loadClassesData = async (board) => {
         setLoadingClasses(true);
         try {
-            const response = await fetchClasses(board);
+            const response = await fetchClasses(board, true);
             if (response && (response.status === 'success' || Array.isArray(response))) {
                 const classData = response.data || response;
                 setClasses(classData);

@@ -22,13 +22,12 @@ const LoginScreen = ({ navigation }) => {
     const [googleLoading, setGoogleLoading] = useState(false);
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        clientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
-        webClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
-        androidClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        clientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',       // Web client
+        webClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',    // Web client
+        androidClientId: '228101833572-hqsvf7i9tb4bbqs22ec261ns8ducmfpp.apps.googleusercontent.com', // Android client
         iosClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
         redirectUri: AuthSession.makeRedirectUri({
-            scheme: 'veeru-app',
-            useProxy: true,
+            scheme: 'com.veeru.app',
         }),
     });
 

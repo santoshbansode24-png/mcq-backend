@@ -149,3 +149,27 @@ SELECT 'Duplicate entries will be automatically blocked!' AS 'Duplicate Preventi
 -- 4. SIGNAL SQLSTATE '45000' raises a custom error
 -- 5. To drop a trigger: DROP TRIGGER IF EXISTS trigger_name;
 -- ============================================================================
+-- PART 2: Smart Sync Tracking Triggers
+-- ============================================================================
+-- These triggers automatically update the 'app_content_updates' table 
+-- whenever content is changed (INSERT, UPDATE, or DELETE).
+
+CREATE TABLE IF NOT EXISTS app_content_updates (
+    board_type VARCHAR(50) PRIMARY KEY,
+    last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Seed defaults
+INSERT IGNORE INTO app_content_updates (board_type) VALUES ('CBSE'), ('Marathi Medium'), ('Semi English'), ('ICSE');
+
+DELIMITER $$
+-- MCQs
+CREATE TRIGGER after_mcq_ins AFTER INSERT ON mcqs FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+CREATE TRIGGER after_mcq_upd AFTER UPDATE ON mcqs FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+CREATE TRIGGER after_mcq_del AFTER DELETE ON mcqs FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+
+-- Notes
+CREATE TRIGGER after_note_ins AFTER INSERT ON notes FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+CREATE TRIGGER after_note_upd AFTER UPDATE ON notes FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+CREATE TRIGGER after_note_del AFTER DELETE ON notes FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+DELIMITER ;

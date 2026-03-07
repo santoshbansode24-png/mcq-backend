@@ -91,29 +91,60 @@ const NoteItem = React.memo(({ item, index, onOpenNote }) => {
 
 const VideoItem = React.memo(({ item, index, onOpenVideo }) => {
     const gradient = videoGradients[index % videoGradients.length];
+
+    // Extraction logic for thumbnail
+    const getYoutubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    const videoId = getYoutubeId(item.url);
+    const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+
     return (
         <TouchableOpacity
             onPress={() => onOpenVideo(item)}
-            style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
+            style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 110 }]}
         >
             <LinearGradient
                 colors={gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
+                style={{ width: '100%', height: '100%', flexDirection: 'row' }}
             >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
-                        <Text style={{ fontSize: 20 }}>🎥</Text>
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 16 }}>
-                        <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800' }]} numberOfLines={1}>
-                            {item.title || `Video Lesson ${index + 1}`}
-                        </Text>
-                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)', fontSize: 13 }]} numberOfLines={1}>
-                            {item.description || 'Watch video'}
-                        </Text>
-                    </View>
+                {/* Visual Section: Thumbnail or Icon */}
+                <View style={{ width: 120, height: '100%', backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center' }}>
+                    {thumbUrl ? (
+                        <View style={{ width: '100%', height: '100%' }}>
+                            <Image source={{ uri: thumbUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 16, marginLeft: 2 }}>▶️</Text>
+                                </View>
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 50, height: 50, borderRadius: 25, marginRight: 0 }]}>
+                            <Text style={{ fontSize: 24 }}>🎥</Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Content Section */}
+                <View style={{ flex: 1, padding: 12, justifyContent: 'center' }}>
+                    <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800' }]} numberOfLines={2}>
+                        {item.title || `Video Lesson ${index + 1}`}
+                    </Text>
+                    <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)', fontSize: 12, marginTop: 4 }]} numberOfLines={1}>
+                        {item.description || 'Watch tutorial video'}
+                    </Text>
+                    {item.duration && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>⏱️ {item.duration}</Text>
+                        </View>
+                    )}
                 </View>
             </LinearGradient>
         </TouchableOpacity>

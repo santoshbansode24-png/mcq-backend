@@ -86,8 +86,19 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         }
 
         try {
-            // Force refresh to bypass stale cache
-            const response = await fetchSubjects(scholarshipClassId, true);
+            // First check if we have cached data to show instantly
+            if (!forceRefresh) {
+                const cached = await dataCache.get(`subjects_${scholarshipClassId}`, 'subjects');
+                if (cached && cached.data) {
+                    const mocks = cached.data.filter(s => s.subject_name.includes("Mock Test") || s.subject_name.includes("Previous Paper"));
+                    const regular = cached.data.filter(s => !s.subject_name.includes("Mock Test") && !s.subject_name.includes("Previous Paper"));
+                    setSubjects(regular);
+                    setMockTests(mocks);
+                }
+            }
+
+            // Then revalidate from server
+            const response = await fetchSubjects(scholarshipClassId, forceRefresh);
             if (response.status === 'success') {
                 const allData = response.data;
 

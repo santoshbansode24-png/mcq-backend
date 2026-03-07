@@ -19,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Validate required fields
-// Validate required fields
 $required = ['name', 'email', 'mobile', 'password', 'school_name', 'class_id'];
 $missing = validateRequired($input, $required);
 
@@ -45,6 +44,10 @@ $school_name = sanitizeInput($input['school_name']);
 $class_id = filter_var($input['class_id'], FILTER_VALIDATE_INT);
 $board_type = sanitizeInput($input['board_type']);
 
+// Handle Google Login data
+$google_id = isset($input['google_id']) ? sanitizeInput($input['google_id']) : null;
+$profile_picture = isset($input['profile_picture']) ? sanitizeInput($input['profile_picture']) : null;
+
 // Validate Board
 if (!in_array($board_type, ['CBSE', 'STATE_MARATHI', 'STATE_SEMI'])) {
     sendResponse('error', 'Invalid board selection', null, 400);
@@ -53,6 +56,11 @@ if (!in_array($board_type, ['CBSE', 'STATE_MARATHI', 'STATE_SEMI'])) {
 // Validate email format
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     sendResponse('error', 'Invalid email format', null, 400);
+}
+
+// Validate mobile (exactly 10 digits)
+if (strlen($mobile) !== 10 || !is_numeric($mobile)) {
+    sendResponse('error', 'Mobile number must be exactly 10 digits', null, 400);
 }
 
 try {
@@ -68,42 +76,42 @@ try {
 
     // Default values
     $user_type = 'student';
-    $subscription_status = 'active'; // Default to active for now
-    $subscription_expiry = date('Y-m-d', strtotime('+30 days')); // 30 days trial/active
+    $subscription_status = 'active'; 
+    $subscription_expiry = date('Y-m-d', strtotime('+30 days')); 
     
     // Insert new user
-    // We insert into BOTH 'mobile' and 'phone' columns for backward compatibility
-    // We insert into BOTH 'board_type' and 'board' columns for backward compatibility
-    // We also make sure school_name is definitely included
     $insertStmt = $pdo->prepare("
         INSERT INTO users (
             name, email, mobile, phone, 
-            password, user_type, 
+            password, google_id, profile_picture,
+            user_type, 
             subscription_status, subscription_expiry, 
             school_name, class_id, 
             board_type, board,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
 
     $insertStmt->execute([
         $name, 
         $email,
-        $mobile, $mobile, // Save mobile to both columns
-        $hashed_password, 
+        $mobile, $mobile, 
+        $hashed_password,
+        $google_id,
+        $profile_picture,
         $user_type, 
         $subscription_status, 
         $subscription_expiry,
         $school_name,
         $class_id,
-        $board_type, $board_type // Save board to both columns
+        $board_type, $board_type
     ]);
 
     $user_id = $pdo->lastInsertId();
 
     // Fetch the newly created user to return (excluding password)
-    $userStmt = $pdo->prepare("SELECT user_id, name, email, user_type, subscription_status, class_id FROM users WHERE user_id = ?");
+    $userStmt = $pdo->prepare("SELECT user_id, name, email, user_type, subscription_status, class_id, board_type, school_name, google_id FROM users WHERE user_id = ?");
     $userStmt->execute([$user_id]);
     $newUser = $userStmt->fetch();
 

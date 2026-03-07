@@ -2,6 +2,7 @@
   "expo": {
     "name": "Veeru",
     "slug": "mcq-student-app",
+    "scheme": "veeru-app",
     "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -59,7 +60,8 @@
           }
         }
       ],
-      "./withUcropColors.js"
+      "./withUcropColors.js",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

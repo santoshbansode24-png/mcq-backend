@@ -140,6 +140,20 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         saveHistory();
     }, [historyStack, isHistoryLoaded]);
 
+    useEffect(() => {
+        const triggerSync = async () => {
+            if (userState && userState.class_id) {
+                // If the user just came from Setup screen after picking a class, 
+                // we want a PRIORITY sync (bypass 6 hour cooldown)
+                const isPriority = route.params?.isNewSelection === true;
+
+                console.log(`[MainScreen] Checking background sync status (Priority: ${isPriority})...`);
+                SmartCacheService.syncAllForClass(userState.class_id, isPriority);
+            }
+        };
+        triggerSync();
+    }, [userState?.class_id, route.params?.isNewSelection]);
+
     // SELF-HEALING: Load user data if it's missing (happens on app restart)
     useEffect(() => {
         const recoverUser = async () => {
@@ -151,12 +165,6 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
                         if (parsedUser && parsedUser.user_id) {
                             console.log("[MainScreen] Recovered user data from AsyncStorage");
                             setUserState(parsedUser);
-
-                            // AUTOMATIC SYNC: Start background download for the recovered class
-                            if (parsedUser.class_id) {
-                                console.log("[MainScreen] Triggering automatic background sync...");
-                                SmartCacheService.syncAllForClass(parsedUser.class_id, false);
-                            }
                         }
                     }
                 } catch (e) {

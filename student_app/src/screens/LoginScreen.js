@@ -4,7 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { loginUser } from '../api/auth';
+import { googleLogin } from '../api/googleAuth';
 import config, { BASE_URL } from '../api/config';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const { width, height } = Dimensions.get('window');
 
@@ -13,6 +19,73 @@ const LoginScreen = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
+
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        clientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        webClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        androidClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        iosClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        redirectUri: AuthSession.makeRedirectUri({
+            scheme: 'veeru-app',
+            useProxy: true,
+        }),
+    });
+
+    React.useEffect(() => {
+        if (response?.type === 'success') {
+            const { authentication } = response;
+            getUserInfo(authentication.accessToken);
+        } else if (response?.type === 'error' || response?.type === 'cancel') {
+            setGoogleLoading(false);
+        }
+    }, [response]);
+
+    const getUserInfo = async (token) => {
+        if (!token) return;
+        try {
+            const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const user = await res.json();
+
+            const userDataForBackend = {
+                email: user.email,
+                name: user.name,
+                id: user.id,
+                photo: user.picture
+            };
+
+            const data = await googleLogin(userDataForBackend);
+            setGoogleLoading(false);
+
+            if (data && data.status === 'success') {
+                await AsyncStorage.setItem('user_data', JSON.stringify(data.data));
+                if (data.is_new_user) {
+                    navigation.replace('Setup', { user: data.data });
+                } else {
+                    navigation.replace('Main', { user: data.data });
+                }
+            } else if (data && data.status === 'new_user') {
+                // Not a user yet, redirect to full registration screen with pre-filled data
+                navigation.navigate('Register', { googleData: data.data });
+            } else {
+                Alert.alert('Login Failed', data.message || 'Error connecting to database');
+            }
+        } catch (error) {
+            console.error('Error fetching user info:', error);
+            setGoogleLoading(false);
+            Alert.alert('Error', 'Failed to get your Google profile info');
+        }
+    };
+
+    const handleGoogleSignIn = () => {
+        setGoogleLoading(true);
+        // Force account selection every time
+        promptAsync({
+            showInRecents: true,
+        });
+    };
 
     const handleLogin = async () => {
         const trimmedEmail = email.trim();
@@ -150,6 +223,29 @@ const LoginScreen = ({ navigation }) => {
                                 <Text style={styles.loginButtonText}>LOGIN</Text>
                             )}
                         </LinearGradient>
+                    </TouchableOpacity>
+
+                    {/* OR Separator */}
+                    <View style={styles.separatorContainer}>
+                        <View style={styles.separatorLine} />
+                        <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
+                        <View style={styles.separatorLine} />
+                    </View>
+
+                    {/* Google Login Button */}
+                    <TouchableOpacity
+                        style={styles.googleButton}
+                        onPress={handleGoogleSignIn}
+                        disabled={googleLoading}
+                    >
+                        {googleLoading ? (
+                            <ActivityIndicator color="#4f46e5" />
+                        ) : (
+                            <View style={styles.googleButtonContent}>
+                                <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
 
                     {window.lastError && !loading && (
@@ -341,6 +437,43 @@ const styles = StyleSheet.create({
     privacyLink: {
         color: '#6366f1',
         textDecorationLine: 'underline',
+    },
+    separatorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    separatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#e2e8f0',
+    },
+    separatorText: {
+        paddingHorizontal: 12,
+        color: '#94a3b8',
+        fontSize: 10,
+        fontFamily: 'NotoSans-Bold',
+    },
+    googleButton: {
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: '#ffffff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    googleButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    googleButtonText: {
+        marginLeft: 10,
+        color: '#0f172a',
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
     },
 });
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-    Alert, Animated, Dimensions, Platform, StatusBar, Vibration
+    Alert, Animated, Dimensions, Platform, StatusBar, Vibration, BackHandler
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,27 @@ const VocabBoosterScreen = ({ user, navigation, route }) => {
     useEffect(() => {
         loadWords();
     }, []);
+
+    useEffect(() => {
+        const backAction = () => {
+            Alert.alert(
+                "Quit Practice?",
+                "Are you sure you want to stop practicing? Your progress for this set will not be saved.",
+                [
+                    { text: "Stay", style: "cancel" },
+                    { text: "Quit", style: "destructive", onPress: () => navigation.goBack() }
+                ]
+            );
+            return true;
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [navigation]);
 
     useEffect(() => {
         if (reviewWords.length > 0) {

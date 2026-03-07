@@ -12,13 +12,43 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'react-native';
 import { BASE_URL } from '../api/config';
 import { getCachedFile } from '../utils/downloadUtils';
+import { fetchVocabSet, fetchVocabStats } from '../api/vocab';
+import { fetchMentalMathProgress } from '../api/mentalMath';
 
 const SYNC_STATUS_KEY = '@smart_sync_status';
 const SYNC_QUEUE_KEY = '@smart_sync_queue'; // To resume interrupted syncs
 
 let isProcessing = false; // concurrency lock
+let listeners = [];
+
+const notifyListeners = (status) => {
+    listeners.forEach(l => l(status));
+};
 
 export const SmartCacheService = {
+    /**
+     * Subscribe to sync status changes
+     */
+    subscribe: (callback) => {
+        listeners.push(callback);
+        return () => {
+            listeners = listeners.filter(l => l !== callback);
+        };
+    },
+
+    /**
+     * Check for new content updates from server
+     */
+    checkContentVersion: async (boardType) => {
+        try {
+            const response = await fetch(`${BASE_URL}/api/check_content_version.php?board_type=${boardType}`);
+            const data = await response.json();
+            return data.status === 'success' ? data.version : null;
+        } catch (error) {
+            console.error('[SmartCache] Version check failed:', error);
+            return null;
+        }
+    },
     /**
      * Bulk sync all data for a specific class
      */
@@ -65,6 +95,19 @@ export const SmartCacheService = {
 
             // Save queue to storage so we can resume if app closes
             await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(fullQueue));
+
+            notifyListeners({ isSyncing: true, progress: 0 });
+
+            // 2. Sync GLOBAL features (Vocabulary + Mental Math)
+            // Get user from AsyncStorage if available
+            const savedUser = await AsyncStorage.getItem('user_data');
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                if (user && user.user_id) {
+                    await SmartCacheService.syncGlobalContent(user.user_id);
+                }
+            }
+
             await SmartCacheService.processSyncQueue();
 
             await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
@@ -110,6 +153,31 @@ export const SmartCacheService = {
             console.warn('[SmartCache] Queue processing error:', error);
         } finally {
             isProcessing = false;
+        }
+    },
+
+    /**
+     * Sync data types that aren't tied to a chapter (like Vocabulary or specific user progress)
+     */
+    syncGlobalContent: async (userId) => {
+        try {
+            console.log(`[SmartCache] 🌍 Syncing Global content (Vocab, Maths) for user ${userId}...`);
+
+            // 1. Sync Mental Math Progress
+            await SmartCacheService.retry(() => fetchMentalMathProgress(userId, true));
+
+            // 2. Sync Vocabulary Data
+            // Store general stats
+            await SmartCacheService.retry(() => fetchVocabStats(userId, true));
+
+            // Pre-download the first 3 sets of Vocabulary (0-2) as they are common for starting
+            for (let i = 0; i <= 3; i++) {
+                await SmartCacheService.retry(() => fetchVocabSet(userId, i));
+            }
+
+            console.log(`[SmartCache] ✅ Global sync completed`);
+        } catch (error) {
+            console.warn('[SmartCache] Global sync error:', error.message);
         }
     },
 

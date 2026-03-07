@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
-    Animated, Dimensions, StatusBar, Platform, SafeAreaView, Pressable
+    Animated, Dimensions, StatusBar, Platform, SafeAreaView, Pressable, BackHandler
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -99,6 +99,32 @@ const FlashcardsScreen = ({ navigation, route }) => {
         const s = seconds % 60;
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
+
+    // Handle Hardware Back Button
+    useEffect(() => {
+        const backAction = () => {
+            if (isTaskActive) {
+                Alert.alert(
+                    "Abandon Mission?",
+                    "Flashcard study timer is still running. Do you want to leave?",
+                    [
+                        { text: "Stay", style: "cancel" },
+                        { text: "Leave", style: "destructive", onPress: () => navigation.goBack() }
+                    ]
+                );
+                return true;
+            }
+            navigation.goBack();
+            return true;
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [isTaskActive, navigation]);
 
 
     // Update ref when state changes

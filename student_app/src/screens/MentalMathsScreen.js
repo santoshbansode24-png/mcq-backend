@@ -11,6 +11,7 @@ import { API_URL } from '../api/config';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import { fetchMentalMathProgress, saveMentalMathProgress } from '../api/mentalMath';
 
 const { width, height } = Dimensions.get('window');
 
@@ -123,9 +124,9 @@ const MentalMathsScreen = ({ navigation, user }) => {
 
     const loadProgress = async () => {
         try {
-            const response = await axios.get(`${API_URL}/mental_math_get_progress.php?user_id=${user.user_id}`);
-            if (response.data.status === 'success') {
-                const data = response.data.data;
+            const res = await fetchMentalMathProgress(user.user_id);
+            if (res.status === 'success') {
+                const data = res.data;
                 const userLevel = parseInt(data.level) || 1;
                 setLevel(userLevel);
                 setTotalSets(parseInt(data.total_sets_completed) || 0);
@@ -229,11 +230,7 @@ const MentalMathsScreen = ({ navigation, user }) => {
         }
 
         try {
-            await axios.post(`${API_URL}/mental_math_save_progress.php`, {
-                user_id: user.user_id,
-                level: newLevel,
-                score: finalScore
-            });
+            await saveMentalMathProgress(user.user_id, newLevel, finalScore);
         } catch (error) {
             console.error('Sync failed', error);
         }

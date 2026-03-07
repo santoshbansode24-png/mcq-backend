@@ -6,12 +6,22 @@ import { registerUser } from '../api/auth';
 import { fetchClasses } from '../api/classes';
 import config from '../api/config';
 
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import { googleLogin } from '../api/googleAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+WebBrowser.maybeCompleteAuthSession();
+
 const { width, height } = Dimensions.get('window');
 
-const RegisterScreen = ({ navigation }) => {
+const RegisterScreen = ({ navigation, route }) => {
     // states
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [googleId, setGoogleId] = useState(null);
+    const [profilePicture, setProfilePicture] = useState(null);
     const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,6 +36,87 @@ const RegisterScreen = ({ navigation }) => {
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [showClassModal, setShowClassModal] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
+
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        clientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        webClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        androidClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        iosClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        redirectUri: AuthSession.makeRedirectUri({
+            scheme: 'veeru-app',
+            useProxy: true,
+        }),
+    });
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { authentication } = response;
+            getUserInfo(authentication.accessToken);
+        } else if (response?.type === 'error' || response?.type === 'cancel') {
+            setGoogleLoading(false);
+        }
+    }, [response]);
+
+    useEffect(() => {
+        if (route.params?.googleData) {
+            const { name, email, google_id, photo } = route.params.googleData;
+            setName(name || '');
+            setEmail(email || '');
+            setGoogleId(google_id || null);
+            setProfilePicture(photo || null);
+        }
+    }, [route.params]);
+
+    const getUserInfo = async (token) => {
+        if (!token) return;
+        try {
+            const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const user = await res.json();
+
+            const userDataForBackend = {
+                email: user.email,
+                name: user.name,
+                id: user.id,
+                photo: user.picture
+            };
+
+            const data = await googleLogin(userDataForBackend);
+            setGoogleLoading(false);
+
+            if (data && data.status === 'success') {
+                await AsyncStorage.setItem('user_data', JSON.stringify(data.data));
+                if (data.is_new_user || !data.data.class_id || !data.data.board_type) {
+                    navigation.replace('Setup', { user: data.data });
+                } else {
+                    navigation.replace('Main', { user: data.data });
+                }
+            } else if (data && data.status === 'new_user') {
+                // Pre-fill form with Google data
+                const gData = data.data;
+                setName(gData.name || '');
+                setEmail(gData.email || '');
+                setGoogleId(gData.google_id || null);
+                setProfilePicture(gData.photo || null);
+                Alert.alert("Complete Registration", "Please fill in your mobile, school, and other details to complete your account.");
+            } else {
+                Alert.alert('Registration Failed', data.message || 'Error connecting to database');
+            }
+        } catch (error) {
+            console.error('Error fetching user info:', error);
+            setGoogleLoading(false);
+            Alert.alert('Error', 'Failed to get your Google profile info');
+        }
+    };
+
+    const handleGoogleSignIn = () => {
+        setGoogleLoading(true);
+        promptAsync({
+            showInRecents: true,
+        });
+    };
 
     useEffect(() => {
         if (selectedBoard) {
@@ -90,14 +181,22 @@ const RegisterScreen = ({ navigation }) => {
                 trimmedPassword,
                 trimmedSchool,
                 selectedClass.class_id,
-                selectedBoard
+                selectedBoard,
+                googleId,
+                profilePicture
             );
 
             setLoading(false);
 
             if (data && data.status === 'success') {
-                Alert.alert('Success', 'Registration successful! Please login.');
-                navigation.navigate('Login');
+                // Auto-login after successful registration
+                await AsyncStorage.setItem('user_data', JSON.stringify(data.data));
+
+                // Always take them to Home (Main) since they just picked a class/board in this form
+                navigation.replace('Main', {
+                    user: data.data,
+                    isNewSelection: true
+                });
             } else {
                 const msg = data?.message || 'Registration failed';
                 Alert.alert('Failure', msg);
@@ -150,36 +249,40 @@ const RegisterScreen = ({ navigation }) => {
                 </View>
 
                 <View style={styles.formContainer}>
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>FULL NAME</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="person-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="John Doe"
-                                placeholderTextColor="#94a3b8"
-                                value={name}
-                                onChangeText={setName}
-                                autoCapitalize="words"
-                            />
-                        </View>
-                    </View>
+                    {!googleId && (
+                        <>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>FULL NAME</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="person-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="John Doe"
+                                        placeholderTextColor="#94a3b8"
+                                        value={name}
+                                        onChangeText={setName}
+                                        autoCapitalize="words"
+                                    />
+                                </View>
+                            </View>
 
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>EMAIL ADDRESS</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="student@example.com"
-                                placeholderTextColor="#94a3b8"
-                                value={email}
-                                onChangeText={setEmail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
-                        </View>
-                    </View>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>EMAIL ADDRESS</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="student@example.com"
+                                        placeholderTextColor="#94a3b8"
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    )}
 
                     <View style={styles.inputWrapper}>
                         <Text style={styles.label}>MOBILE NUMBER <Text style={{ color: '#ef4444' }}>*</Text></Text>
@@ -317,6 +420,29 @@ const RegisterScreen = ({ navigation }) => {
                                 <Text style={styles.registerButtonText}>REGISTER</Text>
                             )}
                         </LinearGradient>
+                    </TouchableOpacity>
+
+                    {/* OR Separator */}
+                    <View style={styles.separatorContainer}>
+                        <View style={styles.separatorLine} />
+                        <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
+                        <View style={styles.separatorLine} />
+                    </View>
+
+                    {/* Google Login Button */}
+                    <TouchableOpacity
+                        style={styles.googleButton}
+                        onPress={handleGoogleSignIn}
+                        disabled={googleLoading}
+                    >
+                        {googleLoading ? (
+                            <ActivityIndicator color="#4f46e5" />
+                        ) : (
+                            <View style={styles.googleButtonContent}>
+                                <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
 
                     <View style={styles.loginContainer}>
@@ -537,6 +663,43 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'NotoSans-Bold',
         letterSpacing: 1,
+    },
+    separatorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    separatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#e2e8f0',
+    },
+    separatorText: {
+        paddingHorizontal: 12,
+        color: '#94a3b8',
+        fontSize: 10,
+        fontFamily: 'NotoSans-Bold',
+    },
+    googleButton: {
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: '#ffffff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    googleButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    googleButtonText: {
+        marginLeft: 10,
+        color: '#0f172a',
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
     },
     loginContainer: {
         flexDirection: 'row',

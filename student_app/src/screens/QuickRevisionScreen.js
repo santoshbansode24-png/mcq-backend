@@ -30,7 +30,8 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const [revisionData, setRevisionData] = useState([]);
     const [error, setError] = useState(null);
     const [playingIndex, setPlayingIndex] = useState(null);
-    const [sound, setSound] = useState(null); // State for audio sound object
+    const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+    const [sound, setSound] = useState(null);
 
     // Use a ref to store the language to avoid re-fetching on every click
     const preferredLanguage = useRef('en-IN');
@@ -137,65 +138,65 @@ const QuickRevisionScreen = ({ navigation, route }) => {
             setSound(null);
         }
         setPlayingIndex(null);
+        setIsAutoPlaying(false);
     };
 
     /* ---------------- PLAY TTS ---------------- */
 
-    const playTTS = async (item, index) => {
-        // console.log("TTS Item Data:", JSON.stringify(item)); // DEBUG LOG
-        // 1. If clicking the one currently playing, stop it.
-        if (playingIndex === index) {
+    const playTTS = async (item, index, autoNext = false) => {
+        if (playingIndex === index && !autoNext) {
             await stopTTS();
             return;
         }
 
-        // 2. Identify the text to speak
         const q = item.q || item.Question || '';
         const a = item.a || item.Answer || '';
-        const e = item.e || item.Explanation || ''; // Get explanation
+        const e = item.e || item.Explanation || '';
 
-        if (!e) {
-            // console.log("DEBUG: Explanation missing in item:", item);
-            // Alert.alert("Debug", "No explanation found in data for this point.");
-        } else {
-            // console.log("DEBUG: Explanation found:", e);
-        }
-
-        // Speak Q, then A, then Explanation (without "Explanation" prefix for better flow in Marathi)
         const textToSpeak = `${q}. ${a}. ${e || ''}`.trim();
 
-        if (!textToSpeak) {
-            Alert.alert("Error", "No text found to read for this point.");
-            return;
-        }
+        if (!textToSpeak) return;
 
         try {
-            // 3. Always stop current speech first
             await stopTTS();
+            if (autoNext) setIsAutoPlaying(true);
 
-            // 4. Play using Google TTS
             const newSound = await playGoogleTTS(textToSpeak, preferredLanguage.current);
 
             if (newSound) {
                 setSound(newSound);
                 setPlayingIndex(index);
 
-                // Handle completion
                 newSound.setOnPlaybackStatusUpdate((status) => {
                     if (status.didJustFinish) {
                         setPlayingIndex(null);
-                        setSound(null); // Clear sound state on finish
-                        newSound.unloadAsync(); // Unload memory
+                        setSound(null);
+                        newSound.unloadAsync();
+
+                        if (isAutoPlaying && index + 1 < revisionData.length) {
+                            playTTS(revisionData[index + 1], index + 1, true);
+                        } else {
+                            setIsAutoPlaying(false);
+                        }
                     }
                 });
             } else {
-                Alert.alert('TTS Error', 'Could not fetch audio. Check internet or API Key.');
+                setIsAutoPlaying(false);
                 setPlayingIndex(null);
             }
-
         } catch (err) {
-            // console.log('TTS execution error:', err);
+            setIsAutoPlaying(false);
             setPlayingIndex(null);
+        }
+    };
+
+    const toggleAutoPlay = () => {
+        if (isAutoPlaying) {
+            stopTTS();
+        } else {
+            if (revisionData.length > 0) {
+                playTTS(revisionData[0], 0, true);
+            }
         }
     };
 
@@ -236,20 +237,26 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         >
             <SafeAreaView style={styles.safeArea}>
                 {/* HEADER */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                <View style={[styles.header, { borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={26} color={theme.text} />
                     </TouchableOpacity>
 
-                    <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
-                        {chapterName || 'Quick Revision'}
-                    </Text>
+                    <View style={styles.headerTextContainer}>
+                        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
+                            {chapterName || 'Quick Revision'}
+                        </Text>
+                        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>{revisionData.length} Key Points</Text>
+                    </View>
 
-                    <TouchableOpacity onPress={stopTTS}>
+                    <TouchableOpacity
+                        onPress={toggleAutoPlay}
+                        style={[styles.headerActionButton, isAutoPlaying && { backgroundColor: '#fee2e2' }]}
+                    >
                         <Ionicons
-                            name="stop-circle"
-                            size={32}
-                            color={playingIndex !== null ? '#ef4444' : '#cbd5e1'}
+                            name={isAutoPlaying ? "pause" : "volume-high"}
+                            size={24}
+                            color={isAutoPlaying ? '#ef4444' : theme.primary}
                         />
                     </TouchableOpacity>
                 </View>
@@ -273,44 +280,53 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                 style={[
                                     styles.card,
                                     { backgroundColor: isDarkMode ? '#1e293b' : '#fff' },
-                                    isPlaying && { borderColor: theme.primary, borderWidth: 1 }
+                                    isPlaying && { borderColor: theme.primary, borderWidth: 1.5, shadowColor: theme.primary, shadowOpacity: 0.3 }
                                 ]}
                             >
                                 <View style={styles.cardHeader}>
-                                    <View style={styles.pointContainer}>
-                                        <Text style={styles.pointText}>POINT {index + 1}</Text>
+                                    <View style={styles.headerLeftControls}>
+                                        <TouchableOpacity
+                                            onPress={() => playTTS(item, index)}
+                                            style={[styles.playIconCircle, { backgroundColor: isPlaying ? theme.primary : (isDarkMode ? '#334155' : '#f1f5f9') }]}
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        >
+                                            <Ionicons
+                                                name={isPlaying ? 'pause' : 'play'}
+                                                size={20}
+                                                color={isPlaying ? '#fff' : theme.primary}
+                                            />
+                                        </TouchableOpacity>
+                                        <View style={[styles.pointBadge, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc' }]}>
+                                            <Text style={[styles.pointText, { color: isDarkMode ? '#94a3b8' : '#64748b' }]}>POINT {index + 1}</Text>
+                                        </View>
                                     </View>
-
-                                    <TouchableOpacity
-                                        onPress={() => playTTS(item, index)}
-                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    >
-                                        <Ionicons
-                                            name={isPlaying ? 'pause-circle' : 'play-circle'}
-                                            size={48}
-                                            color={isPlaying ? '#ef4444' : theme.primary}
-                                        />
-                                    </TouchableOpacity>
                                 </View>
 
                                 <View style={styles.textArea}>
-                                    <Text style={[styles.label, { color: theme.primary }]}>QUESTION</Text>
+                                    <View style={styles.sectionRow}>
+                                        <View style={[styles.indicator, { backgroundColor: theme.primary }]} />
+                                        <Text style={[styles.label, { color: theme.primary }]}>QUESTION</Text>
+                                    </View>
                                     <RenderText text={q} />
 
-                                    <View style={styles.line} />
+                                    <View style={styles.separator} />
 
-                                    <Text style={[styles.label, { color: theme.primary }]}>ANSWER</Text>
+                                    <View style={styles.sectionRow}>
+                                        <View style={[styles.indicator, { backgroundColor: '#10b981' }]} />
+                                        <Text style={[styles.label, { color: '#10b981' }]}>ANSWER</Text>
+                                    </View>
                                     <RenderText text={a} />
 
-                                    {/* Render Explanation if exists */}
                                     {(item.e || item.Explanation) && (
-                                        <>
-                                            <View style={[styles.line, { marginVertical: 10 }]} />
-                                            <Text style={[styles.label, { color: theme.textSecondary || '#666', fontStyle: 'italic' }]}>EXPLANATION</Text>
-                                            <Text style={[styles.mainText, { color: theme.textSecondary || '#555', fontSize: 14, fontStyle: 'italic', backgroundColor: '#fff3cd', padding: 5 }]}>
+                                        <View style={styles.explanationBox}>
+                                            <View style={styles.sectionRow}>
+                                                <MaterialCommunityIcons name="information-outline" size={14} color="#64748b" />
+                                                <Text style={styles.explanationLabel}>EXPLANATION</Text>
+                                            </View>
+                                            <Text style={[styles.explanationText, { color: isDarkMode ? '#94a3b8' : '#475569' }]}>
                                                 {item.e || item.Explanation}
                                             </Text>
-                                        </>
+                                        </View>
                                     )}
                                 </View>
                             </View>
@@ -329,65 +345,145 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 0.5,
-        borderBottomColor: 'rgba(203, 213, 225, 0.3)',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    backBtn: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    headerTextContainer: {
+        flex: 1,
+        marginLeft: 12,
     },
     headerTitle: {
-        flex: 1,
-        marginLeft: 15,
         fontSize: 18,
         fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Regular',
+        opacity: 0.8,
+    },
+    headerActionButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
     },
     scrollArea: {
         padding: 16,
         paddingBottom: 40,
     },
     card: {
-        borderRadius: 20,
-        padding: 18,
-        marginBottom: 18,
-        elevation: 4,
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 20,
+        elevation: 6,
         shadowColor: '#000',
         shadowOpacity: 0.1,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     cardHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
     },
-    pointContainer: {
-        backgroundColor: 'rgba(100, 116, 139, 0.1)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
+    headerLeftControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.02)',
+        padding: 4,
+        borderRadius: 30,
+    },
+    playIconCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+    },
+    pointBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginLeft: 8,
     },
     pointText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 'bold',
-        color: '#64748b',
+        letterSpacing: 0.5,
     },
-    textArea: { marginTop: 4 },
+    textArea: { marginTop: 0 },
+    sectionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    indicator: {
+        width: 4,
+        height: 12,
+        borderRadius: 2,
+        marginRight: 8,
+    },
     label: {
         fontSize: 10,
         fontWeight: 'bold',
-        marginBottom: 5,
         letterSpacing: 1,
-        opacity: 0.7,
+        fontFamily: 'NotoSans-Bold',
     },
     mainText: {
         fontSize: 16,
         lineHeight: 24,
-        fontWeight: '500',
+        fontWeight: '600',
+        fontFamily: 'NotoSans-Bold',
+        paddingLeft: 12,
     },
-    line: {
+    separator: {
         height: 1,
-        backgroundColor: '#e2e8f0',
-        marginVertical: 15,
-        opacity: 0.3,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        marginVertical: 16,
+        width: '100%',
+    },
+    explanationBox: {
+        marginTop: 20,
+        padding: 15,
+        backgroundColor: 'rgba(100, 116, 139, 0.05)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(100, 116, 139, 0.1)',
+        borderStyle: 'dashed',
+    },
+    explanationLabel: {
+        fontSize: 9,
+        fontWeight: 'bold',
+        color: '#64748b',
+        marginLeft: 6,
+        letterSpacing: 0.5,
+    },
+    explanationText: {
+        fontSize: 13,
+        lineHeight: 20,
+        fontStyle: 'italic',
+        marginTop: 6,
+        fontFamily: 'NotoSans-Regular',
     },
 });
 

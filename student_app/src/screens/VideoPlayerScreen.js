@@ -43,8 +43,13 @@ const VideoPlayerScreen = ({ route, navigation }) => {
 
         // Handle physical back button and ensure orientation reset on unmount
         const backAction = () => {
+            if (isFullScreen) {
+                ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+                setIsFullScreen(false);
+                return true;
+            }
             navigation.goBack();
-            return true; // Prevent default behavior (which might be popping the history stack in MainScreen)
+            return true; // Prevent default behavior
         };
 
         const backHandler = BackHandler.addEventListener(
@@ -57,7 +62,7 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             // Force reset to Portrait when leaving VideoPlayer
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
         };
-    }, [activeTask, navigation]);
+    }, [activeTask, navigation, isFullScreen]);
 
     // Countdown Logic
     React.useEffect(() => {

@@ -40,10 +40,12 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
     const [showExplanation, setShowExplanation] = useState(false);
     const [score, setScore] = useState(0);
     const [quizFinished, setQuizFinished] = useState(false);
+    const [showReview, setShowReview] = useState(false);
+    const [userAnswers, setUserAnswers] = useState([]); // Store all user answers for review
 
     // --- Input Handlers ---
 
-    const pickImage = async () => {
+    const takePhoto = async () => {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
             Alert.alert("Permission Required", "You need to allow camera access to take photos of your notes.");
@@ -54,13 +56,45 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [4, 3],
-            quality: 0.5, // Optimize size for faster upload
+            quality: 0.5,
         });
 
         if (!result.canceled) {
             setSelectedImage(result.assets[0]);
             setInputType('camera');
         }
+    };
+
+    const pickFromGallery = async () => {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+            Alert.alert("Permission Required", "You need to allow gallery access to choose photos of your notes.");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.5,
+        });
+
+        if (!result.canceled) {
+            setSelectedImage(result.assets[0]);
+            setInputType('camera');
+        }
+    };
+
+    const handleImageTabPress = () => {
+        Alert.alert(
+            "Select Image Source",
+            "Choose how you want to upload your notes",
+            [
+                { text: "Take Photo", onPress: takePhoto },
+                { text: "Choose from Gallery", onPress: pickFromGallery },
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
     };
 
     const pickDocument = async () => {
@@ -170,6 +204,8 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                     setQuizFinished(false);
                     setSelectedOption(null);
                     setShowExplanation(false);
+                    setUserAnswers([]);
+                    setShowReview(false);
                 }
             } else {
                 Alert.alert('AI Generator Error', response.data.message || 'Failed to generate quiz');
@@ -188,9 +224,23 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
         if (selectedOption) return;
         setSelectedOption(optionKey);
         setShowExplanation(true);
-        if (optionKey === quiz[currentQuestionIndex].correct_answer) {
+
+        const isCorrect = optionKey === quiz[currentQuestionIndex].correct_answer;
+
+        // Vibration feedback
+        if (isCorrect) {
+            Vibration.vibrate(10);
             setScore(prev => prev + 1);
+        } else {
+            Vibration.vibrate([0, 10, 10, 10]);
         }
+
+        // Save answer for review
+        setUserAnswers(prev => {
+            const newAnswers = [...prev];
+            newAnswers[currentQuestionIndex] = optionKey;
+            return newAnswers;
+        });
     };
 
     const nextQuestion = () => {
@@ -328,7 +378,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             <View style={styles.tabContainer}>
                 <TouchableOpacity
                     style={[styles.tabButton, inputType === 'camera' && styles.activeTab]}
-                    onPress={() => pickImage()}
+                    onPress={handleImageTabPress}
                 >
                     <Ionicons name="camera" size={24} color={inputType === 'camera' ? '#fff' : '#64748b'} />
                     <Text style={[styles.tabText, inputType === 'camera' && styles.activeTabText]}>Photo</Text>
@@ -376,8 +426,8 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                             </View>
                         )}
                         {selectedImage && (
-                            <TouchableOpacity style={styles.repickButton} onPress={pickImage}>
-                                <Text style={styles.repickText}>Retake Photo</Text>
+                            <TouchableOpacity style={styles.repickButton} onPress={handleImageTabPress}>
+                                <Text style={styles.repickText}>Change Image</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -442,6 +492,11 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
 
                 {step === 2 && !quizFinished && (
                     <ScrollView contentContainerStyle={styles.quizScroll}>
+                        {/* Progress Bar */}
+                        <View style={styles.progressBarContainer}>
+                            <View style={[styles.progressBarFill, { width: `${((currentQuestionIndex + 1) / quiz.length) * 100}%` }]} />
+                        </View>
+
                         {/* Question Card */}
                         <View style={styles.questionCard}>
                             <View style={styles.questionHeader}>
@@ -524,17 +579,45 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                                 ) : (
                                     <>
                                         <Ionicons name="add-circle-outline" size={24} color="#fff" />
-                                        <Text style={styles.actionButtonText}>Load 5 More</Text>
+                                        <Text style={styles.actionButtonText}>Load More</Text>
                                     </>
                                 )}
+                            </TouchableOpacity>
+
+                            {/* Review Button */}
+                            <TouchableOpacity style={[styles.actionButton, styles.reviewToggleBtn]} onPress={() => setShowReview(!showReview)}>
+                                <Ionicons name={showReview ? "eye-off" : "eye"} size={24} color="#fff" />
+                                <Text style={styles.actionButtonText}>{showReview ? 'Hide Review' : 'Review'}</Text>
                             </TouchableOpacity>
 
                             {/* PDF Button */}
                             <TouchableOpacity style={[styles.actionButton, styles.pdfButton]} onPress={generatePDF}>
                                 <Ionicons name="download-outline" size={24} color="#fff" />
-                                <Text style={styles.actionButtonText}>Save PDF</Text>
+                                <Text style={styles.actionButtonText}>PDF</Text>
                             </TouchableOpacity>
                         </View>
+
+                        {showReview && (
+                            <View style={styles.reviewSection}>
+                                <Text style={styles.reviewHeader}>Question Review</Text>
+                                {quiz.map((q, idx) => (
+                                    <View key={idx} style={styles.reviewItem}>
+                                        <Text style={styles.reviewQText}>{idx + 1}. {decodeHtml(q.question)}</Text>
+                                        <View style={styles.reviewAnswerRow}>
+                                            <Text style={styles.reviewAnswerLabel}>Correct: </Text>
+                                            <Text style={styles.reviewCorrectVal}>{decodeHtml(q[`option_${q.correct_answer}`])}</Text>
+                                        </View>
+                                        {userAnswers[idx] !== q.correct_answer && (
+                                            <View style={styles.reviewAnswerRow}>
+                                                <Text style={styles.reviewAnswerLabel}>Your Pick: </Text>
+                                                <Text style={styles.reviewWrongVal}>{decodeHtml(q[`option_${userAnswers[idx]}`])}</Text>
+                                            </View>
+                                        )}
+                                        <Text style={styles.reviewExplText}><Text style={{ fontWeight: 'bold' }}>Note: </Text>{decodeHtml(q.explanation)}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
 
                         <TouchableOpacity style={styles.restartButton} onPress={() => { setStep(1); setInputText(''); setSelectedImage(null); setSelectedFile(null); }}>
                             <Text style={styles.restartButtonText}>Create New Quiz</Text>
@@ -625,11 +708,25 @@ const styles = StyleSheet.create({
     finalScore: { fontSize: 48, fontWeight: 'bold', color: '#fff', marginBottom: 10, fontFamily: 'NotoSans-Bold' },
     resultMessage: { fontSize: 18, color: 'rgba(255,255,255,0.9)', fontFamily: 'NotoSans-Regular' },
 
-    actionButtons: { flexDirection: 'row', gap: 15, marginBottom: 20, width: '100%' },
-    actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, gap: 8 },
+    progressBarContainer: { height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, marginBottom: 20, overflow: 'hidden' },
+    progressBarFill: { height: '100%', backgroundColor: '#7c3aed' },
+
+    actionButtons: { flexDirection: 'row', gap: 10, marginBottom: 20, width: '100%' },
+    actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, gap: 5 },
     loadMoreButton: { backgroundColor: '#059669' },
     pdfButton: { backgroundColor: '#2563eb' },
-    actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15, fontFamily: 'NotoSans-Bold' },
+    reviewToggleBtn: { backgroundColor: '#4b5563' },
+    actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 12, fontFamily: 'NotoSans-Bold' },
+
+    reviewSection: { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#e2e8f0' },
+    reviewHeader: { fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginBottom: 15, fontFamily: 'NotoSans-Bold' },
+    reviewItem: { marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+    reviewQText: { fontSize: 16, fontWeight: '600', color: '#334155', marginBottom: 8, fontFamily: 'NotoSans-Bold' },
+    reviewAnswerRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
+    reviewAnswerLabel: { fontSize: 14, color: '#64748b', fontFamily: 'NotoSans-Regular' },
+    reviewCorrectVal: { fontSize: 14, color: '#16a34a', fontWeight: '600', fontFamily: 'NotoSans-Bold' },
+    reviewWrongVal: { fontSize: 14, color: '#dc2626', fontWeight: '600', fontFamily: 'NotoSans-Bold' },
+    reviewExplText: { fontSize: 13, color: '#64748b', marginTop: 5, fontStyle: 'italic', fontFamily: 'NotoSans-Regular' },
 
     restartButton: { width: '100%', backgroundColor: '#fff', padding: 20, borderRadius: 20, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
     restartButtonText: { color: '#7c3aed', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },

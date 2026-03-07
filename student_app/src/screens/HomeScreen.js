@@ -57,13 +57,66 @@ const HomeScreen = ({ user, navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [hasUpdate, setHasUpdate] = useState(false);
+    const glowAnim = useRef(new Animated.Value(0)).current;
+    const syncRotAnim = useRef(new Animated.Value(0)).current;
 
 
+
+    useEffect(() => {
+        const unsubscribe = SmartCacheService.subscribe((status) => {
+            setIsSyncing(status.isSyncing);
+        });
+
+        checkVersion();
+
+        return () => unsubscribe();
+    }, []);
+
+    const checkVersion = async () => {
+        if (!user?.board_type) return;
+        const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
+        const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
+
+        if (serverVer && (!localVer || parseInt(serverVer) > parseInt(localVer))) {
+            setHasUpdate(true);
+            startGlow();
+        }
+    };
+
+    const startGlow = () => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+                Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: true })
+            ])
+        ).start();
+    };
+
+    const forceSync = async () => {
+        if (isSyncing) return;
+
+        setIsSyncing(true);
+        setHasUpdate(false);
+
+        // Removed deleted data by clearing main class cache keys
+        // subjects, chapters lists are cleared so they re-fetch from scratch
+        await dataCache.remove(`subjects_${classId}`);
+        // Trigger priority sync
+        await SmartCacheService.syncAllForClass(classId, true);
+
+        // Update local version
+        const latestVer = await SmartCacheService.checkContentVersion(user.board_type);
+        if (latestVer) {
+            await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
+        }
+    };
 
     useFocusEffect(
         useCallback(() => {
             if (classId) {
                 loadSubjects();
+                checkVersion();
             }
         }, [classId])
     );
@@ -130,17 +183,44 @@ const HomeScreen = ({ user, navigation, route }) => {
                     </View>
                     <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
                 </View>
-                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                    <View style={[styles.avatarContainer, { borderColor: theme.primary }]}>
-                        {user?.profile_picture ? (
-                            <Image source={{ uri: getImageUrl(user.profile_picture) }} style={styles.avatar} />
-                        ) : (
-                            <LinearGradient colors={['#6366f1', '#a855f7']} style={styles.avatarPlaceholder}>
-                                <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
-                            </LinearGradient>
-                        )}
-                    </View>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {/* THE SMART SYNC BUTTON */}
+                    <TouchableOpacity
+                        onPress={forceSync}
+                        style={[styles.syncButton, hasUpdate && styles.syncButtonUpdate]}
+                        disabled={isSyncing}
+                    >
+                        <Animated.View style={[
+                            styles.syncIconContainer,
+                            {
+                                transform: [{ rotate: syncRotAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
+                                shadowOpacity: hasUpdate ? glowAnim : 0,
+                                elevation: hasUpdate ? 5 : 0
+                            }
+                        ]}>
+                            {isSyncing ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <View>
+                                    <MaterialCommunityIcons name="cloud-sync" size={24} color={hasUpdate ? "#fff" : theme.primary} />
+                                    {hasUpdate && <View style={styles.updateDot} />}
+                                </View>
+                            )}
+                        </Animated.View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                        <View style={[styles.avatarContainer, { borderColor: theme.primary }]}>
+                            {user?.profile_picture ? (
+                                <Image source={{ uri: getImageUrl(user.profile_picture) }} style={styles.avatar} />
+                            ) : (
+                                <LinearGradient colors={['#6366f1', '#a855f7']} style={styles.avatarPlaceholder}>
+                                    <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
+                                </LinearGradient>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('dailyBoosters')}</Text>
@@ -455,6 +535,41 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         fontWeight: '500',
         fontFamily: 'NotoSans-Bold',
+    },
+    syncButton: {
+        marginRight: 12,
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    syncButtonUpdate: {
+        backgroundColor: '#ef4444',
+        borderRadius: 22,
+        shadowColor: '#ef4444',
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 10,
+    },
+    syncIconContainer: {
+        width: 40,
+        height: 40,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    updateDot: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        width: 10,
+        height: 10,
+        backgroundColor: '#ef4444',
+        borderRadius: 5,
+        borderWidth: 1.5,
+        borderColor: '#fff',
     }
 });
 

@@ -48,13 +48,20 @@ const MyExamTestScreen = ({ navigation, route }) => {
     useEffect(() => {
         const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
             if (!showResults) {
-                // Return true to prevent default back behavior
+                Alert.alert(
+                    "Quit Exam?",
+                    "Are you sure you want to exit the exam? Your progress will be lost.",
+                    [
+                        { text: "Stay", style: "cancel" },
+                        { text: "Quit", style: "destructive", onPress: () => navigation.goBack() }
+                    ]
+                );
                 return true;
             }
             return false;
         });
         return () => backHandler.remove();
-    }, [showResults]);
+    }, [showResults, navigation]);
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -307,7 +314,16 @@ const MyExamTestScreen = ({ navigation, route }) => {
             </LinearGradient>
 
             <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.questionCard}>
+                <LinearGradient
+                    colors={['#0ea5e9', '#2563eb']} // Vibrant sky-blue to royal-blue
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.questionCard}
+                >
+                    <View style={styles.questionBadge}>
+                        <Text style={styles.questionBadgeText}>QUESTION</Text>
+                    </View>
+
                     {currentQuestion.image_url ? (
                         <Image
                             source={{ uri: `${BASE_URL}/uploads/${currentQuestion.image_url}` }}
@@ -317,12 +333,12 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     ) : null}
 
                     <MathJaxWebView
-                        content={`<div style="font-weight: 500; color: #000000;">${decodeHtml(currentQuestion.question)}</div>`}
-                        textColor="#000000"
-                        fontSize="17px"
+                        content={`<div style="font-weight: bold; color: #ffffff; font-family: 'NotoSans-Bold'; line-height: 1.3;">${decodeHtml(currentQuestion.question)}</div>`}
+                        textColor="#ffffff"
+                        fontSize="16px"
                         backgroundColor="transparent"
                     />
-                </View>
+                </LinearGradient>
 
                 <View style={styles.optionsList}>
                     {['a', 'b', 'c', 'd'].map((opt) => {
@@ -373,7 +389,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
                                         </View>
                                         <View style={{ flex: 1, justifyContent: 'center' }}>
                                             <MathJaxWebView
-                                                content={`<div style="font-weight: 500; line-height: 1.4;">${decodeHtml(currentQuestion[`option_${opt}`])}</div>`}
+                                                content={`<div style="font-weight: bold; line-height: 1.3;">${decodeHtml(currentQuestion[`option_${opt}`])}</div>`}
                                                 textColor={hasAnswered && (isCorrectAnswer || isSelected) ? '#000000' : (isDarkMode ? '#ffffff' : '#020617')}
                                                 fontSize="16px"
                                                 backgroundColor="transparent"
@@ -508,32 +524,45 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 12,
-        paddingBottom: 100,
-        marginTop: -10,
+        padding: 10,
+        paddingBottom: 110,
+        marginTop: 0,
     },
     questionCard: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 16,
-        shadowColor: '#4f46e5',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
+        borderRadius: 16,
+        padding: 12, // More compact
+        marginBottom: 12, // Tighter gap
+        shadowColor: '#2563eb',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
         elevation: 4,
+    },
+    questionBadge: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+        marginBottom: 6, // Very tight
         borderWidth: 1,
-        borderColor: '#e9d5ff',
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    questionBadgeText: {
+        color: '#ffffff',
+        fontSize: 10,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1.5,
     },
     questionImage: {
         width: '100%',
-        height: 100,
-        marginBottom: 8,
-        borderRadius: 8,
-        backgroundColor: '#f1f5f9',
+        height: 60, // Minimal height to save space
+        marginBottom: 6,
+        borderRadius: 6,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     optionsList: {
-        gap: 8,
+        gap: 6, // Tighter options
     },
     optionButton: {
         borderRadius: 16,
@@ -546,7 +575,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     optionGradient: {
-        paddingVertical: 8,
+        paddingVertical: 4, // Extremely compact
         paddingHorizontal: 10,
     },
     optionContent: {
@@ -554,9 +583,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     optionLetterBox: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
+        width: 26,
+        height: 26,
+        borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
@@ -575,17 +604,13 @@ const styles = StyleSheet.create({
     },
     explanationContainer: {
         backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 20,
-        marginTop: 24,
-        marginBottom: 20,
+        borderRadius: 16,
+        padding: 12,
+        marginTop: 12,
+        marginBottom: 6,
         borderWidth: 1,
         borderColor: '#e2e8f0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 3,
+        elevation: 2,
     },
     explanationTitle: {
         fontSize: 18,

@@ -179,8 +179,8 @@ const MyExamScreen = ({ navigation, route, user }) => {
                 Alert.alert('Error', response.data.message || 'Failed to generate test');
             }
         } catch (error) {
-            console.error(error);
-            Alert.alert('Error', 'Failed to generate test. Please try again.');
+            const errorMsg = error.response?.data?.message || 'Failed to generate test. Please try again.';
+            Alert.alert('Error', errorMsg);
         } finally {
             setLoading(false);
         }

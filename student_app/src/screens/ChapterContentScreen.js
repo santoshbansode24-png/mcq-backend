@@ -168,6 +168,13 @@ const ChapterContentScreen = ({ navigation, route }) => {
     // Handle Hardware Back Button
     useEffect(() => {
         const backAction = () => {
+            // Priority 1: If in Quiz mode, just exit quiz mode and go back to Sets List
+            if (quizMode) {
+                setQuizMode(false);
+                return true;
+            }
+
+            // Priority 2: If a timed task is active, ask for confirmation
             if (isTaskActive) {
                 Alert.alert(
                     "Abandon Mission?",
@@ -179,6 +186,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 );
                 return true;
             }
+
+            // Default: Pop screen from stack
             navigation.goBack();
             return true;
         };
@@ -189,7 +198,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
         );
 
         return () => backHandler.remove();
-    }, [isTaskActive, navigation]);
+    }, [isTaskActive, quizMode, navigation]);
 
     const finishTask = async () => {
         setIsTaskActive(false);

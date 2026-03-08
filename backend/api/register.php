@@ -19,7 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Validate required fields
-$required = ['name', 'email', 'mobile', 'password', 'school_name', 'class_id'];
+$required = ['name', 'email', 'mobile', 'school_name', 'class_id'];
+if (empty($input['google_id'])) {
+    $required[] = 'password';
+}
 $missing = validateRequired($input, $required);
 
 // Check board (accept board_type or board)
@@ -39,7 +42,7 @@ if (!empty($missing)) {
 $name = sanitizeInput($input['name']);
 $email = sanitizeInput($input['email']);
 $mobile = sanitizeInput($input['mobile']);
-$password = $input['password'];
+$password = $input['password'] ?? '';
 $school_name = sanitizeInput($input['school_name']);
 $class_id = filter_var($input['class_id'], FILTER_VALIDATE_INT);
 $board_type = sanitizeInput($input['board_type']);
@@ -72,7 +75,7 @@ try {
     }
 
     // Hash password
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+    $hashed_password = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : '';
 
     // Default values
     $user_type = 'student';

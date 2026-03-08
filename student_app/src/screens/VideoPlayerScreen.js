@@ -1,16 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, StatusBar, Dimensions, BackHandler, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar, BackHandler, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode, VideoFullscreenUpdate } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, API_URL } from '../api/config';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width, height } = Dimensions.get('window');
-
 const VideoPlayerScreen = ({ route, navigation }) => {
+    const { width, height } = useWindowDimensions();
     const { videoUrl, title, activeTask } = route.params || {};
     const [playing, setPlaying] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -53,8 +52,10 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             setTaskTimer(activeTask.duration_minutes * 60);
             setIsTaskActive(true);
         }
+    }, [activeTask, isTaskActive]);
 
-        // Handle physical back button and ensure orientation reset on unmount
+    // Handle physical back button
+    React.useEffect(() => {
         const backAction = () => {
             if (isFullScreen) {
                 ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
@@ -69,13 +70,15 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             "hardwareBackPress",
             backAction
         );
+        return () => backHandler.remove();
+    }, [isFullScreen, navigation]);
 
+    // Force reset to Portrait when leaving VideoPlayer (on unmount)
+    React.useEffect(() => {
         return () => {
-            backHandler.remove();
-            // Force reset to Portrait when leaving VideoPlayer
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
         };
-    }, [activeTask, navigation, isFullScreen]);
+    }, []);
 
     // Countdown Logic
     React.useEffect(() => {
@@ -159,8 +162,8 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             )}
 
             {/* Timer Overlay */}
-            {isTaskActive && (
-                <View style={[styles.timerOverlay, isFullScreen ? styles.timerOverlayFullScreen : {}]}>
+            {isTaskActive && !isFullScreen && (
+                <View style={styles.timerOverlay}>
                     <Text style={styles.timerText}>⏳ {formatTimer(taskTimer)}</Text>
                     <TouchableOpacity onPress={finishTask} style={styles.finishBtn}>
                         <Text style={styles.finishBtnText}>Done</Text>
@@ -168,7 +171,7 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                 </View>
             )}
 
-            <View style={[styles.videoWrapper, isFullScreen && styles.fullScreenWrapper]}>
+            <View style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}>
 
                 {/* Loading State Overlay */}
                 {!isReady && (
@@ -190,12 +193,12 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                <View style={[styles.videoContainer, isFullScreen && styles.fullScreenContainer]}>
+                <View style={isFullScreen ? styles.fullScreenContainer : styles.videoContainer}>
                     {videoId ? (
                         <View style={styles.youtubeWrapper}>
                             <YoutubePlayer
                                 height={isFullScreen ? height : width * 9 / 16}
-                                width={isFullScreen ? width : width}
+                                width={width}
                                 play={playing}
                                 videoId={videoId}
                                 onChangeState={onStateChange}
@@ -203,11 +206,10 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                                 onFullScreenChange={onFullScreenChange}
                                 initialPlayerParams={{
                                     controls: 1, // Enable standard YouTube controls
-                                    modestbranding: 1, // Minimize YouTube branding
+                                    modestbranding: 0, // Show YouTube branding
                                     rel: 0,
                                     playsinline: 1,
                                     fs: 1, // Enable Fullscreen button
-                                    iv_load_policy: 3, // Disable annotations for faster load
                                 }}
                                 // Enable Hardware Acceleration for WebView
                                 webViewProps={{
@@ -233,6 +235,15 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                             onLoadStart={() => setIsReady(false)}
                             onLoad={() => setIsReady(true)}
                             onError={(e) => console.log('Video Error:', e)}
+                            onFullscreenUpdate={async ({ fullscreenUpdate }) => {
+                                if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_PRESENT || fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
+                                    setIsFullScreen(true);
+                                    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+                                } else if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_DISMISS || fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
+                                    setIsFullScreen(false);
+                                    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+                                }
+                            }}
                         />
                     )}
                 </View>

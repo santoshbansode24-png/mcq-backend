@@ -20,7 +20,6 @@ import MainScreen from './src/screens/MainScreen';
 import VideoPlayerScreen from './src/screens/VideoPlayerScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import SubscriptionScreen from './src/screens/SubscriptionScreen';
-import SplashViewScreen from './src/screens/SplashViewScreen';
 
 // Server Config
 import { checkServerConnection } from './src/api/config';
@@ -33,7 +32,6 @@ SplashScreen.preventAutoHideAsync();
 export default function App() {
   const [serverChecked, setServerChecked] = useState(false);
   const [initialRoute, setInitialRoute] = useState(null);
-  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
   const [fontsLoaded, error] = useFonts({
     'NotoSans-Regular': require('./assets/fonts/NotoSansDevanagari-Regular.ttf'),
     'NotoSans-Bold': require('./assets/fonts/NotoSansDevanagari-Bold.ttf'),
@@ -89,10 +87,6 @@ export default function App() {
 
   if ((!fontsLoaded && !error) || !serverChecked || !initialRoute) {
     return null;
-  }
-
-  if (showAnimatedSplash) {
-    return <SplashViewScreen onFinish={() => setShowAnimatedSplash(false)} />;
   }
 
   return (

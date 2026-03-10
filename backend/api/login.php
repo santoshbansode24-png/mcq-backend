@@ -68,14 +68,13 @@ try {
     
     // Check if user exists
     if (!$user) {
-        file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: User not found for: $email\n", FILE_APPEND);
-        sendResponse('error', 'Invalid email or password', null, 401);
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Verify password
     if (!password_verify($password, $user['password'])) {
         file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: Password mismatch for: $email\n", FILE_APPEND);
-        sendResponse('error', 'Invalid email or password', null, 401);
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Check subscription status (skip for reviewer)

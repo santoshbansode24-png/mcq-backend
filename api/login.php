@@ -50,12 +50,12 @@ try {
     
     // Check if user exists
     if (!$user) {
-        sendResponse('error', 'Invalid email or password', null, 401);
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Verify password
     if (!password_verify($password, $user['password'])) {
-        sendResponse('error', 'Invalid email or password', null, 401);
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Check subscription status

@@ -30,30 +30,34 @@ if (!empty($missing)) {
 $email = sanitizeInput($input['email']);
 $password = $input['password'];
 
-// Validate email format
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    sendResponse('error', 'Invalid email format', null, 400);
+// Validate email format (Skip strict email check if it looks like a phone number)
+// Simple check: If it has no '@', assume it's a mobile number, otherwise validate email
+if (strpos($email, '@') !== false) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendResponse('error', 'Invalid email format', null, 400);
+    }
 }
 
 try {
-    // Query database for teacher
+    // Query database for user (by Email OR Mobile and user_type = 'teacher')
     $stmt = $pdo->prepare("
-        SELECT user_id, name, email, password, user_type, phone 
+        SELECT user_id, name, email, password, user_type, subscription_status 
         FROM users 
-        WHERE email = ? AND user_type = 'teacher'
+        WHERE (email = ? OR mobile = ?) AND user_type = 'teacher'
     ");
     
-    $stmt->execute([$email]);
+    // Pass the same input twice to check against both columns
+    $stmt->execute([$email, $email]); 
     $user = $stmt->fetch();
     
     // Check if user exists
     if (!$user) {
-        sendResponse('error', 'Invalid email or password', null, 401);
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Verify password
     if (!password_verify($password, $user['password'])) {
-        sendResponse('error', 'Invalid email or password', null, 401);
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Remove password from response

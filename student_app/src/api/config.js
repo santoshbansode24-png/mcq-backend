@@ -32,8 +32,8 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-// const config = RAILWAY_CONFIG; // Production build - using Railway
-const config = LOCAL_CONFIG; // Local development
+const config = RAILWAY_CONFIG; // Production build - using Railway
+// const config = LOCAL_CONFIG; // Local development
 
 export default config;
 

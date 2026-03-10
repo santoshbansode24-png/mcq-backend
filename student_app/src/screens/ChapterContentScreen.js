@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl, Image, BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
@@ -15,6 +15,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { downloadFile, getCachedFile } from '../utils/downloadUtils';
 import { dataCache } from '../utils/dataCache';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
+import NetInfo from '@react-native-community/netinfo';
 
 // --- CONSTANTS MOVED OUTSIDE FOR PERFORMANCE ---
 
@@ -77,7 +78,7 @@ const NoteItem = React.memo(({ item, index, onOpenNote }) => {
                     </View>
                     <View style={{ flex: 1, marginLeft: 16 }}>
                         <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800', marginBottom: 2 }]} numberOfLines={1}>
-                            {item.title || `Note Lesson ${index + 1}`}
+                            {item.title || `Note Lesson ${index + 1} `}
                         </Text>
                         <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13 }]} numberOfLines={1}>
                             {item.note_type?.toUpperCase() || 'PDF'}
@@ -91,60 +92,35 @@ const NoteItem = React.memo(({ item, index, onOpenNote }) => {
 
 const VideoItem = React.memo(({ item, index, onOpenVideo }) => {
     const gradient = videoGradients[index % videoGradients.length];
-
-    // Extraction logic for thumbnail
-    const getYoutubeId = (url) => {
-        if (!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    };
-
-    const videoId = getYoutubeId(item.url);
-    const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
-
     return (
         <TouchableOpacity
             onPress={() => onOpenVideo(item)}
-            style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 110 }]}
+            style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
         >
             <LinearGradient
                 colors={gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ width: '100%', height: '100%', flexDirection: 'row' }}
+                style={{ paddingHorizontal: 16, width: '100%', height: '100%', justifyContent: 'center' }}
             >
-                {/* Visual Section: Thumbnail or Icon */}
-                <View style={{ width: 120, height: '100%', backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center' }}>
-                    {thumbUrl ? (
-                        <View style={{ width: '100%', height: '100%' }}>
-                            <Image source={{ uri: thumbUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
-                                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 16, marginLeft: 2 }}>▶️</Text>
-                                </View>
-                            </View>
-                        </View>
-                    ) : (
-                        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 50, height: 50, borderRadius: 25, marginRight: 0 }]}>
-                            <Text style={{ fontSize: 24 }}>🎥</Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* Content Section */}
-                <View style={{ flex: 1, padding: 12, justifyContent: 'center' }}>
-                    <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800' }]} numberOfLines={2}>
-                        {item.title || `Video Lesson ${index + 1}`}
-                    </Text>
-                    <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.95)', fontSize: 12, marginTop: 4 }]} numberOfLines={1}>
-                        {item.description || 'Watch tutorial video'}
-                    </Text>
-                    {item.duration && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>⏱️ {item.duration}</Text>
-                        </View>
-                    )}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22 }]}>
+                        <Text style={{ fontSize: 20 }}>▶️</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 16 }}>
+                        <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800', marginBottom: 2 }]} numberOfLines={2}>
+                            {item.title || `Video Lesson ${index + 1}`}
+                        </Text>
+                        {item.description ? (
+                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13 }]} numberOfLines={1}>
+                                {item.description}
+                            </Text>
+                        ) : (
+                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.85)', fontSize: 12 }]}>
+                                Tap to watch
+                            </Text>
+                        )}
+                    </View>
                 </View>
             </LinearGradient>
         </TouchableOpacity>
@@ -196,40 +172,76 @@ const ChapterContentScreen = ({ navigation, route }) => {
         return () => clearInterval(interval);
     }, [isTaskActive, taskTimer]);
 
-    // Handle Hardware Back Button
-    useEffect(() => {
-        const backAction = () => {
-            // Priority 1: If in Quiz mode, just exit quiz mode and go back to Sets List
-            if (quizMode) {
-                setQuizMode(false);
-                return true;
-            }
+    // Quiz State — declared here so refs below can reference them
+    const [quizMode, setQuizMode] = useState(false);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [selectedOption, setSelectedOption] = useState(null);
+    const [showExplanation, setShowExplanation] = useState(false);
+    const [score, setScore] = useState(0);
+    const [quizFinished, setQuizFinished] = useState(false);
+    const [quizQuestions, setQuizQuestions] = useState([]);
 
-            // Priority 2: If a timed task is active, ask for confirmation
-            if (isTaskActive) {
-                Alert.alert(
-                    "Abandon Mission?",
-                    "Timer is still running. Do you want to leave?",
-                    [
-                        { text: "Stay", style: "cancel" },
-                        { text: "Leave", style: "destructive", onPress: () => navigation.goBack() }
-                    ]
-                );
-                return true;
-            }
+    // Sets State
+    const [mcqSets, setMcqSets] = useState([]);
+    const [currentSetIndex, setCurrentSetIndex] = useState(0);
+    const [flashcardSets, setFlashcardSets] = useState([]);
+    const [revisionData, setRevisionData] = useState([]);
+    const [playingIndex, setPlayingIndex] = useState(null);
+    const [setStatuses, setSetStatuses] = useState({});
+    const [userAnswers, setUserAnswers] = useState({});
 
-            // Default: Pop screen from stack
-            navigation.goBack();
+    // Use refs so the interceptor always reads the LATEST state, avoiding stale closures
+    const quizModeRef = useRef(quizMode);
+    const isTaskActiveRef = useRef(isTaskActive);
+    const navigationRef = useRef(navigation);
+    useEffect(() => { quizModeRef.current = quizMode; }, [quizMode]);
+    useEffect(() => { isTaskActiveRef.current = isTaskActive; }, [isTaskActive]);
+    useEffect(() => { navigationRef.current = navigation; }, [navigation]);
+
+    // Stable interceptor function (created once, reads from refs for latest values)
+    const stableInterceptor = useRef(() => {
+        if (quizModeRef.current) {
+            setQuizMode(false);
+            setQuizFinished(false);
+            setCurrentQuestionIndex(0);
+            setSelectedOption(null);
+            setScore(0);
+            return true; // Handled — don't pop history stack in MainScreen
+        }
+        if (isTaskActiveRef.current) {
+            Alert.alert(
+                "Abandon Mission?",
+                "Timer is still running. Do you want to leave?",
+                [
+                    { text: "Stay", style: "cancel" },
+                    { text: "Leave", style: "destructive", onPress: () => navigationRef.current.goBack() }
+                ]
+            );
             return true;
+        }
+        return false; // Not handled — let MainScreen pop the stack normally
+    });
+
+    // Register the stable interceptor ONCE on mount; unregister on unmount
+    useEffect(() => {
+        if (navigation.registerBackInterceptor) {
+            navigation.registerBackInterceptor(stableInterceptor.current);
+        }
+        return () => {
+            if (navigation.unregisterBackInterceptor) {
+                navigation.unregisterBackInterceptor();
+            }
         };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-        const backHandler = BackHandler.addEventListener(
-            "hardwareBackPress",
-            backAction
-        );
+    // Header back button: runs the interceptor, falls through to goBack() if not handled
+    const onHeaderBack = useCallback(() => {
+        const handled = stableInterceptor.current();
+        if (!handled) {
+            navigationRef.current.goBack();
+        }
+    }, []);
 
-        return () => backHandler.remove();
-    }, [isTaskActive, quizMode, navigation]);
 
     const finishTask = async () => {
         setIsTaskActive(false);
@@ -257,24 +269,6 @@ const ChapterContentScreen = ({ navigation, route }) => {
         const s = seconds % 60;
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
-
-    // Quiz State
-    const [quizMode, setQuizMode] = useState(false);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [selectedOption, setSelectedOption] = useState(null);
-    const [showExplanation, setShowExplanation] = useState(false);
-    const [score, setScore] = useState(0);
-    const [quizFinished, setQuizFinished] = useState(false);
-    const [quizQuestions, setQuizQuestions] = useState([]);
-
-    // Sets State
-    const [mcqSets, setMcqSets] = useState([]);
-    const [currentSetIndex, setCurrentSetIndex] = useState(0);
-    const [flashcardSets, setFlashcardSets] = useState([]); // New state for Flashcard sets
-    const [revisionData, setRevisionData] = useState([]); // New state for Quick Revision
-    const [playingIndex, setPlayingIndex] = useState(null); // TTS State
-    const [setStatuses, setSetStatuses] = useState({}); // Stores {'0': {status:'completed'} } for current tab
-    const [userAnswers, setUserAnswers] = useState({}); // Stores user answers for current quiz {0: 'a', 1: 'b' }
 
 
 
@@ -709,7 +703,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         <Text style={styles.restartButtonText}>Replay Set {currentSetIndex + 1}</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.backToContentButton} onPress={() => setQuizMode(false)}>
+                    <TouchableOpacity style={styles.backToContentButton} onPress={() => {
+                        setQuizMode(false);
+                        setQuizFinished(false);
+                    }}>
                         <Text style={styles.backToContentText}>Back to Sets</Text>
                     </TouchableOpacity>
                 </View>
@@ -832,6 +829,12 @@ const ChapterContentScreen = ({ navigation, route }) => {
     };
 
     const handleOpenNote = useCallback(async (item) => {
+        const netInfo = await NetInfo.fetch();
+        if (!netInfo.isConnected) {
+            Alert.alert('Offline Mode', 'You are currently offline. Please connect to the internet to view PDF notes.');
+            return;
+        }
+
         const rawPath = item.file_path || item.file_url;
         if (!rawPath) {
             Alert.alert('Error', 'File path is missing');
@@ -861,7 +864,13 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
     }, [navigation]);
 
-    const handleOpenVideo = useCallback((item) => {
+    const handleOpenVideo = useCallback(async (item) => {
+        const netInfo = await NetInfo.fetch();
+        if (!netInfo.isConnected) {
+            Alert.alert('Offline Mode', 'You are currently offline. Please connect to the internet to watch videos.');
+            return;
+        }
+
         navigation.navigate('VideoPlayer', {
             videoUrl: item.url,
             title: item.title || 'Video Lesson',
@@ -1173,20 +1182,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
                 {/* Modern Header */}
                 <View style={[styles.header, { backgroundColor: theme.background }]}>
-                    <TouchableOpacity onPress={() => {
-                        if (isTaskActive) {
-                            Alert.alert(
-                                "Abandon Mission?",
-                                "Timer is still running. Do you want to leave?",
-                                [
-                                    { text: "Stay", style: "cancel" },
-                                    { text: "Leave", style: "destructive", onPress: () => navigation.goBack() }
-                                ]
-                            );
-                        } else {
-                            navigation.goBack();
-                        }
-                    }} style={styles.backButton}>
+                    <TouchableOpacity onPress={onHeaderBack} style={styles.backButton}>
                         <View style={styles.backButtonInner}>
                             <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
                         </View>

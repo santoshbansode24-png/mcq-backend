@@ -31,9 +31,26 @@ export const SmartCacheService = {
      */
     subscribe: (callback) => {
         listeners.push(callback);
+        // Immediately notify the new subscriber with current state
+        SmartCacheService.checkSyncState();
         return () => {
             listeners = listeners.filter(l => l !== callback);
         };
+    },
+
+    /**
+     * Checks if the app is currently fully synced (no queue and completed status)
+     */
+    checkSyncState: async () => {
+        try {
+            const queue = await SmartCacheService.getSyncQueue();
+            const status = await SmartCacheService.getSyncStatus();
+            const isFullySynced = Boolean(status && status.status === 'completed' && (!queue || queue.length === 0));
+            notifyListeners({ isSyncing: isProcessing, isFullySynced });
+            return isFullySynced;
+        } catch (error) {
+            return false;
+        }
     },
 
     /**
@@ -67,6 +84,8 @@ export const SmartCacheService = {
                 if (queue && queue.length > 0 && !isProcessing) {
                     console.log(`[SmartCache] ⏯️ Resuming interrupted sync for ${queue.length} items...`);
                     await SmartCacheService.processSyncQueue();
+                } else {
+                    await SmartCacheService.checkSyncState();
                 }
                 return;
             }
@@ -96,7 +115,7 @@ export const SmartCacheService = {
             // Save queue to storage so we can resume if app closes
             await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(fullQueue));
 
-            notifyListeners({ isSyncing: true, progress: 0 });
+            notifyListeners({ isSyncing: true, isFullySynced: false, progress: 0 });
 
             // 2. Sync GLOBAL features (Vocabulary + Mental Math)
             // Get user from AsyncStorage if available
@@ -116,9 +135,11 @@ export const SmartCacheService = {
                 status: 'completed'
             }));
 
+            await SmartCacheService.checkSyncState();
             console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
         } catch (error) {
             console.error('[SmartCache] ❌ Sync failed:', error);
+            notifyListeners({ isSyncing: false, isFullySynced: false });
         }
     },
 
@@ -133,6 +154,7 @@ export const SmartCacheService = {
             let queue = await SmartCacheService.getSyncQueue();
             if (!queue || queue.length === 0) {
                 isProcessing = false;
+                await SmartCacheService.checkSyncState();
                 return;
             }
 
@@ -146,11 +168,15 @@ export const SmartCacheService = {
                 queue.shift();
                 await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
 
+                notifyListeners({ isSyncing: true, isFullySynced: false, itemsLeft: queue.length });
+
                 // Small delay to prevent blocking the UI thread too much
                 await new Promise(r => setTimeout(r, 100));
             }
+            await SmartCacheService.checkSyncState();
         } catch (error) {
             console.warn('[SmartCache] Queue processing error:', error);
+            notifyListeners({ isSyncing: false, isFullySynced: false });
         } finally {
             isProcessing = false;
         }
@@ -218,29 +244,9 @@ export const SmartCacheService = {
                 });
             }
 
-            // 3. SILENT PDF PRE-FETCHING
-            // This ensures PDFs open instantly when the user clicks them
-            if (notesRes && notesRes.status === 'success' && Array.isArray(notesRes.data)) {
-                console.log(`[SmartCache] 📥 Starting silent PDF sync for Chapter ${chapterId} (${notesRes.data.length} files)`);
-
-                for (const note of notesRes.data) {
-                    const rawPath = note.file_path || note.file_url;
-                    if (rawPath) {
-                        let remoteUrl = rawPath;
-                        if (!rawPath.startsWith('http')) {
-                            remoteUrl = `${BASE_URL}/${rawPath}`;
-                        }
-
-                        try {
-                            // Download silently in background
-                            await SmartCacheService.retry(() => getCachedFile(remoteUrl, note.title, null, true), 2, 2000);
-                            console.log(`[SmartCache] ✅ Silently cached PDF: ${note.title}`);
-                        } catch (pdfErr) {
-                            console.warn(`[SmartCache] ⚠️ Failed to silently cache PDF: ${note.title}`, pdfErr.message);
-                        }
-                    }
-                }
-            }
+            // 3. SILENT PDF PRE-FETCHING (REMOVED)
+            // User requested to explicitly skip downloading Videos and Notes to save local storage space.
+            // Notes and Videos will only be accessed when online.
         } catch (error) {
             console.warn(`[SmartCache] ❌ Failed content for chapter ${chapterId}:`, error.message);
         }

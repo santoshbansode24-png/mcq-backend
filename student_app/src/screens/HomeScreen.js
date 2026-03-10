@@ -100,6 +100,14 @@ const HomeScreen = ({ user, navigation, route }) => {
         if (isSyncing) return;
 
         setIsSyncing(true);
+
+        const queue = await SmartCacheService.getSyncQueue();
+        if (!hasUpdate && queue && queue.length > 0) {
+            console.log('[Home] Resuming interrupted sync queue manually.');
+            await SmartCacheService.processSyncQueue();
+            return;
+        }
+
         setHasUpdate(false);
 
         // Removed deleted data by clearing main class cache keys

@@ -129,14 +129,19 @@ export const SmartCacheService = {
 
             await SmartCacheService.processSyncQueue();
 
-            await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
-                lastSync: Date.now(),
-                classId: classId,
-                status: 'completed'
-            }));
+            let finalQueue = await SmartCacheService.getSyncQueue();
+            if (!finalQueue || finalQueue.length === 0) {
+                await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
+                    lastSync: Date.now(),
+                    classId: classId,
+                    status: 'completed'
+                }));
+                console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
+            } else {
+                console.warn(`[SmartCache] ⚠️ Bulk sync finished but ${finalQueue.length} items remain in queue.`);
+            }
 
             await SmartCacheService.checkSyncState();
-            console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
         } catch (error) {
             console.error('[SmartCache] ❌ Sync failed:', error);
             notifyListeners({ isSyncing: false, isFullySynced: false });
@@ -175,8 +180,9 @@ export const SmartCacheService = {
             }
             await SmartCacheService.checkSyncState();
         } catch (error) {
-            console.warn('[SmartCache] Queue processing error:', error);
+            console.warn('[SmartCache] Queue processing error. Network may have dropped:', error);
             notifyListeners({ isSyncing: false, isFullySynced: false });
+            throw error;
         } finally {
             isProcessing = false;
         }
@@ -249,6 +255,7 @@ export const SmartCacheService = {
             // Notes and Videos will only be accessed when online.
         } catch (error) {
             console.warn(`[SmartCache] ❌ Failed content for chapter ${chapterId}:`, error.message);
+            throw error; // Propagate error to processSyncQueue to abort the queue
         }
     },
 

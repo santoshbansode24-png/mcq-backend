@@ -262,11 +262,11 @@ const MyExamTestScreen = ({ navigation, route }) => {
 
                 <TouchableOpacity
                     style={styles.homeButtonWrapper}
-                    onPress={() => navigation.navigate('Home')}
+                    onPress={() => navigation.goBack()}
                     activeOpacity={0.8}
                 >
                     <LinearGradient colors={['#4f46e5', '#6366f1']} style={styles.homeButtonGradient}>
-                        <Text style={styles.homeButtonText}>Back to Home</Text>
+                        <Text style={styles.homeButtonText}>Back to List</Text>
                     </LinearGradient>
                 </TouchableOpacity>
             </ScrollView>

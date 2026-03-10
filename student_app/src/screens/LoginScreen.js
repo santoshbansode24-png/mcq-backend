@@ -22,12 +22,9 @@ const LoginScreen = ({ navigation }) => {
     const [googleLoading, setGoogleLoading] = useState(false);
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        clientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',       // Web client
-        webClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',    // Web client
-        androidClientId: '228101833572-hqsvf7i9tb4bbqs22ec261ns8ducmfpp.apps.googleusercontent.com', // Android client
-        iosClientId: '228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com',
+        clientId: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com',
         redirectUri: AuthSession.makeRedirectUri({
-            scheme: 'com.veeru.app',
+            useProxy: true,
         }),
     });
 
@@ -59,11 +56,14 @@ const LoginScreen = ({ navigation }) => {
             setGoogleLoading(false);
 
             if (data && data.status === 'success') {
-                await AsyncStorage.setItem('user_data', JSON.stringify(data.data));
-                if (data.is_new_user) {
-                    navigation.replace('Setup', { user: data.data });
+                const userData = data.data;
+                await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+
+                // Check if user needs setup (new user or missing critical info)
+                if (userData.is_new_user || !userData.class_id || !userData.board_type) {
+                    navigation.replace('Setup', { user: userData });
                 } else {
-                    navigation.replace('Main', { user: data.data });
+                    navigation.replace('Main', { user: userData });
                 }
             } else if (data && data.status === 'new_user') {
                 // Not a user yet, redirect to full registration screen with pre-filled data
@@ -225,27 +225,31 @@ const LoginScreen = ({ navigation }) => {
                     </TouchableOpacity>
 
                     {/* OR Separator */}
-                    <View style={styles.separatorContainer}>
-                        <View style={styles.separatorLine} />
-                        <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
-                        <View style={styles.separatorLine} />
-                    </View>
+                    {false && (
+                        <View style={styles.separatorContainer}>
+                            <View style={styles.separatorLine} />
+                            <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
+                            <View style={styles.separatorLine} />
+                        </View>
+                    )}
 
                     {/* Google Login Button */}
-                    <TouchableOpacity
-                        style={styles.googleButton}
-                        onPress={handleGoogleSignIn}
-                        disabled={googleLoading}
-                    >
-                        {googleLoading ? (
-                            <ActivityIndicator color="#4f46e5" />
-                        ) : (
-                            <View style={styles.googleButtonContent}>
-                                <Ionicons name="logo-google" size={20} color="#EA4335" />
-                                <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                    {false && (
+                        <TouchableOpacity
+                            style={styles.googleButton}
+                            onPress={handleGoogleSignIn}
+                            disabled={googleLoading}
+                        >
+                            {googleLoading ? (
+                                <ActivityIndicator color="#4f46e5" />
+                            ) : (
+                                <View style={styles.googleButtonContent}>
+                                    <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    )}
 
                     {window.lastError && !loading && (
                         <Text style={styles.errorText}>

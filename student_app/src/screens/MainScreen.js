@@ -103,6 +103,15 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     const [historyStack, setHistoryStack] = useState([{ screen: 'Home', params: {} }]);
     const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
 
+    // Back Intercept Ref: child screens can register a function here to intercept back
+    const backInterceptorRef = useRef(null);
+    const registerBackInterceptor = useCallback((fn) => {
+        backInterceptorRef.current = fn;
+    }, []);
+    const unregisterBackInterceptor = useCallback(() => {
+        backInterceptorRef.current = null;
+    }, []);
+
     // User State
     const [userState, setUserState] = useState(route.params?.user);
 
@@ -226,6 +235,12 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
 
     // Handle Hardware Back Button
     const handleGoBack = useCallback(() => {
+        // First, give current screen a chance to intercept (e.g., ChapterContent in quizMode)
+        if (backInterceptorRef.current) {
+            const intercepted = backInterceptorRef.current();
+            if (intercepted) return true; // Screen handled it internally, don't pop stack
+        }
+
         if (historyStack.length > 1) {
             // Pop current screen
             setHistoryStack(prev => prev.slice(0, -1));
@@ -283,7 +298,9 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             navigate: handleNavigate,
             goBack: handleGoBack,
             replace: parentNavigation.replace,
-            addListener: () => { }
+            addListener: () => { },
+            registerBackInterceptor,
+            unregisterBackInterceptor,
         },
         route: { params: viewParams }
     };

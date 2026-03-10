@@ -55,16 +55,9 @@ const RegisterScreen = ({ navigation, route }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId:
-      "228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com", // Web client
-    webClientId:
-      "228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com", // Web client
-    androidClientId:
-      "228101833572-hqsvf7i9tb4bbqs22ec261ns8ducmfpp.apps.googleusercontent.com", // Android client
-    iosClientId:
-      "228101833572-dc32st1ped33r02uulbmoffp0v05uhg.apps.googleusercontent.com",
+    clientId: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com',
     redirectUri: AuthSession.makeRedirectUri({
-      scheme: "com.veeru.app",
+      useProxy: true,
     }),
   });
 
@@ -106,11 +99,12 @@ const RegisterScreen = ({ navigation, route }) => {
       setGoogleLoading(false);
 
       if (data && data.status === "success") {
-        await AsyncStorage.setItem("user_data", JSON.stringify(data.data));
-        if (data.is_new_user || !data.data.class_id || !data.data.board_type) {
-          navigation.replace("Setup", { user: data.data });
+        const userData = data.data;
+        await AsyncStorage.setItem("user_data", JSON.stringify(userData));
+        if (userData.is_new_user || !userData.class_id || !userData.board_type) {
+          navigation.replace("Setup", { user: userData });
         } else {
-          navigation.replace("Main", { user: data.data });
+          navigation.replace("Main", { user: userData });
         }
       } else if (data && data.status === "new_user") {
         // Pre-fill form with Google data
@@ -550,27 +544,31 @@ const RegisterScreen = ({ navigation, route }) => {
           </TouchableOpacity>
 
           {/* OR Separator */}
-          <View style={styles.separatorContainer}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
-            <View style={styles.separatorLine} />
-          </View>
+          {false && (
+            <View style={styles.separatorContainer}>
+              <View style={styles.separatorLine} />
+              <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
+              <View style={styles.separatorLine} />
+            </View>
+          )}
 
           {/* Google Login Button */}
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#4f46e5" />
-            ) : (
-              <View style={styles.googleButtonContent}>
-                <Ionicons name="logo-google" size={20} color="#EA4335" />
-                <Text style={styles.googleButtonText}>Sign up with Google</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {false && (
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#4f46e5" />
+              ) : (
+                <View style={styles.googleButtonContent}>
+                  <Ionicons name="logo-google" size={20} color="#EA4335" />
+                  <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
 
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>

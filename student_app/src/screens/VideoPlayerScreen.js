@@ -1,52 +1,35 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, StatusBar, BackHandler, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar, BackHandler, useWindowDimensions } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { Video, ResizeMode, VideoFullscreenUpdate } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL, API_URL } from '../api/config';
-import { LinearGradient } from 'expo-linear-gradient';
+import { API_URL, BASE_URL } from '../api/config';
 
 const VideoPlayerScreen = ({ route, navigation }) => {
-    const { width, height } = useWindowDimensions();
+    const { width } = useWindowDimensions();
     const { videoUrl, title, activeTask } = route.params || {};
     const [playing, setPlaying] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [isReady, setIsReady] = useState(false); // Track if video is ready to play
 
     const onStateChange = useCallback((state) => {
-        if (state === "ended") {
-            setPlaying(false);
-        }
-        if (state === "playing") {
-            setIsReady(true);
-        }
-        if (state === "buffering") {
-            // Optional: You could show a smaller spinner here, 
-            // but for now we'll let the native YouTube spinner handle it to avoid flickering
-        }
+        if (state === 'ended') setPlaying(false);
     }, []);
 
-    const onReadyHandler = useCallback(() => {
-        setIsReady(true);
-    }, []);
-
-    // Full screen toggle handler
-    const onFullScreenChange = useCallback((isFullScreen) => {
-        setIsFullScreen(isFullScreen);
-        if (isFullScreen) {
+    const onFullScreenChange = useCallback((fullScreen) => {
+        setIsFullScreen(fullScreen);
+        if (fullScreen) {
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
         } else {
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
         }
     }, []);
 
-    // Timer State and Logic
+    // Timer State
     const [taskTimer, setTaskTimer] = useState(0);
     const [isTaskActive, setIsTaskActive] = useState(false);
 
-    // Initial Timer Setup
     React.useEffect(() => {
         if (activeTask && !isTaskActive) {
             setTaskTimer(activeTask.duration_minutes * 60);
@@ -54,7 +37,7 @@ const VideoPlayerScreen = ({ route, navigation }) => {
         }
     }, [activeTask, isTaskActive]);
 
-    // Handle physical back button
+    // Hardware back button
     React.useEffect(() => {
         const backAction = () => {
             if (isFullScreen) {
@@ -63,30 +46,24 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                 return true;
             }
             navigation.goBack();
-            return true; // Prevent default behavior
+            return true;
         };
-
-        const backHandler = BackHandler.addEventListener(
-            "hardwareBackPress",
-            backAction
-        );
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
         return () => backHandler.remove();
     }, [isFullScreen, navigation]);
 
-    // Force reset to Portrait when leaving VideoPlayer (on unmount)
+    // Reset orientation on unmount
     React.useEffect(() => {
         return () => {
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
         };
     }, []);
 
-    // Countdown Logic
+    // Countdown
     React.useEffect(() => {
         let interval = null;
         if (isTaskActive && taskTimer > 0) {
-            interval = setInterval(() => {
-                setTaskTimer((prev) => prev - 1);
-            }, 1000);
+            interval = setInterval(() => setTaskTimer(p => p - 1), 1000);
         } else if (taskTimer === 0 && isTaskActive) {
             finishTask();
         }
@@ -96,11 +73,9 @@ const VideoPlayerScreen = ({ route, navigation }) => {
     const finishTask = async () => {
         setIsTaskActive(false);
         try {
-            // Get User ID
             const userDataStr = await AsyncStorage.getItem('user_data');
             const userData = userDataStr ? JSON.parse(userDataStr) : null;
             const userId = userData?.user_id || userData?.id;
-
             if (userId && activeTask) {
                 await axios.post(`${API_URL}/update_task_status.php`, {
                     user_id: userId,
@@ -120,143 +95,94 @@ const VideoPlayerScreen = ({ route, navigation }) => {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    // Robust Video ID Extractor
+    // Extract YouTube video ID
     const getVideoId = (url) => {
         if (!url) return null;
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
         if (match && match[2]) {
             const cleanId = match[2].replace(/[^a-zA-Z0-9_-]/g, '');
-            if (cleanId.length >= 11) {
-                return cleanId.substring(0, 11);
-            }
+            return cleanId.length >= 11 ? cleanId.substring(0, 11) : null;
         }
         return null;
     };
 
     const videoId = useMemo(() => getVideoId(videoUrl), [videoUrl]);
-    const thumbnailUrl = useMemo(() => videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null, [videoId]);
 
-    // Construct full URL for non-YouTube videos
     const getFullVideoUrl = (url) => {
         if (!url) return null;
         if (url.startsWith('http')) return url;
-        const cleanPath = url.startsWith('/') ? url.substring(1) : url;
-        return `${BASE_URL}/${cleanPath}`;
+        return `${BASE_URL}/${url.startsWith('/') ? url.substring(1) : url}`;
     };
-
     const fullVideoUrl = getFullVideoUrl(videoUrl);
 
     return (
         <View style={styles.container}>
-            <StatusBar hidden={isFullScreen} barStyle="light-content" backgroundColor="black" translucent />
+            <StatusBar barStyle="light-content" backgroundColor="black" />
 
-            {/* Header - Only visible in Portrait */}
+            {/* Header */}
             {!isFullScreen && (
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-                        <Text style={styles.closeText}>✕ Close</Text>
+                        <Text style={styles.closeText}>← Back</Text>
                     </TouchableOpacity>
-                    <Text style={styles.title} numberOfLines={1}>{title || 'Video Player'}</Text>
-                </View>
-            )}
+                    <Text style={styles.title} numberOfLines={1}>{title || 'Video'}</Text>
 
-            {/* Timer Overlay */}
-            {isTaskActive && !isFullScreen && (
-                <View style={styles.timerOverlay}>
-                    <Text style={styles.timerText}>⏳ {formatTimer(taskTimer)}</Text>
-                    <TouchableOpacity onPress={finishTask} style={styles.finishBtn}>
-                        <Text style={styles.finishBtnText}>Done</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            <View style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}>
-
-                {/* Loading State Overlay */}
-                {!isReady && (
-                    <View style={styles.loadingOverlay}>
-                        {thumbnailUrl ? (
-                            <Image
-                                source={{ uri: thumbnailUrl }}
-                                style={[StyleSheet.absoluteFill, { opacity: 0.4 }]}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a1a1a' }]} />
-                        )}
-                        <View style={styles.loadingInfo}>
-                            <ActivityIndicator size="large" color="#ffffff" />
-                            <Text style={styles.loadingText}>Preparing high-quality video...</Text>
-                            <Text style={styles.bufferingSubtext}>Optimization in progress</Text>
+                    {isTaskActive && (
+                        <View style={styles.timerBadge}>
+                            <Text style={styles.timerText}>⏳ {formatTimer(taskTimer)}</Text>
                         </View>
-                    </View>
-                )}
-
-                <View style={isFullScreen ? styles.fullScreenContainer : styles.videoContainer}>
-                    {videoId ? (
-                        <View style={styles.youtubeWrapper}>
-                            <YoutubePlayer
-                                height={isFullScreen ? height : width * 9 / 16}
-                                width={width}
-                                play={playing}
-                                videoId={videoId}
-                                onChangeState={onStateChange}
-                                onReady={onReadyHandler}
-                                onFullScreenChange={onFullScreenChange}
-                                initialPlayerParams={{
-                                    controls: 1, // Enable standard YouTube controls
-                                    modestbranding: 0, // Show YouTube branding
-                                    rel: 0,
-                                    playsinline: 1,
-                                    fs: 1, // Enable Fullscreen button
-                                }}
-                                // Enable Hardware Acceleration for WebView
-                                webViewProps={{
-                                    allowsInlineMediaPlayback: true,
-                                    javaScriptEnabled: true,
-                                    domStorageEnabled: true,
-                                    renderToHardwareTextureAndroid: true,
-                                    androidLayerType: 'hardware',
-                                    startInLoadingState: false, // Performance tweak
-                                }}
-                                // Performance: Ensure player is only as large as needed
-                                forceAndroidAutoplay={true}
-                            />
-                        </View>
-                    ) : (
-                        <Video
-                            style={styles.video}
-                            source={{ uri: fullVideoUrl }}
-                            useNativeControls
-                            resizeMode={ResizeMode.CONTAIN}
-                            isLooping={false}
-                            shouldPlay={true}
-                            onLoadStart={() => setIsReady(false)}
-                            onLoad={() => setIsReady(true)}
-                            onError={(e) => console.log('Video Error:', e)}
-                            onFullscreenUpdate={async ({ fullscreenUpdate }) => {
-                                if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_PRESENT || fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
-                                    setIsFullScreen(true);
-                                    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-                                } else if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_DISMISS || fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
-                                    setIsFullScreen(false);
-                                    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
-                                }
-                            }}
-                        />
                     )}
                 </View>
+            )}
+
+            {/* Video Player */}
+            <View style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}>
+                {videoId ? (
+                    <YoutubePlayer
+                        height={width * 9 / 16}
+                        width={width}
+                        play={playing}
+                        videoId={videoId}
+                        onChangeState={onStateChange}
+                        onFullScreenChange={onFullScreenChange}
+                        initialPlayerParams={{ controls: 1, rel: 0, playsinline: 1 }}
+                        webViewProps={{
+                            allowsInlineMediaPlayback: true,
+                            javaScriptEnabled: true,
+                            domStorageEnabled: true,
+                        }}
+                        forceAndroidAutoplay={true}
+                    />
+                ) : (
+                    <Video
+                        style={styles.video}
+                        source={{ uri: fullVideoUrl }}
+                        useNativeControls
+                        resizeMode={ResizeMode.CONTAIN}
+                        shouldPlay={true}
+                        onFullscreenUpdate={async ({ fullscreenUpdate }) => {
+                            if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_PRESENT) {
+                                setIsFullScreen(true);
+                                await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+                            } else if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_DISMISS) {
+                                setIsFullScreen(false);
+                                await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+                            }
+                        }}
+                    />
+                )}
             </View>
 
-            {/* Footer / Info Section */}
-            {!isFullScreen && isReady && (
+            {/* Simple Now Playing label */}
+            {!isFullScreen && (
                 <View style={styles.infoSection}>
-                    <View style={styles.qualityBadge}>
-                        <Text style={styles.qualityText}>Full HD Playback</Text>
-                    </View>
-                    <Text style={styles.nowPlaying}>Now Playing: {title}</Text>
-                    <Text style={[styles.subText, { color: '#94a3b8' }]}>Please wait for buffering if your internet is slow.</Text>
+                    <Text style={styles.nowPlaying} numberOfLines={2}>{title || 'Now Playing'}</Text>
+                    {isTaskActive && (
+                        <TouchableOpacity onPress={finishTask} style={styles.finishBtn}>
+                            <Text style={styles.finishBtnText}>✓ Mark Task Done</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
         </View>
@@ -264,164 +190,55 @@ const VideoPlayerScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: 'black',
-    },
+    container: { flex: 1, backgroundColor: '#000' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
-        paddingTop: 40,
-        backgroundColor: 'rgba(0,0,0,0.9)',
-        borderBottomWidth: 1,
-        borderBottomColor: '#334155',
+        paddingHorizontal: 16,
+        paddingTop: 44,
+        paddingBottom: 12,
+        backgroundColor: '#000',
     },
-    closeButton: {
-        padding: 10,
-        marginRight: 10,
-    },
-    closeText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-        fontFamily: 'NotoSans-Bold',
-    },
-    title: {
-        color: 'white',
-        fontSize: 16,
-        flex: 1,
-        fontFamily: 'NotoSans-Bold',
-    },
-    timerOverlay: {
-        position: 'absolute',
-        top: 40,
-        right: 20,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        padding: 8,
-        borderRadius: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        zIndex: 2000,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-    },
-    timerOverlayFullScreen: {
-        top: 20,
-        right: 50,
-    },
-    timerText: {
-        color: 'white',
-        fontWeight: 'bold',
-        marginRight: 10,
-        fontVariant: ['tabular-nums'],
-        fontFamily: 'NotoSans-Bold',
-    },
-    finishBtn: {
-        backgroundColor: '#7e22ce',
+    closeButton: { paddingRight: 12 },
+    closeText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    title: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '600' },
+    timerBadge: {
+        backgroundColor: 'rgba(255,255,255,0.15)',
         paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginLeft: 8,
     },
-    finishBtnText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 12,
-        fontFamily: 'NotoSans-Bold',
-    },
+    timerText: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
     videoWrapper: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        width: '100%',
+        aspectRatio: 16 / 9,
         backgroundColor: '#000',
     },
     fullScreenWrapper: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        bottom: 0,
-        right: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         zIndex: 999,
     },
-    loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        zIndex: 10,
-        backgroundColor: '#000',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingInfo: {
-        alignItems: 'center',
-        padding: 20,
-    },
-    loadingText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginTop: 20,
-        textAlign: 'center',
-        fontFamily: 'NotoSans-Bold',
-    },
-    bufferingSubtext: {
-        color: '#94a3b8',
-        fontSize: 13,
-        marginTop: 8,
-        fontFamily: 'NotoSans-Regular',
-    },
-    videoContainer: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    fullScreenContainer: {
-        width: '100%',
-        height: '100%',
-        aspectRatio: undefined,
-    },
-    youtubeWrapper: {
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    video: {
-        width: '100%',
-        height: '100%',
-    },
+    video: { width: '100%', height: '100%' },
     infoSection: {
-        padding: 24,
-        backgroundColor: '#0f172a',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        marginTop: -20,
-        flex: 1,
-    },
-    qualityBadge: {
-        backgroundColor: '#334155',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 8,
-        marginBottom: 16,
-    },
-    qualityText: {
-        color: '#f8fafc',
-        fontSize: 11,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
+        padding: 16,
+        backgroundColor: '#111',
     },
     nowPlaying: {
-        color: 'white',
-        fontSize: 20,
-        fontWeight: '800',
-        fontFamily: 'NotoSans-Bold',
-        marginBottom: 8,
+        color: '#e2e8f0',
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 12,
     },
-    subText: {
-        fontSize: 14,
-        fontFamily: 'NotoSans-Regular',
-    }
+    finishBtn: {
+        backgroundColor: '#7e22ce',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        alignSelf: 'flex-start',
+    },
+    finishBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
 });
 
 export default VideoPlayerScreen;

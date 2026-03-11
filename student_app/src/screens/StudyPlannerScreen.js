@@ -1,603 +1,415 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Animated, Image, Modal, Alert, ActivityIndicator, Dimensions
+    ActivityIndicator, Dimensions, Alert, StatusBar
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import config from '../api/config';
 import axios from 'axios';
-
-import { fetchSubjects } from '../api/subjects';
-import { fetchChapters } from '../api/chapters';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
-// --- Components ---
-
-const LevelBadge = ({ level, xp, theme }) => (
-    <View style={[styles.levelBadge, { backgroundColor: theme.cardBg }]}>
-        <View style={styles.levelCircle}>
-            <Text style={styles.levelText}>{level}</Text>
-        </View>
-        <View style={styles.xpBarContainer}>
-            <Text style={[styles.xpText, { color: theme.textSecondary }]}>Level {level} Explorer</Text>
-            <View style={styles.xpTrack}>
-                <View style={[styles.xpFill, { width: `${Math.min(xp % 1000 / 10, 100)}%` }]} />
-            </View>
-        </View>
-    </View>
-);
-
-const StreakFlame = ({ streak }) => (
-    <View style={styles.streakContainer}>
-        <Ionicons name="flame" size={32} color="#FF5722" />
-        <Text style={styles.streakText}>{streak}</Text>
-    </View>
-);
-
-const TaskCard = ({ task, onPress, theme }) => {
-    const isCompleted = task.status === 'completed';
-    return (
-        <TouchableOpacity
-            style={[styles.taskCard, { backgroundColor: theme.cardBg, borderColor: isCompleted ? '#4CAF50' : 'transparent', borderWidth: 2 }]}
-            onPress={() => onPress(task)}
-            disabled={isCompleted}
-        >
-            <View style={[styles.taskIcon, { backgroundColor: isCompleted ? '#E8F5E9' : '#FFF3E0' }]}>
-                <Ionicons
-                    name={isCompleted ? "checkmark-circle" : (task.task_type === 'video' ? "play-circle" : "book")}
-                    size={28}
-                    color={isCompleted ? "#4CAF50" : "#FF9800"}
-                />
-            </View>
-            <View style={styles.taskInfo}>
-                <Text style={[styles.taskSubject, { color: theme.textSecondary }]}>{task.subject}</Text>
-                <Text style={[styles.taskTitle, { color: theme.text }]}>{task.title}</Text>
-                <View style={styles.taskMeta}>
-                    <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
-                    <Text style={[styles.taskMetaText, { color: theme.textSecondary }]}>{task.duration_minutes} min</Text>
-                    <Text style={[styles.xpBadge, { color: '#6A1B9A' }]}>+{task.xp_reward} XP</Text>
-                </View>
-            </View>
-            {isCompleted && (
-                <View style={styles.completedBadge}>
-                    <Text style={styles.completedText}>DONE</Text>
-                </View>
-            )}
-        </TouchableOpacity>
-    );
-};
-
-// --- Main Screen ---
-
-const StudyPlannerScreen = ({ user, navigation, route }) => {
+const StudyPlannerScreen = ({ user, navigation }) => {
     const { theme } = useTheme();
 
+    // --- State ---
     const [loading, setLoading] = useState(true);
-    const [planExists, setPlanExists] = useState(false); // Only used for initial load check?
-    const [showWizard, setShowWizard] = useState(true); // Controls view - DEFAULT TO WIZARD
-    const [tasks, setTasks] = useState([]);
-    const [stats, setStats] = useState({ level: 1, current_streak: 0, total_xp: 0 });
+    const [isConfigured, setIsConfigured] = useState(false);
+    const [wizardStep, setWizardStep] = useState(1);
+    const [roadmap, setRoadmap] = useState([]);
 
-    // Wizard State
-    const [wizardStep, setWizardStep] = useState(1); // 1: Time, 2: Subject, 3: Chapter
+    // Form Data
+    const [examDate, setExamDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    
+    // Selection State
     const [availableSubjects, setAvailableSubjects] = useState([]);
-    const [selectedSubjects, setSelectedSubjects] = useState([]); // Array of Subject IDs (Single for now)
-    const [availableChapters, setAvailableChapters] = useState([]);
-    const [selectedChapter, setSelectedChapter] = useState(null); // Chapter ID
-    const [selectedHours, setSelectedHours] = useState(2); // In hours (0.25, 0.5, etc.)
-
-    // Focus Timer
-    const [activeTask, setActiveTask] = useState(null);
-    const [timerVisible, setTimerVisible] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(0);
-    const [isTimerRunning, setIsTimerRunning] = useState(false);
+    const [selectedSubjects, setSelectedSubjects] = useState([]); // Track subject IDs
+    const [allChapters, setAllChapters] = useState([]); // Flat list of all chapters for current subjects
+    const [selectedChapters, setSelectedChapters] = useState([]); // Track EXACT chapter IDs to include
+    const [loadingChapters, setLoadingChapters] = useState(false);
 
     useEffect(() => {
-        fetchData();
-        if (user?.class_id) {
-            loadSubjects();
-        }
+        checkExistingPlan();
+        fetchSyllabusInfo();
     }, [user]);
 
-    const fetchData = async () => {
-        setLoading(true);
+    const checkExistingPlan = async () => {
         try {
-            // Check for existing goals/tasks
-            const res = await axios.get(`${config.API_URL}/get_daily_tasks.php?user_id=${user.user_id}`);
-            if (res.data.status === 'success') {
-                setTasks(res.data.data.tasks);
-                setStats(res.data.data.stats);
+            const res = await axios.get(`${config.API_URL}/get_study_status.php?user_id=${user.user_id}`);
+            if (res.data.status === 'success' && res.data.is_configured) {
+                setIsConfigured(true);
+                setExamDate(new Date(res.data.exam_date));
+                fetchRoadmap();
+            }
+        } catch (error) {
+            console.log("No existing plan found");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-                const hasTasks = res.data.data.tasks.length > 0;
-                setPlanExists(hasTasks);
-                // Don't auto-hide wizard - let user control it
+    const fetchRoadmap = async () => {
+        try {
+            const res = await axios.get(`${config.API_URL}/get_roadmap.php?user_id=${user.user_id}`);
+            if (res.data.status === 'success') {
+                setRoadmap(res.data.data);
             }
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
         }
     };
 
-    const loadSubjects = async () => {
+    const fetchSyllabusInfo = async () => {
         try {
-            const response = await fetchSubjects(user.class_id);
-            if (response.status === 'success') {
-                setAvailableSubjects(response.data);
+            const response = await axios.get(`${config.API_URL}/get_subjects.php?class_id=${user.class_id}`);
+            if (response.data.status === 'success') {
+                setAvailableSubjects(response.data.data);
             }
         } catch (error) {
-            console.log("Error loading subjects", error);
+            console.log("Error fetching subjects", error);
         }
     };
 
-    const loadChapters = async (subjectId) => {
-        setLoading(true);
+    // When subjects change, fetch their chapters
+    useEffect(() => {
+        if (selectedSubjects.length > 0) {
+            fetchSelectedChapters();
+        } else {
+            setAllChapters([]);
+            setSelectedChapters([]);
+        }
+    }, [selectedSubjects]);
+
+    const fetchSelectedChapters = async () => {
+        setLoadingChapters(true);
         try {
-            const response = await fetchChapters(subjectId);
-            if (response.status === 'success') {
-                setAvailableChapters(response.data);
-                if (response.data.length > 0) {
-                    setWizardStep(3); // Move to Chapter Step
-                } else {
-                    Alert.alert("No Chapters", "No chapters found for this subject.");
+            const chapterPromises = selectedSubjects.map(sid => 
+                axios.get(`${config.API_URL}/get_chapters.php?subject_id=${sid}`)
+            );
+            const results = await Promise.all(chapterPromises);
+            
+            let combinedChapters = [];
+            results.forEach((res, index) => {
+                if (res.data.status === 'success') {
+                    const subjectName = availableSubjects.find(s => s.subject_id === selectedSubjects[index])?.subject_name;
+                    const chaptersWithMeta = res.data.data.map(ch => ({ 
+                        ...ch, 
+                        subject_name: subjectName 
+                    }));
+                    combinedChapters = [...combinedChapters, ...chaptersWithMeta];
                 }
-            }
+            });
+            
+            setAllChapters(combinedChapters);
+            // Default select ALL chapters when a subject is added
+            const newChapterIds = combinedChapters.map(c => c.chapter_id);
+            setSelectedChapters(newChapterIds);
+            
         } catch (error) {
-            console.error("Error loading chapters", error);
-            Alert.alert("Error", "Could not load chapters.");
+            console.error("Error fetching chapters", error);
         } finally {
-            setLoading(false);
+            setLoadingChapters(false);
         }
     };
 
-    const createPlan = async () => {
-        // Validation
-        if (selectedSubjects.length === 0) {
-            Alert.alert("Step Missed", "Please select a subject.");
+    const handleDateChange = (event, selectedDate) => {
+        setShowDatePicker(false);
+        if (selectedDate) setExamDate(selectedDate);
+    };
+
+    const toggleSubject = (id) => {
+        if (selectedSubjects.includes(id)) {
+            setSelectedSubjects(selectedSubjects.filter(sid => sid !== id));
+        } else {
+            setSelectedSubjects([...selectedSubjects, id]);
+        }
+    };
+
+    const toggleChapter = (id) => {
+        if (selectedChapters.includes(id)) {
+            setSelectedChapters(selectedChapters.filter(cid => cid !== id));
+        } else {
+            setSelectedChapters([...selectedChapters, id]);
+        }
+    };
+
+    const savePlan = async () => {
+        if (selectedChapters.length === 0) {
+            Alert.alert("Selection Required", "Please select at least one chapter to build your roadmap.");
             return;
         }
-
-        // For this new flow, Chapter selection is highly recommended but we could technically allow skipping?
-        // But user request was specific. Let's enforce chapter selection if we are in this flow.
-        if (wizardStep === 3 && !selectedChapter) {
-            Alert.alert("Choose Chapter", "Please select a chapter to focus on.");
-            return;
-        }
-
         setLoading(true);
         try {
-            const res = await axios.post(`${config.API_URL}/create_study_plan.php`, {
+            // Updated setup_syllabus_path.php will need to handle array of chapter_ids
+            const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {
                 user_id: user.user_id,
-                focus_subjects: selectedSubjects,
-                target_hours: selectedHours,
-                chapter_id: selectedChapter, // Send Chapter ID
-                goal_type: 'daily_habit' // Default
+                exam_date: examDate.toISOString().split('T')[0],
+                subject_ids: selectedSubjects,
+                chapter_ids: selectedChapters // We send the specific chapters chosen
             });
-
             if (res.data.status === 'success') {
-                // Reset wizard state
-                setWizardStep(1);
-                setSelectedSubjects([]);
-                setSelectedChapter(null);
-                setAvailableChapters([]);
-                setShowWizard(false);
-
-                setPlanExists(true);
-                fetchData();
+                setIsConfigured(true);
+                fetchRoadmap();
             }
         } catch (error) {
-            console.error("Create Plan Error:", error);
-            const msg = error.response?.data?.message || error.message || "Failed to create plan.";
-            Alert.alert("Plan Creation Failed", msg);
+            Alert.alert("Error", "Failed to save plan.");
         } finally {
             setLoading(false);
         }
     };
 
-    // --- Navigation Logic ---
-    const handleTaskNavigation = (task) => {
-        if (task.status === 'completed') return;
-
-        // If no chapter ID (e.g., generic revision), fallback to modal timer
-        if (!task.chapter_id) {
-            startTask(task);
+    const handleTaskPress = (task) => {
+        if (task.status === 'completed') {
+            Alert.alert("Goal Achieved", "You have already mastered this session!");
             return;
         }
-
-        const taskParams = {
-            activeTask: {
-                ...task,
-                // Ensure ID is passed as number if needed
-                task_id: parseInt(task.task_id),
-                duration_minutes: parseInt(task.duration_minutes),
-                xp_reward: parseInt(task.xp_reward)
-            }
-        };
-
+        
         const chapterData = {
             chapter_id: task.chapter_id,
-            chapter_name: task.title.split(': ')[1]?.split(' (')[0] || task.title,
-            subject_id: task.subject_id || 0 // Fallback if missing, though ChapterContent mostly needs chapter_id
+            chapter_name: task.title.split(': ').pop(),
+            subject_name: task.subject
         };
 
-        // Determine Destination
-        switch (task.task_type) {
-            case 'quiz':
-                // Check if it's Flashcards based on Title (since type is shared)
-                if (task.title.toLowerCase().includes('flashcard')) {
-                    navigation.navigate('ChapterContent', {
-                        chapter: chapterData,
-                        initialTab: 'Flashcards',
-                        ...taskParams
-                    });
-                } else {
-                    // Default to MCQs
-                    navigation.navigate('ChapterContent', {
-                        chapter: chapterData,
-                        initialTab: 'MCQs',
-                        ...taskParams
-                    });
-                }
-                break;
-
-            case 'video':
-                // If we had a specific video URL, we'd go to VideoPlayer.
-                // But tasks usually just say "Watch: Chapter Name".
-                // So go to ChapterContent -> Videos tab
-                navigation.navigate('ChapterContent', {
-                    chapter: chapterData,
-                    initialTab: 'Videos',
-                    ...taskParams
-                });
-                break;
-
-            case 'revision':
-                // Notes or Quick Revision
-                if (task.title.toLowerCase().includes('quick revision')) {
-                    navigation.navigate('ChapterContent', {
-                        chapter: chapterData,
-                        initialTab: 'QuickRevision',
-                        ...taskParams
-                    });
-                } else {
-                    navigation.navigate('ChapterContent', {
-                        chapter: chapterData,
-                        initialTab: 'Notes',
-                        ...taskParams
-                    });
-                }
-                break;
-
-            default:
-                // Fallback for custom types
-                startTask(task);
+        if (task.task_type === 'quiz') {
+            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'MCQs' });
+        } else if (task.task_type === 'video') {
+            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'Videos' });
+        } else if (task.task_type === 'flashcard') {
+            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'Flashcards' });
+        } else {
+            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'Notes' });
         }
     };
 
-    // --- Timer Logic (Modal - Fallback) ---
-    useEffect(() => {
-        let interval = null;
-        if (isTimerRunning && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0 && isTimerRunning) {
-            completeTask();
-        }
-        return () => clearInterval(interval);
-    }, [isTimerRunning, timeLeft]);
-
-    const startTask = (task) => {
-        setActiveTask(task);
-        setTimeLeft(task.duration_minutes * 60); // Convert mins to seconds
-        setTimerVisible(true);
-        setIsTimerRunning(false); // User must press start in modal
-    };
-
-    const completeTask = async () => {
-        setIsTimerRunning(false);
-        setTimerVisible(false);
-
-        try {
-            await axios.post(`${config.API_URL}/update_task_status.php`, {
-                user_id: user.user_id,
-                task_id: activeTask.task_id,
-                status: 'completed'
-            });
-            Alert.alert("Mission Complete!", `You earned ${activeTask.xp_reward} XP!`);
-            fetchData(); // Refresh list
-        } catch (error) {
-            console.error(error);
+    const getTaskStyle = (type, isCompleted) => {
+        if (isCompleted) return { color: '#4CAF50', icon: 'checkmark-circle', label: 'Done' };
+        switch (type) {
+            case 'video': return { color: '#6200EA', icon: 'play-circle-outline', label: 'Video' };
+            case 'quiz': return { color: '#E65100', icon: 'medal-outline', label: 'Quiz' };
+            case 'notes': return { color: '#0091EA', icon: 'document-text-outline', label: 'Notes' };
+            case 'flashcard': return { color: '#D500F9', icon: 'layers-outline', label: 'Cards' };
+            default: return { color: '#455A64', icon: 'star-outline', label: 'Goal' };
         }
     };
 
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    };
+    if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#4F46E5" /></View>;
 
-    // --- Onboarding Wizard (Multi-Step: Time -> Subject -> Chapter) ---
-    if (showWizard && !loading) {
+    if (isConfigured) {
         return (
-            <View style={[styles.container, { backgroundColor: theme.background }]}>
-                <LinearGradient colors={['#FF9800', '#F57C00']} style={styles.wizardHeader}>
-                    {wizardStep > 1 && (
-                        <TouchableOpacity
-                            style={{ position: 'absolute', top: 50, left: 20, zIndex: 10 }}
-                            onPress={() => setWizardStep(prev => prev - 1)}
-                        >
-                            <Ionicons name="arrow-back" size={28} color="white" />
-                        </TouchableOpacity>
-                    )}
-                    {tasks.length > 0 && wizardStep === 1 && (
-                        <TouchableOpacity
-                            style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 }}
-                            onPress={() => setShowWizard(false)}
-                        >
-                            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>View Tasks</Text>
-                        </TouchableOpacity>
-                    )}
-                    <Text style={styles.wizardTitle}>
-                        {wizardStep === 1 ? "Pick Duration ⏳" : wizardStep === 2 ? "Pick Subject 📚" : "Pick Chapter 🎯"}
-                    </Text>
-                    <Text style={{ color: 'white', opacity: 0.9, marginTop: 5 }}>Step {wizardStep} of 3</Text>
+            <View style={styles.container}>
+                <LinearGradient colors={['#1A237E', '#4F46E5']} style={styles.modernHeader}>
+                    <View style={styles.headerTop}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}><Ionicons name="arrow-back" size={26} color="white" /></TouchableOpacity>
+                        <View style={styles.headerInfoText}>
+                            <Text style={styles.headerTitle}>Victory Pipeline</Text>
+                            <Text style={styles.headerSub}>Deadline: {examDate.toLocaleDateString()}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => setIsConfigured(false)} style={styles.resetHeaderBtn}><Ionicons name="refresh-circle" size={32} color="white" /></TouchableOpacity>
+                    </View>
                 </LinearGradient>
 
-                <ScrollView contentContainerStyle={{ padding: 20 }}>
-
-                    {/* Step 1: Time Selection */}
-                    {wizardStep === 1 && (
-                        <View>
-                            <Text style={[styles.label, { color: theme.text }]}>How much time do you have?</Text>
-                            <View style={styles.hoursRow}>
-                                {[
-                                    { label: '15 min', val: 0.25 },
-                                    { label: '30 min', val: 0.5 },
-                                    { label: '45 min', val: 0.75 },
-                                    { label: '60 min', val: 1.0 }
-                                ].map(opt => (
-                                    <TouchableOpacity
-                                        key={opt.label}
-                                        style={[styles.hourBtn, selectedHours === opt.val && styles.hourBtnSelected]}
-                                        onPress={() => {
-                                            setSelectedHours(opt.val);
-                                            setWizardStep(2); // Auto-advance
-                                        }}
-                                    >
-                                        <Text style={[styles.hourText, selectedHours === opt.val && styles.hourTextSelected]}>{opt.label}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                <ScrollView style={styles.timelineBody} showsVerticalScrollIndicator={false}>
+                    {roadmap.map((day) => (
+                        <View key={day.date} style={styles.dayBlock}>
+                            <View style={styles.dayLabelRow}>
+                                <View style={[styles.dayBadge, day.is_today && styles.todayBadge]}><Text style={[styles.dayBadgeText, day.is_today && styles.todayBadgeText]}>{day.is_today ? 'TODAY' : day.display_date.split(',')[0].toUpperCase()}</Text></View>
+                                <Text style={styles.dayFullDate}>{day.display_date.split(',')[1]}</Text>
                             </View>
-                        </View>
-                    )}
-
-                    {/* Step 2: Subject Selection */}
-                    {wizardStep === 2 && (
-                        <View>
-                            <Text style={[styles.label, { color: theme.text }]}>What do you want to study?</Text>
-                            <View style={styles.subjectGrid}>
-                                {availableSubjects.length > 0 ? (
-                                    availableSubjects.map(subj => (
-                                        <TouchableOpacity
-                                            key={subj.subject_id}
-                                            style={[styles.chip, selectedSubjects.includes(subj.subject_id) && styles.chipSelected]}
-                                            onPress={() => {
-                                                setSelectedSubjects([subj.subject_id]); // Single Select for this flow
-                                                loadChapters(subj.subject_id);
-                                            }}
-                                        >
-                                            <Text style={[styles.chipText, selectedSubjects.includes(subj.subject_id) && styles.chipTextSelected]}>
-                                                {subj.subject_name}
-                                            </Text>
+                            <View style={styles.verticalLink} />
+                            <View style={styles.dayTasks}>
+                                {day.tasks.map(task => {
+                                    const isDone = task.status === 'completed';
+                                    const style = getTaskStyle(task.task_type, isDone);
+                                    return (
+                                        <TouchableOpacity key={task.task_id} style={[styles.smartTile, { borderLeftColor: style.color }, isDone && styles.completedTile]} onPress={() => handleTaskPress(task)}>
+                                            <View style={styles.tileLeft}>
+                                                <Ionicons name={style.icon} size={24} color={style.color} />
+                                                <View style={styles.tileTextContainer}>
+                                                    <Text style={[styles.tileTag, { color: style.color }]}>{style.label} • {task.subject}</Text>
+                                                    <Text style={[styles.tileTitle, isDone && styles.completedText]} numberOfLines={2}>{task.title}</Text>
+                                                </View>
+                                            </View>
+                                            <Ionicons name={isDone ? "checkmark-circle" : "chevron-forward"} size={isDone ? 26 : 18} color={isDone ? "#4CAF50" : "#CCC"} />
                                         </TouchableOpacity>
-                                    ))
-                                ) : (
-                                    <Text style={{ color: theme.textSecondary }}>Loading subjects...</Text>
-                                )}
+                                    );
+                                })}
                             </View>
                         </View>
-                    )}
-
-                    {/* Step 3: Chapter Selection */}
-                    {wizardStep === 3 && (
-                        <View>
-                            <Text style={[styles.label, { color: theme.text }]}>Select a Specific Chapter</Text>
-                            {availableChapters.length > 0 ? (
-                                availableChapters.map(ch => (
-                                    <TouchableOpacity
-                                        key={ch.chapter_id}
-                                        style={[
-                                            styles.chapterItem,
-                                            { backgroundColor: theme.cardBg, borderColor: theme.border },
-                                            selectedChapter === ch.chapter_id && styles.chapterItemSelected
-                                        ]}
-                                        onPress={() => setSelectedChapter(ch.chapter_id)}
-                                    >
-                                        <Text style={[
-                                            styles.chapterText,
-                                            { color: theme.text },
-                                            selectedChapter === ch.chapter_id && styles.chapterTextSelected
-                                        ]}>
-                                            {ch.chapter_name}
-                                        </Text>
-                                        {selectedChapter === ch.chapter_id && <Ionicons name="checkmark-circle" size={24} color="white" />}
-                                    </TouchableOpacity>
-                                ))
-                            ) : (
-                                <Text style={{ color: theme.textSecondary, fontStyle: 'italic' }}>No chapters found.</Text>
-                            )}
-
-                            <TouchableOpacity style={styles.createBtn} onPress={createPlan}>
-                                <Text style={styles.createBtnText}>Start My Session 🚀</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
+                    ))}
                 </ScrollView>
             </View>
         );
     }
 
-    // --- Main Dashboard ---
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
-            {/* Header */}
-            <LinearGradient colors={['#6200EA', '#7C4DFF']} style={styles.header}>
-                <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <StreakFlame streak={stats.current_streak} />
-                </View>
-                <LevelBadge level={stats.level} xp={stats.total_xp} theme={theme} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 }}>
-                    <Text style={styles.greeting}>Today's Missions</Text>
-                    <TouchableOpacity
-                        style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 }}
-                        onPress={() => {
-                            setWizardStep(1);
-                            setSelectedSubjects([]);
-                            setSelectedChapter(null);
-                            setAvailableChapters([]);
-                            setShowWizard(true);
-                        }}
-                    >
-                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 14 }}>+ New Session</Text>
-                    </TouchableOpacity>
-                </View>
+        <ScrollView style={{flex: 1, backgroundColor: '#FFF'}} contentContainerStyle={{flexGrow: 1}}>
+            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.setupBanner}>
+                <Ionicons name="airplane-outline" size={80} color="white" />
+                <Text style={styles.setupTitle}>Strategic Plan</Text>
+                <Text style={styles.setupDesc}>We'll map out all notes, videos, and quizzes.</Text>
             </LinearGradient>
 
-            {/* Task List */}
-            {loading ? (
-                <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 50 }} />
-            ) : (
-                <ScrollView contentContainerStyle={styles.taskList}>
-                    {tasks.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <Text style={{ color: theme.textSecondary }}>No missions for today!</Text>
-                            <TouchableOpacity onPress={() => setShowWizard(true)}><Text style={{ color: theme.primary }}>Create New Plan</Text></TouchableOpacity>
+            <View style={styles.wizardBox}>
+                <Text style={styles.wizardProgress}>STEP {wizardStep} / 3</Text>
+                
+                {wizardStep === 1 && (
+                    <View style={styles.stepContent}>
+                        <Text style={styles.stepTitle}>When is your Exam? 🗓️</Text>
+                        <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}><Ionicons name="calendar-outline" size={24} color="#4F46E5" /><Text style={styles.dateSelectorText}>{examDate.toDateString()}</Text></TouchableOpacity>
+                        {showDatePicker && <DateTimePicker value={examDate} mode="date" display="default" minimumDate={new Date()} onChange={handleDateChange} />}
+                        <TouchableOpacity style={styles.primaryActionButton} onPress={() => setWizardStep(2)}><Text style={styles.primaryActionButtonLabel}>Next</Text></TouchableOpacity>
+                    </View>
+                )}
+
+                {wizardStep === 2 && (
+                    <View style={styles.stepContent}>
+                        <Text style={styles.stepTitle}>Select Subjects 📚</Text>
+                        <View style={styles.chipCloud}>
+                            {availableSubjects.map(s => (
+                                <TouchableOpacity key={s.subject_id} style={[styles.smallChip, selectedSubjects.includes(s.subject_id) && styles.smallChipActive]} onPress={() => toggleSubject(s.subject_id)}>
+                                    <Text style={[styles.smallChipLabel, selectedSubjects.includes(s.subject_id) && styles.smallChipLabelActive]}>{s.subject_name}</Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
-                    ) : (
-                        tasks.map((task, index) => (
-                            <TaskCard
-                                key={index}
-                                task={task}
-                                onPress={() => handleTaskNavigation(task)} // Use new navigation handler
-                                theme={theme}
-                            />
-                        ))
-                    )}
-                </ScrollView>
-            )}
 
-            {/* Focus Timer Modal (Fallback) */}
-            <Modal visible={timerVisible} animationType="slide" transparent={true}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.timerTitle}>{activeTask?.title}</Text>
-                        <Text style={styles.timerClock}>{formatTime(timeLeft)}</Text>
+                        {selectedSubjects.length > 0 && (
+                            <View style={styles.chapterSection}>
+                                <Text style={styles.sectionHeading}>Curate Your Pipeline 🛠️</Text>
+                                {loadingChapters ? <ActivityIndicator color="#4F46E5" /> : (
+                                    <View style={styles.groupedChapterList}>
+                                        {selectedSubjects.map(sid => {
+                                            const subject = availableSubjects.find(s => s.subject_id === sid);
+                                            const subjectChapters = allChapters.filter(ch => ch.subject_id === sid);
+                                            
+                                            if (subjectChapters.length === 0) return null;
 
-                        <View style={styles.timerControls}>
-                            {!isTimerRunning ? (
-                                <TouchableOpacity style={styles.startBtn} onPress={() => setIsTimerRunning(true)}>
-                                    <Text style={styles.btnText}>START FOCUS</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity style={styles.pauseBtn} onPress={() => setIsTimerRunning(false)}>
-                                    <Text style={styles.btnText}>PAUSE</Text>
-                                </TouchableOpacity>
-                            )}
+                                            return (
+                                                <View key={sid} style={styles.subjectGroup}>
+                                                    <View style={styles.subjectHeader}>
+                                                        <Text style={styles.subjectHeaderLabel}>{subject?.subject_name}</Text>
+                                                        <View style={styles.subjectHeaderLine} />
+                                                    </View>
+                                                    
+                                                    {subjectChapters.map(ch => (
+                                                        <TouchableOpacity 
+                                                            key={ch.chapter_id} 
+                                                            style={[styles.chapterRow, !selectedChapters.includes(ch.chapter_id) && styles.chapterRowDim]} 
+                                                            onPress={() => toggleChapter(ch.chapter_id)}
+                                                        >
+                                                            <Ionicons 
+                                                                name={selectedChapters.includes(ch.chapter_id) ? "checkmark-circle" : "ellipse-outline"} 
+                                                                size={22} 
+                                                                color={selectedChapters.includes(ch.chapter_id) ? "#4F46E5" : "#CCC"} 
+                                                            />
+                                                            <Text style={[styles.chapterRowText, selectedChapters.includes(ch.chapter_id) && styles.chapterRowTextActive]}>
+                                                                {ch.chapter_name}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                )}
+                            </View>
+                        )}
 
-                            <TouchableOpacity style={styles.giveUpBtn} onPress={() => setTimerVisible(false)}>
-                                <Text style={[styles.btnText, { color: '#666' }]}>GIVE UP</Text>
-                            </TouchableOpacity>
-
-                            {/* Dev Cheat Button */}
-                            <TouchableOpacity onPress={completeTask} style={{ position: 'absolute', top: -40, right: 0 }}>
-                                <Text style={{ fontSize: 10, color: '#ccc' }}>DEV: COMPLETE</Text>
-                            </TouchableOpacity>
+                        <View style={styles.wizardFooter}>
+                            <TouchableOpacity onPress={() => setWizardStep(1)}><Text style={styles.wizardBack}>Back</Text></TouchableOpacity>
+                            <TouchableOpacity style={styles.primaryActionButton} onPress={() => setWizardStep(3)}><Text style={styles.primaryActionButtonLabel}>Next</Text></TouchableOpacity>
                         </View>
                     </View>
-                </View>
-            </Modal>
-        </View>
+                )}
+
+                {wizardStep === 3 && (
+                    <View style={styles.stepContent}>
+                        <Text style={styles.stepTitle}>All Set! 🚀</Text>
+                        <View style={styles.summaryCard}>
+                            <Text style={styles.summaryInfo}>📅 Exam Date: {examDate.toLocaleDateString()}</Text>
+                            <Text style={styles.summaryInfo}>📖 Chapters Selected: {selectedChapters.length}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.launchBtn} onPress={savePlan}>
+                            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.launchBtnGrad}><Text style={styles.launchBtnText}>GENERATE ROADMAP</Text></LinearGradient>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setWizardStep(2)} style={{marginTop:20}}><Text style={styles.wizardBack}>Change Chapters</Text></TouchableOpacity>
+                    </View>
+                )}
+            </View>
+        </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    header: { padding: 20, paddingTop: 40, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, elevation: 5 },
-    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    greeting: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 15, fontFamily: 'NotoSans-Bold' },
+    container: { flex: 1, backgroundColor: '#F9FAFC' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    modernHeader: { padding: 25, paddingTop: 50, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+    headerTop: { flexDirection: 'row', alignItems: 'center' },
+    backBtn: { marginRight: 15 },
+    headerInfoText: { flex: 1 },
+    headerTitle: { fontSize: 22, fontWeight: 'bold', color: 'white' },
+    headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+    resetHeaderBtn: { padding: 5 },
 
-    levelBadge: { padding: 10, borderRadius: 15, flexDirection: 'row', alignItems: 'center' },
-    levelCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-    levelText: { fontWeight: 'bold', color: '#333', fontFamily: 'NotoSans-Bold' },
-    xpBarContainer: { flex: 1 },
-    xpText: { fontSize: 12, marginBottom: 5 },
-    xpTrack: { height: 8, backgroundColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden' },
-    xpFill: { height: '100%', backgroundColor: '#4CAF50' },
+    timelineBody: { padding: 20 },
+    dayBlock: { marginBottom: 20, position: 'relative' },
+    dayLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+    dayBadge: { backgroundColor: '#E0E0E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginRight: 10 },
+    todayBadge: { backgroundColor: '#FFD600' },
+    dayBadgeText: { fontSize: 10, fontWeight: 'bold', color: '#666' },
+    todayBadgeText: { color: '#000' },
+    dayFullDate: { fontSize: 14, fontWeight: 'bold', color: '#888' },
+    verticalLink: { position: 'absolute', left: 18, top: 40, bottom: -20, width: 2, backgroundColor: '#E0E0E0', zIndex: -1 },
 
-    streakContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', padding: 5, borderRadius: 20, paddingHorizontal: 12 },
-    streakText: { color: '#fff', fontWeight: 'bold', marginLeft: 5, fontSize: 16, fontFamily: 'NotoSans-Bold' },
+    dayTasks: { paddingLeft: 10 },
+    smartTile: { backgroundColor: 'white', borderLeftWidth: 4, borderRadius: 15, padding: 15, flexDirection: 'row', alignItems: 'center', marginBottom: 12, elevation: 2 },
+    completedTile: { backgroundColor: '#F1F8E9', borderLeftColor: '#4CAF50', elevation: 0 },
+    tileLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+    tileTextContainer: { marginLeft: 15, flex: 1 },
+    tileTag: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginBottom: 2 },
+    tileTitle: { fontSize: 14, fontWeight: '700', color: '#333' },
+    completedText: { textDecorationLine: 'line-through', color: '#757575' },
 
-    taskList: { padding: 20 },
-    taskCard: { padding: 15, borderRadius: 16, marginBottom: 15, flexDirection: 'row', alignItems: 'center', elevation: 2 },
-    taskIcon: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    taskInfo: { flex: 1 },
-    taskSubject: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', fontFamily: 'NotoSans-Bold' },
-    taskTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 5, fontFamily: 'NotoSans-Bold' },
-    taskMeta: { flexDirection: 'row', alignItems: 'center' },
-    taskMetaText: { marginLeft: 5, fontSize: 12, marginRight: 10, fontFamily: 'NotoSans-Regular' },
-    xpBadge: { fontSize: 12, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
-    completedBadge: { position: 'absolute', right: 10, top: 10, backgroundColor: '#E8F5E9', padding: 4, borderRadius: 4 },
-    completedText: { fontSize: 10, color: '#2E7D32', fontWeight: 'bold' },
+    setupBanner: { height: 320, justifyContent: 'center', alignItems: 'center', borderBottomLeftRadius: 50, borderBottomRightRadius: 50 },
+    setupTitle: { fontSize: 28, fontWeight: 'bold', color: 'white', marginTop: 20 },
+    setupDesc: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 8, textAlign: 'center', paddingHorizontal: 50 },
+    wizardBox: { backgroundColor: 'white', marginHorizontal: 25, marginTop: -40, borderRadius: 30, padding: 30, elevation: 12, marginBottom: 50 },
+    wizardProgress: { fontSize: 10, fontWeight: '900', color: '#999', textAlign: 'center', marginBottom: 20 },
+    stepContent: { alignItems: 'center' },
+    stepTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A237E', marginBottom: 30 },
+    dateSelector: { width: '100%', padding: 18, backgroundColor: '#F3F4F9', borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
+    dateSelectorText: { fontSize: 18, fontWeight: 'bold', color: '#333', marginLeft: 12 },
+    primaryActionButton: { backgroundColor: '#4F46E5', paddingHorizontal: 40, paddingVertical: 15, borderRadius: 15 },
+    primaryActionButtonLabel: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 
-    // Wizard
-    wizardHeader: { height: 200, justifyContent: 'center', alignItems: 'center', borderBottomLeftRadius: 50 },
-    wizardTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', fontFamily: 'NotoSans-Bold' },
-    label: { fontSize: 18, fontWeight: 'bold', marginTop: 25, marginBottom: 15, fontFamily: 'NotoSans-Bold' },
-    subjectGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-    chip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: '#eee', marginRight: 10, marginBottom: 10 },
-    chipSelected: { backgroundColor: '#FF9800' },
-    chipText: { color: '#333', fontFamily: 'NotoSans-Bold' },
-    chipTextSelected: { color: '#fff', fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
-    hoursRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    hourBtn: { flex: 1, padding: 15, alignItems: 'center', backgroundColor: '#eee', marginHorizontal: 5, borderRadius: 10 },
-    hourBtnSelected: { backgroundColor: '#6200EA' },
-    hourText: { color: '#333' },
-    hourTextSelected: { color: '#fff', fontWeight: 'bold' },
-    createBtn: { backgroundColor: '#00C853', padding: 18, borderRadius: 15, marginTop: 40, alignItems: 'center', elevation: 5 },
-    createBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18, fontFamily: 'NotoSans-Bold' },
+    chipCloud: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 },
+    smallChip: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#DDD', margin: 5 },
+    smallChipActive: { backgroundColor: '#1A237E', borderColor: '#1A237E' },
+    smallChipLabel: { fontSize: 12, fontWeight: 'bold', color: '#666' },
+    smallChipLabelActive: { color: 'white' },
 
-    goalTypeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-    goalTypeBtn: { flex: 1, backgroundColor: '#eee', padding: 15, borderRadius: 12, alignItems: 'center', marginHorizontal: 5 },
-    goalTypeBtnSelected: { backgroundColor: '#FF9800' },
-    goalTypeText: { fontWeight: 'bold', marginTop: 5, color: '#333' },
-    goalTypeSub: { fontSize: 10, color: '#666', marginTop: 2 },
-    dateChip: { backgroundColor: '#eee', padding: 10, borderRadius: 10, marginRight: 10, alignItems: 'center', minWidth: 80 },
-    dateChipSelected: { backgroundColor: '#6200EA' },
+    chapterSection: { width: '100%', marginTop: 10, marginBottom: 30 },
+    sectionHeading: { fontSize: 16, fontWeight: 'bold', color: '#444', marginBottom: 15 },
+    groupedChapterList: { width: '100%' },
+    subjectGroup: { marginBottom: 25 },
+    subjectHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    subjectHeaderLabel: { fontSize: 13, fontWeight: '900', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: 1 },
+    subjectHeaderLine: { flex: 1, height: 1, backgroundColor: '#EEE', marginLeft: 10 },
+    chapterRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FE', padding: 15, borderRadius: 15, marginBottom: 8, borderWidth: 1, borderColor: '#F0F0F0' },
+    chapterRowDim: { opacity: 0.5, backgroundColor: 'white' },
+    chapterRowText: { fontSize: 14, fontWeight: '600', color: '#666', marginLeft: 12, flex: 1 },
+    chapterRowTextActive: { color: '#333', fontWeight: '700' },
 
-    // Modal
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
-    modalContent: { width: '85%', backgroundColor: '#fff', borderRadius: 20, padding: 30, alignItems: 'center' },
-    timerTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-    timerClock: { fontSize: 60, fontWeight: 'bold', color: '#6200EA', marginBottom: 40 },
-    timerControls: { width: '100%' },
-    startBtn: { backgroundColor: '#6200EA', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
-    pauseBtn: { backgroundColor: '#FF9800', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
-    giveUpBtn: { padding: 15, alignItems: 'center' },
-    btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-
-    // Wizard Steps
-    chapterItem: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 2, borderColor: 'transparent' },
-    chapterItemSelected: { borderColor: '#4CAF50', backgroundColor: '#E8F5E9' },
-    chapterText: { fontSize: 16, fontWeight: '600' },
-    chapterTextSelected: { color: '#2E7D32', fontWeight: 'bold' }
+    wizardFooter: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    wizardBack: { fontWeight: 'bold', color: '#999' },
+    summaryCard: { width: '100%', padding: 20, backgroundColor: '#F8F9FE', borderRadius: 20, marginBottom: 40 },
+    summaryInfo: { fontSize: 14, fontWeight: 'bold', color: '#444', marginBottom: 10 },
+    launchBtn: { width: '100%', borderRadius: 15, overflow: 'hidden' },
+    launchBtnGrad: { padding: 20, alignItems: 'center' },
+    launchBtnText: { color: 'white', fontWeight: 'bold' }
 });
 
 export default StudyPlannerScreen;

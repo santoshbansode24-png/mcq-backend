@@ -23,6 +23,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { BASE_URL } from '../api/config';
 import { dataCache } from '../utils/dataCache';
 import { SmartCacheService } from '../services/SmartCacheService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SkeletonItem = () => {
     const opacity = useRef(new Animated.Value(0.3)).current;
@@ -211,11 +212,32 @@ const HomeScreen = ({ user, navigation, route }) => {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {/* THE SMART SYNC BUTTON */}
                         <TouchableOpacity
-                            onPress={() => {
-                                if (isFullySynced && !hasUpdate) {
-                                    Alert.alert("Offline Ready", "All textual data for your class is downloaded. You can use the app even without internet!");
-                                } else {
-                                    forceSync();
+                            onPress={async () => {
+                                if (isSyncing) return;
+                                
+                                try {
+                                    const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
+                                    const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
+                                    
+                                    if (serverVer && (!localVer || parseInt(serverVer) > parseInt(localVer))) {
+                                        setHasUpdate(true);
+                                        setIsFullySynced(false);
+                                        startGlow();
+                                        Alert.alert("New Data Found", "Downloading new updates...");
+                                        forceSync();
+                                    } else {
+                                        if (isFullySynced && !hasUpdate) {
+                                            Alert.alert("Up to Date! 🚀", "No new updates found. All textual data is downloaded and ready for offline use!");
+                                        } else {
+                                            forceSync();
+                                        }
+                                    }
+                                } catch (e) {
+                                    if (isFullySynced && !hasUpdate) {
+                                        Alert.alert("Offline Ready", "All textual data for your class is downloaded.");
+                                    } else {
+                                        forceSync();
+                                    }
                                 }
                             }}
                             style={[

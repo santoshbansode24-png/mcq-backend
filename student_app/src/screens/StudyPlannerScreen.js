@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import config from '../api/config';
 import axios from 'axios';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { scheduleStudyPlanNotifications } from '../utils/studyNotificationHelper';
 
 const { width } = Dimensions.get('window');
 
@@ -154,9 +155,38 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             if (res.data.status === 'success') {
                 setIsConfigured(true);
                 fetchRoadmap();
+
+                // --- Schedule Notifications for Today's Tasks ---
+                // We use a separate logic to ensure we don't crash if the immediate response lacks data
+                if (res.data.status === 'success') {
+                    // Fetch roadmap first to get the structured data
+                    const roadRes = await axios.get(`${config.API_URL}/get_roadmap.php?user_id=${user.user_id}`);
+                    if (roadRes.data.status === 'success' && roadRes.data.data) {
+                        const today = new Date().toISOString().split('T')[0];
+                        const todayData = roadRes.data.data.find(d => d.date === today);
+                        const todayTasks = todayData?.tasks || [];
+                        
+                        if (todayTasks.length > 0) {
+                            const startTime = new Date(); 
+                            const endTime = new Date();
+                            endTime.setHours(21, 0, 0); // 9 PM
+
+                            const chapters = todayTasks.map(t => ({
+                                chapter_id: t.chapter_id,
+                                chapter_name: t.title.split(': ').pop(),
+                                subject_name: t.subject
+                            }));
+
+                            scheduleStudyPlanNotifications(chapters, startTime, endTime);
+                        }
+                    }
+                }
+            } else {
+                Alert.alert("Error", res.data.message || "Something went wrong.");
             }
         } catch (error) {
-            Alert.alert("Error", "Failed to save plan.");
+            console.error(error);
+            Alert.alert("Error", "Failed to connect to server.");
         } finally {
             setLoading(false);
         }
@@ -211,6 +241,31 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                         <TouchableOpacity onPress={() => setIsConfigured(false)} style={styles.resetHeaderBtn}><Ionicons name="refresh-circle" size={32} color="white" /></TouchableOpacity>
                     </View>
                 </LinearGradient>
+
+                {/* --- Progress Dashboard --- */}
+                <View style={styles.progressCard}>
+                    <View style={styles.progressTextRow}>
+                        <View>
+                            <Text style={styles.progressLabel}>Overall Mastery</Text>
+                            <Text style={styles.progressStats}>
+                                {roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length} / {roadmap.flatMap(d => d.tasks).length} Tasks Finished
+                            </Text>
+                        </View>
+                        <Text style={styles.progressPercent}>
+                            {Math.round((roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length / (roadmap.flatMap(d => d.tasks).length || 1)) * 100)}%
+                        </Text>
+                    </View>
+                    <View style={styles.progressBarBg}>
+                        <LinearGradient
+                            colors={['#4CAF50', '#8BC34A']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={[styles.progressBarFill, { 
+                                width: `${(roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length / (roadmap.flatMap(d => d.tasks).length || 1)) * 100}%` 
+                            }]}
+                        />
+                    </View>
+                </View>
 
                 <ScrollView style={styles.timelineBody} showsVerticalScrollIndicator={false}>
                     {roadmap.map((day) => (
@@ -353,6 +408,51 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 22, fontWeight: 'bold', color: 'white' },
     headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
     resetHeaderBtn: { padding: 5 },
+
+    // --- Progress Card Styles ---
+    progressCard: {
+        backgroundColor: 'white',
+        marginHorizontal: 20,
+        marginTop: -25,
+        borderRadius: 20,
+        padding: 20,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+    },
+    progressTextRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    progressLabel: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#1A237E',
+    },
+    progressStats: {
+        fontSize: 11,
+        color: '#666',
+        marginTop: 2,
+    },
+    progressPercent: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#4CAF50',
+    },
+    progressBarBg: {
+        height: 10,
+        backgroundColor: '#F0F0F0',
+        borderRadius: 5,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 5,
+    },
 
     timelineBody: { padding: 20 },
     dayBlock: { marginBottom: 20, position: 'relative' },

@@ -1,7 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { StatusBar } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import Constants from 'expo-constants';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { LanguageProvider } from './src/context/LanguageContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -24,6 +25,9 @@ import SubscriptionScreen from './src/screens/SubscriptionScreen';
 // Server Config
 import { checkServerConnection } from './src/api/config';
 
+// Create a navigation project-wide reference
+export const navigationRef = createNavigationContainerRef();
+
 const Stack = createStackNavigator();
 
 // Prevent splash screen from auto-hiding
@@ -36,6 +40,43 @@ export default function App() {
     'NotoSans-Regular': require('./assets/fonts/NotoSansDevanagari-Regular.ttf'),
     'NotoSans-Bold': require('./assets/fonts/NotoSansDevanagari-Bold.ttf'),
   });
+
+  // --- Notification Deep Linking Logic ---
+  useEffect(() => {
+    // Check if we are in Expo Go to avoid crash in SDK 53+
+    const isExpoGo = Constants.appOwnership === 'expo';
+    
+    if (isExpoGo) {
+        console.warn('Notifications are disabled in Expo Go. Use a Development Build to enable this feature.');
+        return;
+    }
+
+    try {
+        const Notifications = require('expo-notifications');
+        // Listener when a notification is clicked while app is in foreground or background
+        const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+          const data = response.notification.request.content.data;
+          
+          if (data?.type === 'STUDY_REMINDER' && data?.chapterId) {
+            // Navigate directly to ChapterContent
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('ChapterContent', { 
+                chapter: {
+                  chapter_id: data.chapterId,
+                  chapter_name: data.chapterName,
+                  subject_name: data.subjectName
+                }, 
+                initialTab: 'Notes' 
+              });
+            }
+          }
+        });
+
+        return () => subscription.remove();
+    } catch (e) {
+        console.log('Failed to initialize notifications:', e.message);
+    }
+  }, []);
 
   // Check Server Status on App Start
   useEffect(() => {
@@ -93,7 +134,7 @@ export default function App() {
     <ErrorBoundary>
       <LanguageProvider>
         <ThemeProvider>
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <Stack.Navigator
               initialRouteName={initialRoute}
@@ -110,6 +151,7 @@ export default function App() {
               <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
               <Stack.Screen name="Subscription" component={SubscriptionScreen} />
+              <Stack.Screen name="ChapterContent" component={require('./src/screens/ChapterContentScreen').default} />
             </Stack.Navigator>
           </NavigationContainer>
         </ThemeProvider>

@@ -16,6 +16,7 @@ import { downloadFile, getCachedFile } from '../utils/downloadUtils';
 import { dataCache } from '../utils/dataCache';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
 import NetInfo from '@react-native-community/netinfo';
+import { scheduleStudyPlanNotifications } from '../utils/studyNotificationHelper';
 
 // --- CONSTANTS MOVED OUTSIDE FOR PERFORMANCE ---
 
@@ -258,6 +259,33 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     status: 'completed'
                 });
                 Alert.alert("Mission Complete! 🎉", `Great job! You earned ${activeTask.xp_reward} XP!`);
+
+                // --- Reschedule Remaining Notifications ---
+                try {
+                    const res = await axios.get(`${API_URL}/get_roadmap.php?user_id=${userId}`);
+                    if (res.data.status === 'success' && res.data.data) {
+                        const today = new Date().toISOString().split('T')[0];
+                        const todayData = res.data.data.find(d => d.date === today);
+                        const remainingTasks = todayData?.tasks?.filter(t => t.status !== 'completed') || [];
+                        
+                        if (remainingTasks.length > 0) {
+                            const startTime = new Date(); // Start rescheduling from NOW
+                            const endTime = new Date();
+                            endTime.setHours(21, 0, 0); // 9 PM
+
+                            const chapters = remainingTasks.map(t => ({
+                                chapter_id: t.chapter_id,
+                                chapter_name: t.title.split(': ').pop(),
+                                subject_name: t.subject
+                            }));
+
+                            // Import helper is already added at the top
+                            scheduleStudyPlanNotifications(chapters, startTime, endTime);
+                        }
+                    }
+                } catch (err) {
+                    console.log('Notification rescheduling failed', err);
+                }
             }
         } catch (e) {
             console.error('[Timer] Error finishing task:', e);

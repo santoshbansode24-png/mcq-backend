@@ -25,6 +25,7 @@ import { API_URL } from '../api/config';
 import { Alert } from 'react-native';
 import LanguageToggle from '../components/LanguageToggle';
 import { getLanguagePreference, saveLanguagePreference } from '../utils/languageStorage';
+import { dataCache } from '../utils/dataCache';
 
 // Hardcoded ID for the Scholarship Class created in DB
 const SCHOLARSHIP_CLASS_ID = 37;

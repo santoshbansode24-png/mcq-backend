@@ -53,6 +53,10 @@ try {
     
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
     
+    // Fix for "Illegal mix of collations" error (utf8mb4_unicode_ci vs utf8mb4_0900_ai_ci)
+    // Synchronize connection collation with database collation
+    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+    
 } catch (PDOException $e) {   
     // Return unified JSON error if connection fails
     header('Content-Type: application/json');

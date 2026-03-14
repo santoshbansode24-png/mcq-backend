@@ -137,35 +137,62 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                 </View>
             )}
 
-            {/* Video Player */}
-            <Pressable 
-                onLongPress={() => setPlaybackRate(2)}
-                onPressOut={() => setPlaybackRate(1)}
-                delayLongPress={400}
-                style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}
-            >
-                <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-                    {/* This transparent layer catches gestures for 2x speed without blocking the player's internal logic 
-                        Actually, it's better to just use the Pressable around it.
-                    */}
-                </View>
+            {/* Video Player Section */}
+            <View style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}>
                 {videoId ? (
-                    <YoutubePlayer
-                        height={width * 9 / 16}
-                        width={width}
-                        play={playing}
-                        videoId={videoId}
-                        onChangeState={onStateChange}
-                        onFullScreenChange={onFullScreenChange}
-                        playbackRate={playbackRate}
-                        initialPlayerParams={{ controls: 1, rel: 0, playsinline: 1 }}
-                        webViewProps={{
-                            allowsInlineMediaPlayback: true,
-                            javaScriptEnabled: true,
-                            domStorageEnabled: true,
-                        }}
-                        forceAndroidAutoplay={true}
-                    />
+                    <View>
+                        <YoutubePlayer
+                            height={width * 9 / 16}
+                            width={width}
+                            play={playing}
+                            videoId={videoId}
+                            onChangeState={onStateChange}
+                            onFullScreenChange={onFullScreenChange}
+                            playbackRate={playbackRate}
+                            initialPlayerParams={{ 
+                                controls: 1, 
+                                rel: 0, 
+                                playsinline: 1,
+                                modestbranding: 1,
+                                showinfo: 0
+                            }}
+                            webViewProps={{
+                                allowsInlineMediaPlayback: true,
+                                javaScriptEnabled: true,
+                                domStorageEnabled: true,
+                            }}
+                            forceAndroidAutoplay={true}
+                        />
+
+                        {/* 
+                          TRANSPARENT GESTURE OVERLAY 
+                          This prevents the YouTube context menu from appearing 
+                          and handles the 2x speed hold.
+                        */}
+                        <Pressable 
+                            style={styles.gestureOverlay}
+                            onPress={() => setPlaying(!playing)}
+                            onLongPress={() => setPlaybackRate(2)}
+                            onPressOut={() => setPlaybackRate(1)}
+                            delayLongPress={300}
+                        >
+                            {/* Visual Feedback for Play/Pause */}
+                            {!playing && (
+                                <View style={styles.playIconOverlay}>
+                                    <Text style={{fontSize: 50}}>▶️</Text>
+                                </View>
+                            )}
+                            
+                            {/* 2x Speed Indicator */}
+                            {playbackRate > 1 && (
+                                <View style={styles.speedBadgeOverlay}>
+                                    <View style={styles.speedBadgeInner}>
+                                        <Text style={styles.speedBadgeText}>⏩ 2x Speed</Text>
+                                    </View>
+                                </View>
+                            )}
+                        </Pressable>
+                    </View>
                 ) : (
                     <Video
                         style={styles.video}
@@ -186,14 +213,7 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                         }}
                     />
                 )}
-
-                {/* Speed Indicator Overlay */}
-                {playbackRate > 1 && (
-                    <View style={styles.speedBadgeOverlay}>
-                        <Text style={styles.speedBadgeText}>⏩ 2x Speed</Text>
-                    </View>
-                )}
-            </Pressable>
+            </View>
 
             {/* Simple Now Playing label */}
             {!isFullScreen && (
@@ -246,34 +266,45 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: '#111',
     },
-    nowPlaying: {
-        color: '#e2e8f0',
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 12,
-    },
-    finishBtn: {
-        backgroundColor: '#7e22ce',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 10,
-        alignSelf: 'flex-start',
-    },
     finishBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+    gestureOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 50, // Leave space for the seek bar at the bottom
+        zIndex: 500,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    playIconOverlay: {
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     speedBadgeOverlay: {
         position: 'absolute',
         top: 20,
         alignSelf: 'center',
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
         zIndex: 1000,
+    },
+    speedBadgeInner: {
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     speedBadgeText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: 'bold',
+        textShadowColor: 'black',
+        textShadowRadius: 4,
     },
 });
 

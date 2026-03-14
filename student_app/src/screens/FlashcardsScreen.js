@@ -46,6 +46,28 @@ const FlashcardsScreen = ({ navigation, route }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const isFlippedRef = useRef(false); // Ref to track valid state inside PanResponder closure
     const [error, setError] = useState(null);
+    const flipSoundRef = useRef(null);
+
+    // Preload Flip Sound
+    useEffect(() => {
+        const loadSound = async () => {
+            try {
+                const { sound } = await Audio.Sound.createAsync(
+                    require('../../assets/sounds/flip.mp3')
+                );
+                flipSoundRef.current = sound;
+            } catch (e) {
+                console.log('Error preloading flip sound:', e);
+            }
+        };
+        loadSound();
+
+        return () => {
+            if (flipSoundRef.current) {
+                flipSoundRef.current.unloadAsync();
+            }
+        };
+    }, []);
 
     // Timer State
     const { activeTask } = route.params || {};
@@ -203,18 +225,11 @@ const FlashcardsScreen = ({ navigation, route }) => {
 
     const playFlipSound = async () => {
         try {
-            const { sound } = await Audio.Sound.createAsync(
-                require('../../assets/sounds/flip.mp3')
-            );
-            await sound.playAsync();
-            // Unload sound from memory after playback
-            sound.setOnPlaybackStatusUpdate(async (status) => {
-                if (status.didJustFinish) {
-                    await sound.unloadAsync();
-                }
-            });
+            if (flipSoundRef.current) {
+                await flipSoundRef.current.replayAsync();
+            }
         } catch (error) {
-            console.log('Error playing sound (ensure assets/sounds/flip.mp3 exists):', error);
+            console.log('Error playing flip sound:', error);
         }
     };
 
@@ -225,15 +240,15 @@ const FlashcardsScreen = ({ navigation, route }) => {
         if (isFlippedRef.current) {
             Animated.spring(flipAnim, {
                 toValue: 0,
-                friction: 6, // Lower friction for more "snappiness"
-                tension: 40,
+                friction: 8, // Higher friction = less overshoot
+                tension: 60, // Higher tension = faster
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
         } else {
             Animated.spring(flipAnim, {
                 toValue: 180,
-                friction: 6,
-                tension: 40,
+                friction: 8,
+                tension: 60,
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
         }
@@ -257,10 +272,9 @@ const FlashcardsScreen = ({ navigation, route }) => {
 
     const resetFlip = () => {
         if (isFlippedRef.current) {
-            Animated.spring(flipAnim, {
+            Animated.timing(flipAnim, {
                 toValue: 0,
-                friction: 8,
-                tension: 10,
+                duration: 250,
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
             setIsFlipped(false);
@@ -608,9 +622,9 @@ const styles = StyleSheet.create({
         fontFamily: 'NotoSans-Bold',
         color: '#FFFFFF',
         // Strong shadow
-        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 6,
+        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     tapHintBadge: {
         flexDirection: 'row',

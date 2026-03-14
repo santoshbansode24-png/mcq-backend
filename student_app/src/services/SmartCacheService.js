@@ -233,19 +233,21 @@ export const SmartCacheService = {
      */
     syncChapterContent: async (chapterId) => {
         try {
-            // 1. Fetch JSON Content (MCQs, Flashcards, etc.) with Retry
-            const mcqRes = await SmartCacheService.retry(() => fetchMCQs(chapterId, true));
-            await SmartCacheService.retry(() => fetchFlashcards(chapterId, true));
-            await SmartCacheService.retry(() => fetchQuickRevision(chapterId, true));
-            const notesRes = await SmartCacheService.retry(() => fetchNotes(chapterId, true));
-            await SmartCacheService.retry(() => fetchVideos(chapterId, true));
+            // 1. Fetch JSON Content in Parallel for speed
+            const [mcqRes] = await Promise.all([
+                SmartCacheService.retry(() => fetchMCQs(chapterId, true)),
+                SmartCacheService.retry(() => fetchFlashcards(chapterId, true)),
+                SmartCacheService.retry(() => fetchQuickRevision(chapterId, true)),
+                SmartCacheService.retry(() => fetchNotes(chapterId, true)),
+                SmartCacheService.retry(() => fetchVideos(chapterId, true))
+            ]);
 
             // 2. Pre-fetch MCQ images
             if (mcqRes && mcqRes.status === 'success' && Array.isArray(mcqRes.data)) {
                 mcqRes.data.forEach(item => {
                     if (item.image_url) {
                         const imgUri = item.image_url.startsWith('http') ? item.image_url : `${BASE_URL}/uploads/${item.image_url}`;
-                        Image.prefetch(imgUri).catch(e => console.warn('[SmartCache] Image prefetch failed:', imgUri));
+                        Image.prefetch(imgUri).catch(e => {}); // Silent failure for missing images
                     }
                 });
             }

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, StatusBar, BackHandler, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar, BackHandler, useWindowDimensions, Pressable } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { Video, ResizeMode, VideoFullscreenUpdate } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -12,6 +12,7 @@ const VideoPlayerScreen = ({ route, navigation }) => {
     const { videoUrl, title, activeTask } = route.params || {};
     const [playing, setPlaying] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1);
 
     const onStateChange = useCallback((state) => {
         if (state === 'ended') setPlaying(false);
@@ -137,7 +138,17 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             )}
 
             {/* Video Player */}
-            <View style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}>
+            <Pressable 
+                onLongPress={() => setPlaybackRate(2)}
+                onPressOut={() => setPlaybackRate(1)}
+                delayLongPress={400}
+                style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}
+            >
+                <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                    {/* This transparent layer catches gestures for 2x speed without blocking the player's internal logic 
+                        Actually, it's better to just use the Pressable around it.
+                    */}
+                </View>
                 {videoId ? (
                     <YoutubePlayer
                         height={width * 9 / 16}
@@ -146,6 +157,7 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                         videoId={videoId}
                         onChangeState={onStateChange}
                         onFullScreenChange={onFullScreenChange}
+                        playbackRate={playbackRate}
                         initialPlayerParams={{ controls: 1, rel: 0, playsinline: 1 }}
                         webViewProps={{
                             allowsInlineMediaPlayback: true,
@@ -161,6 +173,8 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                         useNativeControls
                         resizeMode={ResizeMode.CONTAIN}
                         shouldPlay={true}
+                        rate={playbackRate}
+                        shouldCorrectPitch={true}
                         onFullscreenUpdate={async ({ fullscreenUpdate }) => {
                             if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_PRESENT) {
                                 setIsFullScreen(true);
@@ -172,7 +186,14 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                         }}
                     />
                 )}
-            </View>
+
+                {/* Speed Indicator Overlay */}
+                {playbackRate > 1 && (
+                    <View style={styles.speedBadgeOverlay}>
+                        <Text style={styles.speedBadgeText}>⏩ 2x Speed</Text>
+                    </View>
+                )}
+            </Pressable>
 
             {/* Simple Now Playing label */}
             {!isFullScreen && (
@@ -239,6 +260,21 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     finishBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+    speedBadgeOverlay: {
+        position: 'absolute',
+        top: 20,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        zIndex: 1000,
+    },
+    speedBadgeText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
 });
 
 export default VideoPlayerScreen;

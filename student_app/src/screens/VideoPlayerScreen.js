@@ -140,10 +140,10 @@ const VideoPlayerScreen = ({ route, navigation }) => {
             {/* Video Player Section */}
             <View style={isFullScreen ? styles.fullScreenWrapper : styles.videoWrapper}>
                 {videoId ? (
-                    <View>
+                    <View style={{ flex: 1 }}>
                         <YoutubePlayer
-                            height={width * 9 / 16}
-                            width={width}
+                            height={isFullScreen ? width : (width * 9 / 16)}
+                            width={isFullScreen ? '100%' : width}
                             play={playing}
                             videoId={videoId}
                             onChangeState={onStateChange}
@@ -153,37 +153,36 @@ const VideoPlayerScreen = ({ route, navigation }) => {
                                 controls: 1, 
                                 rel: 0, 
                                 playsinline: 1,
-                                modestbranding: 1,
-                                showinfo: 0
+                                modestbranding: 1
                             }}
                             webViewProps={{
-                                allowsInlineMediaPlayback: true,
-                                javaScriptEnabled: true,
-                                domStorageEnabled: true,
+                                // This is the secret to blocking that "List" menu!
+                                // It disables the context menu and text selection inside the YouTube frame.
+                                injectedJavaScript: `
+                                    document.body.style.webkitTouchCallout='none';
+                                    document.body.style.webkitUserSelect='none';
+                                    window.addEventListener('contextmenu', function(e) { 
+                                        e.preventDefault(); 
+                                        return false; 
+                                    });
+                                    true;
+                                `,
                             }}
-                            forceAndroidAutoplay={true}
                         />
 
                         {/* 
-                          TRANSPARENT GESTURE OVERLAY 
-                          This prevents the YouTube context menu from appearing 
-                          and handles the 2x speed hold.
+                            MINIMALIST SPEED TRIGGER
+                            We use a transparent Pressable that DOES NOT block taps (it has a delay)
+                            and only shows the badge when actually running at 2x.
                         */}
                         <Pressable 
-                            style={styles.gestureOverlay}
-                            onPress={() => setPlaying(!playing)}
+                            style={StyleSheet.absoluteFill}
                             onLongPress={() => setPlaybackRate(2)}
                             onPressOut={() => setPlaybackRate(1)}
-                            delayLongPress={300}
+                            delayLongPress={500}
+                            pointerEvents="box-none" // This allows taps to go THROUGH to the YouTube buttons!
                         >
-                            {/* Visual Feedback for Play/Pause */}
-                            {!playing && (
-                                <View style={styles.playIconOverlay}>
-                                    <Text style={{fontSize: 50}}>▶️</Text>
-                                </View>
-                            )}
-                            
-                            {/* 2x Speed Indicator */}
+                            {/* 2x Speed Indicator - Only visible when holding */}
                             {playbackRate > 1 && (
                                 <View style={styles.speedBadgeOverlay}>
                                     <View style={styles.speedBadgeInner}>

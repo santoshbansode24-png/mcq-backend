@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
     ActivityIndicator, Alert, TextInput, Image, Dimensions, StatusBar,
-    KeyboardAvoidingView, Platform
+    KeyboardAvoidingView, Platform, Vibration
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
@@ -142,6 +142,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
 
         try {
             const formData = new FormData();
+            formData.append('user_id', user?.user_id || user?.id || '');
             formData.append('input_type', inputType);
             formData.append('difficulty', difficulty);
             formData.append('language', language);

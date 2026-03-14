@@ -34,6 +34,21 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 use Smalot\PdfParser\Parser;
 use PhpOffice\PhpWord\IOFactory;
 
+// --- AUTH & TRAFFIC CONTROL ---
+require_once 'AiUsageManager.php';
+$userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0; 
+
+// Check limits BEFORE calling Gemini
+if ($userId > 0) {
+    $aiManager = new AiUsageManager($userId);
+    $canProceed = $aiManager->canMakeRequest();
+    if ($canProceed !== true) {
+        ob_clean();
+        echo json_encode(['status' => 'error', 'message' => $canProceed]);
+        exit;
+    }
+}
+
 // --- OCR & Text Extraction Helpers ---
 
 function extractTextFromPdf($filePath) {
@@ -247,6 +262,12 @@ try {
     }
 
     if (!$finalReply) throw new Exception("AI Processing Failed. Details: " . $lastError);
+
+    // --- TRACK USAGE ---
+    if ($userId > 0 && isset($decoded['usageMetadata']['totalTokenCount'])) {
+        $tokensUsed = $decoded['usageMetadata']['totalTokenCount'];
+        $aiManager->logUsage($tokensUsed);
+    }
 
     // 6. Clean and Output JSON
     $rawText = str_replace(["```json", "```"], "", $finalReply);

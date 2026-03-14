@@ -25,9 +25,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_sample') {
     header('Content-Disposition: attachment; filename="mcq_sample.csv"');
     $output = fopen('php://output', 'w');
     fputs($output, "\xEF\xBB\xBF"); // Add BOM for Excel
-    fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)', 'Image File (e.g. q1.jpg)']);
-    fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy', '']);
-    fputcsv($output, ['Identify this shape', 'Circle', 'Square', 'Triangle', 'Rectangle', 'c', 'It has 3 sides', 'medium', 'triangle.jpg']);
+    fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)']);
+    fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy']);
+    fputcsv($output, ['Identify this shape (example context)', 'Circle', 'Square', 'Triangle', 'Rectangle', 'c', 'It has 3 sides', 'medium']);
     fclose($output);
     exit();
 }
@@ -68,31 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $explanation = sanitizeInput($_POST['explanation']);
     $difficulty = $_POST['difficulty'];
     
-    // Handle Image Upload
-    $image_url = null;
-    if (isset($_FILES['question_image']) && $_FILES['question_image']['error'] == 0) {
-        $upload_dir = '../uploads/mcq_images/';
-        if (!file_exists($upload_dir)) { mkdir($upload_dir, 0777, true); }
-        
-        $file_ext = strtolower(pathinfo($_FILES['question_image']['name'], PATHINFO_EXTENSION));
-        $allowed_ext = ['jpg', 'jpeg', 'png', 'gif'];
-        
-        if (in_array($file_ext, $allowed_ext)) {
-            $new_name = uniqid('mcq_') . '.' . $file_ext;
-            if (hash_file('sha256', $_FILES['question_image']['tmp_name']) === false) {
-                 $message = "Error: Invalid file content.";
-                 $messageType = "error";
-            } else {
-                 if (move_uploaded_file($_FILES['question_image']['tmp_name'], $upload_dir . $new_name)) {
-                     $image_url = 'mcq_images/' . $new_name;
-                 }
-            }
-        }
-    }
+    $medium = isset($_POST['medium']) ? $_POST['medium'] : 'english';
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $image_url]);
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
         $message = "MCQ added successfully!";
         $messageType = "success";
     } catch (PDOException $e) {
@@ -115,46 +95,81 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $count = 0;
         $errors = 0;
         
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $medium = isset($_POST['medium']) ? $_POST['medium'] : 'english';
         
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $row_num = 1; // Header is row 1
+        $first_error = "";
+
         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            $row_num++;
+            
+            // Check if row is practically empty (Excel saves trailing rows as ",,,,,,,")
+            $is_empty_row = true;
+            foreach ($data as $cell) {
+                if (!empty(trim($cell ?? ''))) {
+                    $is_empty_row = false;
+                    break;
+                }
+            }
+            if ($is_empty_row) {
+                continue; // Silently skip without incrementing errors
+            }
+            
             // Validate row has enough columns (at least 6)
-            if (count($data) < 6) { $errors++; continue; }
+            if (count($data) < 6) { 
+                if ($errors == 0) { $first_error = "Row $row_num: Not enough columns (" . count($data) . "). Is it comma-separated?"; }
+                $errors++; 
+                continue; 
+            }
             
             $question = sanitizeInput(convertUtf8($data[0]));
+            if (empty($question)) {
+                if ($errors == 0) { $first_error = "Row $row_num: Question is empty."; }
+                $errors++;
+                continue;
+            }
+
             $opt_a = sanitizeInput(convertUtf8($data[1]));
             $opt_b = sanitizeInput(convertUtf8($data[2]));
             $opt_c = sanitizeInput(convertUtf8($data[3]));
             $opt_d = sanitizeInput(convertUtf8($data[4]));
+            
+            // Clean up correct answer (allow 'Option A' or 'A')
             $correct = strtolower(trim(convertUtf8($data[5]))); // a, b, c, d
+            $correct = str_replace(['option ', 'option'], '', $correct);
+            
             $explanation = isset($data[6]) ? sanitizeInput(convertUtf8($data[6])) : '';
-            $difficulty = isset($data[7]) ? strtolower(trim(convertUtf8($data[7]))) : 'medium';
-            // Column 9 (Index 8) is Image Filename
-            $image_filename = isset($data[8]) ? trim(convertUtf8($data[8])) : null;
+            
+            $diff_input = isset($data[7]) ? strtolower(trim(convertUtf8($data[7]))) : '';
+            $difficulty = empty($diff_input) ? 'medium' : $diff_input;
+            if (!in_array($difficulty, ['easy', 'medium', 'hard'])) { $difficulty = 'medium'; }
+            
+            // Image Upload is removed for Bulk CSV
             $image_subpath = null;
             
-            // If filename provided, check if it exists in uploads/mcq_images/
-            if ($image_filename) {
-                // Security check: Only allow basename to prevent directory traversal
-                $clean_name = basename($image_filename);
-                if (file_exists('../uploads/mcq_images/' . $clean_name)) {
-                    $image_subpath = 'mcq_images/' . $clean_name;
-                }
+            // Validate correct answer format
+            if (!in_array($correct, ['a', 'b', 'c', 'd'])) { 
+                if ($errors == 0) { $first_error = "Row $row_num: Invalid correct answer '$correct'"; }
+                $errors++; 
+                continue; 
             }
             
-            // Validate correct answer format
-            if (!in_array($correct, ['a', 'b', 'c', 'd'])) { $errors++; continue; }
-            
             try {
-                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $image_subpath]);
+                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
                 $count++;
             } catch (Exception $e) {
+                if ($errors == 0) { $first_error = "Row $row_num DB Error: " . $e->getMessage(); }
                 $errors++;
             }
         }
         fclose($handle);
         
         $message = "Bulk upload complete! Added: $count MCQs. Skipped/Errors: $errors.";
+        if (!empty($first_error)) {
+            $message .= " Example error: " . $first_error;
+        }
         $messageType = ($count > 0) ? "success" : "error";
     } else {
         $message = "Please upload a valid CSV file.";
@@ -163,34 +178,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 }
 
 // Get Classes for Initial Dropdown
-// Handle Bulk Image Upload
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'bulk_image_upload') {
-    $upload_dir = '../uploads/mcq_images/';
-    if (!file_exists($upload_dir)) { mkdir($upload_dir, 0777, true); }
-    
-    $count = 0;
-    $errors = 0;
-    
-    if (isset($_FILES['image_files']) && is_array($_FILES['image_files']['name'])) {
-        foreach ($_FILES['image_files']['name'] as $i => $name) {
-            if ($_FILES['image_files']['error'][$i] == 0) {
-                $tmp_name = $_FILES['image_files']['tmp_name'][$i];
-                // Use original filename so CSV mapping works
-                // Sanitize filename to prevent issues
-                $clean_name = basename($name); // e.g., "Figure_Page1.png"
-                if (move_uploaded_file($tmp_name, $upload_dir . $clean_name)) {
-                    $count++;
-                } else {
-                    $errors++;
-                }
-            } else {
-                $errors++;
-            }
-        }
-        $message = "Images Uploaded: $count. Errors: $errors. Now you can upload the CSV.";
-        $messageType = ($count > 0) ? "success" : "error";
-    }
-}
 
 // Get Classes for Initial Dropdown
 $classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_id");
@@ -425,12 +412,6 @@ $mcqs = $mcqs_query->fetchAll();
                              <label style="display:block; margin-bottom:5px; font-weight:600;">Question Text:</label>
                              <textarea name="question" placeholder="Enter question here (or use LaTeX like \sqrt{x})" required style="width:100%; height: 80px;"></textarea>
                         </div>
-
-                        <div style="grid-column: span 2; background: #fff; padding: 10px; border: 1px dashed #ccc; border-radius: 8px;">
-                            <label style="display:block; margin-bottom:5px; font-weight:600;">Upload Diagram/Image (Optional):</label>
-                            <input type="file" name="question_image" accept="image/*">
-                            <small style="color: #666; display: block; margin-top: 5px;">Supported: JPG, PNG. Max 2MB.</small>
-                        </div>
                         
                         <input type="text" name="option_a" placeholder="Option A (e.g. \frac{1}{2})" required>
                         <input type="text" name="option_b" placeholder="Option B" required>
@@ -459,26 +440,9 @@ $mcqs = $mcqs_query->fetchAll();
 
             <!-- Bulk Upload Form -->
             <div id="bulk-content" class="tab-content active">
-                <!-- STEP 1: BULK IMAGES -->
-                <div style="margin-bottom: 25px; padding: 20px; background: #e0f2fe; border-radius: 10px; border: 1px solid #bae6fd;">
-                    <h3 style="color: #0369a1; margin-bottom: 10px;">Step 1: Upload Images (Optional) 📸</h3>
-                    <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">
-                        If your CSV refers to images (e.g., "q1.png"), upload those files here <b>FIRST</b>.<br>
-                        You can select multiple files at once.
-                    </p>
-                    <form method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="action" value="bulk_image_upload">
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="file" name="image_files[]" multiple accept="image/*" required style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #cbd5e1; flex: 1;">
-                            <button type="submit" class="btn-add" style="background: #0ea5e9;">Upload Images</button>
-                        </div>
-                    </form>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
 
                 <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                    <h3>Step 2: Upload CSV 📝</h3>
+                    <h3>Upload CSV 📝</h3>
                     <p style="margin: 10px 0; color: #666;">1. Download the sample CSV file.<br>2. Fill in your questions (keep the header row).<br>3. Select the Class, Subject, and Chapter below.<br>4. Upload the file.</p>
                     <a href="?action=download_sample" class="btn-download">⬇️ Download Sample CSV</a>
                 </div>
@@ -529,9 +493,6 @@ $mcqs = $mcqs_query->fetchAll();
                     <?php foreach($mcqs as $mcq): ?>
                     <tr>
                         <td>
-                            <?php if($mcq['image_url']): ?>
-                                <div style="margin-bottom:5px; color:#667eea; font-size:12px;">[ Image Attached ]</div>
-                            <?php endif; ?>
                             <?php echo htmlspecialchars(substr($mcq['question'], 0, 50)) . '...'; ?>
                         </td>
                         <td>

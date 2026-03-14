@@ -75,30 +75,26 @@ function sendResponse($status, $message, $data = null, $httpCode = 200) {
 }
 
 /**
- * Helper function to get JSON input
+ * Handles Windows-1252 (common in Excel CSVs) to UTF-8
  */
-function getJsonInput() {
-    $input = file_get_contents('php://input');
-    return json_decode($input, true);
-}
-
-/**
- * Helper function to validate required fields
- */
-function validateRequired($data, $requiredFields) {
-    $missing = [];
-    foreach ($requiredFields as $field) {
-        if (!isset($data[$field]) || empty(trim($data[$field]))) {
-            $missing[] = $field;
-        }
+function convertUtf8($data) {
+    if (is_array($data)) {
+        return array_map('convertUtf8', $data);
     }
-    return $missing;
+    
+    // If it's already valid UTF-8, return it
+    if (mb_check_encoding($data, 'UTF-8')) {
+        return $data;
+    }
+    
+    // Otherwise, assume it's Windows-1252 (or ISO-8859-1) and convert
+    return mb_convert_encoding($data, 'UTF-8', 'Windows-1252');
 }
 
 /**
  * Helper function to sanitize input
  */
 function sanitizeInput($data) {
-    return htmlspecialchars(strip_tags(trim($data ?? '')));
+    return strip_tags(trim($data ?? ''));
 }
 ?>

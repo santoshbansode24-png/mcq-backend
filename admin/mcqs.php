@@ -24,9 +24,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_sample') {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="mcq_sample.csv"');
     $output = fopen('php://output', 'w');
-    fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)', 'Image File (e.g. q1.jpg)']);
-    fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy', '']);
-    fputcsv($output, ['Identify this shape', 'Circle', 'Square', 'Triangle', 'Rectangle', 'c', 'It has 3 sides', 'medium', 'triangle.jpg']);
+    fputs($output, "\xEF\xBB\xBF"); // Add BOM for Excel
+    fputcsv($output, ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (a/b/c/d)', 'Explanation', 'Difficulty (easy/medium/hard)']);
+    fputcsv($output, ['What is 2+2?', '3', '4', '5', '6', 'b', '2 plus 2 equals 4', 'easy']);
+    fputcsv($output, ['Identify this shape (example context)', 'Circle', 'Square', 'Triangle', 'Rectangle', 'c', 'It has 3 sides', 'medium']);
     fclose($output);
     exit();
 }
@@ -68,31 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $difficulty = $_POST['difficulty'];
     $medium = isset($_POST['medium']) ? $_POST['medium'] : 'english';
     
-    // Handle Image Upload
-    $image_url = null;
-    if (isset($_FILES['question_image']) && $_FILES['question_image']['error'] == 0) {
-        $upload_dir = '../uploads/mcq_images/';
-        if (!file_exists($upload_dir)) { mkdir($upload_dir, 0777, true); }
-        
-        $file_ext = strtolower(pathinfo($_FILES['question_image']['name'], PATHINFO_EXTENSION));
-        $allowed_ext = ['jpg', 'jpeg', 'png', 'gif'];
-        
-        if (in_array($file_ext, $allowed_ext)) {
-            $new_name = uniqid('mcq_') . '.' . $file_ext;
-            if (hash_file('sha256', $_FILES['question_image']['tmp_name']) === false) {
-                 $message = "Error: Invalid file content.";
-                 $messageType = "error";
-            } else {
-                 if (move_uploaded_file($_FILES['question_image']['tmp_name'], $upload_dir . $new_name)) {
-                     $image_url = 'mcq_images/' . $new_name;
-                 }
-            }
-        }
-    }
-    
     try {
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium, $image_url]);
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
         $message = "MCQ added successfully!";
         $messageType = "success";
     } catch (PDOException $e) {
@@ -118,46 +97,72 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         // Get medium from form
         $medium = isset($_POST['medium']) ? $_POST['medium'] : 'english';
         
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $row_num = 1;
+        $first_error = "";
         
         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            // Validate row has enough columns (at least 6)
-            if (count($data) < 6) { $errors++; continue; }
+            $row_num++;
             
-            $question = sanitizeInput($data[0]);
-            $opt_a = sanitizeInput($data[1]);
-            $opt_b = sanitizeInput($data[2]);
-            $opt_c = sanitizeInput($data[3]);
-            $opt_d = sanitizeInput($data[4]);
-            $correct = strtolower(trim($data[5])); // a, b, c, d
-            $explanation = isset($data[6]) ? sanitizeInput($data[6]) : '';
-            $difficulty = isset($data[7]) ? strtolower(trim($data[7])) : 'medium';
-            // Column 9 (Index 8) is Image Filename
-            $image_filename = isset($data[8]) ? trim($data[8]) : null;
-            $image_subpath = null;
-            
-            // If filename provided, check if it exists in uploads/mcq_images/
-            if ($image_filename) {
-                // Security check: Only allow basename to prevent directory traversal
-                $clean_name = basename($image_filename);
-                if (file_exists('../uploads/mcq_images/' . $clean_name)) {
-                    $image_subpath = 'mcq_images/' . $clean_name;
+            // Check if row is practically empty (Excel saves trailing rows as ",,,,,,,")
+            $is_empty_row = true;
+            foreach ($data as $cell) {
+                if (!empty(trim($cell ?? ''))) {
+                    $is_empty_row = false;
+                    break;
                 }
             }
+            if ($is_empty_row) {
+                continue; // Silently skip without incrementing errors
+            }
+            
+            // Validate row has enough columns (at least 6)
+            if (count($data) < 6) { 
+                if ($errors == 0) { $first_error = "Row $row_num: Not enough columns (" . count($data) . "). Is it comma-separated?"; }
+                $errors++; continue; 
+            }
+            
+            $question = sanitizeInput(convertUtf8($data[0]));
+            if (empty($question)) {
+                if ($errors == 0) { $first_error = "Row $row_num: Question is empty."; }
+                $errors++; continue;
+            }
+            
+            $opt_a = sanitizeInput(convertUtf8($data[1]));
+            $opt_b = sanitizeInput(convertUtf8($data[2]));
+            $opt_c = sanitizeInput(convertUtf8($data[3]));
+            $opt_d = sanitizeInput(convertUtf8($data[4]));
+            
+            $correct = strtolower(trim(convertUtf8($data[5]))); // a, b, c, d
+            $correct = str_replace(['option ', 'option'], '', $correct);
+            
+            $explanation = isset($data[6]) ? sanitizeInput(convertUtf8($data[6])) : '';
+            
+            $diff_input = isset($data[7]) ? strtolower(trim(convertUtf8($data[7]))) : '';
+            $difficulty = empty($diff_input) ? 'medium' : $diff_input;
+            if (!in_array($difficulty, ['easy', 'medium', 'hard'])) { $difficulty = 'medium'; }
             
             // Validate correct answer format
-            if (!in_array($correct, ['a', 'b', 'c', 'd'])) { $errors++; continue; }
+            if (!in_array($correct, ['a', 'b', 'c', 'd'])) { 
+                if ($errors == 0) { $first_error = "Row $row_num: Invalid correct answer '$correct'"; }
+                $errors++; continue; 
+            }
             
             try {
-                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium, $image_subpath]);
+                $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
                 $count++;
             } catch (Exception $e) {
+                if ($errors == 0) { $first_error = "Row $row_num DB Error: " . $e->getMessage(); }
                 $errors++;
             }
         }
         fclose($handle);
         
         $message = "Bulk upload complete! Added: $count MCQs. Skipped/Errors: $errors.";
+        if (!empty($first_error)) {
+            $message .= " Example error: " . $first_error;
+        }
         $messageType = ($count > 0) ? "success" : "error";
     } else {
         $message = "Please upload a valid CSV file.";
@@ -397,12 +402,6 @@ $mcqs = $mcqs_query->fetchAll();
                         <div style="grid-column: span 2;">
                              <label style="display:block; margin-bottom:5px; font-weight:600;">Question Text:</label>
                              <textarea name="question" placeholder="Enter question here (or use LaTeX like \sqrt{x})" required style="width:100%; height: 80px;"></textarea>
-                        </div>
-
-                        <div style="grid-column: span 2; background: #fff; padding: 10px; border: 1px dashed #ccc; border-radius: 8px;">
-                            <label style="display:block; margin-bottom:5px; font-weight:600;">Upload Diagram/Image (Optional):</label>
-                            <input type="file" name="question_image" accept="image/*">
-                            <small style="color: #666; display: block; margin-top: 5px;">Supported: JPG, PNG. Max 2MB.</small>
                         </div>
                         
                         <input type="text" name="option_a" placeholder="Option A (e.g. \frac{1}{2})" required>

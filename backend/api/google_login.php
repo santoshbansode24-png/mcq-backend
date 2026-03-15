@@ -22,6 +22,8 @@ if (!$input || !isset($input['email'])) {
 // Sanitize inputs
 $email = sanitizeInput($input['email']);
 $google_id = isset($input['id']) ? sanitizeInput($input['id']) : ''; // Google UID
+$name = isset($input['name']) ? sanitizeInput($input['name']) : 'Student';
+$photo = isset($input['photo']) ? sanitizeInput($input['photo']) : '';
 
 try {
     // 1. Check if user already exists by email OR google_id in 'users' table
@@ -32,7 +34,6 @@ try {
     if ($user) {
         // User exists - UPDATE google_id if it was missing or photo if changed
         $userId = $user['user_id'];
-        $photo = isset($input['photo']) ? sanitizeInput($input['photo']) : ($user['profile_picture'] ?? '');
         
         $updateStmt = $pdo->prepare("UPDATE users SET google_id = ?, profile_picture = ? WHERE user_id = ?");
         $updateStmt->execute([$google_id, $photo, $userId]);
@@ -44,17 +45,29 @@ try {
             "email" => $user['email'],
             "class_id" => $user['class_id'],
             "board_type" => $user['board_type'] ?? null,
-            "google_id" => $google_id
+            "google_id" => $google_id,
+            "is_new_user" => false
         ], 200);
 
     } else {
-        // User is NEW - DO NOT create account yet. 
-        // Return a special status so the frontend can redirect to the manual Registration screen
-        sendResponse('new_user', 'No account found. Please register.', [
-            "name" => $input['name'] ?? '',
+        // User is NEW - Create account now!
+        // Generate a random password since it's required in some schema versions
+        $random_pass = password_hash(bin2hex(random_bytes(10)), PASSWORD_DEFAULT);
+        
+        $insertStmt = $pdo->prepare("INSERT INTO users (name, email, password, google_id, profile_picture, user_type) VALUES (?, ?, ?, ?, ?, 'student')");
+        $insertStmt->execute([$name, $email, $random_pass, $google_id, $photo]);
+        
+        $newId = $pdo->lastInsertId();
+        
+        // Return newly created user data
+        sendResponse('success', 'Account created successfully', [
+            "user_id" => $newId,
+            "name" => $name,
             "email" => $email,
+            "class_id" => null,
+            "board_type" => null,
             "google_id" => $google_id,
-            "photo" => $input['photo'] ?? ''
+            "is_new_user" => true
         ], 200);
     }
 } catch (PDOException $e) {

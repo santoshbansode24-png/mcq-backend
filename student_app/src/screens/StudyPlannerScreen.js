@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    ActivityIndicator, Dimensions, Alert, StatusBar
+    ActivityIndicator, Dimensions, Alert, Platform,
+    StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -21,9 +23,10 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     const [isConfigured, setIsConfigured] = useState(false);
     const [wizardStep, setWizardStep] = useState(1);
     const [roadmap, setRoadmap] = useState([]);
+    const insets = useSafeAreaInsets();
 
     // Form Data
-    const [examDate, setExamDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    const [examDate, setExamDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     
     // Selection State
@@ -43,11 +46,19 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             const res = await axios.get(`${config.API_URL}/get_study_status.php?user_id=${user.user_id}`);
             if (res.data.status === 'success' && res.data.is_configured) {
                 setIsConfigured(true);
-                setExamDate(new Date(res.data.exam_date));
+                // Fix for Jan 01 1970: Check if date is valid
+                if (res.data.exam_date && res.data.exam_date !== '0000-00-00' && res.data.exam_date !== '1970-01-01') {
+                    setExamDate(new Date(res.data.exam_date));
+                } else {
+                    setExamDate(new Date()); // Fallback to today
+                }
                 fetchRoadmap();
+            } else {
+                setExamDate(new Date()); // Ensure it's today if not configured or fallback
             }
         } catch (error) {
             console.log("No existing plan found");
+            setExamDate(new Date()); // Safety fallback
         } finally {
             setLoading(false);
         }
@@ -119,7 +130,44 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
     const handleDateChange = (event, selectedDate) => {
         setShowDatePicker(false);
-        if (selectedDate) setExamDate(selectedDate);
+        if (selectedDate) {
+            setExamDate(selectedDate);
+            // If already configured, auto-save the new date
+            if (isConfigured) {
+                // We need to re-save with existing subjects/chapters or just update date?
+                // For simplicity, if they change date in header, we trigger a regen
+                setTimeout(() => {
+                    Alert.alert(
+                        "Update Roadmap?",
+                        "Changing the exam date will regenerate your study plan. Continue?",
+                        [
+                            { text: "Cancel", style: "cancel", onPress: () => checkExistingPlan() },
+                            { text: "Update", onPress: () => updatePlanWithNewDate(selectedDate) }
+                        ]
+                    );
+                }, 500);
+            }
+        }
+    };
+
+    const updatePlanWithNewDate = async (newDate) => {
+        setLoading(true);
+        try {
+            // Fetch existing selection first to be safe
+            const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {
+                user_id: user.user_id,
+                exam_date: newDate.toISOString().split('T')[0],
+                subject_ids: selectedSubjects,
+                chapter_ids: selectedChapters
+            });
+            if (res.data.status === 'success') {
+                fetchRoadmap();
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const toggleSubject = (id) => {
@@ -230,34 +278,59 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
     if (isConfigured) {
         return (
-            <View style={styles.container}>
-                <LinearGradient colors={['#1A237E', '#4F46E5']} style={styles.modernHeader}>
+            <View style={[styles.container, { paddingTop: insets.top }]}>
+                <LinearGradient colors={['#1e1b4b', '#4338ca']} style={[styles.modernHeader, { paddingTop: 20 }]}>
                     <View style={styles.headerTop}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}><Ionicons name="arrow-back" size={26} color="white" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <Ionicons name="chevron-back" size={28} color="white" />
+                        </TouchableOpacity>
                         <View style={styles.headerInfoText}>
                             <Text style={styles.headerTitle}>Victory Pipeline</Text>
-                            <Text style={styles.headerSub}>Deadline: {examDate.toLocaleDateString()}</Text>
+                            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.headerDateBadge}>
+                                <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.7)" />
+                                <Text style={styles.headerSub}>
+                                    Deadline: {examDate instanceof Date && !isNaN(examDate) ? examDate.toLocaleDateString('en-IN') : 'Set Date'}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity onPress={() => setIsConfigured(false)} style={styles.resetHeaderBtn}><Ionicons name="refresh-circle" size={32} color="white" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => {
+                            Alert.alert(
+                                "Reset Planner?",
+                                "This will clear your current roadmap and allow you to start over. Continue?",
+                                [
+                                    { text: "Cancel", style: "cancel" },
+                                    { text: "Reset", style: "destructive", onPress: () => setIsConfigured(false) }
+                                ]
+                            );
+                        }} style={styles.resetHeaderBtn}>
+                            <Ionicons name="refresh-circle-outline" size={30} color="white" />
+                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
 
                 {/* --- Progress Dashboard --- */}
                 <View style={styles.progressCard}>
-                    <View style={styles.progressTextRow}>
-                        <View>
-                            <Text style={styles.progressLabel}>Overall Mastery</Text>
-                            <Text style={styles.progressStats}>
-                                {roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length} / {roadmap.flatMap(d => d.tasks).length} Tasks Finished
-                            </Text>
+                    <View style={styles.statsRow}>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statVal}>{roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length}</Text>
+                            <Text style={styles.statLab}>Completed</Text>
                         </View>
-                        <Text style={styles.progressPercent}>
-                            {Math.round((roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length / (roadmap.flatMap(d => d.tasks).length || 1)) * 100)}%
-                        </Text>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statVal, {color: '#4338ca'}]}>{roadmap.flatMap(d => d.tasks).length}</Text>
+                            <Text style={styles.statLab}>Total Tasks</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statVal, {color: '#10b981'}]}>
+                                {Math.round((roadmap.flatMap(d => d.tasks).filter(t => t.status === 'completed').length / (roadmap.flatMap(d => d.tasks).length || 1)) * 100)}%
+                            </Text>
+                            <Text style={styles.statLab}>Mastery</Text>
+                        </View>
                     </View>
                     <View style={styles.progressBarBg}>
                         <LinearGradient
-                            colors={['#4CAF50', '#8BC34A']}
+                            colors={['#10b981', '#34d399']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={[styles.progressBarFill, { 
@@ -285,7 +358,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                                                 <Ionicons name={style.icon} size={24} color={style.color} />
                                                 <View style={styles.tileTextContainer}>
                                                     <Text style={[styles.tileTag, { color: style.color }]}>{style.label} • {task.subject}</Text>
-                                                    <Text style={[styles.tileTitle, isDone && styles.completedText]} numberOfLines={2}>{task.title}</Text>
+                                                    <Text style={[styles.tileTitle, isDone && styles.completedText]} numberOfLines={2}>{task.title.toUpperCase()}</Text>
                                                 </View>
                                             </View>
                                             <Ionicons name={isDone ? "checkmark-circle" : "chevron-forward"} size={isDone ? 26 : 18} color={isDone ? "#4CAF50" : "#CCC"} />
@@ -301,40 +374,110 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     }
 
     return (
-        <ScrollView style={{flex: 1, backgroundColor: '#FFF'}} contentContainerStyle={{flexGrow: 1}}>
-            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.setupBanner}>
-                <Ionicons name="airplane-outline" size={80} color="white" />
-                <Text style={styles.setupTitle}>Strategic Plan</Text>
-                <Text style={styles.setupDesc}>We'll map out all notes, videos, and quizzes.</Text>
-            </LinearGradient>
+        <View style={{flex: 1, backgroundColor: '#F8FAFC'}}>
+            <StatusBar barStyle="light-content" backgroundColor="#312e81" translucent />
+            <ScrollView 
+                style={{flex: 1}} 
+                contentContainerStyle={{flexGrow: 1, paddingBottom: 100}}
+                showsVerticalScrollIndicator={false}
+            >
+                <LinearGradient colors={['#312e81', '#4338ca']} style={[styles.setupBanner, { paddingTop: insets.top + 10 }]}>
+                    <View style={styles.headerIconCircle}>
+                        <Ionicons name="rocket" size={44} color="#4338ca" />
+                    </View>
+                    <Text style={styles.setupTitle}>Strategic Study Roadmap</Text>
+                    <Text style={styles.setupDesc}>AI-Powered syllabus coverage for your success.</Text>
+                </LinearGradient>
 
-            <View style={styles.wizardBox}>
-                <Text style={styles.wizardProgress}>STEP {wizardStep} / 3</Text>
-                
+                <View style={styles.wizardBox}>
+                {/* Visual Step Indicator */}
+                <View style={styles.stepIndicatorRow}>
+                    {[1, 2, 3].map((s) => (
+                        <View key={s} style={[styles.stepDot, wizardStep >= s && styles.stepDotActive]}>
+                            {wizardStep > s ? (
+                                <Ionicons name="checkmark" size={14} color="white" />
+                            ) : (
+                                <Text style={[styles.stepDotText, wizardStep === s && styles.stepDotTextActive]}>{s}</Text>
+                            )}
+                        </View>
+                    ))}
+                    <View style={styles.stepConnector} />
+                </View>
+
                 {wizardStep === 1 && (
                     <View style={styles.stepContent}>
                         <Text style={styles.stepTitle}>When is your Exam? 🗓️</Text>
-                        <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}><Ionicons name="calendar-outline" size={24} color="#4F46E5" /><Text style={styles.dateSelectorText}>{examDate.toDateString()}</Text></TouchableOpacity>
-                        {showDatePicker && <DateTimePicker value={examDate} mode="date" display="default" minimumDate={new Date()} onChange={handleDateChange} />}
-                        <TouchableOpacity style={styles.primaryActionButton} onPress={() => setWizardStep(2)}><Text style={styles.primaryActionButtonLabel}>Next</Text></TouchableOpacity>
+                        <Text style={styles.stepSubText}>Pick the date you want to be ready by.</Text>
+                        
+                        <TouchableOpacity style={styles.dateSelectorCard} onPress={() => setShowDatePicker(true)}>
+                            <View style={styles.dateIconBox}>
+                                <Ionicons name="calendar" size={24} color="#4338ca" />
+                            </View>
+                            <View style={styles.dateTextBox}>
+                                <Text style={styles.dateLabel}>TARGET EXAM DATE</Text>
+                                <Text style={styles.dateValue}>
+                                    {examDate instanceof Date && !isNaN(examDate) ? examDate.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString()}
+                                </Text>
+                            </View>
+                            <View style={styles.editDateBtn}>
+                                <Text style={styles.editDateText}>CHOOSE</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {showDatePicker && (
+                            <DateTimePicker 
+                                value={examDate instanceof Date && !isNaN(examDate) ? examDate : new Date()} 
+                                mode="date" 
+                                display="default" 
+                                minimumDate={new Date()} 
+                                onChange={handleDateChange} 
+                            />
+                        )}
+
+                        <TouchableOpacity style={styles.primaryBtn} onPress={() => setWizardStep(2)}>
+                            <LinearGradient colors={['#4338ca', '#6366f1']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.primaryBtnGrad}>
+                                <Text style={styles.primaryBtnText}>Continue to Subjects</Text>
+                                <Ionicons name="arrow-forward-circle" size={22} color="white" />
+                            </LinearGradient>
+                        </TouchableOpacity>
                     </View>
                 )}
 
                 {wizardStep === 2 && (
                     <View style={styles.stepContent}>
                         <Text style={styles.stepTitle}>Select Subjects 📚</Text>
+                        <Text style={styles.stepSubText}>Select what you need to master.</Text>
+                        
                         <View style={styles.chipCloud}>
                             {availableSubjects.map(s => (
-                                <TouchableOpacity key={s.subject_id} style={[styles.smallChip, selectedSubjects.includes(s.subject_id) && styles.smallChipActive]} onPress={() => toggleSubject(s.subject_id)}>
-                                    <Text style={[styles.smallChipLabel, selectedSubjects.includes(s.subject_id) && styles.smallChipLabelActive]}>{s.subject_name}</Text>
+                                <TouchableOpacity 
+                                    key={s.subject_id} 
+                                    style={[styles.smallChip, selectedSubjects.includes(s.subject_id) && styles.smallChipActive]} 
+                                    onPress={() => toggleSubject(s.subject_id)}
+                                >
+                                    <Text style={[styles.smallChipLabel, selectedSubjects.includes(s.subject_id) && styles.smallChipLabelActive]}>
+                                        {s.subject_name}
+                                    </Text>
+                                    {selectedSubjects.includes(s.subject_id) && <Ionicons name="checkmark-circle" size={16} color="white" style={{marginLeft: 5}} />}
                                 </TouchableOpacity>
                             ))}
                         </View>
 
                         {selectedSubjects.length > 0 && (
                             <View style={styles.chapterSection}>
-                                <Text style={styles.sectionHeading}>Curate Your Pipeline 🛠️</Text>
-                                {loadingChapters ? <ActivityIndicator color="#4F46E5" /> : (
+                                <View style={styles.sectionHeaderRow}>
+                                    <View>
+                                        <Text style={styles.sectionHeading}>Curate Chapters 🛠️</Text>
+                                        <Text style={styles.sectionSubHeading}>{selectedChapters.length} Chapters in Pipeline</Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => setSelectedChapters(allChapters.map(c => c.chapter_id))} style={styles.selectAllBtn}>
+                                        <Text style={styles.selectAllText}>Select All</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {loadingChapters ? (
+                                    <View style={{padding: 40}}><ActivityIndicator color="#4338ca" size="large" /></View>
+                                ) : (
                                     <View style={styles.groupedChapterList}>
                                         {selectedSubjects.map(sid => {
                                             const subject = availableSubjects.find(s => s.subject_id === sid);
@@ -346,7 +489,6 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                                                 <View key={sid} style={styles.subjectGroup}>
                                                     <View style={styles.subjectHeader}>
                                                         <Text style={styles.subjectHeaderLabel}>{subject?.subject_name}</Text>
-                                                        <View style={styles.subjectHeaderLine} />
                                                     </View>
                                                     
                                                     {subjectChapters.map(ch => (
@@ -355,13 +497,11 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                                                             style={[styles.chapterRow, !selectedChapters.includes(ch.chapter_id) && styles.chapterRowDim]} 
                                                             onPress={() => toggleChapter(ch.chapter_id)}
                                                         >
-                                                            <Ionicons 
-                                                                name={selectedChapters.includes(ch.chapter_id) ? "checkmark-circle" : "ellipse-outline"} 
-                                                                size={22} 
-                                                                color={selectedChapters.includes(ch.chapter_id) ? "#4F46E5" : "#CCC"} 
-                                                            />
+                                                            <View style={[styles.chapterCheck, selectedChapters.includes(ch.chapter_id) && styles.chapterCheckActive]}>
+                                                                {selectedChapters.includes(ch.chapter_id) && <Ionicons name="checkmark" size={16} color="white" />}
+                                                            </View>
                                                             <Text style={[styles.chapterRowText, selectedChapters.includes(ch.chapter_id) && styles.chapterRowTextActive]}>
-                                                                {ch.chapter_name}
+                                                                {ch.chapter_name.toUpperCase()}
                                                             </Text>
                                                         </TouchableOpacity>
                                                     ))}
@@ -374,54 +514,90 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                         )}
 
                         <View style={styles.wizardFooter}>
-                            <TouchableOpacity onPress={() => setWizardStep(1)}><Text style={styles.wizardBack}>Back</Text></TouchableOpacity>
-                            <TouchableOpacity style={styles.primaryActionButton} onPress={() => setWizardStep(3)}><Text style={styles.primaryActionButtonLabel}>Next</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setWizardStep(1)} style={styles.secondaryBtn}>
+                                <Text style={styles.secondaryBtnText}>Back</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.primaryBtnSmall} onPress={() => setWizardStep(3)}>
+                                <LinearGradient colors={['#4338ca', '#6366f1']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.primaryBtnGradSmall}>
+                                    <Text style={styles.primaryBtnText}>Review Plan</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="white" style={{marginLeft: 5}} />
+                                </LinearGradient>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 )}
 
                 {wizardStep === 3 && (
                     <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>All Set! 🚀</Text>
-                        <View style={styles.summaryCard}>
-                            <Text style={styles.summaryInfo}>📅 Exam Date: {examDate.toLocaleDateString()}</Text>
-                            <Text style={styles.summaryInfo}>📖 Chapters Selected: {selectedChapters.length}</Text>
+                        <View style={styles.finalSuccessIcon}>
+                            <Ionicons name="checkmark-done-circle" size={80} color="#10b981" />
                         </View>
-                        <TouchableOpacity style={styles.launchBtn} onPress={savePlan}>
-                            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.launchBtnGrad}><Text style={styles.launchBtnText}>GENERATE ROADMAP</Text></LinearGradient>
+                        <Text style={styles.stepTitle}>Ready to Blast Off! 🚀</Text>
+                        <Text style={styles.stepSubText}>Your customized roadmap is prepared.</Text>
+                        
+                        <View style={styles.summaryCardModern}>
+                            <View style={styles.summaryItem}>
+                                <Ionicons name="calendar-outline" size={20} color="#64748b" />
+                                <Text style={styles.summaryText}>Target Date: <Text style={{color: '#1e293b', fontWeight: 'bold'}}>{examDate.toLocaleDateString()}</Text></Text>
+                            </View>
+                            <View style={styles.summaryItem}>
+                                <Ionicons name="book-outline" size={20} color="#64748b" />
+                                <Text style={styles.summaryText}>Total Chapters: <Text style={{color: '#1e293b', fontWeight: 'bold'}}>{selectedChapters.length}</Text></Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity style={styles.launchBtnModern} onPress={savePlan}>
+                            <LinearGradient colors={['#10b981', '#059669']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.launchBtnGrad}>
+                                <Text style={styles.launchBtnText}>CREATE MY VICTORY PIPELINE</Text>
+                            </LinearGradient>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setWizardStep(2)} style={{marginTop:20}}><Text style={styles.wizardBack}>Change Chapters</Text></TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setWizardStep(2)} style={styles.reviewPlanBtn}>
+                            <Text style={styles.reviewPlanText}>Adjust Selection</Text>
+                        </TouchableOpacity>
                     </View>
                 )}
-            </View>
-        </ScrollView>
+                </View>
+            </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F9FAFC' },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    modernHeader: { padding: 25, paddingTop: 50, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
-    headerTop: { flexDirection: 'row', alignItems: 'center' },
-    backBtn: { marginRight: 15 },
-    headerInfoText: { flex: 1 },
-    headerTitle: { fontSize: 22, fontWeight: 'bold', color: 'white' },
-    headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-    resetHeaderBtn: { padding: 5 },
+    modernHeader: { padding: 20, paddingTop: 60, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+    headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+    headerInfoText: { flex: 1, marginLeft: 15 },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: 'white' },
+    headerDateBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+    headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+    resetHeaderBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
 
     // --- Progress Card Styles ---
     progressCard: {
         backgroundColor: 'white',
-        marginHorizontal: 20,
-        marginTop: -25,
-        borderRadius: 20,
+        marginHorizontal: 16,
+        marginTop: -30,
+        borderRadius: 24,
         padding: 20,
-        elevation: 10,
+        elevation: 8,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
     },
+    statsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    statItem: { alignItems: 'center', flex: 1 },
+    statVal: { fontSize: 20, fontWeight: 'bold', color: '#1e293b' },
+    statLab: { fontSize: 10, color: '#64748b', textTransform: 'uppercase', marginTop: 4, fontWeight: 'bold' },
+    statDivider: { width: 1, height: 30, backgroundColor: '#f1f5f9' },
     progressTextRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -444,14 +620,14 @@ const styles = StyleSheet.create({
         color: '#4CAF50',
     },
     progressBarBg: {
-        height: 10,
-        backgroundColor: '#F0F0F0',
-        borderRadius: 5,
+        height: 12,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 6,
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
-        borderRadius: 5,
+        borderRadius: 6,
     },
 
     timelineBody: { padding: 20 },
@@ -473,43 +649,351 @@ const styles = StyleSheet.create({
     tileTitle: { fontSize: 14, fontWeight: '700', color: '#333' },
     completedText: { textDecorationLine: 'line-through', color: '#757575' },
 
-    setupBanner: { height: 320, justifyContent: 'center', alignItems: 'center', borderBottomLeftRadius: 50, borderBottomRightRadius: 50 },
-    setupTitle: { fontSize: 28, fontWeight: 'bold', color: 'white', marginTop: 20 },
-    setupDesc: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 8, textAlign: 'center', paddingHorizontal: 50 },
-    wizardBox: { backgroundColor: 'white', marginHorizontal: 25, marginTop: -40, borderRadius: 30, padding: 30, elevation: 12, marginBottom: 50 },
-    wizardProgress: { fontSize: 10, fontWeight: '900', color: '#999', textAlign: 'center', marginBottom: 20 },
-    stepContent: { alignItems: 'center' },
-    stepTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A237E', marginBottom: 30 },
-    dateSelector: { width: '100%', padding: 18, backgroundColor: '#F3F4F9', borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
-    dateSelectorText: { fontSize: 18, fontWeight: 'bold', color: '#333', marginLeft: 12 },
-    primaryActionButton: { backgroundColor: '#4F46E5', paddingHorizontal: 40, paddingVertical: 15, borderRadius: 15 },
-    primaryActionButtonLabel: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-
-    chipCloud: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 },
-    smallChip: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#DDD', margin: 5 },
-    smallChipActive: { backgroundColor: '#1A237E', borderColor: '#1A237E' },
-    smallChipLabel: { fontSize: 12, fontWeight: 'bold', color: '#666' },
-    smallChipLabelActive: { color: 'white' },
-
-    chapterSection: { width: '100%', marginTop: 10, marginBottom: 30 },
-    sectionHeading: { fontSize: 16, fontWeight: 'bold', color: '#444', marginBottom: 15 },
-    groupedChapterList: { width: '100%' },
-    subjectGroup: { marginBottom: 25 },
-    subjectHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    subjectHeaderLabel: { fontSize: 13, fontWeight: '900', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: 1 },
-    subjectHeaderLine: { flex: 1, height: 1, backgroundColor: '#EEE', marginLeft: 10 },
-    chapterRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FE', padding: 15, borderRadius: 15, marginBottom: 8, borderWidth: 1, borderColor: '#F0F0F0' },
-    chapterRowDim: { opacity: 0.5, backgroundColor: 'white' },
-    chapterRowText: { fontSize: 14, fontWeight: '600', color: '#666', marginLeft: 12, flex: 1 },
-    chapterRowTextActive: { color: '#333', fontWeight: '700' },
-
-    wizardFooter: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    wizardBack: { fontWeight: 'bold', color: '#999' },
-    summaryCard: { width: '100%', padding: 20, backgroundColor: '#F8F9FE', borderRadius: 20, marginBottom: 40 },
-    summaryInfo: { fontSize: 14, fontWeight: 'bold', color: '#444', marginBottom: 10 },
-    launchBtn: { width: '100%', borderRadius: 15, overflow: 'hidden' },
-    launchBtnGrad: { padding: 20, alignItems: 'center' },
-    launchBtnText: { color: 'white', fontWeight: 'bold' }
+    restartButtonText: { color: '#4338ca', fontSize: 18, fontWeight: 'bold' },
+    
+    // Setup Optimization Styles
+    setupBanner: { 
+        height: 240, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        paddingTop: 20 
+    },
+    headerIconCircle: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5
+    },
+    setupTitle: { 
+        fontSize: 22, 
+        fontWeight: 'bold', 
+        color: 'white', 
+        textAlign: 'center' 
+    },
+    setupDesc: { 
+        fontSize: 14, 
+        color: 'rgba(255,255,255,0.85)', 
+        marginTop: 6, 
+        textAlign: 'center' 
+    },
+    wizardBox: { 
+        backgroundColor: 'white', 
+        marginHorizontal: 16, 
+        marginTop: -30, 
+        borderRadius: 24, 
+        padding: 24, 
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 15,
+        marginBottom: 40
+    },
+    stepIndicatorRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 30,
+        position: 'relative'
+    },
+    stepDot: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#e2e8f0',
+        zIndex: 2,
+        marginHorizontal: 20
+    },
+    stepDotActive: {
+        backgroundColor: '#4338ca',
+        borderColor: '#4338ca'
+    },
+    stepDotText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#94a3b8'
+    },
+    stepDotTextActive: {
+        color: 'white'
+    },
+    stepConnector: {
+        position: 'absolute',
+        top: 15,
+        left: '20%',
+        right: '20%',
+        height: 2,
+        backgroundColor: '#e2e8f0',
+        zIndex: 1
+    },
+    stepContent: {
+        alignItems: 'center',
+        width: '100%'
+    },
+    stepTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        marginBottom: 8,
+        textAlign: 'center'
+    },
+    stepSubText: {
+        fontSize: 14,
+        color: '#64748b',
+        marginBottom: 30,
+        textAlign: 'center'
+    },
+    dateSelectorCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        width: '100%',
+        padding: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        marginBottom: 40
+    },
+    dateIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: '#e0e7ff',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    dateTextBox: {
+        flex: 1,
+        marginLeft: 15
+    },
+    dateLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#94a3b8',
+        letterSpacing: 1
+    },
+    dateValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        marginTop: 2
+    },
+    editDateBtn: {
+        backgroundColor: 'white',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    editDateText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#4338ca'
+    },
+    primaryBtn: {
+        width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        elevation: 4
+    },
+    primaryBtnGrad: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 18,
+        gap: 10
+    },
+    primaryBtnText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+    chipCloud: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 10,
+        marginBottom: 20
+    },
+    smallChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 25,
+        backgroundColor: '#f1f5f9',
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    smallChipActive: {
+        backgroundColor: '#4338ca',
+        borderColor: '#4338ca'
+    },
+    smallChipLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#64748b'
+    },
+    smallChipLabelActive: {
+        color: 'white'
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        marginBottom: 15,
+        marginTop: 20
+    },
+    sectionHeading: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1e293b'
+    },
+    sectionSubHeading: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2
+    },
+    selectAllBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 6
+    },
+    selectAllText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#4338ca'
+    },
+    subjectGroup: {
+        marginBottom: 20
+    },
+    subjectHeader: {
+        marginBottom: 10,
+        paddingLeft: 4
+    },
+    subjectHeaderLabel: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#4338ca',
+        textTransform: 'uppercase'
+    },
+    chapterRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    chapterRowDim: {
+        opacity: 0.6
+    },
+    chapterCheck: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: '#cbd5e1',
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    chapterCheckActive: {
+        backgroundColor: '#4338ca',
+        borderColor: '#4338ca'
+    },
+    chapterRowText: {
+        flex: 1,
+        fontSize: 14,
+        color: '#475569',
+        marginLeft: 12
+    },
+    chapterRowTextActive: {
+        color: '#1e293b',
+        fontWeight: 'bold'
+    },
+    wizardFooter: {
+        flexDirection: 'row',
+        width: '100%',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 30
+    },
+    secondaryBtn: {
+        paddingHorizontal: 20,
+        paddingVertical: 12
+    },
+    secondaryBtnText: {
+        color: '#94a3b8',
+        fontWeight: 'bold'
+    },
+    primaryBtnSmall: {
+        borderRadius: 12,
+        overflow: 'hidden'
+    },
+    primaryBtnGradSmall: {
+        paddingHorizontal: 25,
+        paddingVertical: 12
+    },
+    finalSuccessIcon: {
+        marginBottom: 15
+    },
+    summaryCardModern: {
+        width: '100%',
+        backgroundColor: '#f8fafc',
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        marginBottom: 30
+    },
+    summaryItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 12
+    },
+    summaryText: {
+        fontSize: 14,
+        color: '#64748b'
+    },
+    launchBtnModern: {
+        width: '100%',
+        borderRadius: 20,
+        overflow: 'hidden',
+        elevation: 6,
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10
+    },
+    launchBtnText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 14
+    },
+    reviewPlanBtn: {
+        marginTop: 20,
+        padding: 10
+    },
+    reviewPlanText: {
+        color: '#94a3b8',
+        fontWeight: 'bold',
+        fontSize: 12
+    }
 });
 
 export default StudyPlannerScreen;

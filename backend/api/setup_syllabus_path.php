@@ -91,9 +91,9 @@ try {
 
             // 3. Flashcards (Active Recall)
             $pdo->prepare("INSERT INTO study_tasks (user_id, plan_id, task_date, subject, chapter_id, title, task_type, duration_minutes, xp_reward) 
-                          VALUES (?, ?, ?, ?, ?, ?, 'quiz', 10, 60)")
-                ->execute([$user_id, $plan_id, $date, $ch['subject_name'], $ch['chapter_id'], "Flashcards: " . $ch['chapter_name']]);
-
+                          VALUES (?, ?, ?, ?, ?, ?, 'flashcard', 10, 60)")
+                ->execute([$user_id, $plan_id, $date, $ch['subject_name'], $ch['chapter_id'], "Cards: " . $ch['chapter_name']]);
+                
             // 4. Practice Quiz
             $pdo->prepare("INSERT INTO study_tasks (user_id, plan_id, task_date, subject, chapter_id, title, task_type, duration_minutes, xp_reward) 
                           VALUES (?, ?, ?, ?, ?, ?, 'quiz', 15, 100)")

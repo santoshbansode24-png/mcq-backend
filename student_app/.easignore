@@ -1,35 +1,16 @@
-# EAS Ignore
-# These files are ignored when uploading to EAS Build
-
-# Dependencies
-node_modules/
-.expo/
-.git_backup/
-
-# Build artifacts
+node_modules
+android/build
+android/app/build
+android/.gradle
+.git
+.git_backup
+.expo
+.eas
+artifacts
+tmp
+dist
+builds
+temp_image_processing
 *.apk
 *.aab
-dist/
-web-build/
-builds/
-
-# Native directories (EAS builds from source)
-android/
-ios/
-android_old/
-android_backup_conflict/
-
-# Environment files
-.env
-.env.local
-
-# Git
-.git/
-.gitignore
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Documentation (optional, to save space)
-*.md
+*.zip

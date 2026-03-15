@@ -4,7 +4,8 @@
     "slug": "mcq-student-app",
     "owner": "virajbansode",
     "scheme": "com.veeru.app",
-    "version": "1.0.10",
+    "version": "1.0.14",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -32,7 +33,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.veeru.app",
-      "versionCode": 12,
+      "versionCode": 16,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -62,7 +63,8 @@
         }
       ],
       "./withUcropColors.js",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

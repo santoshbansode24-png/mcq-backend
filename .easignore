@@ -1,0 +1,12 @@
+backend/
+student_app/node_modules/
+student_app/android/build/
+student_app/android/app/build/
+student_app/android/.gradle/
+student_app/.expo/
+student_app/dist/
+student_app/builds/
+.git/
+.git_backup/
+artifacts/
+tmp/

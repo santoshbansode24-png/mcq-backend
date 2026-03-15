@@ -114,25 +114,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
         $stmt = $pdo->prepare("INSERT INTO flashcards (chapter_id, subject, topic, question_front, answer_back) VALUES (?, ?, ?, ?, ?)");
         
+        $row_num = 1;
+        $first_error = "";
+        
         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            $row_num++;
+            
+            // Check if row is practically empty (Excel saves trailing rows as ",,,,,,,")
+            $is_empty_row = true;
+            foreach ($data as $cell) {
+                if (!empty(trim($cell ?? ''))) {
+                    $is_empty_row = false;
+                    break;
+                }
+            }
+            if ($is_empty_row) {
+                continue; // Silently skip without incrementing errors
+            }
+            
             // Need at least 2 columns now (Question, Answer)
-            if (count($data) < 2) { $errors++; continue; }
+            if (count($data) < 2) { 
+                if ($errors == 0) { $first_error = "Row $row_num: Not enough columns (" . count($data) . "). Is it comma-separated?"; }
+                $errors++; 
+                continue; 
+            }
             
             $front = sanitizeTop(convertUtf8($data[0]));
             $back = sanitizeTop(convertUtf8($data[1]));
             
-            if (empty($front) || empty($back)) { $errors++; continue; }
+            if (empty($front) || empty($back)) { 
+                if ($errors == 0) { $first_error = "Row $row_num: Question or Answer is empty."; }
+                $errors++; 
+                continue; 
+            }
             
             try {
                 $stmt->execute([$chapter_id, $subject, $topic, $front, $back]);
                 $count++;
             } catch (Exception $e) {
+                if ($errors == 0) { $first_error = "Row $row_num DB Error: " . $e->getMessage(); }
                 $errors++;
             }
         }
         fclose($handle);
         
         $message = "Bulk upload complete! Added: $count Flashcards. Skipped/Errors: $errors.";
+        if (!empty($first_error)) {
+            $message .= " Example error: " . $first_error;
+        }
         $messageType = ($count > 0) ? "success" : "error";
     } else {
         $message = "Please upload a valid CSV file.";

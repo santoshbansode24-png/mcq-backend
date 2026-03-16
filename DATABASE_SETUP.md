@@ -37,12 +37,17 @@ CREATE TABLE IF NOT EXISTS mcq_attempts (
 );
 ```
 
-## Verification
-
-After running the SQL, verify the table was created:
-
+### Study Tasks (Strategic Roadmap Fix)
+If you get a "Data truncated" error, run this to allow 'notes' and 'flashcards':
 ```sql
-DESCRIBE mcq_attempts;
+ALTER TABLE study_tasks MODIFY COLUMN task_type VARCHAR(50) NOT NULL;
+ALTER TABLE study_tasks MODIFY COLUMN title VARCHAR(255) NOT NULL;
+ALTER TABLE study_tasks MODIFY COLUMN subject VARCHAR(100) NOT NULL;
 ```
 
-You should see 8 columns: attempt_id, user_id, mcq_id, chapter_id, selected_answer, correct_answer, is_correct, attempted_at
+## Verification
+After running the SQL, verify the table was created:
+```sql
+DESCRIBE mcq_attempts;
+DESCRIBE study_tasks;
+```

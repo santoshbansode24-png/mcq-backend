@@ -50,7 +50,7 @@ try {
         subject VARCHAR(100) NOT NULL,
         chapter_id INT NULL,
         title VARCHAR(255) NOT NULL,
-        task_type ENUM('revision', 'quiz', 'video', 'custom', 'practice') NOT NULL,
+        task_type VARCHAR(50) NOT NULL,
         duration_minutes INT DEFAULT 15,
         status ENUM('pending', 'in_progress', 'completed', 'skipped') DEFAULT 'pending',
         xp_reward INT DEFAULT 50,
@@ -61,6 +61,10 @@ try {
 
     $pdo->exec($sql_tasks);
     
+    try {
+        $pdo->exec("ALTER TABLE study_tasks MODIFY COLUMN task_type VARCHAR(50) NOT NULL");
+    } catch (Exception $e) { /* Might fail if column is already updated or other issues */ }
+
     try {
         $pdo->exec("ALTER TABLE study_tasks ADD COLUMN chapter_id INT NULL");
     } catch (Exception $e) { /* Column likely exists */ }

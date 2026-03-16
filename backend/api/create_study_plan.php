@@ -190,7 +190,7 @@ try {
                 if ($ch['total_flashcards'] > 0) {
                     $dur = round(($ch['total_flashcards'] * 20) / 60);
                     $dur = max(5, $dur);
-                    $content_types[] = ['title' => "Flashcards: " . $ch['chapter_name'] . " (" . $ch['total_flashcards'] . " Cards)", 'type' => 'quiz', 'dur' => $dur, 'xp' => 5 * $ch['total_flashcards']];
+                    $content_types[] = ['title' => "Flashcards: " . $ch['chapter_name'] . " (" . $ch['total_flashcards'] . " Cards)", 'type' => 'flashcard', 'dur' => $dur, 'xp' => 5 * $ch['total_flashcards']];
                 }
                 
                 // 3. Videos
@@ -246,7 +246,7 @@ try {
                     $dur = round(($ch['total_flashcards'] * 20) / 60);
                     $dur = max(5, $dur);
                     // Use 'revision' type for Flashcards for now, or 'quiz'
-                    $sub_tasks[] = ['title' => "Flashcards: " . $ch['chapter_name'] . " (" . $ch['total_flashcards'] . " Cards)", 'type' => 'quiz', 'dur' => $dur, 'xp' => 5 * $ch['total_flashcards']];
+                    $sub_tasks[] = ['title' => "Flashcards: " . $ch['chapter_name'] . " (" . $ch['total_flashcards'] . " Cards)", 'type' => 'flashcard', 'dur' => $dur, 'xp' => 5 * $ch['total_flashcards']];
                 }
 
                 // 3. Videos: 10 mins per Video

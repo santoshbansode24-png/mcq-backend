@@ -66,12 +66,25 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
     const fetchRoadmap = async () => {
         try {
+            // First, trigger redistribution of missed tasks
+            await axios.post(`${config.API_URL}/redistribute_tasks.php`, { user_id: user.user_id });
+
             const res = await axios.get(`${config.API_URL}/get_roadmap.php?user_id=${user.user_id}`);
             if (res.data.status === 'success') {
                 setRoadmap(res.data.data);
+                
+                // Schedule notifications for today's newly loaded roadmap
+                const today = new Date().toISOString().split('T')[0];
+                const todayData = res.data.data.find(d => d.date === today);
+                if (todayData && todayData.tasks.length > 0) {
+                    const startTime = new Date();
+                    const endTime = new Date();
+                    endTime.setHours(21, 0, 0);
+                    scheduleStudyPlanNotifications(todayData.tasks, startTime, endTime);
+                }
             }
         } catch (error) {
-            console.error(error);
+            console.error("Error loading roadmap/redistributing:", error);
         }
     };
 
@@ -219,13 +232,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                             const endTime = new Date();
                             endTime.setHours(21, 0, 0); // 9 PM
 
-                            const chapters = todayTasks.map(t => ({
-                                chapter_id: t.chapter_id,
-                                chapter_name: t.title.split(': ').pop(),
-                                subject_name: t.subject
-                            }));
-
-                            scheduleStudyPlanNotifications(chapters, startTime, endTime);
+                            scheduleStudyPlanNotifications(todayTasks, startTime, endTime);
                         }
                     }
                 }
@@ -252,15 +259,15 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             subject_name: task.subject
         };
 
-        if (task.task_type === 'quiz') {
-            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'MCQs' });
-        } else if (task.task_type === 'video') {
-            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'Videos' });
-        } else if (task.task_type === 'flashcard') {
-            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'Flashcards' });
-        } else {
-            navigation.navigate('ChapterContent', { chapter: chapterData, initialTab: 'Notes' });
-        }
+        const navConfig = {
+            quiz: 'MCQs',
+            video: 'Videos',
+            flashcard: 'Flashcards',
+            notes: 'Notes'
+        };
+
+        const initialTab = navConfig[task.task_type] || 'Notes';
+        navigation.navigate('ChapterContent', { chapter: chapterData, initialTab });
     };
 
     const getTaskStyle = (type, isCompleted) => {
@@ -279,17 +286,21 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     if (isConfigured) {
         return (
             <View style={[styles.container, { paddingTop: insets.top }]}>
-                <LinearGradient colors={['#1e1b4b', '#4338ca']} style={[styles.modernHeader, { paddingTop: 20 }]}>
+                <LinearGradient 
+                    colors={['#0f172a', '#1e293b', '#334155']} 
+                    start={{x:0, y:0}} end={{x:1, y:1}}
+                    style={[styles.modernHeader, { paddingTop: insets.top + 10, paddingBottom: 60 }]}
+                >
                     <View style={styles.headerTop}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <Ionicons name="chevron-back" size={28} color="white" />
+                            <Ionicons name="chevron-back" size={24} color="white" />
                         </TouchableOpacity>
                         <View style={styles.headerInfoText}>
                             <Text style={styles.headerTitle}>Victory Pipeline</Text>
                             <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.headerDateBadge}>
-                                <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.7)" />
+                                <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.7)" />
                                 <Text style={styles.headerSub}>
-                                    Deadline: {examDate instanceof Date && !isNaN(examDate) ? examDate.toLocaleDateString('en-IN') : 'Set Date'}
+                                    Deadline: {examDate instanceof Date && !isNaN(examDate) ? examDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Set Date'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -303,7 +314,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                                 ]
                             );
                         }} style={styles.resetHeaderBtn}>
-                            <Ionicons name="refresh-circle-outline" size={30} color="white" />
+                            <Ionicons name="refresh-outline" size={24} color="white" />
                         </TouchableOpacity>
                     </View>
                 </LinearGradient>
@@ -317,7 +328,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
-                            <Text style={[styles.statVal, {color: '#4338ca'}]}>{roadmap.flatMap(d => d.tasks).length}</Text>
+                            <Text style={[styles.statVal, {color: '#6366f1'}]}>{roadmap.flatMap(d => d.tasks).length}</Text>
                             <Text style={styles.statLab}>Total Tasks</Text>
                         </View>
                         <View style={styles.statDivider} />
@@ -381,9 +392,15 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                 contentContainerStyle={{flexGrow: 1, paddingBottom: 100}}
                 showsVerticalScrollIndicator={false}
             >
-                <LinearGradient colors={['#312e81', '#4338ca']} style={[styles.setupBanner, { paddingTop: insets.top + 10 }]}>
+                <LinearGradient 
+                    colors={['#1e1b4b', '#312e81', '#4338ca']} 
+                    start={{x:0, y:0}} end={{x:1, y:1}}
+                    style={[styles.setupBanner, { paddingTop: insets.top + 30, paddingBottom: 50 }]}
+                >
                     <View style={styles.headerIconCircle}>
-                        <Ionicons name="rocket" size={44} color="#4338ca" />
+                        <LinearGradient colors={['#ffffff', '#f1f5f9']} style={styles.iconCircleGrad}>
+                            <Ionicons name="rocket" size={40} color="#4338ca" />
+                        </LinearGradient>
                     </View>
                     <Text style={styles.setupTitle}>Strategic Study Roadmap</Text>
                     <Text style={styles.setupDesc}>AI-Powered syllabus coverage for your success.</Text>
@@ -570,19 +587,19 @@ const styles = StyleSheet.create({
     headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
     headerInfoText: { flex: 1, marginLeft: 15 },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: 'white' },
+    headerTitle: { fontSize: 24, fontWeight: '900', color: 'white', letterSpacing: 0.5 },
     headerDateBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
     headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-    resetHeaderBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    resetHeaderBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
 
     // --- Progress Card Styles ---
     progressCard: {
         backgroundColor: 'white',
         marginHorizontal: 16,
-        marginTop: -30,
+        marginTop: -45,
         borderRadius: 24,
-        padding: 20,
-        elevation: 8,
+        padding: 24,
+        elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
@@ -595,9 +612,9 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     statItem: { alignItems: 'center', flex: 1 },
-    statVal: { fontSize: 20, fontWeight: 'bold', color: '#1e293b' },
-    statLab: { fontSize: 10, color: '#64748b', textTransform: 'uppercase', marginTop: 4, fontWeight: 'bold' },
-    statDivider: { width: 1, height: 30, backgroundColor: '#f1f5f9' },
+    statVal: { fontSize: 22, fontWeight: 'bold', color: '#1e293b' },
+    statLab: { fontSize: 10, color: '#64748b', textTransform: 'uppercase', marginTop: 6, fontWeight: '800', letterSpacing: 0.5 },
+    statDivider: { width: 1, height: 35, backgroundColor: '#f1f5f9' },
     progressTextRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -645,9 +662,9 @@ const styles = StyleSheet.create({
     completedTile: { backgroundColor: '#F1F8E9', borderLeftColor: '#4CAF50', elevation: 0 },
     tileLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
     tileTextContainer: { marginLeft: 15, flex: 1 },
-    tileTag: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginBottom: 2 },
-    tileTitle: { fontSize: 14, fontWeight: '700', color: '#333' },
-    completedText: { textDecorationLine: 'line-through', color: '#757575' },
+    tileTag: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+    tileTitle: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+    completedText: { textDecorationLine: 'line-through', color: '#94a3b8' },
 
     restartButtonText: { color: '#4338ca', fontSize: 18, fontWeight: 'bold' },
     
@@ -659,18 +676,25 @@ const styles = StyleSheet.create({
         paddingTop: 20 
     },
     headerIconCircle: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: 'rgba(255,255,255,0.95)',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'white',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5
+        marginBottom: 15
+    },
+    iconCircleGrad: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     setupTitle: { 
         fontSize: 22, 
@@ -687,14 +711,14 @@ const styles = StyleSheet.create({
     wizardBox: { 
         backgroundColor: 'white', 
         marginHorizontal: 16, 
-        marginTop: -30, 
-        borderRadius: 24, 
+        marginTop: -40, 
+        borderRadius: 30, 
         padding: 24, 
-        elevation: 10,
+        elevation: 12,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 15,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
         marginBottom: 40
     },
     stepIndicatorRow: {
@@ -733,8 +757,8 @@ const styles = StyleSheet.create({
         top: 15,
         left: '20%',
         right: '20%',
-        height: 2,
-        backgroundColor: '#e2e8f0',
+        height: 3,
+        backgroundColor: '#f1f5f9',
         zIndex: 1
     },
     stepContent: {
@@ -791,10 +815,10 @@ const styles = StyleSheet.create({
     },
     editDateBtn: {
         backgroundColor: 'white',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 10,
-        borderWidth: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 12,
+        borderWidth: 1.5,
         borderColor: '#e2e8f0'
     },
     editDateText: {
@@ -818,7 +842,8 @@ const styles = StyleSheet.create({
     primaryBtnText: {
         color: 'white',
         fontSize: 16,
-        fontWeight: 'bold'
+        fontWeight: '800',
+        letterSpacing: 0.5
     },
     chipCloud: {
         flexDirection: 'row',
@@ -847,7 +872,8 @@ const styles = StyleSheet.create({
         color: '#64748b'
     },
     smallChipLabelActive: {
-        color: 'white'
+        color: 'white',
+        fontWeight: '700'
     },
     sectionHeaderRow: {
         flexDirection: 'row',
@@ -912,8 +938,8 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     chapterCheckActive: {
-        backgroundColor: '#4338ca',
-        borderColor: '#4338ca'
+        backgroundColor: '#6366f1',
+        borderColor: '#6366f1'
     },
     chapterRowText: {
         flex: 1,
@@ -974,20 +1000,33 @@ const styles = StyleSheet.create({
         width: '100%',
         borderRadius: 20,
         overflow: 'hidden',
-        elevation: 6,
+        elevation: 8,
         shadowColor: '#10b981',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12
     },
     launchBtnText: {
         color: 'white',
-        fontWeight: 'bold',
-        fontSize: 14
+        fontWeight: '900',
+        fontSize: 16,
+        letterSpacing: 1.5,
+        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2
+    },
+    launchBtnGrad: {
+        width: '100%',
+        paddingVertical: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     reviewPlanBtn: {
-        marginTop: 20,
-        padding: 10
+        marginTop: 25,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        alignItems: 'center'
     },
     reviewPlanText: {
         color: '#94a3b8',

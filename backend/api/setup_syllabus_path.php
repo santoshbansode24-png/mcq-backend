@@ -100,6 +100,14 @@ try {
                 ->execute([$user_id, $plan_id, $date, $ch['subject_name'], $ch['chapter_id'], "Quiz: " . $ch['chapter_name']]);
             
             $current_chapter_idx++;
+
+            // --- SMART BLITZ INSERTION ---
+            // After every 2 chapters, insert a Mega Revision Blitz for that day
+            if ($current_chapter_idx % 2 == 0) {
+                $pdo->prepare("INSERT INTO study_tasks (user_id, plan_id, task_date, subject, title, task_type, duration_minutes, xp_reward) 
+                              VALUES (?, ?, ?, 'Full Syllabus', 'Mega Revision Blitz', 'mega', 60, 500)")
+                    ->execute([$user_id, $plan_id, $date]);
+            }
         }
     }
 
@@ -107,7 +115,7 @@ try {
     for ($day = $safe_days; $day < $total_days; $day++) {
         $date = date('Y-m-d', strtotime("+$day days"));
         $pdo->prepare("INSERT INTO study_tasks (user_id, plan_id, task_date, subject, title, task_type, duration_minutes, xp_reward) 
-                      VALUES (?, ?, ?, 'Full Syllabus', 'Mega Revision Blitz', 'mega', 120, 500)")
+                      VALUES (?, ?, ?, 'Full Syllabus', 'Final Mega Blitz', 'mega', 120, 500)")
             ->execute([$user_id, $plan_id, $date]);
     }
 

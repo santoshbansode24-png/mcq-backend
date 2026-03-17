@@ -107,7 +107,7 @@ try {
     for ($day = $safe_days; $day < $total_days; $day++) {
         $date = date('Y-m-d', strtotime("+$day days"));
         $pdo->prepare("INSERT INTO study_tasks (user_id, plan_id, task_date, subject, title, task_type, duration_minutes, xp_reward) 
-                      VALUES (?, ?, ?, 'Full Syllabus', 'Mega Revision Blitz', 'notes', 120, 500)")
+                      VALUES (?, ?, ?, 'Full Syllabus', 'Mega Revision Blitz', 'mega', 120, 500)")
             ->execute([$user_id, $plan_id, $date]);
     }
 

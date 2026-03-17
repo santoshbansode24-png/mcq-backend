@@ -247,9 +247,37 @@ const StudyPlannerScreen = ({ user, navigation }) => {
         }
     };
 
-    const handleTaskPress = (task) => {
+    const handleTaskPress = async (task) => {
         if (task.status === 'completed') {
             Alert.alert("Goal Achieved", "You have already mastered this session!");
+            return;
+        }
+
+        // --- NEW: MEGA REVISION BLITZ HANDLER ---
+        if (task.task_type === 'mega' || task.title.includes('Mega Revision Blitz')) {
+            setLoading(true);
+            try {
+                // Determine medium from user profile (default to English if not found)
+                const medium = user?.medium || 'english';
+                const res = await axios.get(`${config.API_URL}/get_mega_revision_mcqs.php?user_id=${user.user_id}&medium=${medium}`);
+                
+                if (res.data.status === 'success' && res.data.data.length > 0) {
+                    navigation.navigate('MyExamTest', { 
+                        questions: res.data.data, 
+                        totalQuestions: res.data.data.length,
+                        subjectName: 'Mega Revision Blitz',
+                        taskId: task.task_id,
+                        source: 'study_planner'
+                    });
+                } else {
+                    Alert.alert("No MCQs Found", "Go back and finish some chapters to unlock the Blitz!");
+                }
+            } catch (err) {
+                console.error(err);
+                Alert.alert("Error", "Failed to load Mega Revision MCQs.");
+            } finally {
+                setLoading(false);
+            }
             return;
         }
         
@@ -277,9 +305,11 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             case 'quiz': return { color: '#E65100', icon: 'medal-outline', label: 'Quiz' };
             case 'notes': return { color: '#0091EA', icon: 'document-text-outline', label: 'Notes' };
             case 'flashcard': return { color: '#D500F9', icon: 'layers-outline', label: 'Cards' };
+            case 'mega': return { color: '#FF5722', icon: 'flash-outline', label: 'BLITZ' };
             default: return { color: '#455A64', icon: 'star-outline', label: 'Goal' };
         }
     };
+
 
     if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#4F46E5" /></View>;
 
@@ -364,15 +394,43 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                                     const isDone = task.status === 'completed';
                                     const style = getTaskStyle(task.task_type, isDone);
                                     return (
-                                        <TouchableOpacity key={task.task_id} style={[styles.smartTile, { borderLeftColor: style.color }, isDone && styles.completedTile]} onPress={() => handleTaskPress(task)}>
+                                        <TouchableOpacity 
+                                            key={task.task_id} 
+                                            style={[
+                                                styles.smartTile, 
+                                                { borderLeftColor: style.color }, 
+                                                isDone && styles.completedTile,
+                                                task.task_type === 'mega' && !isDone && styles.megaTile
+                                            ]} 
+                                            onPress={() => handleTaskPress(task)}
+                                        >
                                             <View style={styles.tileLeft}>
-                                                <Ionicons name={style.icon} size={24} color={style.color} />
+                                                <Ionicons name={style.icon} size={24} color={task.task_type === 'mega' && !isDone ? 'white' : style.color} />
                                                 <View style={styles.tileTextContainer}>
-                                                    <Text style={[styles.tileTag, { color: style.color }]}>{style.label} • {task.subject}</Text>
-                                                    <Text style={[styles.tileTitle, isDone && styles.completedText]} numberOfLines={2}>{task.title.toUpperCase()}</Text>
+                                                    <View style={styles.tileTopRow}>
+                                                        <Text style={[styles.tileTag, { color: task.task_type === 'mega' && !isDone ? 'rgba(255,255,255,0.9)' : style.color }]}>
+                                                            {style.label} • {task.subject}
+                                                        </Text>
+                                                        {task.xp_reward > 0 && !isDone && (
+                                                            <View style={[styles.xpBadge, { backgroundColor: style.color + '20' }]}>
+                                                                <Text style={[styles.xpText, { color: style.color }]}>+{task.xp_reward} XP</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <Text style={[
+                                                        styles.tileTitle, 
+                                                        isDone && styles.completedText,
+                                                        task.task_type === 'mega' && !isDone && styles.megaTitleText
+                                                    ]} numberOfLines={2}>
+                                                        {task.title.toUpperCase()}
+                                                    </Text>
                                                 </View>
                                             </View>
-                                            <Ionicons name={isDone ? "checkmark-circle" : "chevron-forward"} size={isDone ? 26 : 18} color={isDone ? "#4CAF50" : "#CCC"} />
+                                            <Ionicons 
+                                                name={isDone ? "checkmark-circle" : "chevron-forward"} 
+                                                size={isDone ? 26 : 18} 
+                                                color={isDone ? "#4CAF50" : (task.task_type === 'mega' ? 'white' : "#CCC")} 
+                                            />
                                         </TouchableOpacity>
                                     );
                                 })}
@@ -662,8 +720,13 @@ const styles = StyleSheet.create({
     completedTile: { backgroundColor: '#F1F8E9', borderLeftColor: '#4CAF50', elevation: 0 },
     tileLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
     tileTextContainer: { marginLeft: 15, flex: 1 },
+    tileTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+    xpBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(230, 81, 0, 0.1)' },
+    xpText: { fontSize: 10, fontWeight: '800', fontFamily: 'NotoSans-Bold' },
     tileTag: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
     tileTitle: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+    megaTile: { backgroundColor: '#FF5722', shadowColor: '#FF5722', shadowOpacity: 0.3, elevation: 8 },
+    megaTitleText: { color: 'white' },
     completedText: { textDecorationLine: 'line-through', color: '#94a3b8' },
 
     restartButtonText: { color: '#4338ca', fontSize: 18, fontWeight: 'bold' },

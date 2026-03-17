@@ -58,15 +58,24 @@ export default function App() {
           const data = response.notification.request.content.data;
           
           if (data?.type === 'STUDY_REMINDER' && data?.chapterId) {
-            // Navigate directly to ChapterContent
+            // Map task types to screen tabs
+            const tabMap = {
+                'quiz': 'MCQs',
+                'video': 'Videos',
+                'flashcard': 'Flashcards',
+                'notes': 'Notes'
+            };
+            const targetTab = tabMap[data.taskType] || 'Notes';
+
+            // Navigate directly to ChapterContent with the correct tab active
             if (navigationRef.isReady()) {
               navigationRef.navigate('ChapterContent', { 
                 chapter: {
                   chapter_id: data.chapterId,
-                  chapter_name: data.chapterName,
-                  subject_name: data.subjectName
+                  chapter_name: data.chapterName || 'Chapter Details',
+                  subject_name: data.subjectName || ''
                 }, 
-                initialTab: 'Notes' 
+                initialTab: targetTab
               });
             }
           }

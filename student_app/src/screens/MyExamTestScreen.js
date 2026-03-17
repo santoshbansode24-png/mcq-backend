@@ -8,13 +8,16 @@ import {
     StatusBar,
     Platform,
     BackHandler,
-    Dimensions
+    Dimensions,
+    Alert,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
-import { BASE_URL } from '../api/config';
+import { API_URL, BASE_URL } from '../api/config';
 import MathJaxWebView from '../components/MathJaxWebView';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -95,9 +98,32 @@ const MyExamTestScreen = ({ navigation, route }) => {
         }
     };
 
+    const finishStudyTask = async () => {
+        const { taskId, source } = route.params;
+        if (source === 'study_planner' && taskId) {
+            try {
+                const userDataStr = await AsyncStorage.getItem('user_data');
+                const userData = userDataStr ? JSON.parse(userDataStr) : null;
+                const userId = userData?.user_id || userData?.id;
+
+                if (userId) {
+                    await axios.post(`${API_URL}/update_task_status.php`, {
+                        user_id: userId,
+                        task_id: taskId,
+                        status: 'completed'
+                    });
+                    Alert.alert("Mission Accomplished! 🛡️", "Your Mega Revision Blitz has been recorded. You've earned 500 XP!");
+                }
+            } catch (err) {
+                console.log('[Exam] Task update failed', err);
+            }
+        }
+    };
+
     const submitTest = () => {
         setIsTimerRunning(false);
         setShowResults(true);
+        finishStudyTask();
     };
 
     const calculateResults = () => {

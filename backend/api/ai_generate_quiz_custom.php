@@ -17,7 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { http_response_code(200); exit(); 
 
 // --- GLOBAL ERROR CATCHING ---
 try {
+    // --- FATAL ERROR SHIELD ---
+    register_shutdown_function(function() {
+        $error = error_get_last();
+        if ($error !== NULL && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+            if (ob_get_level()) ob_end_clean();
+            http_response_code(200);
+            echo json_encode([
+                "status" => "error", 
+                "message" => "Server Fatal Error: " . $error['message'],
+                "details" => "Line: " . $error['line']
+            ]);
+        }
+    });
+
     // Performance Tuning
+
     ini_set('memory_limit', '512M');
     ini_set('upload_max_filesize', '100M');
     ini_set('post_max_size', '100M');
@@ -283,14 +298,19 @@ function extractTextFromWord($filePath) {
             curl_close($ch);
 
             $decoded = json_decode($response, true);
+            if ($decoded === null) {
+                $lastError = "Invalid JSON from API. Response: " . substr($response, 0, 100);
+                $retryCount++;
+                continue;
+            }
 
             if ($httpCode == 200 && isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
                 $finalReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
                 $tokensUsed = isset($decoded['usageMetadata']['totalTokenCount']) ? $decoded['usageMetadata']['totalTokenCount'] : 0;
                 break 2; // Success! Exit both loops
-            }
- else {
-                $errorMsg = isset($decoded['error']['message']) ? $decoded['error']['message'] : $response;
+            } else {
+                $errorMsg = isset($decoded['error']['message']) ? $decoded['error']['message'] : (isset($decoded['message']) ? $decoded['message'] : $response);
+
                 
                 // If it's a Rate Limit (429) or Server Error (500/503), WAIT and RETRY
                 if (($httpCode === 429 || $httpCode >= 500) && $retryCount < $maxRetries) {

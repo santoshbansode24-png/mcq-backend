@@ -43,42 +43,55 @@ export default function App() {
 
   // --- Notification Deep Linking Logic ---
   useEffect(() => {
-    // Check if we are in Expo Go to avoid crash in SDK 53+
     const isExpoGo = Constants.appOwnership === 'expo';
-    
     if (isExpoGo) {
         console.warn('Notifications are disabled in Expo Go. Use a Development Build to enable this feature.');
         return;
     }
 
-    try {
-        const Notifications = require('expo-notifications');
-        // Listener when a notification is clicked while app is in foreground or background
-        const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-          const data = response.notification.request.content.data;
-          
-          if (data?.type === 'STUDY_REMINDER' && data?.chapterId) {
-            // Map task types to screen tabs
+    const handleNotificationTap = (data) => {
+        if (!navigationRef.isReady() || !data) return;
+
+        // ── Study Planner notification ──
+        if (data.type === 'STUDY_PLANNER') {
+            // Navigate to Main first (so the inner nav stack is mounted),
+            // then push StudyPlanner inside it via the custom navigation params.
+            navigationRef.navigate('Main', { initialScreen: 'StudyPlanner' });
+            return;
+        }
+
+        // ── Legacy chapter-specific study reminder ──
+        if (data.type === 'STUDY_REMINDER' && data.chapterId) {
             const tabMap = {
                 'quiz': 'MCQs',
                 'video': 'Videos',
                 'flashcard': 'Flashcards',
                 'notes': 'Notes'
             };
-            const targetTab = tabMap[data.taskType] || 'Notes';
-
-            // Navigate directly to ChapterContent with the correct tab active
-            if (navigationRef.isReady()) {
-              navigationRef.navigate('ChapterContent', { 
+            navigationRef.navigate('ChapterContent', {
                 chapter: {
-                  chapter_id: data.chapterId,
-                  chapter_name: data.chapterName || 'Chapter Details',
-                  subject_name: data.subjectName || ''
-                }, 
-                initialTab: targetTab
-              });
+                    chapter_id: data.chapterId,
+                    chapter_name: data.chapterName || 'Chapter Details',
+                    subject_name: data.subjectName || ''
+                },
+                initialTab: tabMap[data.taskType] || 'Notes'
+            });
+        }
+    };
+
+    try {
+        const Notifications = require('expo-notifications');
+
+        // Handle tap when app is in foreground / background
+        const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+            handleNotificationTap(response.notification.request.content.data);
+        });
+
+        // Handle cold launch — app opened directly by tapping a notification
+        Notifications.getLastNotificationResponseAsync().then(response => {
+            if (response) {
+                handleNotificationTap(response.notification.request.content.data);
             }
-          }
         });
 
         return () => subscription.remove();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
@@ -13,7 +13,8 @@ import {
     StatusBar,
     Platform,
     FlatList,
-    Animated
+    Animated,
+    InteractionManager
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,15 +39,180 @@ const SkeletonItem = () => {
     }, []);
 
     return (
-        <Animated.View style={[styles.subjectCard, { opacity, backgroundColor: '#f1f5f9', borderWidth: 0 }]}>
-            <View style={[styles.iconContainer, { backgroundColor: '#e2e8f0' }]} />
+        <Animated.View style={[styles.subjectCardGlossy, { opacity, backgroundColor: '#e2e8f0', borderWidth: 0, shadowOpacity: 0, elevation: 0 }]}>
+            <View style={[styles.subjectIcon3D, { backgroundColor: '#cbd5e1', borderColor: 'transparent' }]} />
             <View style={{ flex: 1, marginLeft: 16 }}>
-                <View style={{ height: 16, backgroundColor: '#e2e8f0', borderRadius: 4, width: '60%', marginBottom: 8 }} />
-                <View style={{ height: 12, backgroundColor: '#e2e8f0', borderRadius: 4, width: '40%' }} />
+                <View style={{ height: 16, backgroundColor: '#cbd5e1', borderRadius: 4, width: '60%', marginBottom: 8 }} />
+                <View style={{ height: 12, backgroundColor: '#cbd5e1', borderRadius: 4, width: '40%' }} />
             </View>
         </Animated.View>
     );
 };
+// ── ListHeader must be defined OUTSIDE the component so React doesn't
+// unmount/remount it on every re-render (was a major perf issue).
+const HomeListHeader = React.memo(({ 
+    userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate,
+    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress 
+}) => {
+    const getCloudIcon = () => {
+        if (hasUpdate)       return { name: 'cloud-download', color: '#fff' };
+        if (isFullySynced)   return { name: 'cloud-check',    color: '#10b981' };
+        return                      { name: 'cloud-sync',     color: theme.primary };
+    };
+    const cloudIcon = getCloudIcon();
+
+    return (
+        <View>
+            <View style={styles.header}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t('welcome')},</Text>
+                        {isSyncing && (
+                            <View style={styles.syncIndicator}>
+                                <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                                <Text style={styles.syncText}>Syncing offline content...</Text>
+                            </View>
+                        )}
+                        {!isSyncing && isFullySynced && !hasUpdate && (
+                            <View style={styles.syncIndicator}>
+                                <MaterialCommunityIcons name="check-circle" size={12} color="#10b981" />
+                                <Text style={[styles.syncText, { color: '#10b981' }]}>Offline Ready</Text>
+                            </View>
+                        )}
+                    </View>
+                    <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity
+                        onPress={onSyncPress}
+                        style={[
+                            styles.syncButton,
+                            hasUpdate ? styles.syncButtonUpdate : null,
+                            isFullySynced && !hasUpdate ? styles.syncButtonSynced : null
+                        ]}
+                        disabled={isSyncing}
+                    >
+                        <Animated.View style={[
+                            styles.syncIconContainer,
+                            {
+                                transform: [{ rotate: syncRotAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
+                                shadowOpacity: hasUpdate ? glowAnim : 0,
+                                elevation: hasUpdate ? 5 : 0
+                            }
+                        ]}>
+                            {isSyncing ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <View>
+                                    <MaterialCommunityIcons name={cloudIcon.name} size={24} color={cloudIcon.color} />
+                                    {hasUpdate && <View style={styles.updateDot} />}
+                                </View>
+                            )}
+                        </Animated.View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={onProfilePress}>
+                        <View style={[styles.avatarContainer, { borderColor: theme.primary }]}>
+                            {user?.profile_picture ? (
+                                <Image
+                                    source={{ uri: user.profile_picture.startsWith('http') ? user.profile_picture : `${BASE_URL}/${user.profile_picture}` }}
+                                    style={styles.avatar}
+                                />
+                            ) : (
+                                <LinearGradient colors={['#6366f1', '#a855f7']} style={styles.avatarPlaceholder}>
+                                    <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
+                                </LinearGradient>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('dailyBoosters')}</Text>
+            <View style={styles.gridContainer}>
+                <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                    <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('VocabDashboard')}>
+                        <LinearGradient colors={['#f093fb', '#f5576c']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="book-open-page-variant" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>{t('vocab')}</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MentalMaths')}>
+                        <LinearGradient colors={['#FF512F', '#F09819']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>Mental Maths</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('MyExam')}>
+                        <LinearGradient colors={['#00F260', '#0575E6']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="file-document-edit-outline" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>{t('myExam')}</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
+                        <LinearGradient colors={['#A855F7', '#C026D3']} style={styles.gridGradient}>
+                            <MaterialCommunityIcons name="printer-outline" size={32} color="white" style={{ marginBottom: 8 }} />
+                            <Text style={styles.gridTitle}>Worksheet</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('StudyPlanner')}>
+                <LinearGradient colors={['#FF512F', '#DD2476']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
+                    <View style={styles.bannerContent}>
+                        <View>
+                            <Text style={styles.bannerTitle}>{t('studyPlanner') || 'My Study Plan'}</Text>
+                            <Text style={styles.bannerSubtitle}>Your Daily Missions & Streaks 🔥</Text>
+                        </View>
+                        <View style={styles.bannerIconContainer}>
+                            <MaterialCommunityIcons name="compass-outline" size={24} color="white" />
+                        </View>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.fullWidthCard} onPress={() => {
+                const studentClass = parseInt(user?.class_id);
+                let scholarshipClassId = 38;
+                if (studentClass >= 5 && studentClass <= 7) scholarshipClassId = 39;
+                else if (studentClass >= 8 && studentClass <= 10) scholarshipClassId = 40;
+                let title = 'Scholarship (Primary)';
+                if (scholarshipClassId === 39) title = 'Scholarship (Upper Primary)';
+                if (scholarshipClassId === 40) title = 'Scholarship (Secondary)';
+                navigation.navigate('ScholarshipSubjects', { scholarshipClassId, levelTitle: title });
+            }}>
+                <LinearGradient colors={['#8E2DE2', '#4A00E0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
+                    <View style={styles.bannerContent}>
+                        <View>
+                            <Text style={styles.bannerTitle}>Scholarship & Olympiad Corner</Text>
+                            <Text style={styles.bannerSubtitle}>Ace your competitive exams! 🏆</Text>
+                        </View>
+                        <View style={styles.bannerIconContainer}>
+                            <MaterialCommunityIcons name="trophy-award" size={24} color="white" />
+                        </View>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('Notifications')}>
+                <LinearGradient colors={['#4facfe', '#00f2fe']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
+                    <View style={styles.bannerContent}>
+                        <View>
+                            <Text style={styles.bannerTitle}>{t('classUpdates')}</Text>
+                            <Text style={styles.bannerSubtitle}>{t('checkAnnouncements')}</Text>
+                        </View>
+                        <View style={styles.bannerIconContainer}><Text style={styles.bannerIcon}>🔔</Text></View>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('yourSubjects')}</Text>
+        </View>
+    );
+});
 
 const HomeScreen = ({ user, navigation, route }) => {
     const { theme, isDarkMode } = useTheme();
@@ -126,10 +292,13 @@ const HomeScreen = ({ user, navigation, route }) => {
 
     useFocusEffect(
         useCallback(() => {
-            if (classId) {
-                loadSubjects();
-                checkVersion();
-            }
+            const task = InteractionManager.runAfterInteractions(() => {
+                if (classId) {
+                    loadSubjects();
+                    checkVersion();
+                }
+            });
+            return () => task.cancel();
         }, [classId])
     );
 
@@ -179,206 +348,6 @@ const HomeScreen = ({ user, navigation, route }) => {
         return path.startsWith('http') ? path : `${BASE_URL}/${path}`;
     };
 
-    // Header component to keep FlatList clean
-    const ListHeader = () => {
-        const getCloudIcon = () => {
-            if (hasUpdate) return { name: "cloud-download", color: "#fff" }; // Update is needed (red bg)
-            if (isFullySynced) return { name: "cloud-check", color: "#10b981" }; // Fully synced (green)
-            return { name: "cloud-sync", color: theme.primary }; // Not synced completely
-        };
-        const cloudIcon = getCloudIcon();
-
-        return (
-            <View>
-                <View style={styles.header}>
-                    <View style={{ flex: 1, marginRight: 12 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t('welcome')},</Text>
-                            {isSyncing && (
-                                <View style={styles.syncIndicator}>
-                                    <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
-                                    <Text style={styles.syncText}>Syncing offline content...</Text>
-                                </View>
-                            )}
-                            {!isSyncing && isFullySynced && !hasUpdate && (
-                                <View style={styles.syncIndicator}>
-                                    <MaterialCommunityIcons name="check-circle" size={12} color="#10b981" />
-                                    <Text style={[styles.syncText, { color: '#10b981' }]}>Offline Ready</Text>
-                                </View>
-                            )}
-                        </View>
-                        <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {/* THE SMART SYNC BUTTON */}
-                        <TouchableOpacity
-                            onPress={async () => {
-                                if (isSyncing) return;
-                                
-                                try {
-                                    const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
-                                    const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
-                                    
-                                    if (serverVer && (!localVer || parseInt(serverVer) > parseInt(localVer))) {
-                                        setHasUpdate(true);
-                                        setIsFullySynced(false);
-                                        startGlow();
-                                        Alert.alert("New Data Found", "Downloading new updates...");
-                                        forceSync();
-                                    } else {
-                                        if (isFullySynced && !hasUpdate) {
-                                            Alert.alert("Up to Date! 🚀", "No new updates found. All textual data is downloaded and ready for offline use!");
-                                        } else {
-                                            forceSync();
-                                        }
-                                    }
-                                } catch (e) {
-                                    if (isFullySynced && !hasUpdate) {
-                                        Alert.alert("Offline Ready", "All textual data for your class is downloaded.");
-                                    } else {
-                                        forceSync();
-                                    }
-                                }
-                            }}
-                            style={[
-                                styles.syncButton,
-                                hasUpdate ? styles.syncButtonUpdate : null,
-                                isFullySynced && !hasUpdate ? styles.syncButtonSynced : null
-                            ]}
-                            disabled={isSyncing}
-                        >
-                            <Animated.View style={[
-                                styles.syncIconContainer,
-                                {
-                                    transform: [{ rotate: syncRotAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
-                                    shadowOpacity: hasUpdate ? glowAnim : 0,
-                                    elevation: hasUpdate ? 5 : 0
-                                }
-                            ]}>
-                                {isSyncing ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                    <View>
-                                        <MaterialCommunityIcons name={cloudIcon.name} size={24} color={cloudIcon.color} />
-                                        {hasUpdate && <View style={styles.updateDot} />}
-                                    </View>
-                                )}
-                            </Animated.View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                            <View style={[styles.avatarContainer, { borderColor: theme.primary }]}>
-                                {user?.profile_picture ? (
-                                    <Image source={{ uri: getImageUrl(user.profile_picture) }} style={styles.avatar} />
-                                ) : (
-                                    <LinearGradient colors={['#6366f1', '#a855f7']} style={styles.avatarPlaceholder}>
-                                        <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
-                                    </LinearGradient>
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('dailyBoosters')}</Text>
-                <View style={styles.gridContainer}>
-                    {/* Row 1 */}
-                    <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-                        <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('VocabDashboard')}>
-                            <LinearGradient colors={['#f093fb', '#f5576c']} style={styles.gridGradient}>
-                                <MaterialCommunityIcons name="book-open-page-variant" size={32} color="white" style={{ marginBottom: 8 }} />
-                                <Text style={styles.gridTitle}>{t('vocab')}</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MentalMaths')}>
-                            <LinearGradient colors={['#FF512F', '#F09819']} style={styles.gridGradient}>
-                                <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
-                                <Text style={styles.gridTitle}>Mental Maths</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Row 2 */}
-                    <View style={{ flexDirection: 'row' }}>
-                        <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('MyExam')}>
-                            <LinearGradient colors={['#00F260', '#0575E6']} style={styles.gridGradient}>
-                                <MaterialCommunityIcons name="file-document-edit-outline" size={32} color="white" style={{ marginBottom: 8 }} />
-                                <Text style={styles.gridTitle}>{t('myExam')}</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
-                            <LinearGradient colors={['#A855F7', '#C026D3']} style={styles.gridGradient}>
-                                <MaterialCommunityIcons name="printer-outline" size={32} color="white" style={{ marginBottom: 8 }} />
-                                <Text style={styles.gridTitle}>Worksheet</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('StudyPlanner')}>
-                    <LinearGradient colors={['#FF512F', '#DD2476']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
-                        <View style={styles.bannerContent}>
-                            <View>
-                                <Text style={styles.bannerTitle}>{t('studyPlanner') || "My Study Plan"}</Text>
-                                <Text style={styles.bannerSubtitle}>Your Daily Missions & Streaks 🔥</Text>
-                            </View>
-                            <View style={styles.bannerIconContainer}>
-                                <MaterialCommunityIcons name="compass-outline" size={24} color="white" />
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.fullWidthCard} onPress={() => {
-                    const studentClass = parseInt(user?.class_id);
-                    let scholarshipClassId = 38; // Default to Primary (38)
-
-                    if (studentClass >= 1 && studentClass <= 4) {
-                        scholarshipClassId = 38; // Primary
-                    } else if (studentClass >= 5 && studentClass <= 7) {
-                        scholarshipClassId = 39; // Upper Primary
-                    } else if (studentClass >= 8 && studentClass <= 10) {
-                        scholarshipClassId = 40; // Secondary
-                    }
-                    // Determine title for better UX
-                    let title = "Scholarship (Primary)";
-                    if (scholarshipClassId === 39) title = "Scholarship (Upper Primary)";
-                    if (scholarshipClassId === 40) title = "Scholarship (Secondary)";
-
-                    navigation.navigate('ScholarshipSubjects', {
-                        scholarshipClassId,
-                        levelTitle: title
-                    });
-                }}>
-                    <LinearGradient colors={['#8E2DE2', '#4A00E0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
-                        <View style={styles.bannerContent}>
-                            <View>
-                                <Text style={styles.bannerTitle}>Scholarship & Olympiad Corner</Text>
-                                <Text style={styles.bannerSubtitle}>Ace your competitive exams! 🏆</Text>
-                            </View>
-                            <View style={styles.bannerIconContainer}>
-                                <MaterialCommunityIcons name="trophy-award" size={24} color="white" />
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate('Notifications')}>
-                    <LinearGradient colors={['#4facfe', '#00f2fe']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
-                        <View style={styles.bannerContent}>
-                            <View>
-                                <Text style={styles.bannerTitle}>{t('classUpdates')}</Text>
-                                <Text style={styles.bannerSubtitle}>{t('checkAnnouncements')}</Text>
-                            </View>
-                            <View style={styles.bannerIconContainer}><Text style={styles.bannerIcon}>🔔</Text></View>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
-
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('yourSubjects')}</Text>
-            </View>
-        );
-    };
 
     const getSubjectIcon = (name) => {
         const lowerName = name.toLowerCase();
@@ -448,6 +417,55 @@ const HomeScreen = ({ user, navigation, route }) => {
         );
     }, [navigation]);
 
+    // Stable sync press handler — memoized so HomeListHeader doesn't re-render unnecessarily
+    const handleSyncPress = useCallback(async () => {
+        if (isSyncing) return;
+        try {
+            const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
+            const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
+            if (serverVer && (!localVer || parseInt(serverVer) > parseInt(localVer))) {
+                setHasUpdate(true);
+                setIsFullySynced(false);
+                startGlow();
+                Alert.alert('New Data Found', 'Downloading new updates...');
+                forceSync();
+            } else {
+                if (isFullySynced && !hasUpdate) {
+                    Alert.alert('Up to Date! 🚀', 'All textual data is downloaded for offline use!');
+                } else {
+                    forceSync();
+                }
+            }
+        } catch {
+            if (isFullySynced && !hasUpdate) {
+                Alert.alert('Offline Ready', 'All textual data for your class is downloaded.');
+            } else {
+                forceSync();
+            }
+        }
+    }, [isSyncing, isFullySynced, hasUpdate, user?.board_type]);
+
+    const handleProfilePress = useCallback(() => navigation.navigate('Profile'), [navigation]);
+
+    // Stable header reference — only re-render if these specific values change
+    const listHeader = useMemo(() => (
+        <HomeListHeader
+            userName={userName}
+            theme={theme}
+            t={t}
+            isDarkMode={isDarkMode}
+            isSyncing={isSyncing}
+            isFullySynced={isFullySynced}
+            hasUpdate={hasUpdate}
+            syncRotAnim={syncRotAnim}
+            glowAnim={glowAnim}
+            user={user}
+            navigation={navigation}
+            onSyncPress={handleSyncPress}
+            onProfilePress={handleProfilePress}
+        />
+    ), [userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress]);
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
@@ -458,7 +476,7 @@ const HomeScreen = ({ user, navigation, route }) => {
                     data={subjects}
                     keyExtractor={(item) => item.subject_id.toString()}
                     renderItem={renderSubjectItem}
-                    ListHeaderComponent={ListHeader}
+                    ListHeaderComponent={listHeader}
                     contentContainerStyle={styles.scrollPadding}
                     showsVerticalScrollIndicator={false}
                     initialNumToRender={8}

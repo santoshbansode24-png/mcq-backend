@@ -6,8 +6,8 @@ class AiUsageManager {
     private $userId;
 
     public function __construct($userId) {
-        $db = new Database();
-        $this->conn = $db->getConnection();
+        global $pdo;
+        $this->conn = $pdo;
         $this->userId = $userId;
     }
 
@@ -20,6 +20,17 @@ class AiUsageManager {
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? (int)$row['setting_value'] : 50000; // Default fallback
+    }
+
+    /**
+     * Get the Daily Request Count Limit for Free Users
+     */
+    public function getRequestLimit() {
+        $query = "SELECT setting_value FROM system_settings WHERE setting_key = 'ai_free_request_limit_daily' LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? (int)$row['setting_value'] : 5; // Default: 5 requests per day for free users
     }
 
     /**
@@ -37,20 +48,30 @@ class AiUsageManager {
             return true; // UNLIMITED ACCESS
         }
         
-        // 2. Free Users: Check Global Limit
-        $limit = $this->getGlobalLimit();
+        // 2. Free Users: Check Global Token Limit & Request Limit
+        $tokenLimit = $this->getGlobalLimit();
+        $requestLimit = $this->getRequestLimit();
         $today = date('Y-m-d');
 
-        // 3. Get today's usage
-        $query = "SELECT tokens_used FROM ai_usage WHERE user_id = :user_id AND usage_date = :date LIMIT 1";
+        // 3. Get today's usage (Tokens and Request Count)
+        $query = "SELECT tokens_used, request_count FROM ai_usage WHERE user_id = :user_id AND usage_date = :date LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->execute([':user_id' => $this->userId, ':date' => $today]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $used = $row ? (int)$row['tokens_used'] : 0;
+        $tokensUsed = $row ? (int)$row['tokens_used'] : 0;
+        $requestsMade = $row ? (int)$row['request_count'] : 0;
 
-        if ($used >= $limit) {
-            return "You have reached your daily AI limit ($limit tokens). Please try again tomorrow or upgrade to Premium for Unlimited AI.";
+        // Check if ANY limit is reached
+        if ($tokensUsed >= $tokenLimit || $requestsMade >= $requestLimit) {
+            // Calculate hours until reset (midnight)
+            $now = time();
+            $midnight = strtotime('tomorrow');
+            $hoursToWait = ceil(($midnight - $now) / 3600);
+            
+            $limitType = ($requestsMade >= $requestLimit) ? "day's attempt" : "daily token";
+            
+            return "You have reached your $limitType limit. Upgrade your plan for Unlimited access, or try again in $hoursToWait hours.";
         }
 
         return true;

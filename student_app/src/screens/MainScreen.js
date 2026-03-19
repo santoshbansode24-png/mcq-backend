@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet,
-    StatusBar, Platform, Animated, Vibration, BackHandler
+    StatusBar, Platform, Animated, Vibration, BackHandler,
+    InteractionManager
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -129,35 +130,49 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             } catch (e) {
                 console.error("Failed to load nav history", e);
             } finally {
-                setIsHistoryLoaded(true); // Allow saving only after load attempt
+                setIsHistoryLoaded(true);
             }
         };
         loadHistory();
     }, []);
 
-    // Save navigation history whenever it changes
+    // Handle deep-link from notification: if App.js passes initialScreen, push it
     useEffect(() => {
-        if (!isHistoryLoaded) return; // Prevent overwriting with default state before load
+        const screen = route?.params?.initialScreen;
+        if (screen && screen !== 'Home') {
+            // Push after a short delay so the nav stack is ready
+            const timer = setTimeout(() => {
+                setHistoryStack(prev => {
+                    // Avoid duplicate on re-render
+                    if (prev[prev.length - 1]?.screen === screen) return prev;
+                    return [...prev, { screen, params: {} }];
+                });
+            }, 200);
+            return () => clearTimeout(timer);
+        }
+    }, [route?.params?.initialScreen]);
 
-        const saveHistory = async () => {
+    // Save navigation history with debounce — avoids hammering AsyncStorage on rapid navigation
+    const saveTimerRef = useRef(null);
+    useEffect(() => {
+        if (!isHistoryLoaded) return;
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(async () => {
             try {
                 await AsyncStorage.setItem('nav_history', JSON.stringify(historyStack));
-            } catch (e) {
-                console.error("Failed to save nav history", e);
-            }
-        };
-        saveHistory();
+            } catch (_) {/* silent – non-critical */}
+        }, 500);
+        return () => clearTimeout(saveTimerRef.current);
     }, [historyStack, isHistoryLoaded]);
 
     useEffect(() => {
-        const triggerSync = async () => {
-            if (userState && userState.class_id) {
-                // If the user just came from Setup screen after picking a class, 
-                // we want a PRIORITY sync (bypass 6 hour cooldown)
+        const triggerSync = () => {
+            if (userState?.class_id) {
                 const isPriority = route.params?.isNewSelection === true;
-
-                console.log(`[MainScreen] Checking background sync status (Priority: ${isPriority})...`);
-                SmartCacheService.syncAllForClass(userState.class_id, isPriority);
+                // Defer heavy sync until after initial animations settle
+                InteractionManager.runAfterInteractions(() => {
+                    SmartCacheService.syncAllForClass(userState.class_id, isPriority);
+                });
             }
         };
         triggerSync();
@@ -290,7 +305,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         }
     }, [parentNavigation]);
 
-    const commonProps = {
+    const commonProps = useMemo(() => ({
         user: userState,
         onUserUpdate: handleUpdateUser,
         onLogout: handleLogout,
@@ -298,12 +313,12 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             navigate: handleNavigate,
             goBack: handleGoBack,
             replace: parentNavigation.replace,
-            addListener: () => { },
+            addListener: () => { return () => { }; }, // Proper mock return
             registerBackInterceptor,
             unregisterBackInterceptor,
         },
         route: { params: viewParams }
-    };
+    }), [userState, handleUpdateUser, handleLogout, handleNavigate, handleGoBack, parentNavigation.replace, registerBackInterceptor, unregisterBackInterceptor, viewParams]);
 
     const renderContent = () => {
         switch (currentView) {

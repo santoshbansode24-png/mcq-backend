@@ -187,7 +187,7 @@ const RegisterScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (trimmedMobile.length !== 10) {
+    if (trimmedMobile.length !== 10 || !/^\d+$/.test(trimmedMobile)) {
       Alert.alert("Error", "Mobile number must be exactly 10 digits");
       return;
     }
@@ -304,7 +304,7 @@ const RegisterScreen = ({ navigation, route }) => {
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="John Doe"
+                    placeholder="Enter full name"
                     placeholderTextColor="#94a3b8"
                     value={name}
                     onChangeText={setName}
@@ -324,7 +324,7 @@ const RegisterScreen = ({ navigation, route }) => {
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="student@example.com"
+                    placeholder="Enter email address"
                     placeholderTextColor="#94a3b8"
                     value={email}
                     onChangeText={setEmail}
@@ -349,7 +349,7 @@ const RegisterScreen = ({ navigation, route }) => {
               />
               <TextInput
                 style={styles.input}
-                placeholder="9876543210"
+                placeholder="Enter whatsapp mobile no"
                 placeholderTextColor="#94a3b8"
                 value={mobile}
                 onChangeText={setMobile}

@@ -45,19 +45,6 @@ const AIScreen = ({ navigation }) => {
             screen: 'HomeworkSolver',
             width: '100%',
             height: 110
-        },
-        {
-            id: 'english',
-            title: 'English Speaking',
-            subtitle: 'Improve Fluency',
-            description: 'Practice conversation and grammar with an AI native speaker.',
-            icon: 'chatbubbles',
-            // Bright Orange to Amber
-            color1: '#ea580c',
-            color2: '#f59e0b',
-            screen: 'EnglishMissionMap',
-            width: '100%',
-            height: 110
         }
     ];
 

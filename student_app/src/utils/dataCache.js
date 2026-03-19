@@ -1,55 +1,44 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Default cache duration (7 days) for safety, but effectively permanent until manual refresh
+// Default cache duration
 const DEFAULT_EXPIRY_MS = 24 * 60 * 60 * 1000;
+
+// Whether to emit any debug logs (set false in production)
+const DEBUG = false;
 
 export const dataCache = {
     /**
      * Save data to cache
-     * @param {string} key - Unique key for the data (e.g., 'mcq_15')
-     * @param {any} data - The data to store
-     * @param {string} type - Content type (mcqs, notes, etc.)
      */
     set: async (key, data, type) => {
         try {
-            const cacheItem = {
-                data,
-                timestamp: Date.now(),
-                type
-            };
+            const cacheItem = { data, timestamp: Date.now(), type };
             await AsyncStorage.setItem(`@cache_${key}`, JSON.stringify(cacheItem));
-            console.log(`[Cache] Saved ${key} (${type})`);
+            if (DEBUG) console.log(`[Cache] Saved ${key} (${type})`);
         } catch (error) {
-            console.warn('[Cache] Set failed:', error);
+            if (DEBUG) console.warn('[Cache] Set failed:', error);
         }
     },
 
     /**
-     * Get data from cache
-     * @param {string} key - Unique key
-     * @param {string} type - Content type
-     * @returns {any|null} - The data or null if missing
+     * Get data from cache (stale-while-revalidate)
      */
     get: async (key, type) => {
         try {
             const raw = await AsyncStorage.getItem(`@cache_${key}`);
             if (!raw) return null;
-
             const cacheItem = JSON.parse(raw);
-
-            // DURABILITY: We always return the cached data even if it's old.
-            // The API wrappers (fetchMCQs, etc.) handle the "Stale-While-Revalidate" 
-            // logic by showing this data instantly and then updating it from the network.
-            const ageHours = (Date.now() - cacheItem.timestamp) / (1000 * 60 * 60);
-            if (ageHours > 24) {
-                console.log(`[Cache] Returning stale data for ${key} (${Math.round(ageHours)}h old). Background refresh will update it.`);
-            } else {
-                console.log(`[Cache] Hit ${key}`);
+            if (DEBUG) {
+                const ageHours = (Date.now() - cacheItem.timestamp) / (1000 * 60 * 60);
+                if (ageHours > 24) {
+                    console.log(`[Cache] Stale ${key} (${Math.round(ageHours)}h old)`);
+                } else {
+                    console.log(`[Cache] Hit ${key}`);
+                }
             }
-
             return cacheItem.data;
         } catch (error) {
-            console.warn('[Cache] Get failed:', error);
+            if (DEBUG) console.warn('[Cache] Get failed:', error);
             return null;
         }
     },
@@ -61,7 +50,7 @@ export const dataCache = {
         try {
             await AsyncStorage.removeItem(`@cache_${key}`);
         } catch (error) {
-            console.warn('[Cache] Remove failed:', error);
+            if (DEBUG) console.warn('[Cache] Remove failed:', error);
         }
     }
 };

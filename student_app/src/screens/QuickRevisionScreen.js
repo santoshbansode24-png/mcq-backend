@@ -19,6 +19,8 @@ import { Audio } from 'expo-av'; // Added import for setAudioModeAsync
 import { useTheme } from '../context/ThemeContext';
 import { fetchQuickRevision } from '../api/content'; // Import from content.js for caching
 import { playGoogleTTS } from '../api/googleTTS'; // Import Google TTS
+import { FlatList, InteractionManager } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? StatusBar.currentHeight : 0;
 
@@ -200,16 +202,70 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         }
     };
 
-    /* ---------------- RENDER ---------------- */
+    /* ---------------- RENDER HELPERS ---------------- */
 
-    const RenderText = useCallback(
-        ({ text }) => (
-            <Text style={[styles.mainText, { color: theme.text }]}>
-                {text}
-            </Text>
-        ),
-        [theme]
-    );
+    const RevisionCard = React.memo(({ item, index, isPlaying, playTTS, isDarkMode, theme }) => {
+        const q = item.q || item.Question || '';
+        const a = item.a || item.Answer || '';
+        const exp = item.e || item.Explanation || '';
+
+        return (
+            <View
+                style={[
+                    styles.card,
+                    { backgroundColor: isDarkMode ? '#1e293b' : '#fff' },
+                    isPlaying && { borderColor: theme.primary, borderWidth: 1.5, shadowColor: theme.primary, shadowOpacity: 0.3 }
+                ]}
+            >
+                <View style={styles.cardHeader}>
+                    <View style={styles.headerLeftControls}>
+                        <TouchableOpacity
+                            onPress={() => playTTS(item, index)}
+                            style={[styles.playIconCircle, { backgroundColor: isPlaying ? theme.primary : (isDarkMode ? '#334155' : '#f1f5f9') }]}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <Ionicons
+                                name={isPlaying ? 'pause' : 'play'}
+                                size={20}
+                                color={isPlaying ? '#fff' : theme.primary}
+                            />
+                        </TouchableOpacity>
+                        <View style={[styles.pointBadge, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc' }]}>
+                            <Text style={[styles.pointText, { color: isDarkMode ? '#94a3b8' : '#64748b' }]}>POINT {index + 1}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.textArea}>
+                    <View style={styles.sectionRow}>
+                        <View style={[styles.indicator, { backgroundColor: theme.primary }]} />
+                        <Text style={[styles.label, { color: theme.primary }]}>QUESTION</Text>
+                    </View>
+                    <Text style={[styles.mainText, { color: theme.text }]}>{q}</Text>
+
+                    <View style={styles.separator} />
+
+                    <View style={styles.sectionRow}>
+                        <View style={[styles.indicator, { backgroundColor: '#10b981' }]} />
+                        <Text style={[styles.label, { color: '#10b981' }]}>ANSWER</Text>
+                    </View>
+                    <Text style={[styles.mainText, { color: theme.text }]}>{a}</Text>
+
+                    {exp ? (
+                        <View style={styles.explanationBox}>
+                            <View style={styles.sectionRow}>
+                                <MaterialCommunityIcons name="information-outline" size={14} color="#64748b" />
+                                <Text style={styles.explanationLabel}>EXPLANATION</Text>
+                            </View>
+                            <Text style={[styles.explanationText, { color: isDarkMode ? '#94a3b8' : '#475569' }]}>
+                                {exp}
+                            </Text>
+                        </View>
+                    ) : null}
+                </View>
+            </View>
+        );
+    });
 
     if (loading) {
         return (
@@ -262,77 +318,28 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 </View>
 
                 {/* CONTENT */}
-                <ScrollView
+                <FlatList
+                    data={revisionData}
+                    keyExtractor={(_, index) => index.toString()}
                     contentContainerStyle={styles.scrollArea}
                     showsVerticalScrollIndicator={false}
+                    maxToRenderPerBatch={10}
+                    windowSize={5}
+                    removeClippedSubviews={Platform.OS === 'android'}
                     refreshControl={
                         <RefreshControl refreshing={loading} onRefresh={() => loadRevision(true)} colors={[theme.primary]} />
                     }
-                >
-                    {revisionData.map((item, index) => {
-                        const q = item.q || item.Question || '';
-                        const a = item.a || item.Answer || '';
-                        const isPlaying = playingIndex === index;
-
-                        return (
-                            <View
-                                key={index}
-                                style={[
-                                    styles.card,
-                                    { backgroundColor: isDarkMode ? '#1e293b' : '#fff' },
-                                    isPlaying && { borderColor: theme.primary, borderWidth: 1.5, shadowColor: theme.primary, shadowOpacity: 0.3 }
-                                ]}
-                            >
-                                <View style={styles.cardHeader}>
-                                    <View style={styles.headerLeftControls}>
-                                        <TouchableOpacity
-                                            onPress={() => playTTS(item, index)}
-                                            style={[styles.playIconCircle, { backgroundColor: isPlaying ? theme.primary : (isDarkMode ? '#334155' : '#f1f5f9') }]}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        >
-                                            <Ionicons
-                                                name={isPlaying ? 'pause' : 'play'}
-                                                size={20}
-                                                color={isPlaying ? '#fff' : theme.primary}
-                                            />
-                                        </TouchableOpacity>
-                                        <View style={[styles.pointBadge, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc' }]}>
-                                            <Text style={[styles.pointText, { color: isDarkMode ? '#94a3b8' : '#64748b' }]}>POINT {index + 1}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-
-                                <View style={styles.textArea}>
-                                    <View style={styles.sectionRow}>
-                                        <View style={[styles.indicator, { backgroundColor: theme.primary }]} />
-                                        <Text style={[styles.label, { color: theme.primary }]}>QUESTION</Text>
-                                    </View>
-                                    <RenderText text={q} />
-
-                                    <View style={styles.separator} />
-
-                                    <View style={styles.sectionRow}>
-                                        <View style={[styles.indicator, { backgroundColor: '#10b981' }]} />
-                                        <Text style={[styles.label, { color: '#10b981' }]}>ANSWER</Text>
-                                    </View>
-                                    <RenderText text={a} />
-
-                                    {(item.e || item.Explanation) && (
-                                        <View style={styles.explanationBox}>
-                                            <View style={styles.sectionRow}>
-                                                <MaterialCommunityIcons name="information-outline" size={14} color="#64748b" />
-                                                <Text style={styles.explanationLabel}>EXPLANATION</Text>
-                                            </View>
-                                            <Text style={[styles.explanationText, { color: isDarkMode ? '#94a3b8' : '#475569' }]}>
-                                                {item.e || item.Explanation}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        );
-                    })}
-                </ScrollView>
+                    renderItem={({ item, index }) => (
+                        <RevisionCard
+                            item={item}
+                            index={index}
+                            isPlaying={playingIndex === index}
+                            playTTS={playTTS}
+                            isDarkMode={isDarkMode}
+                            theme={theme}
+                        />
+                    )}
+                />
             </SafeAreaView>
         </LinearGradient>
     );

@@ -136,14 +136,11 @@ export const SmartCacheService = {
                     classId: classId,
                     status: 'completed'
                 }));
-                console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
-            } else {
-                console.warn(`[SmartCache] ⚠️ Bulk sync finished but ${finalQueue.length} items remain in queue.`);
+                // console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
             }
-
             await SmartCacheService.checkSyncState();
         } catch (error) {
-            console.error('[SmartCache] ❌ Sync failed:', error);
+            // console.error('[SmartCache] ❌ Sync failed:', error);
             notifyListeners({ isSyncing: false, isFullySynced: false });
         }
     },
@@ -163,20 +160,25 @@ export const SmartCacheService = {
                 return;
             }
 
+            let processedCount = 0;
             while (queue.length > 0) {
                 const chapterId = queue[0];
-                console.log(`[SmartCache] 📥 Syncing Chapter: ${chapterId} (${queue.length} left)`);
+                // console.log(`[SmartCache] 📥 Syncing Chapter: ${chapterId} (${queue.length} left)`);
 
                 await SmartCacheService.syncChapterContent(chapterId);
 
-                // Remove from queue after successful (or attempted) sync
                 queue.shift();
-                await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+                processedCount++;
+
+                // BATCH SAVE: Only hit AsyncStorage every 5 items to reduce bridge pressure
+                if (processedCount % 5 === 0 || queue.length === 0) {
+                    await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+                }
 
                 notifyListeners({ isSyncing: true, isFullySynced: false, itemsLeft: queue.length });
 
-                // Small delay to prevent blocking the UI thread too much
-                await new Promise(r => setTimeout(r, 100));
+                // Small delay to prevent blocking the UI thread
+                await new Promise(r => setTimeout(r, 60));
             }
             await SmartCacheService.checkSyncState();
         } catch (error) {
@@ -295,5 +297,23 @@ export const SmartCacheService = {
     getSyncQueue: async () => {
         const raw = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
         return raw ? JSON.parse(raw) : [];
+    },
+
+    /**
+     * Batch sync of the current queue (Optimized for MainScreen background tasks)
+     */
+    syncSyncQueueBatched: async () => {
+        if (isProcessing) return false;
+        try {
+            const queue = await SmartCacheService.getSyncQueue();
+            if (!queue || queue.length === 0) return true;
+
+            // Simple batched processing (reuse processSyncQueue logic but non-blocking)
+            await SmartCacheService.processSyncQueue();
+            return true;
+        } catch (e) {
+            console.warn('[SmartCache] Batched sync failed:', e.message);
+            return false;
+        }
     }
 };

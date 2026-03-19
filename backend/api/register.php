@@ -67,11 +67,18 @@ if (strlen($mobile) !== 10 || !is_numeric($mobile)) {
 }
 
 try {
-    // Check if email already exists
+    // Check if email already registered
     $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
-        sendResponse('error', 'Email already registered', null, 409);
+        sendResponse('error', 'Email already registered. Please try logging in.', null, 409);
+    }
+
+    // Check if mobile already registered
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE mobile = ? OR phone = ?");
+    $stmt->execute([$mobile, $mobile]);
+    if ($stmt->fetch()) {
+        sendResponse('error', 'Mobile number already registered. Please use a different number.', null, 409);
     }
 
     // Hash password
@@ -85,21 +92,21 @@ try {
     // Insert new user
     $insertStmt = $pdo->prepare("
         INSERT INTO users (
-            name, email, mobile, phone, 
+            name, email, mobile, 
             password, google_id, profile_picture,
             user_type, 
             subscription_status, subscription_expiry, 
             school_name, class_id, 
-            board_type, board,
+            board_type,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
 
     $insertStmt->execute([
         $name, 
         $email,
-        $mobile, $mobile, 
+        $mobile, 
         $hashed_password,
         $google_id,
         $profile_picture,
@@ -108,13 +115,19 @@ try {
         $subscription_expiry,
         $school_name,
         $class_id,
-        $board_type, $board_type
+        $board_type
     ]);
 
     $user_id = $pdo->lastInsertId();
 
-    // Fetch the newly created user to return (excluding password)
-    $userStmt = $pdo->prepare("SELECT user_id, name, email, user_type, subscription_status, class_id, board_type, school_name, google_id FROM users WHERE user_id = ?");
+    // Fetch the newly created user to return (including class name)
+    $userStmt = $pdo->prepare("
+        SELECT u.user_id, u.name, u.email, u.user_type, u.subscription_status, 
+               u.class_id, c.class_name, u.board_type, u.school_name, u.google_id 
+        FROM users u
+        LEFT JOIN classes c ON u.class_id = c.class_id
+        WHERE u.user_id = ?
+    ");
     $userStmt->execute([$user_id]);
     $newUser = $userStmt->fetch();
 

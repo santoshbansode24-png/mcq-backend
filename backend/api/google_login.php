@@ -27,7 +27,13 @@ $photo = isset($input['photo']) ? sanitizeInput($input['photo']) : '';
 
 try {
     // 1. Check if user already exists by email OR google_id in 'users' table
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE (email = ? OR google_id = ?) AND user_type = 'student' LIMIT 1");
+    $stmt = $pdo->prepare("
+        SELECT u.*, c.class_name 
+        FROM users u 
+        LEFT JOIN classes c ON u.class_id = c.class_id 
+        WHERE (u.email = ? OR u.google_id = ?) AND u.user_type = 'student' 
+        LIMIT 1
+    ");
     $stmt->execute([$email, $google_id]);
     $user = $stmt->fetch();
 
@@ -44,6 +50,7 @@ try {
             "name" => $user['name'],
             "email" => $user['email'],
             "class_id" => $user['class_id'],
+            "class_name" => $user['class_name'] ?? null,
             "board_type" => $user['board_type'] ?? null,
             "google_id" => $google_id,
             "is_new_user" => false

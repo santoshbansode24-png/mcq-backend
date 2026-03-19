@@ -175,6 +175,7 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             // Call the custom PHP endpoint we created
             const response = await axios.post(`${API_URL}/ai_generate_quiz_custom.php`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 120000, // 2 minutes for processing large docs
             });
 
             if (response.data.status === 'success') {
@@ -213,7 +214,10 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Connection Error', 'Failed to connect to AI service. Please check your internet.');
+            const msg = error.code === 'ECONNABORTED' 
+                ? 'Request timed out. This can happen with large files—please try a shorter document.'
+                : 'Failed to connect to AI service. Please check your internet.';
+            Alert.alert('Connection Error', msg);
         } finally {
             setLoading(false);
             setLoadingMore(false);

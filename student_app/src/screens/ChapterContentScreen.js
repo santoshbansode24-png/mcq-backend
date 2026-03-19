@@ -128,6 +128,94 @@ const VideoItem = React.memo(({ item, index, onOpenVideo }) => {
     );
 });
 
+// --- ISOLATED TIMER COMPONENT ---
+// This prevents the entire 1800-line screen from re-rendering every second
+const StudyTimer = React.memo(({ initialSeconds, isActive, onFinish }) => {
+    const [seconds, setSeconds] = useState(initialSeconds);
+    
+    useEffect(() => {
+        setSeconds(initialSeconds);
+    }, [initialSeconds]);
+
+    useEffect(() => {
+        let interval = null;
+        if (isActive && seconds > 0) {
+            interval = setInterval(() => {
+                setSeconds(prev => prev - 1);
+            }, 1000);
+        } else if (seconds === 0 && isActive) {
+            onFinish();
+        }
+        return () => clearInterval(interval);
+    }, [isActive, seconds, onFinish]);
+
+    const format = (s) => {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+    };
+
+    if (!isActive) return null;
+
+    return (
+        <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>⏳ {format(seconds)}</Text>
+            <TouchableOpacity onPress={onFinish} style={styles.finishBtn}>
+                <Text style={styles.finishBtnText}>Done</Text>
+            </TouchableOpacity>
+        </View>
+    );
+});
+
+const TabSelector = React.memo(({ activeTab, onTabPress, theme, t }) => {
+    const tabs = [
+        { id: 'MCQs', icon: '📝', label: t('mcqs') || 'MCQs', color: '#3b82f6' },
+        { id: 'Flashcards', icon: '🗂️', label: t('flashcards') || 'Flashcards', color: '#10b981' },
+        { id: 'QuickRevision', icon: '⚡', label: t('revision') || 'Revision', color: '#f59e0b' },
+        { id: 'Videos', icon: '🎥', label: t('videos') || 'Videos', color: '#ef4444' },
+        { id: 'Notes', icon: '📄', label: t('notes') || 'Notes', color: '#8b5cf6' },
+    ];
+
+    return (
+        <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+            <View style={styles.tabsRow}>
+                {tabs.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <TouchableOpacity
+                            key={tab.id}
+                            style={[
+                                styles.tile,
+                                {
+                                    backgroundColor: isActive ? tab.color : theme.card,
+                                    borderColor: tab.color,
+                                    elevation: isActive ? 6 : 1,
+                                    shadowColor: tab.color,
+                                    transform: [{ translateY: isActive ? -4 : 0 }]
+                                }
+                            ]}
+                            onPress={() => onTabPress(tab.id)}
+                            activeOpacity={0.9}
+                        >
+                            <Text style={[styles.tileIcon, { opacity: isActive ? 1 : 0.8 }]}>{tab.icon}</Text>
+                            <Text style={[
+                                styles.tileText,
+                                {
+                                    color: isActive ? 'white' : tab.color,
+                                    fontWeight: 'bold',
+                                    fontSize: 10
+                                }
+                            ]} numberOfLines={1}>
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        </View>
+    );
+});
+
 const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
     const { theme, isDarkMode } = useTheme();
@@ -139,7 +227,6 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [voiceModalVisible, setVoiceModalVisible] = useState(false);
-    console.log("[ChapterContent] Rendered. voiceModalVisible state initialized.");
 
     // Separate states for each tab to prevent flicker/ghosting
     const [mcqData, setMcqData] = useState([]);
@@ -155,23 +242,12 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         if (activeTask && !isTaskActive) {
-            console.log('[Timer] Starting for task:', activeTask.title);
             setTaskTimer(activeTask.duration_minutes * 60);
             setIsTaskActive(true);
         }
     }, [activeTask]);
 
-    useEffect(() => {
-        let interval = null;
-        if (isTaskActive && taskTimer > 0) {
-            interval = setInterval(() => {
-                setTaskTimer((prev) => prev - 1);
-            }, 1000);
-        } else if (taskTimer === 0 && isTaskActive) {
-            finishTask();
-        }
-        return () => clearInterval(interval);
-    }, [isTaskActive, taskTimer]);
+    // Timer logic is now moved to the StudyTimer component to prevent whole-screen re-renders
 
     // Quiz State — declared here so refs below can reference them
     const [quizMode, setQuizMode] = useState(false);
@@ -1223,62 +1299,10 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         </Text>
                     </View>
 
-                    {isTaskActive && (
-                        <View style={styles.timerContainer}>
-                            <Text style={styles.timerText}>⏳ {formatTimer(taskTimer)}</Text>
-                            <TouchableOpacity onPress={finishTask} style={styles.finishBtn}>
-                                <Text style={styles.finishBtnText}>Done</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <StudyTimer initialSeconds={taskTimer} isActive={isTaskActive} onFinish={finishTask} />
                 </View>
 
-                {/* Fixed Square Tiles Navigation */}
-                <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-                    <View style={styles.tabsRow}>
-                        {(() => {
-                            const tabs = [
-                                { id: 'MCQs', icon: '📝', label: t('mcqs') || 'MCQs', color: '#3b82f6' },
-                                { id: 'Flashcards', icon: '🗂️', label: t('flashcards') || 'Flashcards', color: '#10b981' },
-                                { id: 'QuickRevision', icon: '⚡', label: t('revision') || 'Revision', color: '#f59e0b' },
-                                { id: 'Videos', icon: '🎥', label: t('videos') || 'Videos', color: '#ef4444' },
-                                { id: 'Notes', icon: '📄', label: t('notes') || 'Notes', color: '#8b5cf6' },
-                            ];
-                            return tabs.map((tab) => {
-                                const isActive = activeTab === tab.id;
-                                return (
-                                    <TouchableOpacity
-                                        key={tab.id}
-                                        style={[
-                                            styles.tile,
-                                            {
-                                                backgroundColor: isActive ? tab.color : theme.card,
-                                                borderColor: tab.color,
-                                                elevation: isActive ? 6 : 1,
-                                                shadowColor: tab.color,
-                                                transform: [{ translateY: isActive ? -4 : 0 }]
-                                            }
-                                        ]}
-                                        onPress={() => setActiveTab(tab.id)}
-                                        activeOpacity={0.9}
-                                    >
-                                        <Text style={[styles.tileIcon, { opacity: isActive ? 1 : 0.8 }]}>{tab.icon}</Text>
-                                        <Text style={[
-                                            styles.tileText,
-                                            {
-                                                color: isActive ? 'white' : tab.color,
-                                                fontWeight: 'bold',
-                                                fontSize: 10
-                                            }
-                                        ]} numberOfLines={1}>
-                                            {tab.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            });
-                        })()}
-                    </View>
-                </View>
+                <TabSelector activeTab={activeTab} onTabPress={setActiveTab} theme={theme} t={t} />
 
                 {/* Main Content Area */}
                 {renderContent()}

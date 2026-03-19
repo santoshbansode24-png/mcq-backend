@@ -18,6 +18,44 @@ const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? StatusBar.currentHeight : 0;
 const SWIPE_THRESHOLD = 100; // Reduced for easier swiping
 
+// --- ISOLATED TIMER COMPONENT ---
+const StudyTimer = React.memo(({ initialSeconds, isActive, onFinish }) => {
+    const [seconds, setSeconds] = useState(initialSeconds);
+    
+    useEffect(() => {
+        setSeconds(initialSeconds);
+    }, [initialSeconds]);
+
+    useEffect(() => {
+        let interval = null;
+        if (isActive && seconds > 0) {
+            interval = setInterval(() => {
+                setSeconds(prev => prev - 1);
+            }, 1000);
+        } else if (seconds === 0 && isActive) {
+            onFinish();
+        }
+        return () => clearInterval(interval);
+    }, [isActive, seconds, onFinish]);
+
+    const format = (s) => {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+    };
+
+    if (!isActive) return null;
+
+    return (
+        <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>{format(seconds)}</Text>
+            <TouchableOpacity onPress={onFinish}>
+                <Ionicons name="checkmark-circle" size={24} color="#4f46e5" />
+            </TouchableOpacity>
+        </View>
+    );
+});
+
 // Colorful gradient combinations for cards
 const CARD_GRADIENTS = [
     ['#8E2DE2', '#4A00E0'], // Rich Violet
@@ -74,7 +112,6 @@ const FlashcardsScreen = ({ navigation, route }) => {
     const [taskTimer, setTaskTimer] = useState(0);
     const [isTaskActive, setIsTaskActive] = useState(false);
 
-    // Initial Timer Setup
     useEffect(() => {
         if (activeTask && !isTaskActive) {
             setTaskTimer(activeTask.duration_minutes * 60);
@@ -82,18 +119,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
         }
     }, [activeTask]);
 
-    // Countdown Logic
-    useEffect(() => {
-        let interval = null;
-        if (isTaskActive && taskTimer > 0) {
-            interval = setInterval(() => {
-                setTaskTimer((prev) => prev - 1);
-            }, 1000);
-        } else if (taskTimer === 0 && isTaskActive) {
-            finishTask();
-        }
-        return () => clearInterval(interval);
-    }, [isTaskActive, taskTimer]);
+    // Timer logic is now moved to the StudyTimer component
 
     const finishTask = async () => {
         setIsTaskActive(false);
@@ -116,11 +142,6 @@ const FlashcardsScreen = ({ navigation, route }) => {
         }
     };
 
-    const formatTimer = (seconds) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s < 10 ? '0' : ''}${s}`;
-    };
 
     // Handle Hardware Back Button
     useEffect(() => {
@@ -430,14 +451,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
                     {setLabel ? `${setLabel}` : (chapterName || 'Flashcards')}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-                    {isTaskActive && (
-                        <View style={styles.timerContainer}>
-                            <Text style={styles.timerText}>{formatTimer(taskTimer)}</Text>
-                            <TouchableOpacity onPress={finishTask}>
-                                <Ionicons name="checkmark-circle" size={24} color="#4f46e5" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <StudyTimer initialSeconds={taskTimer} isActive={isTaskActive} onFinish={finishTask} />
 
                     <TouchableOpacity onPress={shuffleCards} style={styles.iconBtn}>
                         <Ionicons name="shuffle" size={24} color={theme.primary} />

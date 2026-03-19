@@ -53,60 +53,99 @@ $imageData = file_get_contents($file['tmp_name']);
 $base64Image = base64_encode($imageData);
 $mimeType = $file['type'];
 
-// Using gemini-2.0-flash which supports multimodal/vision tasks
-$apiUrl = GEMINI_API_URL . "?key=" . GEMINI_API_KEY;
+    // CRITICAL: Robust AI Calling with Fallbacks
+    $modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+    $finalReply = null;
+    $lastError = "";
+    $tokensUsed = 0;
 
-$payload = [
-    'contents' => [
-        [
-            'parts' => [
-                ['text' => $prompt],
+    foreach ($modelsToTry as $model) {
+        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=" . GEMINI_API_KEY;
+        
+        $payload = [
+            'contents' => [
                 [
-                    'inline_data' => [
-                        'mime_type' => $mimeType,
-                        'data' => $base64Image
+                    'parts' => [
+                        ['text' => $prompt],
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Image
+                            ]
+                        ]
                     ]
                 ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.4,
+                'maxOutputTokens' => 2048,
+                'topP' => 0.8,
+                'topK' => 40
+            ],
+            // Disable safety filters to prevent blocking educational images
+            "safetySettings" => [
+                ["category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"]
             ]
-        ]
-    ]
-];
+        ];
 
-$ch = curl_init($apiUrl);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json'
-]);
-
-// CRITICAL for XAMPP: Disable SSL verify
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-if (curl_errno($ch)) {
-    echo json_encode(['status' => 'error', 'message' => 'Curl error: ' . curl_error($ch)]);
-} else {
-    $decodedResponse = json_decode($response, true);
-    
-    if ($httpCode === 200 && isset($decodedResponse['candidates'][0]['content']['parts'][0]['text'])) {
-        $aiReply = $decodedResponse['candidates'][0]['content']['parts'][0]['text'];
+        // RETRY LOGIC for Rate Limits
+        $maxRetries = 2;
+        $retryCount = 0;
         
+        while ($retryCount <= $maxRetries) {
+            $ch = curl_init($apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                if ($retryCount < $maxRetries) { $retryCount++; sleep(1); continue; }
+                break; // Model failed, try next one
+            }
+
+            $decoded = json_decode($response, true);
+            
+            if ($httpCode === 200 && isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
+                $finalReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
+                $tokensUsed = isset($decoded['usageMetadata']['totalTokenCount']) ? $decoded['usageMetadata']['totalTokenCount'] : 0;
+                break 2; // Success!
+            } else {
+                $errorMsg = isset($decoded['error']['message']) ? $decoded['error']['message'] : $response;
+                
+                if (($httpCode === 429 || $httpCode >= 500) && $retryCount < $maxRetries) {
+                    $retryCount++;
+                    sleep(1);
+                    continue;
+                }
+                
+                $lastError = "Model $model failed ($httpCode): " . $errorMsg;
+                error_log($lastError);
+                break; // Try next model
+            }
+        }
+    }
+
+    if ($finalReply) {
         // TRACK USAGE
-        if ($userId > 0 && isset($decodedResponse['usageMetadata']['totalTokenCount'])) {
-            $tokensUsed = $decodedResponse['usageMetadata']['totalTokenCount'];
+        if ($userId > 0 && $tokensUsed > 0) {
             $aiManager->logUsage($tokensUsed);
         }
-
-        echo json_encode(['status' => 'success', 'reply' => $aiReply]);
+        echo json_encode(['status' => 'success', 'reply' => $finalReply]);
     } else {
-        error_log("Gemini Vision Error: " . $response);
-        echo json_encode(['status' => 'error', 'message' => 'Failed to analyze image.', 'debug' => $decodedResponse]);
+        echo json_encode(['status' => 'error', 'message' => 'AI Processing Failed. Please try again.', 'debug' => $lastError]);
     }
-}
 
 curl_close($ch);
 ?>

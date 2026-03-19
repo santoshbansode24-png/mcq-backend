@@ -76,7 +76,15 @@ function extractTextFromPdf($filePath) {
     try {
         $parser = new Smalot\PdfParser\Parser();
         $pdf = $parser->parseFile($filePath);
-        $text = $pdf->getText();
+        
+        // --- OPTIMIZATION: Extract only first 10 pages to avoid timeouts ---
+        $pages = $pdf->getPages();
+        $text = '';
+        $pageCount = min(count($pages), 10);
+        for ($i = 0; $i < $pageCount; $i++) {
+            $text .= $pages[$i]->getText() . " ";
+        }
+        
         return preg_replace('/\s+/', ' ', $text);
     } catch (Throwable $e) {
         return "";
@@ -278,8 +286,10 @@ function extractTextFromWord($filePath) {
 
             if ($httpCode == 200 && isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
                 $finalReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
+                $tokensUsed = isset($decoded['usageMetadata']['totalTokenCount']) ? $decoded['usageMetadata']['totalTokenCount'] : 0;
                 break 2; // Success! Exit both loops
-            } else {
+            }
+ else {
                 $errorMsg = isset($decoded['error']['message']) ? $decoded['error']['message'] : $response;
                 
                 // If it's a Rate Limit (429) or Server Error (500/503), WAIT and RETRY

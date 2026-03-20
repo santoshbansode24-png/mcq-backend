@@ -7,6 +7,16 @@ class AiUsageManager {
 
     public function __construct($userId) {
         global $pdo;
+        
+        // Final fallback if global $pdo is not yet set
+        if (!$pdo) {
+            require_once __DIR__ . '/../config/db.php';
+        }
+
+        if (!$pdo) {
+            throw new Exception("AI Service Error: Database connection could not be established.");
+        }
+
         $this->conn = $pdo;
         $this->userId = $userId;
     }

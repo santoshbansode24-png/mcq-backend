@@ -29,10 +29,22 @@ try {
     if ($exists) {
         echo "<p style='color:green'>✅ ai_tasks table exists!</p>";
     } else {
-        echo "<p style='color:orange'>⚠️ ai_tasks table missing.</p>";
+        echo "<p style='color:orange'>⚠️ ai_tasks table missing. Attempting to create it...</p>";
+        $pdo->exec("CREATE TABLE IF NOT EXISTS ai_tasks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            status VARCHAR(50) DEFAULT 'pending',
+            progress INT DEFAULT 0,
+            result LONGTEXT,
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )");
+        echo "<p style='color:green'>✅ ai_tasks table created successfully!</p>";
     }
 } catch (Exception $e) {
-    echo "<p style='color:red'>❌ Error checking tables: " . $e->getMessage() . "</p>";
+    echo "<p style='color:red'>❌ Error checking/creating tables: " . $e->getMessage() . "</p>";
 }
 
 // 4. Gemini API Key Check
@@ -57,19 +69,40 @@ if (is_dir($uploadDir)) {
 }
 
 // Ensure autoloader runs in debug script to test pathing
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require_once __DIR__ . '/../vendor/autoload.php';
-} elseif (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
-    require_once __DIR__ . '/../../vendor/autoload.php';
+$autoloadChecked = [];
+$autoloadFound = false;
+
+$paths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../vendor/autoload.php',
+    __DIR__ . '/../../../vendor/autoload.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/backend/vendor/autoload.php'
+];
+
+foreach ($paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $autoloadFound = $path;
+        break;
+    }
+    $autoloadChecked[] = $path;
 }
 
 // 6. Composer Library Check
 echo "<h3>✅ Library Check:</h3>";
-if (class_exists('Smalot\PdfParser\Parser')) {
-    echo "<p style='color:green'>✅ PDF Parser Library Loaded.</p>";
+if ($autoloadFound) {
+    echo "<p style='color:green'>✅ Autoloader found at: $autoloadFound</p>";
 } else {
-    echo "<p style='color:red'>❌ PDF Parser Library MISSING (Check vendor/autoload.php).</p>";
+    echo "<p style='color:red'>❌ Autoloader NOT FOUND. Checked paths:<br>" . implode("<br>", $autoloadChecked) . "</p>";
 }
+
+if (class_exists('Smalot\PdfParser\Parser')) {
+    echo "<p style='color:green'>✅ PDF Parser Library Loaded successfully.</p>";
+} else {
+    echo "<p style='color:red'>❌ PDF Parser Library MISSING (Class Smalot\PdfParser\Parser not found).</p>";
+}
+
 
 echo "<hr><i>Debugger finished at " . date('Y-m-d H:i:s') . "</i>";
 ?>

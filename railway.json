@@ -1,7 +1,8 @@
 {
     "$schema": "https://railway.app/railway.schema.json",
     "build": {
-        "builder": "NIXPACKS"
+        "builder": "NIXPACKS",
+        "buildCommand": "composer install"
     },
     "deploy": {
         "startCommand": "php -d upload_max_filesize=50M -d post_max_size=50M -d memory_limit=256M -S 0.0.0.0:$PORT",

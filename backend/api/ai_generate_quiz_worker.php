@@ -4,9 +4,9 @@
  * This script is called within a background process to handle the actual generation.
  */
 
-require_once '../config/db.php';
-require_once 'AiUsageManager.php';
-require_once 'AiTaskManager.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/AiUsageManager.php';
+require_once __DIR__ . '/AiTaskManager.php';
 
 function processQuizTask($taskId, $payload, $taskManager, $pdo) {
     try {
@@ -28,7 +28,7 @@ function processQuizTask($taskId, $payload, $taskManager, $pdo) {
                 // For images, we just use the raw base64 in Gemini
                 $base64Image = base64_encode(file_get_contents($filePath));
             } elseif ($mimeType === 'application/pdf') {
-                require_once 'ai_helpers.php'; // Use clean helpers
+                require_once __DIR__ . '/ai_helpers.php'; // Use clean helpers
                 $extractedText = extractTextFromPdf($filePath);
                 $taskManager->updateTask($taskId, 'running', 40);
             }
@@ -54,7 +54,7 @@ function processQuizTask($taskId, $payload, $taskManager, $pdo) {
         $taskManager->updateTask($taskId, 'running', 60);
         
         if (!defined('GEMINI_API_KEY')) {
-            require_once '../config/ai_config.php';
+            require_once __DIR__ . '/../config/ai_config.php';
         }
 
         $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . GEMINI_API_KEY;
@@ -108,6 +108,17 @@ function processQuizTask($taskId, $payload, $taskManager, $pdo) {
 
     } catch (Exception $e) {
         $taskManager->updateTask($taskId, 'failed', 0, null, $e->getMessage());
+    }
+}
+
+// Run via CLI if called directly
+if (php_sapi_name() === 'cli' && isset($argv[1]) && is_numeric($argv[1])) {
+    $taskId = (int)$argv[1];
+    $taskManager = new AiTaskManager($pdo);
+    $task = $taskManager->getTask($taskId);
+    if ($task) {
+        $payload = json_decode($task['request_payload'], true);
+        processQuizTask($taskId, $payload, $taskManager, $pdo);
     }
 }
 ?>

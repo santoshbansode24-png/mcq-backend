@@ -101,9 +101,18 @@ try {
     }
 
     // --- BACKGROUND PROCESSING STARTS HERE ---
-    require_once __DIR__ . '/ai_generate_quiz_worker.php';
-    processQuizTask($taskId, $payload, $taskManager, $pdo);
+    // Launch via CLI to avoid blocking the single-threaded Railway PHP development server
+    $scriptUrl = $_SERVER['DOCUMENT_ROOT'] . '/backend/api/ai_generate_quiz_worker.php';
+    if (!file_exists($scriptUrl)) {
+        // Fallback for different DOCUMENT_ROOT configurations
+        $scriptUrl = __DIR__ . '/ai_generate_quiz_worker.php';
+    }
 
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        pclose(popen("start /B C:\\xampp\\php\\php.exe " . escapeshellarg($scriptUrl) . " " . $taskId, "r"));
+    } else {
+        exec("php " . escapeshellarg($scriptUrl) . " " . $taskId . " > /dev/null 2>&1 &");
+    }
 } catch (Exception $e) {
     if (ob_get_level()) ob_end_clean();
     http_response_code(200); // Return JSON even on error

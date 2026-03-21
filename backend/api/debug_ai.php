@@ -56,6 +56,13 @@ if (is_dir($uploadDir)) {
     }
 }
 
+// Ensure autoloader runs in debug script to test pathing
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
+    require_once __DIR__ . '/../../vendor/autoload.php';
+}
+
 // 6. Composer Library Check
 echo "<h3>✅ Library Check:</h3>";
 if (class_exists('Smalot\PdfParser\Parser')) {

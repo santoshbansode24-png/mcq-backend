@@ -120,22 +120,57 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
 
     // --- API Logic ---
 
+    // --- NEW: Task Polling Logic ---
+    const [progress, setProgress] = useState(0);
+    const [taskStatusMsg, setTaskStatusMsg] = useState('AI is preparing...');
+
+    const startTaskPolling = (taskId) => {
+        const interval = setInterval(async () => {
+            try {
+                const response = await axios.get(`${API_URL}/ai_task_status.php?task_id=${taskId}`);
+                const task = response.data.data;
+
+                if (task.status === 'completed') {
+                    clearInterval(interval);
+                    handleTaskSuccess(task.result);
+                } else if (task.status === 'failed') {
+                    clearInterval(interval);
+                    setLoading(false);
+                    Alert.alert('Error', task.error || 'AI processing failed.');
+                } else {
+                    // Update progress UI
+                    setProgress(task.progress);
+                    if (task.progress > 50) setTaskStatusMsg('Generating questions...');
+                    else if (task.progress > 20) setTaskStatusMsg('Analyzing document...');
+                }
+            } catch (error) {
+                console.error("Polling error", error);
+            }
+        }, 2000); // Poll every 2 seconds
+    };
+
+    const handleTaskSuccess = (newQuestions) => {
+        setQuiz(newQuestions);
+        setStep(2);
+        setScore(0);
+        setCurrentQuestionIndex(0);
+        setQuizFinished(false);
+        setLoading(false);
+        setLoadingMore(false);
+        setSelectedOption(null);
+        setShowExplanation(false);
+        setUserAnswers([]);
+    };
+
     const handleGenerateQuiz = async (isLoadMore = false) => {
-        // Validation (only for new quiz)
         if (!isLoadMore) {
             if (inputType === 'text' && !inputText.trim()) {
-                Alert.alert("Empty Input", "Please write some text to generate a quiz.");
-                return;
-            }
-            if (inputType === 'camera' && !selectedImage) {
-                Alert.alert("No Image", "Please take a photo first.");
-                return;
-            }
-            if (inputType === 'file' && !selectedFile) {
-                Alert.alert("No File", "Please upload a document first.");
+                Alert.alert("Empty Input", "Please write some text.");
                 return;
             }
             setLoading(true);
+            setProgress(0);
+            setTaskStatusMsg('AI is reading your content...');
         } else {
             setLoadingMore(true);
         }
@@ -147,21 +182,16 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
             formData.append('difficulty', difficulty);
             formData.append('language', language);
 
-            // If loading more, use the extracted text to skip visual processing
             if (isLoadMore && extractedText) {
                 formData.append('existing_text', extractedText);
-            }
-            // Otherwise process standard inputs
-            else {
+            } else {
                 if (inputType === 'text') {
                     formData.append('content', inputText);
                 } else if (inputType === 'camera') {
-                    const uri = selectedImage.uri;
-                    const fileType = uri.substring(uri.lastIndexOf('.') + 1);
                     formData.append('file', {
-                        uri: uri,
-                        name: `photo.${fileType}`,
-                        type: `image/${fileType}`,
+                        uri: selectedImage.uri,
+                        name: 'photo.jpg',
+                        type: 'image/jpeg',
                     });
                 } else if (inputType === 'file') {
                     formData.append('file', {
@@ -172,55 +202,21 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
                 }
             }
 
-            // Call the custom PHP endpoint we created
-            const response = await axios.post(`${API_URL}/ai_generate_quiz_custom.php`, formData, {
+            const response = await axios.post(`${API_URL}/ai_quiz_start.php`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
-                timeout: 120000, // 2 minutes for processing large docs
             });
 
             if (response.data.status === 'success') {
-                const newQuestions = response.data.data;
-
-                // Store extracted text for future "Load More" calls
-                if (response.data.extracted_text) {
-                    setExtractedText(response.data.extracted_text);
-                }
-
-                if (isLoadMore) {
-                    // Append new questions
-                    setQuiz(prev => [...prev, ...newQuestions]);
-                    setQuizFinished(false);
-                    // Stay on current index, user will just click "Next" from result view logic if we change it?
-                    // Actually, if we are at result view, we should move to the next question index (which corresponds to start of new batch)
-                    // The 'Next' button on result screen will effectively be just closing the result view and showing the question.
-                    // But wait, our 'step 2' logic shows result if quizFinished is true.
-                    // So we just need to set quizFinished to false, and since currentQuestionIndex is at the end, nextQuestion() handles logic?
-                    // No, currentQuestionIndex is at last index. We need to increment it to show the newly added question.
-                    setCurrentQuestionIndex(prev => prev + 1);
-                } else {
-                    // New Quiz
-                    setQuiz(newQuestions);
-                    setStep(2); // Start Quiz
-                    setScore(0);
-                    setCurrentQuestionIndex(0);
-                    setQuizFinished(false);
-                    setSelectedOption(null);
-                    setShowExplanation(false);
-                    setUserAnswers([]);
-                    setShowReview(false);
-                }
+                startTaskPolling(response.data.task_id);
             } else {
-                Alert.alert('AI Generator Error', response.data.message || 'Failed to generate quiz');
+                setLoading(false);
+                setLoadingMore(false);
+                Alert.alert('Error', response.data.message);
             }
         } catch (error) {
-            console.error(error);
-            const msg = error.code === 'ECONNABORTED' 
-                ? 'Request timed out. This can happen with large files—please try a shorter document.'
-                : 'Failed to connect to AI service. Please check your internet.';
-            Alert.alert('Connection Error', msg);
-        } finally {
             setLoading(false);
             setLoadingMore(false);
+            Alert.alert('Connection Error', 'Failed to start AI Task.');
         }
     };
 
@@ -477,9 +473,17 @@ const QuizGeneratorScreen = ({ navigation, user }) => {
     if (loading) {
         return (
             <View style={[styles.container, styles.center]}>
-                <ActivityIndicator size="large" color="#7c3aed" />
-                <Text style={styles.loadingText}>AI is reading your content...</Text>
-                <Text style={styles.subLoadingText}>This may take a few seconds.</Text>
+                <LinearGradient colors={['#7c3aed', '#6d28d9']} style={styles.loadingCircle}>
+                    <ActivityIndicator size="large" color="#fff" />
+                </LinearGradient>
+                <Text style={styles.loadingText}>{taskStatusMsg}</Text>
+                
+                <View style={styles.pollProgressContainer}>
+                    <View style={[styles.pollProgressBar, { width: `${progress}%` }]} />
+                </View>
+                <Text style={styles.subLoadingText}>
+                    {progress}% Complete - Don't close the app.
+                </Text>
             </View>
         );
     }
@@ -644,8 +648,11 @@ const styles = StyleSheet.create({
     headerContent: { flexDirection: 'row', alignItems: 'center' },
     backButton: { marginRight: 15, padding: 5 },
     headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', fontFamily: 'NotoSans-Bold' },
-    loadingText: { marginTop: 20, color: '#64748b', fontSize: 16, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
-    subLoadingText: { marginTop: 5, color: '#94a3b8', fontSize: 14, fontFamily: 'NotoSans-Regular' },
+    loadingText: { marginTop: 20, color: '#1e293b', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
+    subLoadingText: { marginTop: 10, color: '#64748b', fontSize: 14, fontFamily: 'NotoSans-Regular' },
+    loadingCircle: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', elevation: 5 },
+    pollProgressContainer: { width: '80%', height: 10, backgroundColor: '#e2e8f0', borderRadius: 5, marginTop: 20, overflow: 'hidden' },
+    pollProgressBar: { height: '100%', backgroundColor: '#7c3aed' },
 
     // Input Section Styles
     inputScroll: { padding: 20 },

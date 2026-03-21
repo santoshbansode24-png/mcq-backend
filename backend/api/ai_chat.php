@@ -31,30 +31,44 @@ if (file_exists('../config/ai_config.php')) {
 }
 
 try {
-    // 4. Get Input Data
-    $inputJSON = file_get_contents("php://input");
-    $data = json_decode($inputJSON);
+    // 4. Get Input Data (Support both JSON and FormData/Image)
+    $userId = 0;
+    $userMessage = "";
+    $imagePart = null;
 
-    if (empty($data->message)) {
-        throw new Exception("No message provided.");
+    if (strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $inputJSON = file_get_contents("php://input");
+        $data = json_decode($inputJSON);
+        $userMessage = $data->message ?? "";
+        $userId = isset($data->user_id) ? (int)$data->user_id : 0;
+    } else {
+        // Handle FormData (Mobile App with Image)
+        $userMessage = $_POST['message'] ?? "";
+        $userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+        
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $imagePart = [
+                'inline_data' => [
+                    'mime_type' => mime_content_type($_FILES['image']['tmp_name']),
+                    'data' => base64_encode(file_get_contents($_FILES['image']['tmp_name']))
+                ]
+            ];
+        }
+    }
+
+    if (empty($userMessage) && !$imagePart) {
+        throw new Exception("No message or image provided.");
     }
 
     // AUTH & TRAFFIC CONTROL
     require_once 'AiUsageManager.php';
-    $userId = isset($data->user_id) ? (int)$data->user_id : 0;
-    
-    // Only enforce limits if we have a valid user ID. 
-    // If user_id is missing (old app version), you might want to block or allow with strict limit.
-    // For now, let's block or track on user 0 (Guest) if needed, but per plan we block.
     if ($userId > 0) {
         $aiManager = new AiUsageManager($userId);
         $canProceed = $aiManager->canMakeRequest();
         if ($canProceed !== true) {
-            throw new Exception($canProceed); // Return the block message
+            throw new Exception($canProceed);
         }
     }
-
-    $userMessage = $data->message;
 
     // 5. System Instruction (The AI Persona)
     $systemInstruction = "You are a helpful and encouraging AI Tutor. 
@@ -67,90 +81,89 @@ try {
     - If the user writes in English, reply in English.
     - Always match the user's language.";
 
-    // 6. Gemini Configuration
-    // Use the URL defined in ai_config.php which has the working model (gemini-2.5-flash)
-    $apiUrl = GEMINI_API_URL . "?key=" . GEMINI_API_KEY;
+    // 6. Gemini Configuration - STREAMING ENDPOINT
+    $apiUrl = str_replace(':generateContent', ':streamGenerateContent', GEMINI_API_URL) . "?key=" . GEMINI_API_KEY . "&alt=sse";
 
     // 7. Prepare Payload
+    $geminiParts = [["text" => $systemInstruction . "\n\nStudent Question: " . $userMessage]];
+    if ($imagePart) {
+        $geminiParts[] = $imagePart;
+    }
+
     $payload = [
         "contents" => [
             [
-                "parts" => [
-                    // Combining system instruction + user query works best for Flash model
-                    ["text" => $systemInstruction . "\n\nStudent Question: " . $userMessage]
-                ]
+                "parts" => $geminiParts
             ]
         ],
         "generationConfig" => [
-            "temperature" => 0.7,      // Balance between creative and accurate
-            "maxOutputTokens" => 800   // Limit length for mobile UI
+            "temperature" => 0.7,
+            "maxOutputTokens" => 1000
         ]
     ];
 
-    // 8. Send Request via cURL
+    // 8. Send Request via cURL with Streaming
+    header('Content-Type: text/event-stream');
+    header('Cache-Control: no-cache');
+    header('Connection: keep-alive');
+    header('X-Accel-Buffering: no'); // Disable buffering for Nginx/Railway
+
     $ch = curl_init($apiUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false); // We will use write function
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    
-    // CRITICAL for XAMPP/Localhost: Disable SSL verification to prevent connection errors
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
-    $response = curl_exec($ch);
+    $fullReply = "";
+    $tokensUsed = 0;
+
+    // Define the write function to handle incoming stream chunks
+    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed) {
+        $lines = explode("\n", $data);
+        foreach ($lines as $line) {
+            if (strpos($line, 'data: ') === 0) {
+                $jsonStr = substr($line, 6);
+                $decoded = json_decode($jsonStr, true);
+                
+                if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
+                    $partText = $decoded['candidates'][0]['content']['parts'][0]['text'];
+                    $fullReply .= $partText;
+                    
+                    // Send to client in SSE format
+                    echo "data: " . json_encode(["status" => "success", "chunk" => $partText]) . "\n\n";
+                    if (ob_get_level()) ob_flush();
+                    flush();
+                }
+
+                if (isset($decoded['usageMetadata']['totalTokenCount'])) {
+                    $tokensUsed = $decoded['usageMetadata']['totalTokenCount'];
+                }
+            }
+        }
+        return strlen($data);
+    });
+
+    ob_end_flush(); // Close any potential output buffering
+    curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    
     curl_close($ch);
 
-    // 9. Error Handling
-    if ($curlError) {
-        throw new Exception("Connection Error: " . $curlError);
+    // 9. Final Tracking (Log Usage at the end of stream)
+    if ($userId > 0 && $tokensUsed > 0) {
+        $aiManager->logUsage($tokensUsed);
     }
 
-    $decoded = json_decode($response, true);
-
-    // Check for API Logic Errors (like Invalid Key or Over Limit)
-    if (isset($decoded['error'])) {
-        $msg = $decoded['error']['message'];
-        
-        // Handle Quota Limit Specifically
-        if (strpos($msg, 'quota') !== false || strpos($msg, '429') !== false) {
-            throw new Exception("The AI is busy (Quota Limit Reached). Please wait 1 minute and try again.");
-        }
-        
-        throw new Exception("AI API Error: " . $msg);
-    }
-
-    // 10. Extract & Return Reply
-    if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
-        $aiReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
-
-        // TRACK USAGE
-        if ($userId > 0 && isset($decoded['usageMetadata']['totalTokenCount'])) {
-            $tokensUsed = $decoded['usageMetadata']['totalTokenCount'];
-            $aiManager->logUsage($tokensUsed);
-        }
-
-        // Clean Output Buffer before echoing JSON
-        ob_clean();
-        
-        echo json_encode([
-            "status" => "success",
-            "reply" => $aiReply
-        ]);
-    } else {
-        throw new Exception("No response generated by AI.");
-    }
+    // Signal end of stream
+    echo "data: [DONE]\n\n";
+    if (ob_get_level()) ob_flush();
+    flush();
 
 } catch (Exception $e) {
-    // Clean Buffer and Return Error JSON
-    ob_clean();
-    // We send 200 OK even on error so the App handles it gracefully without crashing
-    echo json_encode([
-        "status" => "error",
-        "message" => $e->getMessage()
-    ]);
+    // If an error occurs during streaming, try to send it as a final data packet
+    echo "data: " . json_encode(["status" => "error", "message" => $e->getMessage()]) . "\n\n";
+    if (ob_get_level()) ob_flush();
+    flush();
 }
-?>
+?>

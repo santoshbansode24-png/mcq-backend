@@ -53,99 +53,97 @@ $imageData = file_get_contents($file['tmp_name']);
 $base64Image = base64_encode($imageData);
 $mimeType = $file['type'];
 
-    // CRITICAL: Robust AI Calling with Fallbacks
-    $modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
-    $finalReply = null;
-    $lastError = "";
-    $tokensUsed = 0;
+try {
+    // 5. Setup Streaming Headers
+    header('Content-Type: text/event-stream');
+    header('Cache-Control: no-cache');
+    header('Connection: keep-alive');
+    header('X-Accel-Buffering: no');
 
-    foreach ($modelsToTry as $model) {
-        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=" . GEMINI_API_KEY;
-        
-        $payload = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt],
-                        [
-                            'inline_data' => [
-                                'mime_type' => $mimeType,
-                                'data' => $base64Image
-                            ]
+    // 6. Gemini Configuration - STREAMING
+    // Using gemini-2.0-flash as primary
+    $model = 'gemini-2.0-flash';
+    $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/$model:streamGenerateContent?key=" . GEMINI_API_KEY . "&alt=sse";
+
+    $payload = [
+        'contents' => [
+            [
+                'parts' => [
+                    ['text' => $prompt],
+                    [
+                        'inline_data' => [
+                            'mime_type' => $mimeType,
+                            'data' => $base64Image
                         ]
                     ]
                 ]
-            ],
-            'generationConfig' => [
-                'temperature' => 0.4,
-                'maxOutputTokens' => 2048,
-                'topP' => 0.8,
-                'topK' => 40
-            ],
-            // Disable safety filters to prevent blocking educational images
-            "safetySettings" => [
-                ["category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"],
-                ["category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"],
-                ["category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"],
-                ["category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"]
             ]
-        ];
+        ],
+        'generationConfig' => [
+            'temperature' => 0.4,
+            'maxOutputTokens' => 2048,
+        ],
+        "safetySettings" => [
+            ["category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"],
+            ["category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"],
+            ["category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"],
+            ["category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"]
+        ]
+    ];
 
-        // RETRY LOGIC for Rate Limits
-        $maxRetries = 2;
-        $retryCount = 0;
-        
-        while ($retryCount <= $maxRetries) {
-            $ch = curl_init($apiUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
+    $fullReply = "";
+    $tokensUsed = 0;
 
-            if ($curlError) {
-                if ($retryCount < $maxRetries) { $retryCount++; sleep(1); continue; }
-                break; // Model failed, try next one
-            }
-
-            $decoded = json_decode($response, true);
-            
-            if ($httpCode === 200 && isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
-                $finalReply = $decoded['candidates'][0]['content']['parts'][0]['text'];
-                $tokensUsed = isset($decoded['usageMetadata']['totalTokenCount']) ? $decoded['usageMetadata']['totalTokenCount'] : 0;
-                break 2; // Success!
-            } else {
-                $errorMsg = isset($decoded['error']['message']) ? $decoded['error']['message'] : $response;
+    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed) {
+        $lines = explode("\n", $data);
+        foreach ($lines as $line) {
+            if (strpos($line, 'data: ') === 0) {
+                $jsonStr = substr($line, 6);
+                $decoded = json_decode($jsonStr, true);
                 
-                if (($httpCode === 429 || $httpCode >= 500) && $retryCount < $maxRetries) {
-                    $retryCount++;
-                    sleep(1);
-                    continue;
+                if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
+                    $partText = $decoded['candidates'][0]['content']['parts'][0]['text'];
+                    $fullReply .= $partText;
+                    
+                    echo "data: " . json_encode(["status" => "success", "chunk" => $partText]) . "\n\n";
+                    if (ob_get_level()) ob_flush();
+                    flush();
                 }
-                
-                $lastError = "Model $model failed ($httpCode): " . $errorMsg;
-                error_log($lastError);
-                break; // Try next model
+
+                if (isset($decoded['usageMetadata']['totalTokenCount'])) {
+                    $tokensUsed = $decoded['usageMetadata']['totalTokenCount'];
+                }
             }
         }
+        return strlen($data);
+    });
+
+    if (ob_get_level()) ob_end_flush();
+    curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Final Tracking
+    if ($userId > 0 && $tokensUsed > 0) {
+        $aiManager->logUsage($tokensUsed);
     }
 
-    if ($finalReply) {
-        // TRACK USAGE
-        if ($userId > 0 && $tokensUsed > 0) {
-            $aiManager->logUsage($tokensUsed);
-        }
-        echo json_encode(['status' => 'success', 'reply' => $finalReply]);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'AI Processing Failed. Please try again.', 'debug' => $lastError]);
-    }
+    echo "data: [DONE]\n\n";
+    if (ob_get_level()) ob_flush();
+    flush();
 
-curl_close($ch);
+} catch (Exception $e) {
+    echo "data: " . json_encode(["status" => "error", "message" => $e->getMessage()]) . "\n\n";
+    if (ob_get_level()) ob_flush();
+    flush();
+}
 ?>

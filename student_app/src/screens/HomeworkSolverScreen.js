@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert, StatusBar, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
-import { uploadHomeworkImage } from '../api/ai';
+import { API_URL } from '../api/config';
+import { streamFetch } from '../api/streaming';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -19,6 +21,19 @@ const HomeworkSolverScreen = ({ navigation }) => {
     const [solution, setSolution] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState('English');
+
+    const getUserId = async () => {
+        try {
+            const userData = await AsyncStorage.getItem('user_data');
+            if (userData) {
+                const user = JSON.parse(userData);
+                return user.user_id;
+            }
+        } catch (e) {
+            console.warn("Failed to get user ID for AI tracking", e);
+        }
+        return null;
+    };
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -66,14 +81,45 @@ const HomeworkSolverScreen = ({ navigation }) => {
     const handleSolve = async () => {
         if (!image) return;
 
+        setSolution('');
         setLoading(true);
-        const response = await uploadHomeworkImage(image, null, language);
-        setLoading(false);
 
-        if (response.status === 'success') {
-            setSolution(response.reply);
-        } else {
-            Alert.alert('Error', 'Failed to analyze the image. Please try again.');
+        try {
+            const userId = await getUserId();
+            const PROXY_URL = `${API_URL}/ai_homework.php`;
+
+            const formData = new FormData();
+            formData.append('image', {
+                uri: image,
+                type: 'image/jpeg',
+                name: 'homework.jpg',
+            });
+            formData.append('language', language);
+            formData.append('prompt', "Solve this problem. Give a simple and straightforward answer.");
+            if (userId) formData.append('user_id', userId);
+
+            await streamFetch(
+                PROXY_URL,
+                {
+                    method: 'POST',
+                    body: formData,
+                },
+                (chunk) => {
+                    if (chunk.status === 'success' && chunk.chunk) {
+                        setSolution(prev => prev + chunk.chunk);
+                    }
+                },
+                () => {
+                    setLoading(false);
+                },
+                (error) => {
+                    setLoading(false);
+                    Alert.alert('Error', 'Failed to connect to AI server.');
+                }
+            );
+        } catch (error) {
+            setLoading(false);
+            Alert.alert('Error', 'An unexpected error occurred.');
         }
     };
 

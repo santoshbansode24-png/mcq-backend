@@ -43,6 +43,7 @@ import ScholarshipSetsScreen from './ScholarshipSetsScreen';
 import WorksheetGeneratorScreen from './WorksheetGeneratorScreen';
 
 import StudyPlannerScreen from './StudyPlannerScreen';
+import ChatScreen from './ChatScreen';
 
 // --- Tab Button Component ---
 const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
@@ -222,7 +223,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision'],
-            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'QuizGenerator']
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'QuizGenerator', 'Chat']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -350,6 +351,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'ScholarshipSets': return <ScholarshipSetsScreen {...commonProps} />;
             case 'WorksheetGenerator': return <WorksheetGeneratorScreen {...commonProps} />;
             case 'StudyPlanner': return <StudyPlannerScreen {...commonProps} />;
+            case 'Chat': return <ChatScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };

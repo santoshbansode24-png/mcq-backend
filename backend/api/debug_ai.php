@@ -22,26 +22,54 @@ try {
     echo "<p style='color:red'>❌ Database Connection Failed: " . $e->getMessage() . "</p>";
 }
 
-// 3. Table Check
+// 3. Table Check & Patch
 try {
     $stmt = $pdo->query("SHOW TABLES LIKE 'ai_tasks'");
     $exists = $stmt->fetch();
     if ($exists) {
         echo "<p style='color:green'>✅ ai_tasks table exists!</p>";
+        // Patch wrong columns if they exist
+        try {
+            // Check for 'type' instead of 'task_type'
+            $colStmt = $pdo->query("SHOW COLUMNS FROM ai_tasks LIKE 'type'");
+            if ($colStmt->fetch()) {
+                $pdo->exec("ALTER TABLE ai_tasks CHANGE `type` `task_type` VARCHAR(50) NOT NULL");
+                echo "<p style='color:green'>✅ Patched 'type' to 'task_type'!</p>";
+            }
+            
+            // Check for 'result' instead of 'result_data'
+            $colStmt2 = $pdo->query("SHOW COLUMNS FROM ai_tasks LIKE 'result'");
+            if ($colStmt2->fetch()) {
+                $pdo->exec("ALTER TABLE ai_tasks CHANGE `result` `result_data` MEDIUMTEXT");
+                echo "<p style='color:green'>✅ Patched 'result' to 'result_data'!</p>";
+            }
+
+            // Check for 'request_payload'
+            $colStmt3 = $pdo->query("SHOW COLUMNS FROM ai_tasks LIKE 'request_payload'");
+            if (!$colStmt3->fetch()) {
+                $pdo->exec("ALTER TABLE ai_tasks ADD COLUMN `request_payload` TEXT AFTER `status`");
+                echo "<p style='color:green'>✅ Added missing 'request_payload' column!</p>";
+            }
+        } catch (Exception $e) {
+            echo "<p style='color:orange'>⚠️ Could not patch table: " . $e->getMessage() . "</p>";
+        }
     } else {
         echo "<p style='color:orange'>⚠️ ai_tasks table missing. Attempting to create it...</p>";
         $pdo->exec("CREATE TABLE IF NOT EXISTS ai_tasks (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            status VARCHAR(50) DEFAULT 'pending',
-            progress INT DEFAULT 0,
-            result LONGTEXT,
+            task_type VARCHAR(50) NOT NULL,
+            status ENUM('pending', 'running', 'completed', 'failed') DEFAULT 'pending',
+            request_payload TEXT,
+            result_data MEDIUMTEXT,
             error_message TEXT,
+            progress INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )");
-        echo "<p style='color:green'>✅ ai_tasks table created successfully!</p>";
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_user (user_id),
+            INDEX idx_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+        echo "<p style='color:green'>✅ ai_tasks table created successfully with correct schema!</p>";
     }
 } catch (Exception $e) {
     echo "<p style='color:red'>❌ Error checking/creating tables: " . $e->getMessage() . "</p>";

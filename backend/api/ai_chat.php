@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 // 3. Load Configuration
 // Make sure this file exists and defines 'GEMINI_API_KEY'
 // Load AI config safely - works both locally (XAMPP) and on Railway
-if (file_exists('../config/ai_config.php')) {
-    require_once '../config/ai_config.php';
+if (file_exists(__DIR__ . '/../config/ai_config.php')) {
+    require_once __DIR__ . '/../config/ai_config.php';
 } else {
     // Railway: config file is gitignored, read from environment variable
     if (!defined('GEMINI_API_KEY')) {
@@ -61,7 +61,7 @@ try {
     }
 
     // AUTH & TRAFFIC CONTROL
-    require_once 'AiUsageManager.php';
+    require_once __DIR__ . '/AiUsageManager.php';
     if ($userId > 0) {
         $aiManager = new AiUsageManager($userId);
         $canProceed = $aiManager->canMakeRequest();

@@ -12,9 +12,9 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit(); }
 
-require_once '../config/db.php';
-require_once 'AiUsageManager.php';
-require_once 'AiTaskManager.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/AiUsageManager.php';
+require_once __DIR__ . '/AiTaskManager.php';
 
 // Composer logic
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
@@ -101,7 +101,7 @@ try {
     }
 
     // --- BACKGROUND PROCESSING STARTS HERE ---
-    require_once 'ai_generate_quiz_worker.php';
+    require_once __DIR__ . '/ai_generate_quiz_worker.php';
     processQuizTask($taskId, $payload, $taskManager, $pdo);
 
 } catch (Exception $e) {

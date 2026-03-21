@@ -7,9 +7,9 @@
 header("Content-Type: text/html; charset=UTF-8");
 echo "<h2>🚀 AI Service Debugger (Railway)</h2>";
 
-require_once '../config/db.php';
-require_once 'AiUsageManager.php';
-require_once 'AiTaskManager.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/AiUsageManager.php';
+require_once __DIR__ . '/AiTaskManager.php';
 
 echo "<h3>✅ PHP Version: " . phpversion() . "</h3>";
 

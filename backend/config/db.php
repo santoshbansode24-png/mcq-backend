@@ -42,6 +42,7 @@ try {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_TIMEOUT            => 5, // Fast-fail after 5 seconds to prevent 502 Bad Gateway
     ];
 
     // SSL options removed to fix Railway internal network connection

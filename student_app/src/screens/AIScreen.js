@@ -21,15 +21,15 @@ const AIScreen = ({ navigation }) => {
 
     const features = [
         {
-            id: 'quiz',
-            title: 'Quiz Generator',
-            subtitle: 'Test Yourself',
-            description: 'Generate custom quizzes.',
-            icon: 'create',
-            // Deep Blue to Electric Blue
-            color1: '#2563eb',
-            color2: '#3b82f6',
-            screen: 'QuizGenerator',
+            id: 'pdftoexam',
+            title: 'PDF-to-Exam',
+            subtitle: 'Doc Analyzer',
+            description: 'Turn any PDF into a custom exam.',
+            icon: 'document-attach',
+            // Indigo to Deep Blue
+            color1: '#4f46e5',
+            color2: '#2563eb',
+            screen: 'PDFToExam',
             width: '100%',
             height: 110
         },

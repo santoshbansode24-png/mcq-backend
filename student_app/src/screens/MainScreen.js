@@ -23,11 +23,11 @@ import { SmartCacheService } from '../services/SmartCacheService';
 import PDFViewerScreen from './PDFViewerScreen';
 import NotificationsScreen from './NotificationsScreen';
 import AIScreen from './AIScreen';
+import PDFToExamScreen from './PDFToExamScreen';
 
 import HomeworkSolverScreen from './HomeworkSolverScreen';
 import EnglishTutorScreen from './EnglishTutorScreen';
 import EnglishMissionMapScreen from './EnglishMissionMapScreen';
-import QuizGeneratorScreen from './QuizGeneratorScreen';
 import VocabBoosterScreen from './VocabBoosterScreen';
 import VocabDashboardScreen from './VocabDashboardScreen';
 import MentalMathsScreen from './MentalMathsScreen';
@@ -223,7 +223,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision'],
-            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'QuizGenerator', 'Chat']
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'Chat', 'PDFToExam']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -326,6 +326,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'Home': return <HomeScreen {...commonProps} />;
             case 'Subjects': return <SubjectsScreen {...commonProps} />;
             case 'AI': return <AIScreen {...commonProps} />;
+            case 'PDFToExam': return <PDFToExamScreen {...commonProps} />;
             case 'Profile': return <ProfileScreen {...commonProps} />;
             case 'Leaderboard': return <LeaderboardScreen {...commonProps} />;
             case 'Notifications': return <NotificationsScreen {...commonProps} />;
@@ -340,7 +341,6 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'VocabDashboard': return <VocabDashboardScreen {...commonProps} />;
             case 'VocabBooster': return <VocabBoosterScreen {...commonProps} />;
             case 'MentalMaths': return <MentalMathsScreen {...commonProps} />;
-            case 'QuizGenerator': return <QuizGeneratorScreen {...commonProps} />;
             case 'Flashcards': return <FlashcardsScreen {...commonProps} />;
             case 'QuickRevision': return <QuickRevisionScreen {...commonProps} />;
             case 'MyExam': return <MyExamScreen {...commonProps} />;

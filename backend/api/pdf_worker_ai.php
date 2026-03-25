@@ -1,12 +1,15 @@
 <?php
 /**
- * PDF-to-Exam Background AI Worker
- * This script processes one pending PDF study job at a time.
- * Designed to be run via Cron every 1 minute.
+ * Hardened PDF-to-Exam Background AI Worker
+ * Optimized for Railway/Production timeouts.
  */
 
-set_time_limit(600); // 10 minutes max for large PDFs
+// 🏎️ 1. Resource and Connection Management
+set_time_limit(300); // 5 minutes max per run
+ini_set('memory_limit', '512M'); // Increase for PDF parsing
 ignore_user_abort(true);
+header('Content-Type: text/plain'); // Direct text response for live monitoring
+header('X-Accel-Buffering: no'); // Disable Nginx buffering to allow live flush
 
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
@@ -14,13 +17,21 @@ require_once '../../vendor/autoload.php';
 
 use Smalot\PdfParser\Parser;
 
-// 🧠 1. Find a pending job
-$stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'pending' LIMIT 1");
+function echoHeartbeat($msg) {
+    echo "[" . date('H:i:s') . "] " . $msg . "\n";
+    ob_flush();
+    flush();
+}
+
+echoHeartbeat("Starting Worker...");
+
+// 🧠 2. Find a pending job
+$stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status IN ('pending', 'processing') ORDER BY created_at ASC LIMIT 1");
 $stmt->execute();
 $job = $stmt->fetch();
 
 if (!$job) {
-    // No work to do
+    echoHeartbeat("No pending jobs found. Standing by.");
     exit();
 }
 
@@ -29,26 +40,35 @@ $userId = $job['user_id'];
 $filePath = '../../uploads/pdf_study/' . $job['file_path'];
 
 try {
-    // 🚦 2. Signal that we are starting
+    echoHeartbeat("Processing Job $jobId: " . $job['file_name']);
+
+    // 🚦 3. Signal that we are starting (5% progress)
     $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 5 WHERE job_id = ?")->execute([$jobId]);
 
     if (!file_exists($filePath)) {
-        throw new Exception("PDF file not found at $filePath");
+        throw new Exception("PDF file not found at " . realpath($filePath));
     }
 
-    // 📖 3. Parse PDF Text
+    echoHeartbeat("Parsing PDF Text...");
+    // 📖 4. Parse PDF Text with Error Catching
     $parser = new Parser();
-    $pdf = $parser->parseFile($filePath);
+    try {
+        $pdf = $parser->parseFile($filePath);
+    } catch (Exception $pe) {
+        throw new Exception("PDF Parsing Error: " . $pe->getMessage());
+    }
+    
     $pages = $pdf->getPages();
     $totalPages = count($pages);
+    echoHeartbeat("Total Pages: $totalPages");
     
     $pdo->prepare("UPDATE pdf_study_jobs SET total_pages = ?, progress = 10 WHERE job_id = ?")->execute([$totalPages, $jobId]);
 
     $masterMCQs = [];
     $masterFlashcards = [];
     
-    // Chunking Logic: Process 3 pages at a time
-    $chunkSize = 3;
+    // 🧪 5. Chunking Logic: Process 2 pages at a time (smaller for memory safety)
+    $chunkSize = 2;
     $processedCount = 0;
 
     for ($i = 0; $i < $totalPages; $i += $chunkSize) {
@@ -59,82 +79,65 @@ try {
         }
 
         if (trim($chunkText) === "") {
+            echoHeartbeat("Skipping empty chunk at page $i...");
             $processedCount += count($chunkPages);
             continue;
         }
 
-        // 🤖 4. Call AI with our "Master Study-Pack Prompt"
+        echoHeartbeat("Calling Gemini for chunk beginning at page $i...");
+
+        // 🤖 Master Study-Pack Prompt (Enforced Schema)
         $prompt = "
-            Role: Elite Educational Content Architect and Senior MCQ Psychometrician.
-            Text Chunk: " . $chunkText . "
-            
-            OBJECTIVE: Analyze the text and generate as many high-quality MCQs and Flashcards as possible.
-            
-            RULES:
-            1. SEMANTIC FILTERING: If the text is junk (TOC, ads, index), return { \"status\": \"no_content\" }.
-            2. MCQS: Use Bloom's Taxonomy. No 'All of the above'. Realistic distractors. Include 'Rationale'.
-            3. FLASHCARDS: Front (Question/Concept), Back (Concise Answer).
-            4. FORMAT: Return ONLY a raw JSON object matching the schema below.
-            
-            SCHEMA:
-            {
-              \"status\": \"success\",
-              \"mcqs\": [
-                { \"question\": \"...\", \"options\": [\"A\",\"B\",\"C\",\"D\"], \"correct_answer\": \"...\", \"explanation\": \"...\", \"difficulty\": \"Medium\" }
-              ],
-              \"flashcards\": [
-                { \"front\": \"...\", \"back\": \"...\", \"topic\": \"...\" }
-              ]
-            }
+            Role: Elite MCQ Architect. Analyze the text and generate a Study Pack.
+            Text: " . $chunkText . "
+            Rules: Use Bloom's Taxonomy. JSON ONLY. No markdown.
+            Schema: {\"status\":\"success\",\"mcqs\":[],\"flashcards\":[]}
         ";
 
-        $aiResponseText = callGeminiAPI($prompt, [
-            'temperature' => 0.4,
-            'maxOutputTokens' => 2048
-        ]);
+        try {
+            $aiResponseText = callGeminiAPI($prompt, ['temperature' => 0.4]);
+            $aiResponseText = preg_replace('/```json\s*|\s*```/', '', $aiResponseText);
+            $result = json_decode(trim($aiResponseText), true);
 
-        // Clean JSON if AI added markdown backticks
-        $aiResponseText = preg_replace('/```json\s*|\s*```/', '', $aiResponseText);
-        $result = json_decode(trim($aiResponseText), true);
-
-        if ($result && isset($result['status']) && $result['status'] === 'success') {
-            if (!empty($result['mcqs'])) {
-                $masterMCQs = array_merge($masterMCQs, $result['mcqs']);
+            if ($result && isset($result['status']) && $result['status'] === 'success') {
+                if (!empty($result['mcqs'])) $masterMCQs = array_merge($masterMCQs, $result['mcqs']);
+                if (!empty($result['flashcards'])) $masterFlashcards = array_merge($masterFlashcards, $result['flashcards']);
+                echoHeartbeat("Collected " . count($result['mcqs']) . " MCQs and " . count($result['flashcards']) . " Flashcards.");
             }
-            if (!empty($result['flashcards'])) {
-                $masterFlashcards = array_merge($masterFlashcards, $result['flashcards']);
-            }
+        } catch (Exception $ae) {
+            echoHeartbeat("AI Chunk Error: " . $ae->getMessage());
+            // We continue processing other chunks if one fails
         }
 
         $processedCount += count($chunkPages);
-        $progress = floor(10 + ( ($processedCount / $totalPages) * 80 )); // 10% to 90%
+        $progress = floor(10 + ( ($processedCount / $totalPages) * 80 ));
         
         $pdo->prepare("UPDATE pdf_study_jobs SET processed_pages = ?, progress = ? WHERE job_id = ?")
             ->execute([$processedCount, $progress, $jobId]);
             
-        // Wait 1 second to avoid hitting rate limits too hard
-        sleep(1);
+        usleep(500000); // 0.5s pause to prevent rate limits
     }
 
-    // 💾 5. Save Final Aggregated Pack
+    echoHeartbeat("Saving Final Pack...");
+    // 💾 6. Save Final Aggregated Pack
     $studyPack = [
         'file_name' => $job['file_name'],
         'generated_at' => date('Y-m-d H:i:s'),
-        'summary' => "Study Pack generated from " . $totalPages . " pages. Total MCQs: " . count($masterMCQs) . ", Flashcards: " . count($masterFlashcards),
+        'summary' => "Total MCQs: " . count($masterMCQs) . ", Flashcards: " . count($masterFlashcards),
         'mcqs' => $masterMCQs,
         'flashcards' => $masterFlashcards
     ];
 
-    $studyPackJson = json_encode($studyPack);
+    $pdo->prepare("INSERT INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)")
+        ->execute([$jobId, $userId, json_encode($studyPack)]);
 
-    $stmt = $pdo->prepare("INSERT INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)");
-    $stmt->execute([$jobId, $userId, $studyPackJson]);
-
-    // 🎉 6. Complete Job
+    // 🎉 7. Final Success Signal
     $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100 WHERE job_id = ?")->execute([$jobId]);
+    echoHeartbeat("Work Complete! 🏆");
 
 } catch (Exception $e) {
-    // ❌ 7. Handle Failure
+    // ❌ 8. Handle Fatal Failure
+    echoHeartbeat("FATAL ERROR: " . $e->getMessage());
     $pdo->prepare("UPDATE pdf_study_jobs SET status = 'failed', error_message = ? WHERE job_id = ?")
         ->execute([$e->getMessage(), $jobId]);
 }

@@ -254,15 +254,18 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     };
 
     useEffect(() => {
-        if (selectedSubjects.length > 0) fetchSelectedChapters();
-        else { setAllChapters([]); setSelectedChapters([]); }
+        const timer = setTimeout(() => {
+            if (selectedSubjects.length > 0) fetchSelectedChapters();
+            else { setAllChapters([]); setSelectedChapters([]); }
+        }, 350); // 350ms debounce
+        return () => clearTimeout(timer);
     }, [selectedSubjects]);
 
     const fetchSelectedChapters = async () => {
         setLoadingChapters(true);
         try {
             const results = await Promise.all(
-                selectedSubjects.map(sid => axios.get(`${config.API_URL}/get_chapters.php?subject_id=${sid}`))
+                selectedSubjects.map(sid => axios.get(`${config.API_URL}/get_chapters.php?light=1&subject_id=${sid}`))
             );
             let combined = [];
             results.forEach((res, i) => {
@@ -292,6 +295,15 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     };
 
     const updatePlanWithNewDate = async (newDate) => {
+        if (selectedChapters.length === 0) {
+            Alert.alert(
+                'Action Required', 
+                'To change your target exam date, we need to completely rebuild your custom study plan. Please go to "Edit Plan" to resubmit your syllabus with the new date.'
+            );
+            checkExistingPlan(); // Revert calendar visual
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {
@@ -300,8 +312,14 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                 subject_ids: selectedSubjects,
                 chapter_ids: selectedChapters,
             });
-            if (res.data.status === 'success') fetchRoadmap();
-        } catch {} finally { setLoading(false); }
+            if (res.data.status === 'success') {
+                fetchRoadmap();
+            } else {
+                Alert.alert('Error', res.data.message || 'Something went wrong.');
+            }
+        } catch {
+            Alert.alert('Error', 'Failed to connect to the server while updating the date.');
+        } finally { setLoading(false); }
     };
 
     const toggleSubject = (id) => setSelectedSubjects(prev =>

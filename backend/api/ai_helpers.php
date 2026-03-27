@@ -1,48 +1,30 @@
 <?php
 /**
- * AI Global Helpers
+ * AI Global Helpers - Fixed for XAMPP Windows & Railway Linux
  */
 
-use Smalot\PdfParser\Parser;
-use PhpOffice\PhpWord\IOFactory;
+if (!function_exists('triggerAIWorker')) {
+    /**
+     * Trigger AI worker - works on both Windows XAMPP and Railway Linux.
+     * Uses cURL fire-and-forget with a 1-second timeout.
+     */
+    function triggerAIWorker($workerScript = 'pdf_worker_ai.php') {
+        $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+        $currentDir = dirname($_SERVER['PHP_SELF']);
+        $url = "$protocol://$host$currentDir/$workerScript";
 
-if (!function_exists('extractTextFromPdf')) {
-    function extractTextFromPdf($filePath) {
-        if (!class_exists('Smalot\PdfParser\Parser')) {
-            throw new Exception("PDF Parser library missing.");
-        }
-        try {
-            $parser = new Smalot\PdfParser\Parser();
-            $pdf = $parser->parseFile($filePath);
-            $pages = $pdf->getPages();
-            $text = '';
-            $pageCount = min(count($pages), 10);
-            for ($i = 0; $i < $pageCount; $i++) {
-                $text .= $pages[$i]->getText() . " ";
-            }
-            return preg_replace('/\s+/', ' ', $text);
-        } catch (Throwable $e) {
-            return "";
-        }
-    }
-}
-
-if (!function_exists('extractTextFromWord')) {
-    function extractTextFromWord($filePath) {
-        try {
-            $phpWord = IOFactory::load($filePath);
-            $text = '';
-            foreach ($phpWord->getSections() as $section) {
-                foreach ($section->getElements() as $element) {
-                    if (method_exists($element, 'getText')) {
-                        $text .= $element->getText() . " ";
-                    }
-                }
-            }
-            return $text;
-        } catch (Exception $e) {
-            return "";
-        }
+        // Method 1: cURL fire-and-forget (works on Windows and Linux)
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT_MS, 500); // only wait 500ms then abandon
+        curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        @curl_exec($ch);
+        curl_close($ch);
     }
 }
 ?>

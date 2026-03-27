@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -51,13 +51,23 @@ const MyExamScreen = ({ navigation, route, user }) => {
         loadSubjects().then(() => setRefreshing(false));
     }, []);
 
+    const debounceRef = useRef(null);
+
     useEffect(() => {
         if (selectedSubjects.length > 0) {
-            loadChapters();
+            // Debounce: wait 350ms after last subject toggle before fetching chapters
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            debounceRef.current = setTimeout(() => {
+                loadChapters();
+            }, 350);
         } else {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
             setChapters([]);
             setSelectedChapters([]);
         }
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
     }, [selectedSubjects]);
 
     const loadSubjects = async () => {

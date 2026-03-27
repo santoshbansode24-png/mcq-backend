@@ -1,14 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Default cache duration
-const DEFAULT_EXPIRY_MS = 24 * 60 * 60 * 1000;
+// Cache TTLs per type (milliseconds)
+const EXPIRY_MAP = {
+    chapters: 60 * 60 * 1000,       // 1 hour  (chapters rarely change mid-session)
+    subjects: 2 * 60 * 60 * 1000,   // 2 hours
+    default:  24 * 60 * 60 * 1000,  // 24 hours fallback
+};
 
-// Whether to emit any debug logs (set false in production)
 const DEBUG = false;
 
 export const dataCache = {
     /**
-     * Save data to cache
+     * Save data to cache with a timestamp.
      */
     set: async (key, data, type) => {
         try {
@@ -21,21 +24,25 @@ export const dataCache = {
     },
 
     /**
-     * Get data from cache (stale-while-revalidate)
+     * Get data from cache. Returns null if missing OR expired.
      */
     get: async (key, type) => {
         try {
             const raw = await AsyncStorage.getItem(`@cache_${key}`);
             if (!raw) return null;
+
             const cacheItem = JSON.parse(raw);
-            if (DEBUG) {
-                const ageHours = (Date.now() - cacheItem.timestamp) / (1000 * 60 * 60);
-                if (ageHours > 24) {
-                    console.log(`[Cache] Stale ${key} (${Math.round(ageHours)}h old)`);
-                } else {
-                    console.log(`[Cache] Hit ${key}`);
-                }
+            const ttl = EXPIRY_MAP[type] || EXPIRY_MAP.default;
+            const age = Date.now() - cacheItem.timestamp;
+
+            if (age > ttl) {
+                // Expired — remove and return null so caller fetches fresh data
+                if (DEBUG) console.log(`[Cache] Expired ${key} (age: ${Math.round(age / 60000)}min)`);
+                await AsyncStorage.removeItem(`@cache_${key}`);
+                return null;
             }
+
+            if (DEBUG) console.log(`[Cache] Hit ${key} (age: ${Math.round(age / 60000)}min)`);
             return cacheItem.data;
         } catch (error) {
             if (DEBUG) console.warn('[Cache] Get failed:', error);
@@ -44,7 +51,7 @@ export const dataCache = {
     },
 
     /**
-     * Clear specific cache item
+     * Clear a specific cache item.
      */
     remove: async (key) => {
         try {
@@ -52,5 +59,19 @@ export const dataCache = {
         } catch (error) {
             if (DEBUG) console.warn('[Cache] Remove failed:', error);
         }
-    }
+    },
+
+    /**
+     * Clear all cache items with the @cache_ prefix.
+     */
+    clear: async () => {
+        try {
+            const keys = await AsyncStorage.getAllKeys();
+            const cacheKeys = keys.filter(k => k.startsWith('@cache_'));
+            if (cacheKeys.length > 0) await AsyncStorage.multiRemove(cacheKeys);
+            if (DEBUG) console.log(`[Cache] Cleared ${cacheKeys.length} items`);
+        } catch (error) {
+            if (DEBUG) console.warn('[Cache] Clear failed:', error);
+        }
+    },
 };

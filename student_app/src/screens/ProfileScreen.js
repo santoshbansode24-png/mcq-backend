@@ -21,6 +21,9 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [helpModalVisible, setHelpModalVisible] = useState(false);
     const [securityModalVisible, setSecurityModalVisible] = useState(false); // Security sub-menu
+    const [historyModalVisible, setHistoryModalVisible] = useState(false);
+    const [examHistory, setExamHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
     const [classes, setClasses] = useState([]);
     const [currentClassId, setCurrentClassId] = useState(user?.class_id);
     const [currentClassName, setCurrentClassName] = useState(user?.class_name);
@@ -46,6 +49,26 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
             loadClasses(currentBoard, true);
         }, [currentBoard])
     );
+
+    const fetchExamHistory = async () => {
+        if (!user?.user_id) return;
+        setLoadingHistory(true);
+        try {
+            const res = await axios.get(`${API_URL}/get_exam_history.php?user_id=${user.user_id}`);
+            if (res.data.status === 'success') {
+                setExamHistory(res.data.data);
+            }
+        } catch (e) {
+            console.log('Failed to fetch history', e);
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
+
+    const handleOpenHistory = () => {
+        setHistoryModalVisible(true);
+        fetchExamHistory();
+    };
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
@@ -421,6 +444,14 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
                     <TouchableOpacity
                         style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                        onPress={handleOpenHistory}
+                    >
+                        <Text style={[styles.menuText, { color: theme.text }]}>📋 MY EXAM HISTORY</Text>
+                        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.menuItem, { borderBottomColor: theme.border }]}
                         onPress={() => setHelpModalVisible(true)}
                     >
                         <Text style={[styles.menuText, { color: theme.text }]}>{t('helpSupport')?.toUpperCase()}</Text>
@@ -575,6 +606,54 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         <TouchableOpacity
                             style={[styles.closeButton, { backgroundColor: theme.primary }]}
                             onPress={() => setSecurityModalVisible(false)}
+                        >
+                            <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Exam History Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={historyModalVisible}
+                onRequestClose={() => setHistoryModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalView, { backgroundColor: theme.card, maxHeight: '80%' }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>MY EXAM HISTORY</Text>
+                        
+                        {loadingHistory ? (
+                            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 20 }} />
+                        ) : examHistory.length === 0 ? (
+                            <Text style={{ color: theme.textSecondary, marginBottom: 20 }}>No exam history found.</Text>
+                        ) : (
+                            <FlatList
+                                data={examHistory}
+                                keyExtractor={(item) => item.id.toString()}
+                                style={{ width: '100%', marginBottom: 15 }}
+                                renderItem={({ item }) => {
+                                    const date = new Date(item.taken_at).toLocaleDateString();
+                                    return (
+                                        <View style={[styles.infoRow, { backgroundColor: theme.background, flexDirection: 'column', alignItems: 'flex-start', padding: 12 }]}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 4 }}>
+                                                <Text style={{ fontWeight: 'bold', color: theme.text, flex: 1 }} numberOfLines={1}>{item.subject_names || 'Exam'}</Text>
+                                                <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{date}</Text>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                                                <Text style={{ color: '#16a34a', fontWeight: 'bold' }}>{item.percentage}% Score</Text>
+                                                <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{item.correct}/{item.total} Correct</Text>
+                                            </View>
+                                        </View>
+                                    );
+                                }}
+                            />
+                        )}
+
+                        <TouchableOpacity
+                            style={[styles.closeButton, { backgroundColor: theme.primary }]}
+                            onPress={() => setHistoryModalVisible(false)}
                         >
                             <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
                         </TouchableOpacity>

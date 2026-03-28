@@ -49,6 +49,11 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const [renameText, setRenameText] = useState('');
     const [itemToRename, setItemToRename] = useState(null);
     
+    // Multi-Select Aggregate State
+    const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+    const [selectModeType, setSelectModeType] = useState(null); // 'worksheet' | 'exam'
+    const [selectedPdfs, setSelectedPdfs] = useState([]);
+    
     const currentFolderId = pathStack[pathStack.length - 1].id;
 
     const [refreshing, setRefreshing] = useState(false);
@@ -247,11 +252,77 @@ const PDFToExamScreen = ({ user, navigation }) => {
         } catch(e) { return null; }
     };
 
+    const handleGenerateAggregate = () => {
+        let allMcqs = [];
+        let allCards = [];
+        
+        selectedPdfs.forEach(jobId => {
+            const job = jobs.find(j => j.job_id === jobId);
+            if (job && job.study_content) {
+                try {
+                    const data = JSON.parse(job.study_content);
+                    
+                    if (data.mcqs) {
+                        const normalizedMcqs = data.mcqs.map(m => {
+                            // The AI outputs index 0-3 for answer. Convert to 'a', 'b', 'c', 'd'
+                            const answerMap = ['a', 'b', 'c', 'd'];
+                            const correctLetter = (m.a !== undefined && m.a >= 0 && m.a <= 3) ? answerMap[m.a] : (m.correct_answer || 'a');
+
+                            return {
+                                question: m.q || m.question || m.question_text || '',
+                                option_a: (m.o && m.o[0]) ? m.o[0] : (m.option_a || ''),
+                                option_b: (m.o && m.o[1]) ? m.o[1] : (m.option_b || ''),
+                                option_c: (m.o && m.o[2]) ? m.o[2] : (m.option_c || ''),
+                                option_d: (m.o && m.o[3]) ? m.o[3] : (m.option_d || ''),
+                                correct_answer: correctLetter,
+                                explanation: m.e || m.explanation || '',
+                                source_pdf: job.file_name,
+                                ...m // Spread original just in case
+                            };
+                        });
+                        allMcqs = [...allMcqs, ...normalizedMcqs];
+                    }
+                    
+                    if (data.flashcards) {
+                        const normalizedCards = data.flashcards.map(f => ({
+                            question: f.f || f.front || f.q || '',
+                            answer: f.b || f.back || f.a || '',
+                            source_pdf: job.file_name,
+                            ...f
+                        }));
+                        allCards = [...allCards, ...normalizedCards];
+                    }
+                } catch(e) { 
+                    console.log("Failed to parse job content", e); 
+                }
+            }
+        });
+        
+        // Prepare parameter payload
+        const payloadParams = {
+            allMcqs: allMcqs,
+            allCards: allCards,
+            subjectNames: `Custom AI Generated (${selectedPdfs.length} PDFs)`
+        };
+
+        // Complete state flush
+        setIsMultiSelectMode(false);
+        setSelectedPdfs([]);
+
+        // Explicit Navigation to the beautifully matched Worksheet/Exam Custom Screens
+        if (selectModeType === 'worksheet') {
+            navigation.navigate('AIPdfWorksheet', payloadParams);
+        } else {
+            navigation.navigate('AIPdfExam', payloadParams);
+        }
+    };
+
     const renderFolder = ({ item }) => (
         <TouchableOpacity 
-            style={styles.folderCard} 
-            onPress={() => setPathStack([...pathStack, { id: item.folder_id, name: item.name }])}
-            onLongPress={() => handleOptions('folder', item)}
+            style={[styles.folderCard, isMultiSelectMode && { opacity: 0.3 }]} 
+            onPress={() => { if (!isMultiSelectMode) setPathStack([...pathStack, { id: item.folder_id, name: item.name }]) }}
+            onLongPress={() => { if (!isMultiSelectMode) handleOptions('folder', item) }}
+            disabled={isMultiSelectMode}
         >
             <LinearGradient colors={['#ffffff15', '#ffffff05']} style={styles.glassFolder}>
                 <MaterialCommunityIcons name="molecule" size={30} color="#818cf8" />
@@ -266,23 +337,45 @@ const PDFToExamScreen = ({ user, navigation }) => {
         const progress = isReady ? 100 : (item.progress || 10);
         return (
             <TouchableOpacity 
-                style={styles.pdfTile} 
+                style={[
+                    styles.pdfRow, 
+                    { borderColor: isReady ? '#10b98150' : (isFailed ? '#ef444450' : '#ffffff10') },
+                    isMultiSelectMode && selectedPdfs.includes(item.job_id) && { borderColor: selectModeType === 'worksheet' ? '#34d399' : '#60a5fa', backgroundColor: '#ffffff15' }
+                ]} 
                 onPress={() => {
-                    if (isReady) setSelectedJob(item);
-                    else if (isFailed) Alert.alert("Failed", "This PDF could not be analyzed. Please try another one.");
+                    if (isMultiSelectMode) {
+                        if (!isReady) return; // Only allow completed PDFs to be selected
+                        if (selectedPdfs.includes(item.job_id)) setSelectedPdfs(selectedPdfs.filter(id => id !== item.job_id));
+                        else setSelectedPdfs([...selectedPdfs, item.job_id]);
+                    } else {
+                        if (isReady) setSelectedJob(item);
+                        else if (isFailed) Alert.alert("Failed", "This PDF could not be analyzed. Please try another one.");
+                    }
                 }}
                 onLongPress={() => handleOptions('file', item)}
             >
-                <View style={[styles.pdfCard, { borderColor: isReady ? '#00f3ff50' : (isFailed ? '#ef444450' : '#ffffff10') }]}>
-                    <View style={styles.iconContainer}>
-                        <CircularProgress progress={progress} size={85} color={isReady ? "#00f3ff" : (isFailed ? "#ef4444" : "#f43f5e")} strokeWidth={3} />
-                        <MaterialCommunityIcons name={isFailed ? "file-cancel" : "file-pdf-box"} size={40} color={isReady ? "#00f3ff" : (isFailed ? "#ef4444" : "#f43f5e")} />
-                    </View>
-                    <Text style={styles.pdfName} numberOfLines={2}>{item.file_name}</Text>
-                    <Text style={[styles.pdfStatus, { color: isFailed ? '#f87171' : (isReady ? '#00f3ff' : '#94a3b8') }]}>
-                        {isFailed ? 'Analysis Failed' : (isReady ? '100% Complete' : `${progress}% Processing`)}
+                <View style={styles.pdfRowIcon}>
+                    {isMultiSelectMode && isReady ? (
+                        <View style={[
+                            styles.checkbox, 
+                            selectedPdfs.includes(item.job_id) && { backgroundColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6', borderColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6' }
+                        ]}>
+                            {selectedPdfs.includes(item.job_id) && <MaterialCommunityIcons name="check" size={16} color="white" />}
+                        </View>
+                    ) : (
+                        <>
+                            <CircularProgress progress={progress} size={60} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} strokeWidth={4} />
+                            <MaterialCommunityIcons name={isFailed ? "file-cancel" : "file-document-check"} size={26} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} />
+                        </>
+                    )}
+                </View>
+                <View style={styles.pdfRowContent}>
+                    <Text style={styles.pdfRowTitle} numberOfLines={2}>{item.file_name}</Text>
+                    <Text style={[styles.pdfRowStatus, { color: isFailed ? '#f87171' : (isReady ? '#10b981' : '#818cf8') }]}>
+                        {isFailed ? 'Analysis Failed' : (isReady ? 'Study Pack Ready' : `${progress}% Processing`)}
                     </Text>
                 </View>
+                {isReady && !isMultiSelectMode && <MaterialCommunityIcons name="chevron-right" size={28} color="#64748b" />}
             </TouchableOpacity>
         );
     };
@@ -314,16 +407,49 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
                 }
             >
-                {/* Upload Button */}
-                <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload} disabled={uploading}>
-                    <LinearGradient colors={['#6366f130', '#6366f110']} style={styles.uploadGrad}>
-                        <View style={styles.uploadPlus}><MaterialCommunityIcons name="plus" size={24} color="white" /></View>
-                        <View>
-                            <Text style={styles.uTitle}>Upload PDF</Text>
-                            <Text style={styles.uSub}>Upload New PDF</Text>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
+                {/* New Prominent Dropzone */}
+                {!isMultiSelectMode && (
+                    <TouchableOpacity style={styles.uploadZone} onPress={handleUpload} disabled={uploading}>
+                        <LinearGradient colors={['#312e8160', '#1e1b4b90']} style={styles.uploadGrad}>
+                            <View style={styles.uploadIconWrap}>
+                                <MaterialCommunityIcons name={uploading ? "cloud-upload-outline" : "file-document-plus-outline"} size={45} color="#818cf8" />
+                            </View>
+                            <Text style={styles.uTitle}>{uploading ? "Uploading PDF..." : "Turn any PDF into a Study Set"}</Text>
+                            <Text style={styles.uSub}>Tap to select a document from your device</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                )}
+
+                {/* Global Generators Multi-Select Tools */}
+                {!isMultiSelectMode && (
+                    <View style={styles.generatorsRow}>
+                        <TouchableOpacity style={styles.genCard} onPress={() => { setIsMultiSelectMode(true); setSelectModeType('worksheet'); setSelectedPdfs([]); }}>
+                            <LinearGradient colors={['#10b98120', '#34d39910']} style={styles.genGrad}>
+                                <MaterialCommunityIcons name="file-document-edit" size={28} color="#34d399" />
+                                <Text style={styles.genTitle}>Worksheet</Text>
+                                <Text style={styles.genSub}>Combine PDFs</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.genCard} onPress={() => { setIsMultiSelectMode(true); setSelectModeType('exam'); setSelectedPdfs([]); }}>
+                            <LinearGradient colors={['#3b82f620', '#60a5fa10']} style={styles.genGrad}>
+                                <MaterialCommunityIcons name="text-box-check" size={28} color="#60a5fa" />
+                                <Text style={styles.genTitle}>Custom Exam</Text>
+                                <Text style={styles.genSub}>Combine PDFs</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Selection Instructional Banner */}
+                {isMultiSelectMode && (
+                    <View style={styles.multiSelectBanner}>
+                        <MaterialCommunityIcons name="checkbox-multiple-marked-circle" size={24} color={selectModeType === 'worksheet' ? "#10b981" : "#3b82f6"} />
+                        <Text style={styles.multiSelectInfo}>
+                            Select PDFs below to combine them into a {selectModeType === 'worksheet' ? "Worksheet" : "Custom Exam"}.
+                        </Text>
+                    </View>
+                )}
 
                 {/* Path Navigation */}
                 {pathStack.length > 1 && (
@@ -348,20 +474,37 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 />
 
                 {/* Tiles Section */}
-                <Text style={[styles.sectionTitle, { marginTop: 25 }]}>Study Tiles</Text>
+                <Text style={[styles.sectionTitle, { marginTop: 25 }]}>My Study Materials</Text>
                 {loading ? <ActivityIndicator size="large" color="#6366f1" style={{marginTop: 50}} /> : (
                     <FlatList 
                         data={jobs} 
                         renderItem={renderJob} 
-                        numColumns={2} 
                         scrollEnabled={false}
-                        columnWrapperStyle={styles.row}
                         keyExtractor={k => k.job_id.toString()}
-                        ListEmptyComponent={<Text style={styles.emptyBig}>Upload a PDF to start AI analysis</Text>}
+                        ListEmptyComponent={<Text style={styles.emptyBig}>Upload a PDF above to create logic study tools</Text>}
                     />
                 )}
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* Floating Execution Bar for Multi-Select */}
+            {isMultiSelectMode && (
+                <View style={styles.floatingBar}>
+                    <TouchableOpacity style={styles.cancelSelectBtn} onPress={() => { setIsMultiSelectMode(false); setSelectedPdfs([]); }}>
+                        <MaterialCommunityIcons name="close" size={26} color="#f87171" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.generateBtn, selectedPdfs.length === 0 && { opacity: 0.5 }]} 
+                        disabled={selectedPdfs.length === 0}
+                        onPress={handleGenerateAggregate}
+                    >
+                        <LinearGradient colors={selectModeType === 'worksheet' ? ['#10b981', '#34d399'] : ['#3b82f6', '#60a5fa']} style={styles.genBtnGrad} start={[0,0]} end={[1,1]}>
+                            <Text style={styles.genBtnText}>Generate {selectModeType === 'worksheet' ? 'Worksheet' : 'Exam'} ({selectedPdfs.length})</Text>
+                            <MaterialCommunityIcons name="arrow-right" size={22} color="white" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Folder Creation Modal */}
             <Modal visible={showFolderModal} transparent animationType="fade">
@@ -417,31 +560,27 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                 </ScrollView>
                             </View>
                         ) : (
-                            <View style={styles.studyModes}>
-                                <TouchableOpacity style={styles.modeCard} onPress={() => {
+                            <View style={styles.studyModesGrid}>
+                                {/* Feature 1 */}
+                                <TouchableOpacity style={styles.modeTile} onPress={() => {
                                     const c = getCounts(selectedJob).mcqs;
                                     if (c > 10) setSelectedMode('quiz');
                                     else startStudy(selectedJob, 'quiz', 0);
                                 }}>
-                                    <LinearGradient colors={['#f59e0b', '#fbbf24']} style={styles.modeIcon} shadowOpacity={0.5}>
-                                        <MaterialCommunityIcons name="trophy-outline" size={32} color="white" />
-                                    </LinearGradient>
-                                    <Text style={styles.modeTitle}>AI MCQ Quiz</Text>
-                                    <Text style={styles.modeSub}>{getCounts(selectedJob).mcqs} Qs Available</Text>
-                                    <View style={styles.takeBtn}><Text style={styles.takeBtnText}>Take Quiz</Text></View>
+                                    <LinearGradient colors={['#f59e0b', '#fbbf24']} style={styles.modeIconCard}><MaterialCommunityIcons name="trophy-outline" size={32} color="white" /></LinearGradient>
+                                    <Text style={styles.modeTitleCard}>AI MCQ Quiz</Text>
+                                    <View style={styles.takeBtnCard}><Text style={styles.takeBtnTextCard}>{getCounts(selectedJob).mcqs} Qs</Text></View>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity style={styles.modeCard} onPress={() => {
+                                {/* Feature 2 */}
+                                <TouchableOpacity style={styles.modeTile} onPress={() => {
                                     const c = getCounts(selectedJob).flashcards;
                                     if (c > 10) setSelectedMode('flash');
                                     else startStudy(selectedJob, 'flash', 0);
                                 }}>
-                                    <LinearGradient colors={['#a855f7', '#d946ef']} style={styles.modeIcon} shadowOpacity={0.5}>
-                                        <MaterialCommunityIcons name="brain" size={32} color="white" />
-                                    </LinearGradient>
-                                    <Text style={styles.modeTitle}>Concept Flashcards</Text>
-                                    <Text style={styles.modeSub}>{getCounts(selectedJob).flashcards} Cards Available</Text>
-                                    <View style={[styles.takeBtn, { backgroundColor: '#a855f730' }]}><Text style={[styles.takeBtnText, { color: '#e879f9' }]}>Start Review</Text></View>
+                                    <LinearGradient colors={['#a855f7', '#d946ef']} style={styles.modeIconCard}><MaterialCommunityIcons name="cards-outline" size={32} color="white" /></LinearGradient>
+                                    <Text style={styles.modeTitleCard}>Flashcards</Text>
+                                    <View style={styles.takeBtnCard}><Text style={styles.takeBtnTextCard}>{getCounts(selectedJob).flashcards} Cards</Text></View>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -463,55 +602,73 @@ const styles = StyleSheet.create({
     redDot: { width: 8, height: 8, backgroundColor: '#f43f5e', borderRadius: 4, position: 'absolute', top: 0, right: 0, borderWidth: 2, borderColor: '#0b0e14' },
     
     body: { flex: 1, paddingHorizontal: 20 },
-    uploadBtn: { marginTop: 10, borderRadius: 20, borderWidth: 1, borderColor: '#6366f150', overflow: 'hidden' },
-    uploadGrad: { padding: 20, flexDirection: 'row', alignItems: 'center' },
-    uploadPlus: { width: 45, height: 45, borderRadius: 15, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+    uploadZone: { marginTop: 10, borderRadius: 24, borderWidth: 2, borderColor: '#6366f140', borderStyle: 'dashed', overflow: 'hidden' },
+    uploadGrad: { padding: 30, alignItems: 'center', justifyContent: 'center' },
+    uploadIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#ffffff10', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
     uTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-    uSub: { color: '#94a3b8', fontSize: 12 },
+    uSub: { color: '#94a3b8', fontSize: 13, marginTop: 5, textAlign: 'center' },
 
-    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 30, marginBottom: 15 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 35, marginBottom: 15 },
     sectionTitle: { color: 'white', fontSize: 18, fontWeight: '800' },
     
-    folderCard: { width: 100, height: 110, marginRight: 15 },
+    folderCard: { width: 110, height: 110, marginRight: 15 },
     glassFolder: { flex: 1, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#ffffff10' },
-    folderLabel: { color: 'white', fontSize: 13, fontWeight: 'bold', marginTop: 10, width: '80%', textAlign: 'center' },
+    folderLabel: { color: 'white', fontSize: 13, fontWeight: 'bold', marginTop: 10, width: '85%', textAlign: 'center' },
 
-    pdfTile: { width: TILE_SIZE, height: 180, marginBottom: 20 },
-    pdfCard: { flex: 1, backgroundColor: '#ffffff08', borderRadius: 28, borderWidth: 1.5, padding: 15, alignItems: 'center', justifyContent: 'space-between' },
-    iconContainer: { width: 85, height: 85, alignItems: 'center', justifyContent: 'center' },
-    pdfName: { color: 'white', fontSize: 13, fontWeight: 'bold', textAlign: 'center' },
-    pdfStatus: { fontSize: 10, fontWeight: '800' },
-    row: { justifyContent: 'space-between' },
+    pdfRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff08', borderRadius: 20, padding: 15, marginBottom: 15, borderWidth: 1.5, borderColor: '#ffffff10' },
+    pdfRowIcon: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+    pdfRowContent: { flex: 1, justifyContent: 'center' },
+    pdfRowTitle: { color: 'white', fontSize: 15, fontWeight: 'bold', marginBottom: 4 },
+    pdfRowStatus: { fontSize: 12, fontWeight: '700' },
     
-    backLink: { flexDirection: 'row', alignItems: 'center', marginTop: 15 },
-    backText: { color: '#6366f1', fontSize: 14, fontWeight: 'bold' },
+    backLink: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+    backText: { color: '#6366f1', fontSize: 15, fontWeight: 'bold' },
     
-    emptySmall: { color: '#475569', fontSize: 12, marginVertical: 30 },
-    emptyBig: { color: '#475569', fontSize: 14, textAlign: 'center', marginTop: 50 },
+    emptySmall: { color: '#475569', fontSize: 13, marginVertical: 30 },
+    emptyBig: { color: '#475569', fontSize: 15, textAlign: 'center', marginTop: 50 },
 
-    modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center', padding: 30 },
+    modalOverlay: { flex: 1, backgroundColor: '#000000dd', justifyContent: 'center', padding: 25 },
     modalBox: { backgroundColor: '#1e293b', borderRadius: 32, padding: 25, borderWidth: 1, borderColor: '#ffffff20' },
     modalHead: { color: 'white', fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
-    modalInput: { backgroundColor: '#0f172a', borderRadius: 16, padding: 18, color: 'white', fontSize: 16, marginBottom: 25 },
+    modalInput: { backgroundColor: '#0b0e14', borderRadius: 16, padding: 18, color: 'white', fontSize: 16, marginBottom: 25 },
     modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
     mCancel: { color: '#94a3b8', fontWeight: 'bold', marginRight: 25 },
     mCreate: { backgroundColor: '#6366f1', paddingHorizontal: 30, paddingVertical: 14, borderRadius: 16 },
     mCreateT: { color: 'white', fontWeight: 'bold' },
 
-    sheetOverlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
-    sheetBox: { backgroundColor: '#0f172a', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 25, paddingBottom: 50, borderTopWidth: 1, borderColor: '#ffffff10' },
-    sheetBar: { width: 40, height: 5, backgroundColor: '#334155', borderRadius: 3, alignSelf: 'center', marginBottom: 30 },
-    sheetFileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 35 },
-    miniPdfIcon: { backgroundColor: '#f43f5e20', padding: 10, borderRadius: 15 },
-    sheetFileName: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-    sheetFileStatus: { color: '#10b981', fontSize: 12, fontWeight: 'bold' },
-    studyModes: { flexDirection: 'row', justifyContent: 'space-between' },
-    modeCard: { width: '47%', backgroundColor: '#ffffff05', borderRadius: 30, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#ffffff08' },
-    modeIcon: { width: 70, height: 70, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
-    modeTitle: { color: 'white', fontSize: 15, fontWeight: '800' },
-    modeSub: { color: '#94a3b8', fontSize: 10, marginTop: 5, marginBottom: 15 },
-    takeBtn: { backgroundColor: '#f59e0b20', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
-    takeBtnText: { color: '#fbbf24', fontSize: 12, fontWeight: '900' },
+    sheetOverlay: { flex: 1, backgroundColor: '#00000090', justifyContent: 'flex-end' },
+    sheetBox: { backgroundColor: '#0f172a', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 25, paddingBottom: 50, borderTopWidth: 1, borderColor: '#334155' },
+    sheetBar: { width: 50, height: 6, backgroundColor: '#334155', borderRadius: 3, alignSelf: 'center', marginBottom: 30 },
+    sheetFileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
+    miniPdfIcon: { backgroundColor: '#f43f5e20', padding: 12, borderRadius: 18 },
+    sheetFileName: { color: 'white', fontSize: 18, fontWeight: 'bold', paddingRight: 10 },
+    sheetFileStatus: { color: '#10b981', fontSize: 13, fontWeight: 'bold', marginTop: 4 },
+    
+    studyModesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 15 },
+    modeTile: { width: '47%', backgroundColor: '#ffffff05', borderRadius: 28, padding: 18, alignItems: 'center', borderWidth: 1, borderColor: '#ffffff08' },
+    modeIconCard: { width: 60, height: 60, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
+    modeTitleCard: { color: 'white', fontSize: 14, fontWeight: '900', textAlign: 'center', marginBottom: 10 },
+    modeSubCard: { color: '#94a3b8', fontSize: 11, fontWeight: '700' },
+    takeBtnCard: { backgroundColor: '#ffffff10', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+    takeBtnTextCard: { color: 'white', fontSize: 12, fontWeight: '900' },
+    
+    // Aggregator Top Tools UI
+    generatorsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 },
+    genCard: { width: '48%', backgroundColor: '#ffffff05', borderRadius: 20, borderWidth: 1, borderColor: '#ffffff10', overflow: 'hidden' },
+    genGrad: { padding: 15, alignItems: 'center' },
+    genTitle: { color: 'white', fontSize: 13, fontWeight: 'bold', marginTop: 10 },
+    genSub: { color: '#94a3b8', fontSize: 11, marginTop: 2 },
+    
+    // Multi Select UI
+    multiSelectBanner: { flexDirection: 'row', backgroundColor: '#1e293b', padding: 15, borderRadius: 16, borderWidth: 1, borderColor: '#334155', marginTop: 10, alignItems: 'center' },
+    multiSelectInfo: { color: 'white', fontSize: 13, flex: 1, marginLeft: 15, fontWeight: '500' },
+    checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#64748b', alignItems: 'center', justifyContent: 'center' },
+    
+    floatingBar: { position: 'absolute', bottom: 30, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 100, padding: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 10}, shadowOpacity: 0.5, shadowRadius: 20, elevation: 15, borderWidth: 1, borderColor: '#ffffff20' },
+    cancelSelectBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#ffffff10', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+    generateBtn: { flex: 1, borderRadius: 25, overflow: 'hidden' },
+    genBtnGrad: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, height: 50 },
+    genBtnText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
     
     // Sets UI Styles
     setsContainer: { marginTop: 10 },

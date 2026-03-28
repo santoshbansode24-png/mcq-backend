@@ -42,6 +42,9 @@ import ScholarshipChaptersScreen from './ScholarshipChaptersScreen';
 import ScholarshipSetsScreen from './ScholarshipSetsScreen';
 import WorksheetGeneratorScreen from './WorksheetGeneratorScreen';
 
+import AIPdfExamScreen from './AIPdfExamScreen';
+import AIPdfWorksheetScreen from './AIPdfWorksheetScreen';
+
 import StudyPlannerScreen from './StudyPlannerScreen';
 import ChatScreen from './ChatScreen';
 
@@ -222,8 +225,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     const activeTab = useMemo(() => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
-            'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision'],
-            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'Chat', 'PDFToExam']
+            'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'EnglishTutor', 'Chat', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -352,6 +355,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'WorksheetGenerator': return <WorksheetGeneratorScreen {...commonProps} />;
             case 'StudyPlanner': return <StudyPlannerScreen {...commonProps} />;
             case 'Chat': return <ChatScreen {...commonProps} />;
+            case 'AIPdfExam': return <AIPdfExamScreen {...commonProps} />;
+            case 'AIPdfWorksheet': return <AIPdfWorksheetScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };

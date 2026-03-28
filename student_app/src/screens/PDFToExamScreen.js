@@ -28,6 +28,66 @@ const CircularProgress = ({ progress = 0, size = 60, strokeWidth = 5, color = "#
     );
 };
 
+const FolderCard = React.memo(({ item, isMultiSelectMode, onFolderSelect, onFolderOptions }) => (
+    <TouchableOpacity 
+        style={[styles.folderCard, isMultiSelectMode && { opacity: 0.3 }]} 
+        onPress={() => onFolderSelect(item)}
+        onLongPress={() => onFolderOptions('folder', item)}
+        disabled={isMultiSelectMode}
+    >
+        <LinearGradient colors={['#ffffff15', '#ffffff05']} style={styles.glassFolder}>
+            <MaterialCommunityIcons name="molecule" size={30} color="#818cf8" />
+            <Text style={styles.folderLabel} numberOfLines={1}>{item.name}</Text>
+        </LinearGradient>
+    </TouchableOpacity>
+), (prev, next) => prev.isMultiSelectMode === next.isMultiSelectMode && prev.item.name === next.item.name);
+
+const JobCard = React.memo(({ item, isMultiSelectMode, selectModeType, isSelected, onJobSelect, onJobOptions }) => {
+    const isReady = item.status === 'completed';
+    const isFailed = item.status === 'failed';
+    const progress = isReady ? 100 : (item.progress || 10);
+    return (
+        <TouchableOpacity 
+            style={[
+                styles.pdfRow, 
+                { borderColor: isReady ? '#10b98150' : (isFailed ? '#ef444450' : '#ffffff10') },
+                isMultiSelectMode && isSelected && { borderColor: selectModeType === 'worksheet' ? '#34d399' : '#60a5fa', backgroundColor: '#ffffff15' }
+            ]} 
+            onPress={() => onJobSelect(item, isReady, isFailed)}
+            onLongPress={() => onJobOptions('file', item)}
+        >
+            <View style={styles.pdfRowIcon}>
+                {isMultiSelectMode && isReady ? (
+                    <View style={[
+                        styles.checkbox, 
+                        isSelected && { backgroundColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6', borderColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6' }
+                    ]}>
+                        {isSelected && <MaterialCommunityIcons name="check" size={16} color="white" />}
+                    </View>
+                ) : (
+                    <>
+                        <CircularProgress progress={progress} size={60} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} strokeWidth={4} />
+                        <MaterialCommunityIcons name={isFailed ? "file-cancel" : "file-document-check"} size={26} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} />
+                    </>
+                )}
+            </View>
+            <View style={styles.pdfRowContent}>
+                <Text style={styles.pdfRowTitle} numberOfLines={2}>{item.file_name}</Text>
+                <Text style={[styles.pdfRowStatus, { color: isFailed ? '#f87171' : (isReady ? '#10b981' : '#818cf8') }]}>
+                    {isFailed ? 'Analysis Failed' : (isReady ? 'Study Pack Ready' : `${progress}% Processing`)}
+                </Text>
+            </View>
+            {isReady && !isMultiSelectMode && <MaterialCommunityIcons name="chevron-right" size={28} color="#64748b" />}
+        </TouchableOpacity>
+    );
+}, (prev, next) => {
+    return prev.item.status === next.item.status &&
+           prev.item.progress === next.item.progress &&
+           prev.isMultiSelectMode === next.isMultiSelectMode &&
+           prev.selectModeType === next.selectModeType &&
+           prev.isSelected === next.isSelected;
+});
+
 const PDFToExamScreen = ({ user, navigation }) => {
     const { theme, isDarkMode } = useTheme();
     
@@ -317,68 +377,42 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
     };
 
-    const renderFolder = ({ item }) => (
-        <TouchableOpacity 
-            style={[styles.folderCard, isMultiSelectMode && { opacity: 0.3 }]} 
-            onPress={() => { if (!isMultiSelectMode) setPathStack([...pathStack, { id: item.folder_id, name: item.name }]) }}
-            onLongPress={() => { if (!isMultiSelectMode) handleOptions('folder', item) }}
-            disabled={isMultiSelectMode}
-        >
-            <LinearGradient colors={['#ffffff15', '#ffffff05']} style={styles.glassFolder}>
-                <MaterialCommunityIcons name="molecule" size={30} color="#818cf8" />
-                <Text style={styles.folderLabel} numberOfLines={1}>{item.name}</Text>
-            </LinearGradient>
-        </TouchableOpacity>
-    );
+    const handleFolderSelect = useCallback((item) => {
+        if (!isMultiSelectMode) setPathStack(prev => [...prev, { id: item.folder_id, name: item.name }]);
+    }, [isMultiSelectMode]);
 
-    const renderJob = ({ item }) => {
-        const isReady = item.status === 'completed';
-        const isFailed = item.status === 'failed';
-        const progress = isReady ? 100 : (item.progress || 10);
+    const handleJobSelect = useCallback((item, isReady, isFailed) => {
+        if (isMultiSelectMode) {
+            if (!isReady) return; 
+            setSelectedPdfs(prev => prev.includes(item.job_id) ? prev.filter(id => id !== item.job_id) : [...prev, item.job_id]);
+        } else {
+            if (isReady) setSelectedJob(item);
+            else if (isFailed) Alert.alert("Failed", "This PDF could not be analyzed. Please try another one.");
+        }
+    }, [isMultiSelectMode]);
+
+    const renderFolder = useCallback(({ item }) => (
+        <FolderCard 
+            item={item} 
+            isMultiSelectMode={isMultiSelectMode} 
+            onFolderSelect={handleFolderSelect} 
+            onFolderOptions={handleOptions} 
+        />
+    ), [isMultiSelectMode, handleFolderSelect]);
+
+    const renderJob = useCallback(({ item }) => {
+        const isSelected = selectedPdfs.includes(item.job_id);
         return (
-            <TouchableOpacity 
-                style={[
-                    styles.pdfRow, 
-                    { borderColor: isReady ? '#10b98150' : (isFailed ? '#ef444450' : '#ffffff10') },
-                    isMultiSelectMode && selectedPdfs.includes(item.job_id) && { borderColor: selectModeType === 'worksheet' ? '#34d399' : '#60a5fa', backgroundColor: '#ffffff15' }
-                ]} 
-                onPress={() => {
-                    if (isMultiSelectMode) {
-                        if (!isReady) return; // Only allow completed PDFs to be selected
-                        if (selectedPdfs.includes(item.job_id)) setSelectedPdfs(selectedPdfs.filter(id => id !== item.job_id));
-                        else setSelectedPdfs([...selectedPdfs, item.job_id]);
-                    } else {
-                        if (isReady) setSelectedJob(item);
-                        else if (isFailed) Alert.alert("Failed", "This PDF could not be analyzed. Please try another one.");
-                    }
-                }}
-                onLongPress={() => handleOptions('file', item)}
-            >
-                <View style={styles.pdfRowIcon}>
-                    {isMultiSelectMode && isReady ? (
-                        <View style={[
-                            styles.checkbox, 
-                            selectedPdfs.includes(item.job_id) && { backgroundColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6', borderColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6' }
-                        ]}>
-                            {selectedPdfs.includes(item.job_id) && <MaterialCommunityIcons name="check" size={16} color="white" />}
-                        </View>
-                    ) : (
-                        <>
-                            <CircularProgress progress={progress} size={60} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} strokeWidth={4} />
-                            <MaterialCommunityIcons name={isFailed ? "file-cancel" : "file-document-check"} size={26} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} />
-                        </>
-                    )}
-                </View>
-                <View style={styles.pdfRowContent}>
-                    <Text style={styles.pdfRowTitle} numberOfLines={2}>{item.file_name}</Text>
-                    <Text style={[styles.pdfRowStatus, { color: isFailed ? '#f87171' : (isReady ? '#10b981' : '#818cf8') }]}>
-                        {isFailed ? 'Analysis Failed' : (isReady ? 'Study Pack Ready' : `${progress}% Processing`)}
-                    </Text>
-                </View>
-                {isReady && !isMultiSelectMode && <MaterialCommunityIcons name="chevron-right" size={28} color="#64748b" />}
-            </TouchableOpacity>
+            <JobCard 
+                item={item} 
+                isMultiSelectMode={isMultiSelectMode} 
+                selectModeType={selectModeType} 
+                isSelected={isSelected} 
+                onJobSelect={handleJobSelect} 
+                onJobOptions={handleOptions} 
+            />
         );
-    };
+    }, [isMultiSelectMode, selectModeType, selectedPdfs, handleJobSelect]);
 
     return (
         <View style={styles.container}>

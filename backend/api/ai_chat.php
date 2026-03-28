@@ -48,8 +48,8 @@ try {
         
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $imagePart = [
-                'inline_data' => [
-                    'mime_type' => mime_content_type($_FILES['image']['tmp_name']),
+                'inlineData' => [
+                    'mimeType' => mime_content_type($_FILES['image']['tmp_name']),
                     'data' => base64_encode(file_get_contents($_FILES['image']['tmp_name']))
                 ]
             ];

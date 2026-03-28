@@ -16,15 +16,13 @@ try {
     echo "   OK - Database connected\n\n";
 } catch (Exception $e) {
     echo "   ERROR: " . $e->getMessage() . "\n\n";
-    die();
-}
-
-// Step 2: Check API Key  
-echo "2. CHECKING API KEY:\n";
+// 1. Check API Key
+echo "1. GEMINI API KEY:\n";
 try {
     require_once '../config/ai_config.php';
     if (defined('GEMINI_API_KEY') && strlen(GEMINI_API_KEY) > 10) {
-        echo "   OK - Key loaded: " . substr(GEMINI_API_KEY, 0, 12) . "...\n\n";
+        echo "   ✅ Key loaded: " . substr(GEMINI_API_KEY, 0, 12) . "...\n";
+        echo "   📡 URL: " . GEMINI_API_URL . "\n\n";
     } else {
         echo "   ERROR - GEMINI_API_KEY is not defined!\n";
         // Try env var directly

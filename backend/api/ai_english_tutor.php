@@ -99,8 +99,8 @@ if ($audioData) {
         'role' => 'user',
         'parts' => [
             [
-                'inline_data' => [
-                    'mime_type' => $mimeType,
+                'inlineData' => [
+                    'mimeType' => $mimeType,
                     'data' => $audioData
                 ]
             ],

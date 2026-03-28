@@ -95,8 +95,8 @@ if (!function_exists('callGeminiPDF')) {
                     'parts' => [
                         ['text' => $prompt],
                         [
-                            'inline_data' => [
-                                'mime_type' => 'application/pdf',
+                            'inlineData' => [
+                                'mimeType' => 'application/pdf',
                                 'data' => $base64PDF
                             ]
                         ]
@@ -106,7 +106,7 @@ if (!function_exists('callGeminiPDF')) {
             'generationConfig' => [
                 'temperature' => 0.4,
                 'maxOutputTokens' => 4096, // Increased for large study packs
-                'response_mime_type' => 'application/json'
+                'responseMimeType' => 'application/json'
             ]
         ];
         

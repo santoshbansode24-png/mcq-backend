@@ -202,10 +202,10 @@ const PDFToExamScreen = ({ user, navigation }) => {
             } else {
                 const allCards = (data.flashcards || []).map((f, i) => ({
                     flashcard_id: i,
-                    // The AI typically puts the term on the "Front" (f) and definition on the "Back" (b).
-                    // The user wants the question (definition) to appear first, so we map 'b' to the front.
-                    question_front: f.q || f.Question || f.b || f.Back || f.back || '',
-                    answer_back: f.a || f.Answer || f.f || f.Front || f.front || '',
+                    // Strict mapping: The 'Term' or 'Question' goes on the Front side (question_front).
+                    question_front: f.f || f.Front || f.front || f.q || f.Question || '',
+                    // The 'Definition' or 'Answer' goes on the Back side (answer_back). 
+                    answer_back: f.b || f.Back || f.back || f.a || f.Answer || '',
                     subject: 'AI Generated',
                     topic: job.file_name
                 }));

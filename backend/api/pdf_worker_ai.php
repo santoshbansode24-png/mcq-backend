@@ -32,21 +32,30 @@ foreach ($jobs as $job) {
         // Convert PDF to Base64 for Native Vision API
         $pdfBase64 = base64_encode(file_get_contents($filePath));
         
-        $prompt = "Act as a Senior Academic Evaluator.
-Task: Convert this PDF into a structured JSON Study Pack.
+        $prompt = "Role: You are an expert Educational Content Creator and MCQ Generator. 
+Task: Analyze the uploaded PDF document page-by-page and generate Multiple Choice Questions (MCQs) and Flashcards for every single page without skipping any content.
 
-Constraints:
-1. Format: Output ONLY raw JSON. No markdown backticks.
-2. Content: Analyze every page. Create 15-20 high-quality MCQs and 10 Flashcards.
-3. Quality: Distractors must be plausible. Explanations must be helpful.
+1. Extraction Priority:
+- Static Data: For each page, first identify all 'Static Data' (Dates, Names of People/Places, Specific Figures, Laws, Scientific Formulas, and Key Events). These must not be skipped.
+- Conceptual Data: If a page lacks static data, focus on 'Conceptual Data.' Extract core theories, cause-and-effect relationships, definitions, and the primary logic.
+
+2. Output Requirements:
+- Question Volume: Produce as many questions/flashcards as needed to cover 100% of the content on dense pages, potentially up to 50 items. Do not summarize. Do not merge pages.
+- MCQ Structure: 4 distinct, plausible, slightly similar options for distractors, ensuring the user must think. Only 1 correct answer.
+- Flashcard Structure: Generate flashcards covering key definitions, concepts, and factual pairs from the content.
+- Explanation: A brief explanation/rationale for the correct answer based on the text. Include context (e.g., 'From Page X').
+
+3. Strict Constraints:
+- Language: The generated MCQs and Flashcards MUST be in the exact same language as the uploaded PDF document (e.g. Marathi or English).
+- Format: Output ONLY raw JSON matching the exact schema below! Do not include markdown backticks or prefixes outside the JSON. All data must fit inside the arrays.
 
 JSON Schema:
 {
   \"mcqs\": [
-    {\"q\": \"Question\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation\"}
+    {\"q\": \"Question...\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation...\"}
   ],
   \"flashcards\": [
-    {\"f\": \"Front\", \"b\": \"Back\"}
+    {\"f\": \"Front / Term\", \"b\": \"Back / Definition\"}
   ]
 }";
 

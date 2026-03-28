@@ -12,6 +12,8 @@ ini_set('memory_limit', '256M');
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
 
+file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "POST=" . json_encode($_POST) . " FILES=" . json_encode($_FILES) . "\n", FILE_APPEND);
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['status' => 'error', 'message' => 'Invalid request method']);
     exit();
@@ -26,7 +28,8 @@ try {
     // 2. Handle File Upload
     if (!isset($_FILES['pdf_file'])) throw new Exception("No file uploaded");
     $file      = $_FILES['pdf_file'];
-    $fileName  = $file['name'];
+    // Many mobile file pickers URL-encode the filename (e.g. My%20File.pdf). Decode it.
+    $fileName  = urldecode($file['name']);
     $tmpPath   = $file['tmp_name'];
     $fileError = $file['error'];
     if ($fileError !== 0) throw new Exception("Upload failed with error code: $fileError");
@@ -51,17 +54,21 @@ try {
     // 5. Fire-and-forget: trigger the AI worker
     $protocol   = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
     $host       = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $workerUrl  = "$protocol://$host/backend/api/pdf_worker_ai.php";
+    $baseUri    = dirname($_SERVER['REQUEST_URI'] ?? '/backend/api/upload_pdf_study.php');
+    $workerUrl  = "$protocol://$host$baseUri/pdf_worker_ai.php";
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $workerUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 500); // abandon after 0.5s - worker continues running
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 2000); // 2 seconds to ensure worker starts
     curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     @curl_exec($ch);
+    $curlErr = curl_error($ch);
     curl_close($ch);
+    
+    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Worker URL: $workerUrl | cURL Error: $curlErr\n", FILE_APPEND);
 
     // 6. Return immediate success to the app
     echo json_encode([
@@ -73,6 +80,7 @@ try {
 
 } catch (Exception $e) {
     error_log("PDF Upload Error: " . $e->getMessage());
+    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
 ?>

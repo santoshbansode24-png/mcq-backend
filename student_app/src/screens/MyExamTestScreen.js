@@ -372,6 +372,27 @@ const MyExamTestScreen = ({ navigation, route }) => {
         return { correct, incorrect, unanswered };
     }, [selectedAnswers, questions]);
 
+    // Move hooks ABOVE the early return to comply with the Rule of Hooks
+    const currentQuestion = questions && questions.length > 0 ? questions[currentIndex] : {};
+    const progress = ((currentIndex + 1) / (questions?.length || 1)) * 100;
+    const userAnswer = selectedAnswers[currentIndex];
+    const hasAnswered = !!userAnswer;
+
+    const decodedQuestion = useMemo(
+        () => currentQuestion?.question ? decodeHtml(currentQuestion.question) : '',
+        [currentQuestion?.question]
+    );
+    const decodedOptions = useMemo(() => ({
+        a: currentQuestion?.option_a ? decodeHtml(currentQuestion.option_a) : '',
+        b: currentQuestion?.option_b ? decodeHtml(currentQuestion.option_b) : '',
+        c: currentQuestion?.option_c ? decodeHtml(currentQuestion.option_c) : '',
+        d: currentQuestion?.option_d ? decodeHtml(currentQuestion.option_d) : '',
+    }), [currentQuestion]);
+    const decodedExplanation = useMemo(
+        () => currentQuestion?.explanation ? decodeHtml(currentQuestion.explanation) : null,
+        [currentQuestion?.explanation]
+    );
+
     // ── Results Screen ──────────────────────────────────────────────────────
     if (showResults) {
         const { correct, incorrect, unanswered } = results;
@@ -456,25 +477,6 @@ const MyExamTestScreen = ({ navigation, route }) => {
     }
 
     // ── Exam Screen ─────────────────────────────────────────────────────────
-    const currentQuestion = questions[currentIndex];
-    const progress = ((currentIndex + 1) / questions.length) * 100;
-    const userAnswer = selectedAnswers[currentIndex];
-    const hasAnswered = !!userAnswer;
-
-    const decodedQuestion = useMemo(
-        () => decodeHtml(currentQuestion.question),
-        [currentQuestion.question]
-    );
-    const decodedOptions = useMemo(() => ({
-        a: decodeHtml(currentQuestion.option_a),
-        b: decodeHtml(currentQuestion.option_b),
-        c: decodeHtml(currentQuestion.option_c),
-        d: decodeHtml(currentQuestion.option_d),
-    }), [currentQuestion]);
-    const decodedExplanation = useMemo(
-        () => currentQuestion.explanation ? decodeHtml(currentQuestion.explanation) : null,
-        [currentQuestion.explanation]
-    );
 
     return (
         <View style={[styles.mainWrapper, { backgroundColor: isDarkMode ? '#0f172a' : '#f0f4f8' }]}>

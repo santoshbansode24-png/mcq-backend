@@ -19,7 +19,7 @@ if (!$user_id) {
 
 try {
     if ($job_id) {
-        $stmt = $pdo->prepare("SELECT job_id, user_id, file_name, status, progress, total_pages, processed_pages, error_message, created_at, updated_at FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("SELECT job_id, user_id, file_name, status, progress, total_pages, processed_pages, error_message, study_content, created_at, updated_at FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
         $stmt->execute([$job_id, $user_id]);
         $job = $stmt->fetch();
         
@@ -30,7 +30,7 @@ try {
         echo json_encode(['status' => 'success', 'data' => $job]);
     } else {
         // Get jobs for this user (filtered by folder if provided)
-        $sql = "SELECT job_id, user_id, folder_id, file_name, status, progress, total_pages, processed_pages, created_at FROM pdf_study_jobs WHERE user_id = ?";
+        $sql = "SELECT job_id, user_id, folder_id, file_name, status, progress, total_pages, processed_pages, study_content, created_at FROM pdf_study_jobs WHERE user_id = ?";
         $params = [$user_id];
         
         if ($folder_id === 'root') {

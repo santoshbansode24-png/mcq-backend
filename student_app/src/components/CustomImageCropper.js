@@ -10,88 +10,87 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
     const [cropBox, setCropBox] = useState({ x: 50, y: 100, width: 200, height: 200 });
     const [processing, setProcessing] = useState(false);
 
+    // Keep a live ref to cropBox so PanResponders can read it without stale closures
+    const cropBoxRef = useRef(cropBox);
+    const layoutRef = useRef(layout);
+
     // Initial Image Layout
     const onImageLayout = (event) => {
         const { width, height } = event.nativeEvent.layout;
-        setLayout({ width, height });
-        // Center the crop box initially
-        setCropBox({
+        const newLayout = { width, height };
+        setLayout(newLayout);
+        layoutRef.current = newLayout;
+        const newBox = {
             x: (width - 250) / 2,
             y: (height - 250) / 2,
             width: 250,
             height: 250
-        });
+        };
+        setCropBox(newBox);
+        cropBoxRef.current = newBox;
     };
 
     // Calculate Limits
     const getConstrainedBox = (newBox) => {
-        if (!layout) return newBox;
+        const currentLayout = layoutRef.current;
+        if (!currentLayout) return newBox;
         let { x, y, width, height } = newBox;
-
-        // Min size constraint
         if (width < 50) width = 50;
         if (height < 50) height = 50;
-
-        // Boundary constraint
         if (x < 0) x = 0;
         if (y < 0) y = 0;
-        if (x + width > layout.width) x = layout.width - width;
-        if (y + height > layout.height) y = layout.height - height;
-
-        // Recheck right/bottom after moving
-        if (x < 0) width += x; // Shrink if pushed out left (rare edge case)
-
+        if (x + width > currentLayout.width) x = currentLayout.width - width;
+        if (y + height > currentLayout.height) y = currentLayout.height - height;
+        if (x < 0) width += x;
         return { x, y, width, height };
     };
 
-    // Pan Responder for Dragging the Whole Box
+    // Pan Responder for Dragging the Whole Box — created once
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onPanResponderMove: (_, gestureState) => {
-                setCropBox(prev => getConstrainedBox({
-                    ...prev,
-                    x: prev.x + gestureState.dx,
-                    y: prev.y + gestureState.dy
-                }));
+                setCropBox(prev => {
+                    const next = getConstrainedBox({
+                        ...prev,
+                        x: prev.x + gestureState.dx,
+                        y: prev.y + gestureState.dy
+                    });
+                    cropBoxRef.current = next;
+                    return next;
+                });
             },
-            onPanResponderRelease: () => {
-                // Determine final position logic if needed
-            }
         })
     ).current;
 
-    // Corner Resizing Logic
-    const createResizeResponder = (corner) => {
-        return PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onPanResponderMove: (_, gestureState) => {
-                setCropBox(prev => {
-                    let newBox = { ...prev };
-                    const { dx, dy } = gestureState;
+    // Corner Resizing — created once per corner with useRef
+    const makeCornerResponder = (corner) => PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: (_, gestureState) => {
+            setCropBox(prev => {
+                let newBox = { ...prev };
+                const { dx, dy } = gestureState;
+                if (corner === 'topLeft') {
+                    newBox.x += dx; newBox.y += dy;
+                    newBox.width -= dx; newBox.height -= dy;
+                } else if (corner === 'topRight') {
+                    newBox.y += dy; newBox.width += dx; newBox.height -= dy;
+                } else if (corner === 'bottomLeft') {
+                    newBox.x += dx; newBox.width -= dx; newBox.height += dy;
+                } else if (corner === 'bottomRight') {
+                    newBox.width += dx; newBox.height += dy;
+                }
+                const next = getConstrainedBox(newBox);
+                cropBoxRef.current = next;
+                return next;
+            });
+        }
+    });
 
-                    if (corner === 'topLeft') {
-                        newBox.x += dx;
-                        newBox.y += dy;
-                        newBox.width -= dx;
-                        newBox.height -= dy;
-                    } else if (corner === 'topRight') {
-                        newBox.y += dy;
-                        newBox.width += dx;
-                        newBox.height -= dy;
-                    } else if (corner === 'bottomLeft') {
-                        newBox.x += dx;
-                        newBox.width -= dx;
-                        newBox.height += dy;
-                    } else if (corner === 'bottomRight') {
-                        newBox.width += dx;
-                        newBox.height += dy;
-                    }
-                    return getConstrainedBox(newBox);
-                });
-            }
-        });
-    };
+    const tlResponder = useRef(makeCornerResponder('topLeft')).current;
+    const trResponder = useRef(makeCornerResponder('topRight')).current;
+    const blResponder = useRef(makeCornerResponder('bottomLeft')).current;
+    const brResponder = useRef(makeCornerResponder('bottomRight')).current;
 
     const handleCrop = async () => {
         if (!layout || !imageUri) return;
@@ -112,9 +111,8 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                     height: cropBox.height * scaleY
                 };
 
-                // Validate crop Action
                 if (cropAction.originX < 0) cropAction.originX = 0;
-                if (cropAction.originY < 0) originY = 0;
+                if (cropAction.originY < 0) cropAction.originY = 0;  // ← was: originY = 0 (typo!)
 
                 // Ensure we don't crop outside bounds due to floating point rounding
                 if (cropAction.originX + cropAction.width > actualWidth) cropAction.width = actualWidth - cropAction.originX;
@@ -187,10 +185,10 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                                 <View style={styles.gridLineHorizontal} />
 
                                 {/* Resize Handles */}
-                                <View style={[styles.corner, styles.topLeft]} {...createResizeResponder('topLeft').panHandlers} />
-                                <View style={[styles.corner, styles.topRight]} {...createResizeResponder('topRight').panHandlers} />
-                                <View style={[styles.corner, styles.bottomLeft]} {...createResizeResponder('bottomLeft').panHandlers} />
-                                <View style={[styles.corner, styles.bottomRight]} {...createResizeResponder('bottomRight').panHandlers} />
+                                <View style={[styles.corner, styles.topLeft]} {...tlResponder.panHandlers} />
+                                <View style={[styles.corner, styles.topRight]} {...trResponder.panHandlers} />
+                                <View style={[styles.corner, styles.bottomLeft]} {...blResponder.panHandlers} />
+                                <View style={[styles.corner, styles.bottomRight]} {...brResponder.panHandlers} />
                             </View>
 
                             {/* Dark Overlays surrounding the crop box */}

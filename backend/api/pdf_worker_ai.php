@@ -59,7 +59,7 @@ JSON Schema:
   ]
 }";
 
-        // 2. Call Native Gemini PDF Vision (with 429 Retry)
+        // 2. Call Native Gemini PDF Vision (with Transient Retry)
         $aiResponse = "";
         $maxRetries = 3;
         $attempt = 0;
@@ -69,10 +69,14 @@ JSON Schema:
                 $aiResponse = callGeminiPDF($prompt, $pdfBase64);
                 break; // success
             } catch (Exception $e) {
-                if (strpos($e->getMessage(), '429') !== false) {
+                $errMsg = $e->getMessage();
+                $isTransient = (strpos($errMsg, '429') !== false || strpos($errMsg, '500') !== false || strpos($errMsg, '503') !== false || stripos($errMsg, 'time') !== false || stripos($errMsg, 'resolve') !== false);
+                
+                if ($isTransient) {
                     $attempt++;
                     if ($attempt >= $maxRetries) throw $e;
-                    $pdo->prepare("UPDATE pdf_study_jobs SET progress = 15, error_message = 'AI busy, retrying in 20s...' WHERE job_id = ?")->execute([$job['job_id']]);
+                    $pdo->prepare("UPDATE pdf_study_jobs SET progress = ?, error_message = ? WHERE job_id = ?")
+                        ->execute([15 + ($attempt * 5), 'AI busy, retrying in 20s...', $job['job_id']]);
                     sleep(20);
                 } else {
                     throw $e;
@@ -80,15 +84,22 @@ JSON Schema:
             }
         }
         
-        // Clean JSON (remove potential md tags if AI ignored constraints)
-        $json = trim($aiResponse);
-        if (strpos($json, '```json') === 0) {
-            $json = substr($json, 7, -3);
+        // Aggressive JSON Extraction (Ignores conversational filler text)
+        $aiResponse = trim($aiResponse);
+        $startIdx = strpos($aiResponse, '{');
+        $endIdx = strrpos($aiResponse, '}');
+        
+        if ($startIdx !== false && $endIdx !== false && $endIdx >= $startIdx) {
+            $json = substr($aiResponse, $startIdx, $endIdx - $startIdx + 1);
+        } else {
+            $json = $aiResponse; // Fallback
         }
         
         $data = json_decode($json, true);
-        if (!$data || !isset($data['mcqs'])) {
-             throw new Exception("AI returned invalid JSON: " . substr($json, 0, 100));
+        
+        // Validate output structure robustly
+        if (!$data || (!isset($data['mcqs']) && !isset($data['flashcards']))) {
+            throw new Exception("AI generated an invalid format or refused to answer. Snippet: " . substr($json, 0, 150));
         }
 
         // 3. Save to database

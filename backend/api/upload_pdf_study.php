@@ -76,6 +76,10 @@ try {
     // Flush all output buffers to send headers + body to the client now
     if (ob_get_level() > 0) ob_end_flush();
     flush();
+    session_write_close();
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    }
     
     file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Response sent for job_id=$job_id. Starting inline AI...\n", FILE_APPEND);
 
@@ -123,7 +127,7 @@ Task: Analyze the uploaded PDF document page-by-page and generate Multiple Choic
 JSON Schema:
 {\"mcqs\": [{\"q\": \"Question...\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation...\"}], \"flashcards\": [{\"f\": \"Front / Term\", \"b\": \"Back / Definition\"}]}";
 
-    // Call Gemini with retry on 429 rate limit
+    // Call Gemini with intelligent retry on transient errors (429, 500, 503, timeouts)
     $aiResponse = "";
     $maxRetries = 3;
     for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
@@ -131,31 +135,38 @@ JSON Schema:
             $aiResponse = callGeminiPDF($prompt, $pdfBase64);
             break; // success - exit loop
         } catch (Exception $e) {
-            if (strpos($e->getMessage(), '429') !== false && $attempt < $maxRetries - 1) {
-                $pdo->prepare("UPDATE pdf_study_jobs SET progress = 30, error_message = 'AI busy, retrying...' WHERE job_id = ?")->execute([$job_id]);
-                file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Job $job_id: 429 rate limit, sleeping 20s (attempt " . ($attempt+1) . ")\n", FILE_APPEND);
-                sleep(20);
+            $errMsg = $e->getMessage();
+            $isTransient = (strpos($errMsg, '429') !== false || strpos($errMsg, '500') !== false || strpos($errMsg, '503') !== false || stripos($errMsg, 'time') !== false || stripos($errMsg, 'resolve') !== false);
+            
+            if ($isTransient && $attempt < $maxRetries - 1) {
+                // Update progress subtly to let user know it's working but retrying
+                $pdo->prepare("UPDATE pdf_study_jobs SET progress = ?, error_message = ? WHERE job_id = ?")
+                    ->execute([25 + ($attempt * 10), 'AI engine busy, retrying (' . ($attempt + 2) . '/3)...', $job_id]);
+                    
+                file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Job $job_id: Transient error '$errMsg', sleeping 15s (attempt " . ($attempt+1) . ")\n", FILE_APPEND);
+                sleep(15);
             } else {
-                throw $e; // rethrow non-429 or final retry
+                throw $e; // rethrow solid errors (e.g., 400 Bad Request) or final timeout
             }
         }
     }
 
-    // Clean JSON (strip markdown code fences if AI added them)
-    $json = trim($aiResponse);
-    if (strpos($json, '```json') !== false) {
-        $json = preg_replace('/^```json\s*/i', '', $json);
-        $json = preg_replace('/\s*```$/', '', $json);
-        $json = trim($json);
-    } elseif (strpos($json, '```') === 0) {
-        $json = substr($json, 3);
-        if (substr($json, -3) === '```') $json = substr($json, 0, -3);
-        $json = trim($json);
+    // Aggressive JSON Extraction (Ignores conversational filler text around the JSON)
+    $aiResponse = trim($aiResponse);
+    $startIdx = strpos($aiResponse, '{');
+    $endIdx = strrpos($aiResponse, '}');
+    
+    if ($startIdx !== false && $endIdx !== false && $endIdx >= $startIdx) {
+        $json = substr($aiResponse, $startIdx, $endIdx - $startIdx + 1);
+    } else {
+        $json = $aiResponse; // Fallback to raw response if no brackets found at all
     }
 
     $data = json_decode($json, true);
-    if (!$data || !isset($data['mcqs'])) {
-        throw new Exception("AI returned invalid JSON: " . substr($json, 0, 200));
+    
+    // Validate output structure robustly
+    if (!$data || (!isset($data['mcqs']) && !isset($data['flashcards']))) {
+        throw new Exception("AI generated an invalid format or refused to answer. Snippet: " . substr($json, 0, 150));
     }
 
     // Save to database

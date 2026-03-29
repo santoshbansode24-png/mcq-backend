@@ -46,17 +46,7 @@ try {
         $stmt->execute($params);
         $jobs = $stmt->fetchAll();
         
-        // 4. Auto-trigger worker if there are pending jobs
-        $hasPending = false;
-        foreach ($jobs as $job) {
-            if ($job['status'] === 'pending') {
-                $hasPending = true;
-                break;
-            }
-        }
-        if ($hasPending) {
-            triggerAIWorker('pdf_worker_ai.php');
-        }
+        // Worker trigger removed to prevent race conditions with inline processing
         
         echo json_encode(['status' => 'success', 'data' => $jobs]);
     }

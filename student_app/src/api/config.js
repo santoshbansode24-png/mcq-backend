@@ -33,7 +33,7 @@ const RAILWAY_CONFIG = {
 
 // Export the configuration you want to use
 const config = RAILWAY_CONFIG; // ✅ Production - Railway
-// const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (change SERVER_IP above first)
+// const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (using confirmed IP: 10.239.87.239)
 
 export default config;
 

@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-# Veeru - Educational Learning Platform
-
-**Veeru** is a comprehensive educational learning platform with mobile apps for students and teachers, featuring MCQ tests, video lessons, AI tutoring, vocabulary building, and more.
+**Veeru** is a comprehensive educational learning platform with mobile apps for students and teachers, featuring MCQ tests, video lessons, vocabulary building, and more.
 
 ## 🎯 Project Overview
 
@@ -19,7 +16,6 @@
   - Subject-wise learning with chapters
   - Video lessons and PDF notes
   - MCQ practice tests
-  - AI Tutor for homework help
   - Vocabulary Booster
   - Mental Maths practice
   - Quick Revision flashcards
@@ -159,9 +155,7 @@ Base URL: `http://localhost/mcq%20project2.0/backend/api/`
 - `GET /get_notes.php?chapter_id={id}` - Get notes
 
 ### AI Features
-- `POST /ai_tutor.php` - AI homework help
 - `POST /ai_generate_quiz.php` - Generate custom quiz
-- `POST /ai_english_tutor.php` - English conversation practice
 
 ### Vocabulary
 - `GET /vocab_get_words.php?user_id={id}` - Get vocabulary words
@@ -224,10 +218,6 @@ For issues and questions, please contact the development team.
 
 **Veeru** - Empowering Education Through Technology 🎓
 =======
-# 🎓 Veeru - Backend API
-
-## ✅ Educational Learning Platform
-
 Complete backend system for **Veeru** - an educational learning platform with mobile apps for students and teachers.
 
 ---

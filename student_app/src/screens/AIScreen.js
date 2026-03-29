@@ -45,19 +45,6 @@ const AIScreen = ({ navigation }) => {
             screen: 'HomeworkSolver',
             width: '100%',
             height: 110
-        },
-        {
-            id: 'chat',
-            title: 'Chat with Tutor',
-            subtitle: 'Anytime Helper',
-            description: 'Ask any question to your AI tutor.',
-            icon: 'chatbubbles',
-            // Emerald to Teal
-            color1: '#059669',
-            color2: '#0d9488',
-            screen: 'Chat',
-            width: '100%',
-            height: 110
         }
     ];
 

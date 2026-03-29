@@ -46,7 +46,9 @@ const EnglishMissionMapScreen = ({ navigation, user }) => {
             Alert.alert('Locked 🔒', 'Complete the previous mission to unlock this one!');
             return;
         }
-        navigation.navigate('EnglishTutor', { mission });
+        // AI Tutor disabled/removed
+        Alert.alert('Coming Soon', 'This mission module is being updated.');
+        // navigation.navigate('EnglishTutor', { mission });
     };
 
     if (loading) {

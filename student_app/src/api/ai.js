@@ -49,26 +49,6 @@ const getUserId = async () => {
 };
 
 /**
- * Send Message to AI Tutor
- */
-export const sendMessageToAI = async (message) => {
-    try {
-        const userId = await getUserId();
-
-        // Using production endpoint
-        const response = await aiClient.post('/ai_chat.php', {
-            message: message,
-            user_id: userId // Add user_id for tracking
-        }, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        return response.data;
-    } catch (error) {
-        return handleError(error, 'AI Chat');
-    }
-};
-
-/**
  * Upload Homework Image to AI
  */
 export const uploadHomeworkImage = async (imageUri, prompt, language = 'English') => {

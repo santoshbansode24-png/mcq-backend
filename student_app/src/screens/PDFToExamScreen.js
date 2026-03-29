@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import Svg, { Circle } from 'react-native-svg';
 import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
@@ -226,25 +227,23 @@ const PDFToExamScreen = ({ user, navigation }) => {
             if (doc.canceled) return;
             const file = doc.assets[0];
             setUploading(true);
-            const formData = new FormData();
-            formData.append('user_id', (user?.user_id || 0).toString());
-            if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
-            formData.append('pdf_file', {
-                uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
-                type: 'application/pdf',
-                name: file.name || 'document.pdf'
-            });
-            // Use fetch instead of axios for multipart/form-data to prevent Android APK boundary/network dropping bugs
-            const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json',
-                    // DO NOT set Content-Type here; fetch will automatically add it with the correct boundary!
+            // Use Expo FileSystem to natively handle content:// URIs on Android APKs avoiding 0-byte silent network failures
+            const uploadResponse = await FileSystem.uploadAsync(
+                `${API_URL}/upload_pdf_study.php`,
+                file.uri,
+                {
+                    fieldName: 'pdf_file',
+                    httpMethod: 'POST',
+                    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+                    parameters: {
+                        user_id: (user?.user_id || 0).toString(),
+                        ...(currentFolderId !== 'root' ? { folder_id: currentFolderId.toString() } : {})
+                    }
                 }
-            });
+            );
             
-            const responseData = await response.json();
+            // Server responds instantly (inline background AI processing runs after)
+            const responseData = JSON.parse(uploadResponse.body);
             
             if (responseData.status === 'success') { 
                 Alert.alert("✅ Done!", "Your PDF is uploaded and AI is processing. It will be ready in a moment!"); 

@@ -43,6 +43,7 @@ try {
     if ($fileError !== 0) throw new Exception("Upload failed with error code: $fileError");
     $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
     if ($ext !== 'pdf') throw new Exception("Only PDF files are allowed.");
+    if ($file['size'] === 0) throw new Exception("File is empty (0 bytes). Your device may have denied storage reading permissions.");
 
     // 3. Save file to uploads directory
     $uploadDir = dirname(__DIR__) . '/uploads/pdf_study/';

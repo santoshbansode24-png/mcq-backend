@@ -8,8 +8,9 @@ export const streamFetch = async (url, options, onChunk, onDone, onError) => {
         const xhr = new XMLHttpRequest();
         xhr.open(options.method || 'GET', url, true);
         
-        // Headers
-        xhr.setRequestHeader('Content-Type', 'application/json');
+        // ⚠️ DO NOT manually set Content-Type for FormData uploads.
+        // XHR automatically sets multipart/form-data + the required boundary.
+        // Setting it manually breaks the boundary and destroys file uploads.
         if (options.headers) {
             Object.keys(options.headers).forEach(key => {
                 xhr.setRequestHeader(key, options.headers[key]);
@@ -32,7 +33,12 @@ export const streamFetch = async (url, options, onChunk, onDone, onError) => {
                         } else {
                             try {
                                 const json = JSON.parse(dataStr);
-                                if (onChunk) onChunk(json);
+                                // Surface API-level errors (e.g., "No image uploaded", rate limits)
+                                if (json.status === 'error' && onError) {
+                                    onError(new Error(json.message || 'Server returned an error'));
+                                } else {
+                                    if (onChunk) onChunk(json);
+                                }
                             } catch (e) {
                                 // Ignore partial/invalid JSON in chunks
                             }
@@ -60,3 +66,4 @@ export const streamFetch = async (url, options, onChunk, onDone, onError) => {
         if (onError) onError(e);
     }
 };
+

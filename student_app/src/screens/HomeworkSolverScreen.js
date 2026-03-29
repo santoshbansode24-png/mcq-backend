@@ -114,7 +114,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 },
                 (error) => {
                     setLoading(false);
-                    Alert.alert('Error', 'Failed to connect to AI server.');
+                    Alert.alert('Error', error?.message || 'Failed to connect to AI server.');
                 }
             );
         } catch (error) {

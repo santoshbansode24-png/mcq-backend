@@ -234,22 +234,27 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 type: 'application/pdf',
                 name: file.name || 'document.pdf'
             });
-            const res = await axios.post(`${API_URL}/upload_pdf_study.php`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-                timeout: 300000 // 5 min - AI processes inline on the server
+            // Use fetch instead of axios for multipart/form-data to prevent Android APK boundary/network dropping bugs
+            const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    // DO NOT set Content-Type here; fetch will automatically add it with the correct boundary!
+                }
             });
-            if (res.data.status === 'success') { 
-                Alert.alert("✅ Done!", "Your PDF has been analyzed. Tap it below to start studying!"); 
+            
+            const responseData = await response.json();
+            
+            if (responseData.status === 'success') { 
+                Alert.alert("✅ Done!", "Your PDF is uploaded and AI is processing. It will be ready in a moment!"); 
                 loadData(true); 
             } else {
-                Alert.alert("Error", res.data.message || "Upload failed.");
+                Alert.alert("Error", responseData.message || "Upload failed.");
             }
         } catch (e) { 
-            if (e.code === 'ECONNABORTED') {
-                Alert.alert("⏱ Taking too long", "The PDF is very large. Please try with a smaller PDF (under 5MB) or check your internet connection.");
-            } else {
-                Alert.alert("Upload Failed", "Could not connect to server. Please check your internet and try again.");
-            }
+            console.log("Upload Error:", e);
+            Alert.alert("Upload Failed", "Could not connect to server or process file. Check your internet connection.");
         } 
         finally { setUploading(false); }
     };

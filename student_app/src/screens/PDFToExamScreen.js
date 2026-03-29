@@ -236,19 +236,24 @@ const PDFToExamScreen = ({ user, navigation }) => {
             });
             const res = await axios.post(`${API_URL}/upload_pdf_study.php`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
-                timeout: 120000 // 120s timeout to allow large or slow uploads
+                timeout: 300000 // 5 min - AI processes inline on the server
             });
             if (res.data.status === 'success') { 
-                Alert.alert("Success! 🚀", "AI is processing in the background."); 
+                Alert.alert("✅ Done!", "Your PDF has been analyzed. Tap it below to start studying!"); 
                 loadData(true); 
             } else {
                 Alert.alert("Error", res.data.message || "Upload failed.");
             }
         } catch (e) { 
-            Alert.alert("Upload Failed", "Network timeout. Make sure your internet connection is stable and try again."); 
+            if (e.code === 'ECONNABORTED') {
+                Alert.alert("⏱ Taking too long", "The PDF is very large. Please try with a smaller PDF (under 5MB) or check your internet connection.");
+            } else {
+                Alert.alert("Upload Failed", "Could not connect to server. Please check your internet and try again.");
+            }
         } 
         finally { setUploading(false); }
     };
+
 
     const handleOptions = (type, item) => {
         const id = type === 'folder' ? item.folder_id : item.job_id;
@@ -476,9 +481,23 @@ const PDFToExamScreen = ({ user, navigation }) => {
             setSelectedPdfs(prev => prev.includes(item.job_id) ? prev.filter(id => id !== item.job_id) : [...prev, item.job_id]);
         } else {
             if (isReady) setSelectedJob(item);
-            else if (isFailed) Alert.alert("Failed", "This PDF could not be analyzed. Please try another one.");
+            else if (isFailed) {
+                Alert.alert(
+                    "Analysis Failed", 
+                    `This PDF could not be analyzed.\n\nReason: ${item.error_message || 'Unknown error'}\n\nWould you like to delete it and try uploading again?`,
+                    [
+                        { text: "Keep", style: "cancel" },
+                        { text: "Delete", style: "destructive", onPress: async () => {
+                            setJobs(prev => prev.filter(j => j.job_id !== item.job_id));
+                            try {
+                                await axios.post(`${API_URL}/delete_pdf_job.php`, `user_id=${user?.user_id}&job_id=${item.job_id}`, { headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
+                            } catch(e) { loadData(); }
+                        }}
+                    ]
+                );
+            }
         }
-    }, [isMultiSelectMode]);
+    }, [isMultiSelectMode, user]);
 
     const renderFolder = useCallback(({ item, index }) => (
         <FolderCard 
@@ -549,10 +568,15 @@ const PDFToExamScreen = ({ user, navigation }) => {
                             <TouchableOpacity style={styles.uploadZone} onPress={handleUpload} disabled={uploading}>
                                 <LinearGradient colors={['#ec4899', '#8b5cf6']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={styles.uploadGrad}>
                                     <View style={[styles.uploadIconWrap, { backgroundColor: '#ffffff30' }]}>
-                                        <MaterialCommunityIcons name={uploading ? "cloud-upload-outline" : "file-document-plus-outline"} size={28} color="white" />
+                                        {uploading 
+                                            ? <ActivityIndicator size="small" color="white" />
+                                            : <MaterialCommunityIcons name="file-document-plus-outline" size={28} color="white" />
+                                        }
                                     </View>
-                                    <Text style={styles.uTitle}>{uploading ? "Uploading PDF..." : "Turn any PDF into a Study Set"}</Text>
-                                    <Text style={[styles.uSub, { color: '#f3e8ff' }]}>Tap to select a document from your device</Text>
+                                    <Text style={styles.uTitle}>{uploading ? "Analyzing PDF... Please wait" : "Turn any PDF into a Study Set"}</Text>
+                                    <Text style={[styles.uSub, { color: '#f3e8ff' }]}>
+                                        {uploading ? "AI is generating questions & flashcards" : "Tap to select a document from your device"}
+                                    </Text>
                                 </LinearGradient>
                             </TouchableOpacity>
                         )}

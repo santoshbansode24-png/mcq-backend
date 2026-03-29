@@ -105,7 +105,7 @@ if (!function_exists('callGeminiPDF')) {
             ],
             'generationConfig' => [
                 'temperature' => 0.4,
-                'maxOutputTokens' => 4096, // Increased for large study packs
+                'maxOutputTokens' => 8192,
                 'responseMimeType' => 'application/json'
             ]
         ];
@@ -115,24 +115,30 @@ if (!function_exists('callGeminiPDF')) {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60s for PDF processing
+        curl_setopt($ch, CURLOPT_TIMEOUT, 240); // 4 min for large PDFs
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         
         $response = curl_exec($ch);
+        $curlError = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
+        if ($curlError) throw new Exception("cURL Error: " . $curlError);
         if ($httpCode !== 200) {
-            error_log("Gemini PDF Fail: " . $response);
-            throw new Exception("Gemini API Error ($httpCode)");
+            $errorDetails = json_decode($response, true);
+            $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : substr($response, 0, 300);
+            error_log("Gemini PDF Fail ($httpCode): " . $response);
+            throw new Exception("Gemini API Error ($httpCode): " . $msg);
         }
         
         $decoded = json_decode($response, true);
         if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
             return $decoded['candidates'][0]['content']['parts'][0]['text'];
         }
-        throw new Exception("Invalid PDF AI response.");
+        // Log what we got for debugging
+        error_log("Gemini PDF invalid response: " . substr($response, 0, 500));
+        throw new Exception("Invalid PDF AI response. Response keys: " . implode(',', array_keys($decoded ?? [])));
     }
 }
-?>
+

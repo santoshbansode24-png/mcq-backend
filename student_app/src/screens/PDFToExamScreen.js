@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, FlatList,
     ActivityIndicator, Alert, Animated, Platform, StatusBar,
-    Dimensions, ScrollView, Modal, TextInput, Pressable, RefreshControl
+    Dimensions, ScrollView, Modal, TextInput, Pressable, RefreshControl,
+    BackHandler, InteractionManager
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,30 +30,56 @@ const CircularProgress = ({ progress = 0, size = 60, strokeWidth = 5, color = "#
     );
 };
 
-const FolderCard = React.memo(({ item, isMultiSelectMode, onFolderSelect, onFolderOptions }) => (
-    <TouchableOpacity 
-        style={[styles.folderCard, isMultiSelectMode && { opacity: 0.3 }]} 
-        onPress={() => onFolderSelect(item)}
-        onLongPress={() => onFolderOptions('folder', item)}
-        disabled={isMultiSelectMode}
-    >
-        <LinearGradient colors={['#ffffff15', '#ffffff05']} style={styles.glassFolder}>
-            <MaterialCommunityIcons name="molecule" size={30} color="#818cf8" />
-            <Text style={styles.folderLabel} numberOfLines={1}>{item.name}</Text>
-        </LinearGradient>
-    </TouchableOpacity>
-), (prev, next) => prev.isMultiSelectMode === next.isMultiSelectMode && prev.item.name === next.item.name);
+const VIBRANT_THEMES = [
+    { start: '#10b981', end: '#059669', shadow: '#10b981', bg: '#10b98115' }, // Emerald
+    { start: '#f43f5e', end: '#e11d48', shadow: '#f43f5e', bg: '#f43f5e15' }, // Rose
+    { start: '#3b82f6', end: '#2563eb', shadow: '#3b82f6', bg: '#3b82f615' }, // Azure
+    { start: '#8b5cf6', end: '#6d28d9', shadow: '#8b5cf6', bg: '#8b5cf615' }, // Violet
+    { start: '#f97316', end: '#ea580c', shadow: '#f97316', bg: '#f9731615' }, // Orange
+    { start: '#06b6d4', end: '#0891b2', shadow: '#06b6d4', bg: '#06b6d415' }, // Cyan
+    { start: '#ec4899', end: '#be185d', shadow: '#ec4899', bg: '#ec489915' }, // Pink
+    { start: '#eab308', end: '#ca8a04', shadow: '#eab308', bg: '#eab30815' }, // Yellow
+];
 
-const JobCard = React.memo(({ item, isMultiSelectMode, selectModeType, isSelected, onJobSelect, onJobOptions }) => {
+const getThemeColor = (idx) => VIBRANT_THEMES[(idx || 0) % VIBRANT_THEMES.length];
+
+const FolderCard = React.memo(({ item, index, isMultiSelectMode, onFolderSelect, onFolderOptions }) => {
+    const theme = getThemeColor(index !== undefined ? index : item.folder_id || 0);
+    return (
+        <TouchableOpacity 
+            style={[styles.folderCard, isMultiSelectMode && { opacity: 0.3 }]} 
+            onPress={() => onFolderSelect(item)}
+            onLongPress={() => onFolderOptions('folder', item)}
+            disabled={isMultiSelectMode}
+        >
+            <LinearGradient colors={[theme.start, theme.end]} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={[styles.glassFolder, { borderWidth: 0, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 }]}>
+                <MaterialCommunityIcons name="folder-text" size={32} color="white" />
+                <Text style={styles.folderLabel} numberOfLines={1}>{item.name}</Text>
+            </LinearGradient>
+        </TouchableOpacity>
+    );
+}, (prev, next) => prev.isMultiSelectMode === next.isMultiSelectMode && prev.item.name === next.item.name && prev.index === next.index);
+
+const JobCard = React.memo(({ item, index, isMultiSelectMode, selectModeType, isSelected, onJobSelect, onJobOptions }) => {
     const isReady = item.status === 'completed';
     const isFailed = item.status === 'failed';
     const progress = isReady ? 100 : (item.progress || 10);
+    
+    // Assign unique distinct dynamic color per job file
+    const theme = getThemeColor(index !== undefined ? index : item.job_id || 0);
+
     return (
         <TouchableOpacity 
             style={[
                 styles.pdfRow, 
-                { borderColor: isReady ? '#10b98150' : (isFailed ? '#ef444450' : '#ffffff10') },
-                isMultiSelectMode && isSelected && { borderColor: selectModeType === 'worksheet' ? '#34d399' : '#60a5fa', backgroundColor: '#ffffff15' }
+                { 
+                    borderLeftWidth: 4,
+                    borderLeftColor: theme.start,
+                    backgroundColor: '#ffffff08',
+                    paddingLeft: 12,
+                    borderColor: '#ffffff10' 
+                },
+                isMultiSelectMode && isSelected && { backgroundColor: theme.bg, borderColor: theme.start, borderLeftWidth: 4 }
             ]} 
             onPress={() => onJobSelect(item, isReady, isFailed)}
             onLongPress={() => onJobOptions('file', item)}
@@ -60,22 +88,28 @@ const JobCard = React.memo(({ item, isMultiSelectMode, selectModeType, isSelecte
                 {isMultiSelectMode && isReady ? (
                     <View style={[
                         styles.checkbox, 
-                        isSelected && { backgroundColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6', borderColor: selectModeType === 'worksheet' ? '#10b981' : '#3b82f6' }
+                        isSelected && { backgroundColor: theme.start, borderColor: theme.start }
                     ]}>
                         {isSelected && <MaterialCommunityIcons name="check" size={16} color="white" />}
                     </View>
                 ) : (
                     <>
-                        <CircularProgress progress={progress} size={60} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} strokeWidth={4} />
-                        <MaterialCommunityIcons name={isFailed ? "file-cancel" : "file-document-check"} size={26} color={isReady ? "#10b981" : (isFailed ? "#ef4444" : "#6366f1")} />
+                        <CircularProgress progress={progress} size={60} color={isFailed ? "#ef4444" : theme.start} strokeWidth={4} />
+                        <MaterialCommunityIcons name={isFailed ? "file-cancel" : "text-box-outline"} size={26} color={isFailed ? "#ef4444" : theme.start} />
                     </>
                 )}
             </View>
             <View style={styles.pdfRowContent}>
                 <Text style={styles.pdfRowTitle} numberOfLines={2}>{item.file_name}</Text>
-                <Text style={[styles.pdfRowStatus, { color: isFailed ? '#f87171' : (isReady ? '#10b981' : '#818cf8') }]}>
-                    {isFailed ? 'Analysis Failed' : (isReady ? 'Study Pack Ready' : `${progress}% Processing`)}
-                </Text>
+                {/* Advanced Pill Badges */}
+                <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                    <View style={[styles.statusPill, { backgroundColor: isFailed ? '#ef444420' : (isReady ? '#10b98120' : theme.bg) }]}>
+                        <View style={[styles.statusDot, { backgroundColor: isFailed ? '#ef4444' : (isReady ? '#10b981' : theme.start) }]} />
+                        <Text style={[styles.statusPillText, { color: isFailed ? '#f87171' : (isReady ? '#34d399' : theme.start) }]}>
+                            {isFailed ? 'Analysis Failed' : (isReady ? 'Ready to Study' : `${progress}% AI Processing`)}
+                        </Text>
+                    </View>
+                </View>
             </View>
             {isReady && !isMultiSelectMode && <MaterialCommunityIcons name="chevron-right" size={28} color="#64748b" />}
         </TouchableOpacity>
@@ -85,11 +119,13 @@ const JobCard = React.memo(({ item, isMultiSelectMode, selectModeType, isSelecte
            prev.item.progress === next.item.progress &&
            prev.isMultiSelectMode === next.isMultiSelectMode &&
            prev.selectModeType === next.selectModeType &&
-           prev.isSelected === next.isSelected;
+           prev.isSelected === next.isSelected &&
+           prev.index === next.index;
 });
 
 const PDFToExamScreen = ({ user, navigation }) => {
     const { theme, isDarkMode } = useTheme();
+    const isFocused = useIsFocused();
     
     // Data State
     const [folders, setFolders] = useState([]);
@@ -130,6 +166,28 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
         return () => clearInterval(timer);
     }, [jobs]);
+
+    useEffect(() => {
+        const backAction = () => {
+            if (isMultiSelectMode) {
+                setIsMultiSelectMode(false);
+                setSelectedPdfs([]);
+                return true; // prevent default behavior
+            }
+            if (pathStack.length > 1) {
+                setPathStack(prev => prev.slice(0, -1));
+                return true; // prevent default behavior
+            }
+            return false; // let system handle it
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [isMultiSelectMode, pathStack]);
 
     const loadData = async (silent = false) => {
         if (!silent) setLoading(true);
@@ -209,10 +267,21 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     { text: "DELETE", style: "destructive", onPress: async () => {
                         const endpoint = type === 'folder' ? 'delete_pdf_folder.php' : 'delete_pdf_job.php';
                         const key = type === 'folder' ? 'folder_id' : 'job_id';
+                        
+                        // Optimistic Update
+                        if (type === 'folder') {
+                             setFolders(prev => prev.filter(f => f.folder_id !== id));
+                        } else {
+                             setJobs(prev => prev.filter(j => j.job_id !== id));
+                        }
+                        
                         try {
                             await axios.post(`${API_URL}/${endpoint}`, `user_id=${user?.user_id}&${key}=${id}`, { headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
-                            loadData();
-                        } catch(e) { Alert.alert("Error", "Delete failed"); }
+                            // Verify sync silently if needed, local state handles UI immediately
+                        } catch(e) { 
+                            Alert.alert("Error", "Delete failed"); 
+                            loadData(); // Revert on failure
+                        }
                     }}
                 ]);
             }}
@@ -221,16 +290,28 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     const handleRenameFile = async () => {
         if (!renameText.trim() || !itemToRename) return;
+        
+        // Optimistic Update
+        if (itemToRename.type === 'folder') {
+             setFolders(prev => prev.map(f => f.folder_id === itemToRename.id ? {...f, name: renameText} : f));
+        } else {
+             setJobs(prev => prev.map(j => j.job_id === itemToRename.id ? {...j, file_name: renameText} : j));
+        }
+        
+        setShowRenameModal(false);
+        const newName = renameText;
+        setRenameText('');
+        
         try {
             await axios.post(`${API_URL}/rename_pdf_item.php`, 
-                `user_id=${user?.user_id}&type=${itemToRename.type}&id=${itemToRename.id}&new_name=${encodeURIComponent(renameText)}`,
+                `user_id=${user?.user_id}&type=${itemToRename.type}&id=${itemToRename.id}&new_name=${encodeURIComponent(newName)}`,
                 { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
             );
-            setShowRenameModal(false);
-            setRenameText('');
             setItemToRename(null);
-            loadData();
-        } catch (e) { Alert.alert("Error", "Could not rename item"); }
+        } catch (e) { 
+            Alert.alert("Error", "Could not rename item"); 
+            loadData(); // Revert on failure 
+        }
     };
 
     const getCounts = (job) => {
@@ -313,68 +394,76 @@ const PDFToExamScreen = ({ user, navigation }) => {
     };
 
     const handleGenerateAggregate = () => {
-        let allMcqs = [];
-        let allCards = [];
+        // Complete state flush immediately to unblock UI
+        const pdfsToProcess = [...selectedPdfs];
+        const modeTypeToUse = selectModeType;
         
-        selectedPdfs.forEach(jobId => {
-            const job = jobs.find(j => j.job_id === jobId);
-            if (job && job.study_content) {
-                try {
-                    const data = JSON.parse(job.study_content);
-                    
-                    if (data.mcqs) {
-                        const normalizedMcqs = data.mcqs.map(m => {
-                            // The AI outputs index 0-3 for answer. Convert to 'a', 'b', 'c', 'd'
-                            const answerMap = ['a', 'b', 'c', 'd'];
-                            const correctLetter = (m.a !== undefined && m.a >= 0 && m.a <= 3) ? answerMap[m.a] : (m.correct_answer || 'a');
-
-                            return {
-                                question: m.q || m.question || m.question_text || '',
-                                option_a: (m.o && m.o[0]) ? m.o[0] : (m.option_a || ''),
-                                option_b: (m.o && m.o[1]) ? m.o[1] : (m.option_b || ''),
-                                option_c: (m.o && m.o[2]) ? m.o[2] : (m.option_c || ''),
-                                option_d: (m.o && m.o[3]) ? m.o[3] : (m.option_d || ''),
-                                correct_answer: correctLetter,
-                                explanation: m.e || m.explanation || '',
-                                source_pdf: job.file_name,
-                                ...m // Spread original just in case
-                            };
-                        });
-                        allMcqs = [...allMcqs, ...normalizedMcqs];
-                    }
-                    
-                    if (data.flashcards) {
-                        const normalizedCards = data.flashcards.map(f => ({
-                            question: f.f || f.front || f.q || '',
-                            answer: f.b || f.back || f.a || '',
-                            source_pdf: job.file_name,
-                            ...f
-                        }));
-                        allCards = [...allCards, ...normalizedCards];
-                    }
-                } catch(e) { 
-                    console.log("Failed to parse job content", e); 
-                }
-            }
-        });
-        
-        // Prepare parameter payload
-        const payloadParams = {
-            allMcqs: allMcqs,
-            allCards: allCards,
-            subjectNames: `Custom AI Generated (${selectedPdfs.length} PDFs)`
-        };
-
-        // Complete state flush
         setIsMultiSelectMode(false);
         setSelectedPdfs([]);
 
-        // Explicit Navigation to the beautifully matched Worksheet/Exam Custom Screens
-        if (selectModeType === 'worksheet') {
-            navigation.navigate('AIPdfWorksheet', payloadParams);
-        } else {
-            navigation.navigate('AIPdfExam', payloadParams);
-        }
+        // Defer heavy parsing to ensure touch ripple and modal close are smooth
+        InteractionManager.runAfterInteractions(() => {
+            setTimeout(() => {
+                let allMcqs = [];
+                let allCards = [];
+                
+                pdfsToProcess.forEach(jobId => {
+                    const job = jobs.find(j => j.job_id === jobId);
+                    if (job && job.study_content) {
+                        try {
+                            const data = JSON.parse(job.study_content);
+                            
+                            if (data.mcqs) {
+                                const normalizedMcqs = data.mcqs.map(m => {
+                                    // The AI outputs index 0-3 for answer. Convert to 'a', 'b', 'c', 'd'
+                                    const answerMap = ['a', 'b', 'c', 'd'];
+                                    const correctLetter = (m.a !== undefined && m.a >= 0 && m.a <= 3) ? answerMap[m.a] : (m.correct_answer || 'a');
+
+                                    return {
+                                        question: m.q || m.question || m.question_text || '',
+                                        option_a: (m.o && m.o[0]) ? m.o[0] : (m.option_a || ''),
+                                        option_b: (m.o && m.o[1]) ? m.o[1] : (m.option_b || ''),
+                                        option_c: (m.o && m.o[2]) ? m.o[2] : (m.option_c || ''),
+                                        option_d: (m.o && m.o[3]) ? m.o[3] : (m.option_d || ''),
+                                        correct_answer: correctLetter,
+                                        explanation: m.e || m.explanation || '',
+                                        source_pdf: job.file_name,
+                                        ...m // Spread original just in case
+                                    };
+                                });
+                                allMcqs = [...allMcqs, ...normalizedMcqs];
+                            }
+                            
+                            if (data.flashcards) {
+                                const normalizedCards = data.flashcards.map(f => ({
+                                    question: f.f || f.front || f.q || '',
+                                    answer: f.b || f.back || f.a || '',
+                                    source_pdf: job.file_name,
+                                    ...f
+                                }));
+                                allCards = [...allCards, ...normalizedCards];
+                            }
+                        } catch(e) { 
+                            console.log("Failed to parse job content", e); 
+                        }
+                    }
+                });
+                
+                // Prepare parameter payload
+                const payloadParams = {
+                    allMcqs: allMcqs,
+                    allCards: allCards,
+                    subjectNames: `Custom AI Generated (${pdfsToProcess.length} PDFs)`
+                };
+
+                // Explicit Navigation to the beautifully matched Worksheet/Exam Custom Screens
+                if (modeTypeToUse === 'worksheet') {
+                    navigation.navigate('AIPdfWorksheet', payloadParams);
+                } else {
+                    navigation.navigate('AIPdfExam', payloadParams);
+                }
+            }, 50); // slight delay
+        });
     };
 
     const handleFolderSelect = useCallback((item) => {
@@ -391,20 +480,22 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
     }, [isMultiSelectMode]);
 
-    const renderFolder = useCallback(({ item }) => (
+    const renderFolder = useCallback(({ item, index }) => (
         <FolderCard 
             item={item} 
+            index={index}
             isMultiSelectMode={isMultiSelectMode} 
             onFolderSelect={handleFolderSelect} 
             onFolderOptions={handleOptions} 
         />
     ), [isMultiSelectMode, handleFolderSelect]);
 
-    const renderJob = useCallback(({ item }) => {
+    const renderJob = useCallback(({ item, index }) => {
         const isSelected = selectedPdfs.includes(item.job_id);
         return (
             <JobCard 
                 item={item} 
+                index={index}
                 isMultiSelectMode={isMultiSelectMode} 
                 selectModeType={selectModeType} 
                 isSelected={isSelected} 
@@ -416,7 +507,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" translucent />
+            {isFocused && <StatusBar barStyle="light-content" backgroundColor="#0b0e14" /> }
             
             <View style={styles.header}>
                 <SafeAreaView>
@@ -433,93 +524,102 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 </SafeAreaView>
             </View>
 
-            <ScrollView 
+            <FlatList
+                data={jobs}
+                renderItem={renderJob}
+                keyExtractor={k => k.job_id.toString()}
                 bounces={true} 
                 style={styles.body} 
                 showsVerticalScrollIndicator={false}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                removeClippedSubviews={Platform.OS === 'android'}
+                ListEmptyComponent={!loading ? <Text style={styles.emptyBig}>Upload a PDF above to create logic study tools</Text> : null}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
                 }
-            >
-                {/* New Prominent Dropzone */}
-                {!isMultiSelectMode && (
-                    <TouchableOpacity style={styles.uploadZone} onPress={handleUpload} disabled={uploading}>
-                        <LinearGradient colors={['#312e8160', '#1e1b4b90']} style={styles.uploadGrad}>
-                            <View style={styles.uploadIconWrap}>
-                                <MaterialCommunityIcons name={uploading ? "cloud-upload-outline" : "file-document-plus-outline"} size={45} color="#818cf8" />
+                ListFooterComponent={
+                    <View style={{ height: 100 }} />
+                }
+                ListHeaderComponent={
+                    <>
+                        {/* New Prominent Dropzone */}
+                        {!isMultiSelectMode && (
+                            <TouchableOpacity style={styles.uploadZone} onPress={handleUpload} disabled={uploading}>
+                                <LinearGradient colors={['#ec4899', '#8b5cf6']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={styles.uploadGrad}>
+                                    <View style={[styles.uploadIconWrap, { backgroundColor: '#ffffff30' }]}>
+                                        <MaterialCommunityIcons name={uploading ? "cloud-upload-outline" : "file-document-plus-outline"} size={28} color="white" />
+                                    </View>
+                                    <Text style={styles.uTitle}>{uploading ? "Uploading PDF..." : "Turn any PDF into a Study Set"}</Text>
+                                    <Text style={[styles.uSub, { color: '#f3e8ff' }]}>Tap to select a document from your device</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Global Generators Multi-Select Tools */}
+                        {!isMultiSelectMode && (
+                            <View style={styles.generatorsRow}>
+                                <TouchableOpacity style={styles.genCard} onPress={() => { setIsMultiSelectMode(true); setSelectModeType('worksheet'); setSelectedPdfs([]); }}>
+                                    <LinearGradient colors={['#f97316', '#e11d48']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={styles.genGrad}>
+                                        <MaterialCommunityIcons name="file-document-edit" size={28} color="white" />
+                                        <Text style={styles.genTitle}>Worksheet</Text>
+                                        <Text style={[styles.genSub, { color: '#ffe4e6' }]}>Combine PDFs</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.genCard} onPress={() => { setIsMultiSelectMode(true); setSelectModeType('exam'); setSelectedPdfs([]); }}>
+                                    <LinearGradient colors={['#fbbf24', '#d97706']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={styles.genGrad}>
+                                        <MaterialCommunityIcons name="text-box-check" size={28} color="white" />
+                                        <Text style={styles.genTitle}>Custom Exam</Text>
+                                        <Text style={[styles.genSub, { color: '#fef3c7' }]}>Combine PDFs</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </View>
-                            <Text style={styles.uTitle}>{uploading ? "Uploading PDF..." : "Turn any PDF into a Study Set"}</Text>
-                            <Text style={styles.uSub}>Tap to select a document from your device</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
+                        )}
 
-                {/* Global Generators Multi-Select Tools */}
-                {!isMultiSelectMode && (
-                    <View style={styles.generatorsRow}>
-                        <TouchableOpacity style={styles.genCard} onPress={() => { setIsMultiSelectMode(true); setSelectModeType('worksheet'); setSelectedPdfs([]); }}>
-                            <LinearGradient colors={['#10b98120', '#34d39910']} style={styles.genGrad}>
-                                <MaterialCommunityIcons name="file-document-edit" size={28} color="#34d399" />
-                                <Text style={styles.genTitle}>Worksheet</Text>
-                                <Text style={styles.genSub}>Combine PDFs</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
+                        {/* Selection Instructional Banner */}
+                        {isMultiSelectMode && (
+                            <View style={styles.multiSelectBanner}>
+                                <MaterialCommunityIcons name="checkbox-multiple-marked-circle" size={24} color={selectModeType === 'worksheet' ? "#10b981" : "#3b82f6"} />
+                                <Text style={styles.multiSelectInfo}>
+                                    Select PDFs below to combine them into a {selectModeType === 'worksheet' ? "Worksheet" : "Custom Exam"}.
+                                </Text>
+                            </View>
+                        )}
 
-                        <TouchableOpacity style={styles.genCard} onPress={() => { setIsMultiSelectMode(true); setSelectModeType('exam'); setSelectedPdfs([]); }}>
-                            <LinearGradient colors={['#3b82f620', '#60a5fa10']} style={styles.genGrad}>
-                                <MaterialCommunityIcons name="text-box-check" size={28} color="#60a5fa" />
-                                <Text style={styles.genTitle}>Custom Exam</Text>
-                                <Text style={styles.genSub}>Combine PDFs</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                        {/* Path Navigation */}
+                        {pathStack.length > 1 && (
+                            <TouchableOpacity style={styles.backLink} onPress={() => setPathStack(pathStack.slice(0, -1))}>
+                                <MaterialCommunityIcons name="chevron-left" size={20} color="#6366f1" />
+                                <Text style={styles.backText}>{pathStack[pathStack.length-2].name}</Text>
+                            </TouchableOpacity>
+                        )}
 
-                {/* Selection Instructional Banner */}
-                {isMultiSelectMode && (
-                    <View style={styles.multiSelectBanner}>
-                        <MaterialCommunityIcons name="checkbox-multiple-marked-circle" size={24} color={selectModeType === 'worksheet' ? "#10b981" : "#3b82f6"} />
-                        <Text style={styles.multiSelectInfo}>
-                            Select PDFs below to combine them into a {selectModeType === 'worksheet' ? "Worksheet" : "Custom Exam"}.
-                        </Text>
-                    </View>
-                )}
+                        {/* Folder Section */}
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Study Folders</Text>
+                            <TouchableOpacity onPress={() => setShowFolderModal(true)}><MaterialCommunityIcons name="plus-circle-outline" size={22} color="#6366f1" /></TouchableOpacity>
+                        </View>
+                        <FlatList 
+                            data={folders} 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            renderItem={renderFolder}
+                            keyExtractor={m => m.folder_id.toString()}
+                            initialNumToRender={5}
+                            maxToRenderPerBatch={3}
+                            windowSize={3}
+                            removeClippedSubviews={Platform.OS === 'android'}
+                            ListEmptyComponent={<Text style={styles.emptySmall}>No folders yet</Text>}
+                        />
 
-                {/* Path Navigation */}
-                {pathStack.length > 1 && (
-                    <TouchableOpacity style={styles.backLink} onPress={() => setPathStack(pathStack.slice(0, -1))}>
-                        <MaterialCommunityIcons name="chevron-left" size={20} color="#6366f1" />
-                        <Text style={styles.backText}>{pathStack[pathStack.length-2].name}</Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* Folder Section */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Study Folders</Text>
-                    <TouchableOpacity onPress={() => setShowFolderModal(true)}><MaterialCommunityIcons name="plus-circle-outline" size={22} color="#6366f1" /></TouchableOpacity>
-                </View>
-                <FlatList 
-                    data={folders} 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    renderItem={renderFolder}
-                    keyExtractor={m => m.folder_id.toString()}
-                    ListEmptyComponent={<Text style={styles.emptySmall}>No folders yet</Text>}
-                />
-
-                {/* Tiles Section */}
-                <Text style={[styles.sectionTitle, { marginTop: 25 }]}>My Study Materials</Text>
-                {loading ? <ActivityIndicator size="large" color="#6366f1" style={{marginTop: 50}} /> : (
-                    <FlatList 
-                        data={jobs} 
-                        renderItem={renderJob} 
-                        scrollEnabled={false}
-                        keyExtractor={k => k.job_id.toString()}
-                        ListEmptyComponent={<Text style={styles.emptyBig}>Upload a PDF above to create logic study tools</Text>}
-                    />
-                )}
-                <View style={{ height: 100 }} />
-            </ScrollView>
+                        {/* Tiles Section */}
+                        <Text style={[styles.sectionTitle, { marginTop: 25, marginBottom: 15 }]}>My Study Materials</Text>
+                        {loading && <ActivityIndicator size="large" color="#6366f1" style={{marginTop: 50}} />}
+                    </>
+                }
+            />
 
             {/* Floating Execution Bar for Multi-Select */}
             {isMultiSelectMode && (
@@ -541,7 +641,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
             )}
 
             {/* Folder Creation Modal */}
-            <Modal visible={showFolderModal} transparent animationType="fade">
+            <Modal visible={showFolderModal} transparent animationType="fade" onRequestClose={() => setShowFolderModal(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalBox}>
                         <Text style={styles.modalHead}>New Study Folder</Text>
@@ -555,7 +655,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
             </Modal>
 
             {/* Rename Item Modal */}
-            <Modal visible={showRenameModal} transparent animationType="fade">
+            <Modal visible={showRenameModal} transparent animationType="fade" onRequestClose={() => setShowRenameModal(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalBox}>
                         <Text style={styles.modalHead}>Rename Item</Text>
@@ -569,7 +669,19 @@ const PDFToExamScreen = ({ user, navigation }) => {
             </Modal>
 
             {/* Neon Study Hub */}
-            <Modal visible={selectedJob !== null} transparent animationType="slide">
+            <Modal 
+                visible={selectedJob !== null} 
+                transparent 
+                animationType="slide" 
+                onRequestClose={() => {
+                    if (selectedMode !== null) {
+                        setSelectedMode(null);
+                    } else {
+                        setSelectedJob(null);
+                        setSelectedMode(null);
+                    }
+                }}
+            >
                 <View style={styles.sheetOverlay}>
                     <TouchableOpacity style={{flex: 1}} onPress={() => { setSelectedJob(null); setSelectedMode(null); }} />
                     <View style={styles.sheetBox}>
@@ -627,20 +739,20 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0b0e14' },
-    header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 },
+    header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 5 },
     topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    vaultTitle: { color: 'white', fontSize: 24, fontWeight: '900' },
-    vaultSub: { color: '#94a3b8', fontSize: 16, fontWeight: '500' },
+    vaultTitle: { color: 'white', fontSize: 22, fontWeight: '900' },
+    vaultSub: { color: '#94a3b8', fontSize: 14, fontWeight: '500' },
     headerIcons: { flexDirection: 'row', alignItems: 'center' },
     iconBtn: { marginLeft: 15 },
     redDot: { width: 8, height: 8, backgroundColor: '#f43f5e', borderRadius: 4, position: 'absolute', top: 0, right: 0, borderWidth: 2, borderColor: '#0b0e14' },
     
     body: { flex: 1, paddingHorizontal: 20 },
-    uploadZone: { marginTop: 10, borderRadius: 24, borderWidth: 2, borderColor: '#6366f140', borderStyle: 'dashed', overflow: 'hidden' },
-    uploadGrad: { padding: 30, alignItems: 'center', justifyContent: 'center' },
-    uploadIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#ffffff10', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
-    uTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-    uSub: { color: '#94a3b8', fontSize: 13, marginTop: 5, textAlign: 'center' },
+    uploadZone: { marginTop: 5, borderRadius: 20, borderWidth: 0, overflow: 'hidden' },
+    uploadGrad: { paddingVertical: 18, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
+    uploadIconWrap: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#ffffff10', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    uTitle: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+    uSub: { color: '#94a3b8', fontSize: 12, marginTop: 3, textAlign: 'center' },
 
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 35, marginBottom: 15 },
     sectionTitle: { color: 'white', fontSize: 18, fontWeight: '800' },
@@ -649,11 +761,13 @@ const styles = StyleSheet.create({
     glassFolder: { flex: 1, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#ffffff10' },
     folderLabel: { color: 'white', fontSize: 13, fontWeight: 'bold', marginTop: 10, width: '85%', textAlign: 'center' },
 
-    pdfRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff08', borderRadius: 20, padding: 15, marginBottom: 15, borderWidth: 1.5, borderColor: '#ffffff10' },
+    pdfRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff08', borderRadius: 20, padding: 15, marginBottom: 15, borderWidth: 1.5, borderColor: '#ffffff10', overflow: 'hidden' },
     pdfRowIcon: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center', marginRight: 15 },
     pdfRowContent: { flex: 1, justifyContent: 'center' },
-    pdfRowTitle: { color: 'white', fontSize: 15, fontWeight: 'bold', marginBottom: 4 },
-    pdfRowStatus: { fontSize: 12, fontWeight: '700' },
+    pdfRowTitle: { color: 'white', fontSize: 15, fontWeight: 'bold', marginBottom: 2 },
+    statusPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+    statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
+    statusPillText: { fontSize: 11, fontWeight: 'bold' },
     
     backLink: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
     backText: { color: '#6366f1', fontSize: 15, fontWeight: 'bold' },

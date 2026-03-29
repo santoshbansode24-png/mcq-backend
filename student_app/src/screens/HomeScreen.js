@@ -26,6 +26,15 @@ import { dataCache } from '../utils/dataCache';
 import { SmartCacheService } from '../services/SmartCacheService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const SUBJECT_GRADIENTS = [
+    ['#4f46e5', '#818cf8'], // Indigo
+    ['#0891b2', '#22d3ee'], // Cyan
+    ['#059669', '#34d399'], // Emerald
+    ['#d97706', '#fbbf24'], // Amber
+    ['#db2777', '#f472b6'], // Pink
+    ['#7c3aed', '#a78bfa'], // Violet
+];
+
 const SkeletonItem = () => {
     const opacity = useRef(new Animated.Value(0.3)).current;
 
@@ -364,15 +373,7 @@ const HomeScreen = ({ user, navigation, route }) => {
     };
 
     const getSubjectGradient = (index) => {
-        const gradients = [
-            ['#4f46e5', '#818cf8'], // Indigo
-            ['#0891b2', '#22d3ee'], // Cyan
-            ['#059669', '#34d399'], // Emerald
-            ['#d97706', '#fbbf24'], // Amber
-            ['#db2777', '#f472b6'], // Pink
-            ['#7c3aed', '#a78bfa'], // Violet
-        ];
-        return gradients[index % gradients.length];
+        return SUBJECT_GRADIENTS[index % SUBJECT_GRADIENTS.length];
     };
 
     const renderSubjectItem = useCallback(({ item, index }) => {

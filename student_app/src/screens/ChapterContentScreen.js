@@ -58,6 +58,28 @@ const revisionColors = [
     '#fff7ed', // Soft Orange
 ];
 
+const setColors = [
+    { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' }, // Red
+    { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' }, // Orange
+    { bg: '#fef3c7', border: '#fcd34d', text: '#b45309' }, // Yellow
+    { bg: '#dcfce7', border: '#86efac', text: '#15803d' }, // Green
+    { bg: '#dbeafe', border: '#93c5fd', text: '#1d4ed8' }, // Blue
+    { bg: '#f3e8ff', border: '#d8b4fe', text: '#7e22ce' }, // Purple
+];
+
+const mcqColors = [
+    { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' }, // Red
+    { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' }, // Orange
+    { bg: '#fef9c3', border: '#fde047', text: '#a16207' }, // Yellow
+    { bg: '#ecfccb', border: '#bef264', text: '#4d7c0f' }, // Lime
+    { bg: '#d1fae5', border: '#6ee7b7', text: '#047857' }, // Emerald
+    { bg: '#ccfbf1', border: '#5eead4', text: '#0f766e' }, // Teal
+    { bg: '#e0f2fe', border: '#7dd3fc', text: '#0369a1' }, // Sky
+    { bg: '#e0e7ff', border: '#a5b4fc', text: '#4338ca' }, // Indigo
+    { bg: '#fae8ff', border: '#f0abfc', text: '#a21caf' }, // Fuchsia
+    { bg: '#ffe4e6', border: '#fda4af', text: '#be123c' }, // Rose
+];
+
 // --- MEMOIZED COMPONENTS TO PREVENT FLICKER ---
 
 const NoteItem = React.memo(({ item, index, onOpenNote }) => {
@@ -990,31 +1012,6 @@ const ChapterContentScreen = ({ navigation, route }) => {
         <VideoItem item={item} index={index} onOpenVideo={handleOpenVideo} />
     ), [handleOpenVideo]);
 
-    // Color Palette for Sets (Option 1: Pastel Rainbow)
-    const setColors = [
-        { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' }, // Red
-        { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' }, // Orange
-        { bg: '#fef3c7', border: '#fcd34d', text: '#b45309' }, // Yellow
-        { bg: '#dcfce7', border: '#86efac', text: '#15803d' }, // Green
-        { bg: '#dbeafe', border: '#93c5fd', text: '#1d4ed8' }, // Blue
-        { bg: '#f3e8ff', border: '#d8b4fe', text: '#7e22ce' }, // Purple
-    ];
-
-    // Color Palette for MCQ Sets (Option 3: Warm Sunset)
-    // Color Palette for MCQ Sets (10 Vivid Soft Colors)
-    const mcqColors = [
-        { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' }, // Red
-        { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' }, // Orange
-        { bg: '#fef9c3', border: '#fde047', text: '#a16207' }, // Yellow
-        { bg: '#ecfccb', border: '#bef264', text: '#4d7c0f' }, // Lime
-        { bg: '#d1fae5', border: '#6ee7b7', text: '#047857' }, // Emerald
-        { bg: '#ccfbf1', border: '#5eead4', text: '#0f766e' }, // Teal
-        { bg: '#e0f2fe', border: '#7dd3fc', text: '#0369a1' }, // Sky
-        { bg: '#e0e7ff', border: '#a5b4fc', text: '#4338ca' }, // Indigo
-        { bg: '#fae8ff', border: '#f0abfc', text: '#a21caf' }, // Fuchsia
-        { bg: '#ffe4e6', border: '#fda4af', text: '#be123c' }, // Rose
-    ];
-
     const renderContent = () => {
         // Only show full-screen loader if data is empty (no cache yet)
         const tabData = getTabSpecificData(activeTab);
@@ -1254,6 +1251,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 renderItem={activeTab === 'Notes' ? renderNoteItem : renderVideoItem}
                 keyExtractor={(item, index) => (item.note_id || item.video_id || `item-${index}`).toString()}
                 contentContainerStyle={[styles.listContainer, contentContainerPadding]}
+                initialNumToRender={6}
                 maxToRenderPerBatch={10}
                 windowSize={5}
                 removeClippedSubviews={Platform.OS === 'android'}

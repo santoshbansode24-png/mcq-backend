@@ -8,24 +8,27 @@ ini_set('display_errors', 1);
 
 echo "=== RAILWAY VAULT DIAGNOSTIC ===\n\n";
 
-// Step 1: Check includes
+// Use absolute paths to be safe on Railway
+require_once dirname(__DIR__) . '/config/db.php';
+require_once dirname(__DIR__) . '/config/ai_config.php';
+
+// Step 1: Check Database
 echo "1. CHECKING DB CONNECTION:\n";
 try {
-    require_once '../config/db.php';
     $pdo->query("SELECT 1");
-    echo "   OK - Database connected\n\n";
+    echo "   ✅ OK - Database connected\n\n";
 } catch (Exception $e) {
-    echo "   ERROR: " . $e->getMessage() . "\n\n";
-// 1. Check API Key
-echo "1. GEMINI API KEY:\n";
+    echo "   ❌ ERROR: " . $e->getMessage() . "\n\n";
+}
+
+// Step 2: Check API Key
+echo "2. GEMINI API KEY:\n";
 try {
-    require_once '../config/ai_config.php';
     if (defined('GEMINI_API_KEY') && strlen(GEMINI_API_KEY) > 10) {
         echo "   ✅ Key loaded: " . substr(GEMINI_API_KEY, 0, 12) . "...\n";
         echo "   📡 URL: " . GEMINI_API_URL . "\n\n";
     } else {
-        echo "   ERROR - GEMINI_API_KEY is not defined!\n";
-        // Try env var directly
+        echo "   ❌ ERROR - GEMINI_API_KEY is not defined!\n";
         $envKey = getenv('GEMINI_API_KEY');
         if ($envKey) {
             echo "   Found in ENV: " . substr($envKey, 0, 12) . "...\n\n";
@@ -34,11 +37,11 @@ try {
         }
     }
 } catch (Exception $e) {
-    echo "   ERROR: " . $e->getMessage() . "\n\n";
+    echo "   ❌ ERROR: " . $e->getMessage() . "\n\n";
 }
 
-// Step 3: Check pending jobs
-echo "3. RECENT JOBS:\n";
+// Step 3: Check Recent Jobs
+echo "3. RECENT JOBS (Last 5):\n";
 try {
     $stmt = $pdo->query("SELECT job_id, file_name, status, progress, error_message, created_at FROM pdf_study_jobs ORDER BY job_id DESC LIMIT 5");
     $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -47,22 +50,28 @@ try {
     } else {
         foreach ($jobs as $j) {
             echo "   Job #{$j['job_id']}: {$j['file_name']}\n";
+            echo "   Time: {$j['created_at']}\n";
             echo "   Status={$j['status']} | Progress={$j['progress']}%\n";
             if ($j['error_message']) echo "   ERROR: {$j['error_message']}\n";
-            echo "\n";
+            echo "   -----------------------------------\n";
         }
+        echo "\n";
     }
 } catch (Exception $e) {
-    echo "   DB Error: " . $e->getMessage() . "\n\n";
+    echo "   ❌ DB Error: " . $e->getMessage() . "\n\n";
 }
 
 // Step 4: Test Gemini API
-echo "4. GEMINI API TEST:\n";
+echo "4. GEMINI API TEST (Quick check):\n";
 try {
-    $result = callGeminiAPI("Reply with one word: OK", ['maxOutputTokens' => 5]);
-    echo "   SUCCESS - Response: $result\n\n";
+    if (function_exists('callGeminiAPI')) {
+        $result = callGeminiAPI("Reply with one word: OK", ['maxOutputTokens' => 5]);
+        echo "   ✅ SUCCESS - Response: $result\n\n";
+    } else {
+        echo "   ❌ ERROR - callGeminiAPI function not found!\n\n";
+    }
 } catch (Exception $e) {
-    echo "   FAILED: " . $e->getMessage() . "\n\n";
+    echo "   ❌ FAILED: " . $e->getMessage() . "\n\n";
 }
 
 echo "=== DONE ===\n";

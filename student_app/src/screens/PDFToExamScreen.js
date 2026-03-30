@@ -11,6 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import Svg, { Circle } from 'react-native-svg';
 import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
@@ -227,33 +228,75 @@ const PDFToExamScreen = ({ user, navigation }) => {
             if (doc.canceled) return;
             const file = doc.assets[0];
             setUploading(true);
-            // Use Expo FileSystem to natively handle content:// URIs on Android APKs avoiding 0-byte silent network failures
-            const uploadResponse = await FileSystem.uploadAsync(
-                `${API_URL}/upload_pdf_study.php`,
-                file.uri,
-                {
-                    fieldName: 'pdf_file',
-                    httpMethod: 'POST',
-                    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-                    parameters: {
-                        user_id: (user?.user_id || 0).toString(),
-                        ...(currentFolderId !== 'root' ? { folder_id: currentFolderId.toString() } : {})
-                    }
-                }
-            );
+            // --- Fix for Android APK "content://" URI Upload Bug ---
+            // EXPLANATION: In a production APK, DocumentPicker returns a "content://" URI. 
+            // FileSystem.uploadAsync often corrupts or truncates content:// URIs during streaming,
+            // resulting in a damaged PDF arriving at the server. 
+            // The fix is to explicitly copy it to a standard file:// URI in the app's cache first.
+            const fileName = file.name || 'study_document.pdf';
+            const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const localUri = `${LegacyFileSystem.cacheDirectory}${safeName}`;
             
-            // Server responds instantly (inline background AI processing runs after)
-            const responseData = JSON.parse(uploadResponse.body);
+            console.log("Preparing upload:", { originalUri: file.uri, localUri, apiUrl: `${API_URL}/upload_pdf_study.php` });
+
+            await LegacyFileSystem.copyAsync({
+                from: file.uri,
+                to: localUri
+            });
+
+            // Use standard fetch + FormData to bypass any FileSystem.uploadAsync stream padding bugs
+            const formData = new FormData();
+            formData.append('pdf_file', {
+                uri: localUri,
+                name: safeName,
+                type: 'application/pdf'
+            });
+            formData.append('user_id', (user?.user_id || 0).toString());
+            if (currentFolderId !== 'root') {
+                formData.append('folder_id', currentFolderId.toString());
+            }
+
+            console.log("Sending fetch request... (waiting up to 90s for AI)");
+            // 90-second timeout — AI runs synchronously on server, this can take 20–90s
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 90000);
+            let response;
+            try {
+                response = await fetch(`${API_URL}/upload_pdf_study.php`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+            
+            const rawText = await response.text();
+            let responseData;
+            try {
+                responseData = JSON.parse(rawText);
+            } catch (e) {
+                console.log("Failed to parse server response:", rawText);
+                throw new Error("Invalid response from server. Check backend logs.");
+            }
             
             if (responseData.status === 'success') { 
-                Alert.alert("✅ Done!", "Your PDF is uploaded and AI is processing. It will be ready in a moment!"); 
-                loadData(true); 
+                Alert.alert("✅ Ready!", "AI has analyzed your PDF. Your study materials (MCQs & Flashcards) are ready!"); 
+                loadData(); 
             } else {
-                Alert.alert("Error", responseData.message || "Upload failed.");
+                Alert.alert("Analysis Failed", responseData.message || "Upload failed. Please try again.");
             }
         } catch (e) { 
-            console.log("Upload Error:", e);
-            Alert.alert("Upload Failed", "Could not connect to server or process file. Check your internet connection.");
+            console.log("Upload Error Detail:", e);
+            if (e.name === 'AbortError') {
+                Alert.alert("Timeout", "Analysis took too long (>90s). Please try a smaller PDF or check your connection.");
+            } else {
+                Alert.alert("Upload Failed", `Error: ${e.message}\n\nCheck your internet connection and verify the server is online.`);
+            }
         } 
         finally { setUploading(false); }
     };

@@ -3,21 +3,14 @@
  * Upload PDF for AI Study Analysis
  * 1. Validates & saves the PDF file
  * 2. Creates a job record in DB
- * 3. Flushes "success" response to app immediately
- * 4. Runs AI processing inline (after response sent)
- *
- * WHY: Railway uses php -S (single-threaded). Firing a cURL to a
- * separate worker script blocks because the server can only handle
- * one request at a time. This inline approach solves that completely.
+ * 3. Runs AI processing synchronously
+ * 4. Returns final response to app
  */
 set_time_limit(300); // 5 minutes for AI processing
 ini_set('memory_limit', '512M');
-ignore_user_abort(true); // Keep running even after response is sent
 
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
-
-file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "POST=" . json_encode($_POST) . " FILES=" . json_encode($_FILES) . "\n", FILE_APPEND);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Content-Type: application/json');
@@ -25,8 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$job_id = null;
-$targetPath = null;
+$job_id = null; // Track job_id so the catch block can update it
 
 try {
     // 1. Validate Input
@@ -39,73 +31,32 @@ try {
     $file      = $_FILES['pdf_file'];
     $fileName  = urldecode($file['name']);
     $tmpPath   = $file['tmp_name'];
-    $fileError = $file['error'];
-    if ($fileError !== 0) throw new Exception("Upload failed with error code: $fileError");
+    if ($file['error'] !== 0) throw new Exception("Upload failed with error code: " . $file['error']);
     $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
     if ($ext !== 'pdf') throw new Exception("Only PDF files are allowed.");
-    if ($file['size'] === 0) throw new Exception("File is empty (0 bytes). Your device may have denied storage reading permissions.");
+    if ($file['size'] === 0) throw new Exception("File is empty (0 bytes). Your device may have denied storage read permissions.");
 
-    // 3. Save file to uploads directory
+    // 3. Save file
     $uploadDir = dirname(__DIR__) . '/uploads/pdf_study/';
     if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-    $safeFileName   = preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
-    $uniqueFileName = time() . '_' . $user_id . '_' . $safeFileName;
+    $uniqueFileName = time() . '_' . $user_id . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
     $targetPath     = $uploadDir . $uniqueFileName;
-    if (!move_uploaded_file($tmpPath, $targetPath)) {
-        throw new Exception("Failed to save file. Upload dir: $uploadDir");
-    }
+    if (!move_uploaded_file($tmpPath, $targetPath)) throw new Exception("Failed to save file. Check upload dir permissions.");
 
-    // 4. Create Job Record in DB
-    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, status, progress, total_pages) VALUES (?, ?, ?, ?, 'pending', 10, 0)");
+    // 4. Create Job Record (status = processing so app knows it started)
+    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, status, progress, total_pages) VALUES (?, ?, ?, ?, 'processing', 20, 0)");
     $stmt->execute([$user_id, $folder_id, $fileName, $uniqueFileName]);
     $job_id = $pdo->lastInsertId();
 
-    // 5. === FLUSH RESPONSE TO APP IMMEDIATELY ===
-    // Send the success response now, before starting the slow AI work.
-    // The app will see "success" and start polling for status.
-    $responseBody = json_encode([
-        'status'    => 'success',
-        'message'   => 'PDF uploaded! AI is processing...',
-        'job_id'    => $job_id,
-        'file_name' => $fileName
-    ]);
-    header('Content-Type: application/json');
-    header('Connection: close');
-    header('Content-Length: ' . strlen($responseBody));
-    echo $responseBody;
-    
-    // Flush all output buffers to send headers + body to the client now
-    if (ob_get_level() > 0) ob_end_flush();
-    flush();
-    session_write_close();
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-    }
-    
-    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Response sent for job_id=$job_id. Starting inline AI...\n", FILE_APPEND);
-
-} catch (Exception $e) {
-    error_log("PDF Upload Error: " . $e->getMessage());
-    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "UPLOAD ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-    exit();
-}
-
-// ============================================================
-// 6. INLINE AI PROCESSING (runs after response is already sent)
-// ============================================================
-if (!$job_id || !$targetPath || !file_exists($targetPath)) {
-    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Skipping AI: job_id or file missing.\n", FILE_APPEND);
-    exit();
-}
-
-try {
-    // Mark job as processing
-    $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 20 WHERE job_id = ?")->execute([$job_id]);
-    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Job $job_id: marked processing, calling Gemini...\n", FILE_APPEND);
-
-    // Convert PDF to Base64
+    // ================================================================
+    // 5. SYNCHRONOUS AI PROCESSING
+    // WHY SYNCHRONOUS: Railway uses php -S (single-threaded dev server,
+    // NOT PHP-FPM). The "flush response then continue" trick only works
+    // on Apache/Nginx + PHP-FPM. On php -S, the process gets killed
+    // after the response is sent, so the AI code never completes and the
+    // job stays stuck with a null error_message ("Unknown error" in app).
+    // The fix: run AI here, THEN return the response. Client waits ~20-90s.
+    // ================================================================
     $pdfBase64 = base64_encode(file_get_contents($targetPath));
 
     $prompt = "Role: You are an expert Educational Content Creator and MCQ Generator.
@@ -128,56 +79,75 @@ Task: Analyze the uploaded PDF document page-by-page and generate Multiple Choic
 JSON Schema:
 {\"mcqs\": [{\"q\": \"Question...\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation...\"}], \"flashcards\": [{\"f\": \"Front / Term\", \"b\": \"Back / Definition\"}]}";
 
-    // Call Gemini with intelligent retry on transient errors (429, 500, 503, timeouts)
+    // Call Gemini with retry on transient errors
     $aiResponse = "";
     $maxRetries = 3;
     for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
         try {
+            $pdo->prepare("UPDATE pdf_study_jobs SET progress = ? WHERE job_id = ?")->execute([30 + ($attempt * 15), $job_id]);
             $aiResponse = callGeminiPDF($prompt, $pdfBase64);
-            break; // success - exit loop
+            break; // success
         } catch (Exception $e) {
             $errMsg = $e->getMessage();
-            $isTransient = (strpos($errMsg, '429') !== false || strpos($errMsg, '500') !== false || strpos($errMsg, '503') !== false || stripos($errMsg, 'time') !== false || stripos($errMsg, 'resolve') !== false);
-            
+            $isTransient = (
+                strpos($errMsg, '429') !== false ||
+                strpos($errMsg, '500') !== false ||
+                strpos($errMsg, '503') !== false ||
+                stripos($errMsg, 'timeout') !== false ||
+                stripos($errMsg, 'resolve') !== false
+            );
             if ($isTransient && $attempt < $maxRetries - 1) {
-                // Update progress subtly to let user know it's working but retrying
                 $pdo->prepare("UPDATE pdf_study_jobs SET progress = ?, error_message = ? WHERE job_id = ?")
-                    ->execute([25 + ($attempt * 10), 'AI engine busy, retrying (' . ($attempt + 2) . '/3)...', $job_id]);
-                    
-                file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Job $job_id: Transient error '$errMsg', sleeping 15s (attempt " . ($attempt+1) . ")\n", FILE_APPEND);
+                    ->execute([25 + ($attempt * 10), 'AI busy, retrying (' . ($attempt + 2) . '/3)...', $job_id]);
                 sleep(15);
             } else {
-                throw $e; // rethrow solid errors (e.g., 400 Bad Request) or final timeout
+                throw $e;
             }
         }
     }
 
-    // Aggressive JSON Extraction (Ignores conversational filler text around the JSON)
+    // Extract JSON from AI response
     $aiResponse = trim($aiResponse);
     $startIdx = strpos($aiResponse, '{');
-    $endIdx = strrpos($aiResponse, '}');
-    
-    if ($startIdx !== false && $endIdx !== false && $endIdx >= $startIdx) {
-        $json = substr($aiResponse, $startIdx, $endIdx - $startIdx + 1);
-    } else {
-        $json = $aiResponse; // Fallback to raw response if no brackets found at all
-    }
+    $endIdx   = strrpos($aiResponse, '}');
+    $json = ($startIdx !== false && $endIdx !== false && $endIdx >= $startIdx)
+        ? substr($aiResponse, $startIdx, $endIdx - $startIdx + 1)
+        : $aiResponse;
 
     $data = json_decode($json, true);
-    
-    // Validate output structure robustly
     if (!$data || (!isset($data['mcqs']) && !isset($data['flashcards']))) {
-        throw new Exception("AI generated an invalid format or refused to answer. Snippet: " . substr($json, 0, 150));
+        throw new Exception("AI returned an invalid format. Snippet: " . substr($json, 0, 200));
     }
 
-    // Save to database
-    $pdo->prepare("UPDATE pdf_study_jobs SET study_content = ?, status = 'completed', progress = 100, error_message = NULL WHERE job_id = ?")->execute([$json, $job_id]);
-    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Job $job_id: COMPLETED. MCQs=" . count($data['mcqs']) . " Flashcards=" . count($data['flashcards'] ?? []) . "\n", FILE_APPEND);
+    // Save completed result to DB
+    $pdo->prepare("UPDATE pdf_study_jobs SET study_content = ?, status = 'completed', progress = 100, error_message = NULL WHERE job_id = ?")
+        ->execute([$json, $job_id]);
+
+    // Return success — app will reload data automatically
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status'    => 'success',
+        'message'   => 'PDF analyzed! Your study materials are ready.',
+        'job_id'    => $job_id,
+        'file_name' => $fileName
+    ]);
 
 } catch (Exception $e) {
     $errMsg = $e->getMessage();
-    error_log("Inline AI Error (Job $job_id): $errMsg");
-    file_put_contents('upload_debug.log', date('[Y-m-d H:i:s] ') . "Job $job_id: FAILED - $errMsg\n", FILE_APPEND);
-    $pdo->prepare("UPDATE pdf_study_jobs SET status = 'failed', error_message = ? WHERE job_id = ?")->execute([$errMsg, $job_id]);
+    error_log("PDF Upload/AI Error: " . $errMsg);
+
+    // Always try to mark the job as failed with a real error message
+    if (!empty($job_id)) {
+        try {
+            $pdo->prepare("UPDATE pdf_study_jobs SET status = 'failed', error_message = ? WHERE job_id = ?")
+                ->execute([$errMsg, $job_id]);
+        } catch (Exception $dbEx) {
+            error_log("Also failed to update job status: " . $dbEx->getMessage());
+        }
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => $errMsg]);
+    exit();
 }
 ?>

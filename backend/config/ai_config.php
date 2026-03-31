@@ -85,6 +85,9 @@ if (!function_exists('callGeminiAPI')) {
  * @param string $base64PDF
  */
 if (!function_exists('callGeminiPDF')) {
+    // Worker Security Secret (Must match between App and Server)
+    define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+
     function callGeminiPDF($prompt, $base64PDF, $options = []) {
         if (empty(GEMINI_API_KEY)) {
             throw new Exception("GEMINI_API_KEY is not set. Add it to Railway Environment Variables.");

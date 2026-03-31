@@ -45,6 +45,7 @@ import AIPdfExamScreen from './AIPdfExamScreen';
 import AIPdfWorksheetScreen from './AIPdfWorksheetScreen';
 
 import StudyPlannerScreen from './StudyPlannerScreen';
+import StudyDetailScreen from './StudyDetailScreen';
 
 // --- Tab Button Component ---
 const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
@@ -224,7 +225,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
-            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet']
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -353,6 +354,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'StudyPlanner': return <StudyPlannerScreen {...commonProps} />;
             case 'AIPdfExam': return <AIPdfExamScreen {...commonProps} />;
             case 'AIPdfWorksheet': return <AIPdfWorksheetScreen {...commonProps} />;
+            case 'StudyDetail': return <StudyDetailScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };

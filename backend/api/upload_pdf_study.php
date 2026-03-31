@@ -55,91 +55,16 @@ try {
         }
     }
 
-    // 4. Create Job Record (status = processing so app knows it started)
-    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, status, progress, total_pages) VALUES (?, ?, ?, ?, 'processing', 20, 0)");
+    // 4. Create Job Record (status = pending for worker queue)
+    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, status, progress, total_pages) VALUES (?, ?, ?, ?, 'pending', 5, 0)");
     $stmt->execute([$user_id, $folder_id, $fileName, $uniqueFileName]);
     $job_id = $pdo->lastInsertId();
 
-    // ================================================================
-    // 5. SYNCHRONOUS AI PROCESSING
-    // WHY SYNCHRONOUS: Railway uses php -S (single-threaded dev server,
-    // NOT PHP-FPM). The "flush response then continue" trick only works
-    // on Apache/Nginx + PHP-FPM. On php -S, the process gets killed
-    // after the response is sent, so the AI code never completes and the
-    // job stays stuck with a null error_message ("Unknown error" in app).
-    // The fix: run AI here, THEN return the response. Client waits ~20-90s.
-    // ================================================================
-    $pdfBase64 = base64_encode(file_get_contents($targetPath));
-
-    $prompt = "Role: You are an expert Educational Content Creator and MCQ Generator.
-Task: Analyze the uploaded PDF document page-by-page and generate Multiple Choice Questions (MCQs) and Flashcards for every single page without skipping any content.
-
-1. Extraction Priority:
-- Static Data: For each page, first identify all 'Static Data' (Dates, Names of People/Places, Specific Figures, Laws, Scientific Formulas, and Key Events). These must not be skipped.
-- Conceptual Data: If a page lacks static data, focus on 'Conceptual Data.' Extract core theories, cause-and-effect relationships, definitions, and the primary logic.
-
-2. Output Requirements:
-- Question Volume: Produce as many questions/flashcards as needed to cover 100% of the content on dense pages, potentially up to 50 items. Do not summarize. Do not merge pages.
-- MCQ Structure: 4 distinct, plausible, slightly similar options for distractors, ensuring the user must think. Only 1 correct answer.
-- Flashcard Structure: Generate flashcards covering key definitions, concepts, and factual pairs from the content.
-- Explanation: A brief explanation/rationale for the correct answer based on the text. Include context (e.g., 'From Page X').
-
-3. Strict Constraints:
-- Language: The generated MCQs and Flashcards MUST be in the exact same language as the uploaded PDF document (e.g. Marathi or English).
-- Format: Output ONLY raw JSON matching the exact schema below! Do not include markdown backticks or prefixes outside the JSON. All data must fit inside the arrays.
-
-JSON Schema:
-{\"mcqs\": [{\"q\": \"Question...\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation...\"}], \"flashcards\": [{\"f\": \"Front / Term\", \"b\": \"Back / Definition\"}]}";
-
-    // Call Gemini with retry on transient errors
-    $aiResponse = "";
-    $maxRetries = 3;
-    for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
-        try {
-            $pdo->prepare("UPDATE pdf_study_jobs SET progress = ? WHERE job_id = ?")->execute([30 + ($attempt * 15), $job_id]);
-            $aiResponse = callGeminiPDF($prompt, $pdfBase64);
-            break; // success
-        } catch (Exception $e) {
-            $errMsg = $e->getMessage();
-            $isTransient = (
-                strpos($errMsg, '429') !== false ||
-                strpos($errMsg, '500') !== false ||
-                strpos($errMsg, '503') !== false ||
-                stripos($errMsg, 'timeout') !== false ||
-                stripos($errMsg, 'resolve') !== false
-            );
-            if ($isTransient && $attempt < $maxRetries - 1) {
-                $pdo->prepare("UPDATE pdf_study_jobs SET progress = ?, error_message = ? WHERE job_id = ?")
-                    ->execute([25 + ($attempt * 10), 'AI busy, retrying (' . ($attempt + 2) . '/3)...', $job_id]);
-                sleep(15);
-            } else {
-                throw $e;
-            }
-        }
-    }
-
-    // Extract JSON from AI response
-    $aiResponse = trim($aiResponse);
-    $startIdx = strpos($aiResponse, '{');
-    $endIdx   = strrpos($aiResponse, '}');
-    $json = ($startIdx !== false && $endIdx !== false && $endIdx >= $startIdx)
-        ? substr($aiResponse, $startIdx, $endIdx - $startIdx + 1)
-        : $aiResponse;
-
-    $data = json_decode($json, true);
-    if (!$data || (!isset($data['mcqs']) && !isset($data['flashcards']))) {
-        throw new Exception("AI returned an invalid format. Snippet: " . substr($json, 0, 200));
-    }
-
-    // Save completed result to DB
-    $pdo->prepare("UPDATE pdf_study_jobs SET study_content = ?, status = 'completed', progress = 100, error_message = NULL WHERE job_id = ?")
-        ->execute([$json, $job_id]);
-
-    // Return success — app will reload data automatically
+    // 5. Instantly return success (Background worker takes over via cron/polling)
     header('Content-Type: application/json');
     echo json_encode([
         'status'    => 'success',
-        'message'   => 'PDF analyzed! Your study materials are ready.',
+        'message'   => 'PDF queued for AI analysis. You will be notified when ready.',
         'job_id'    => $job_id,
         'file_name' => $fileName
     ]);

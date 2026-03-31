@@ -1,116 +1,127 @@
 <?php
 /**
  * Elite AI Worker: Gemini 2.0 Native PDF Processing
- * No manual parsing | Direct Vision | Recursive & Fast
+ * Optimized for Railway.app & Veeru App Production
  */
-set_time_limit(300); // 5 minutes max
+set_time_limit(600); // Increased to 10 mins for dense PDFs
 ignore_user_abort(true);
 
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
 
-// 1. Fetch pending jobs
-$stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'pending' LIMIT 3");
+// Security Check: Only allow authorized triggers (App or Cron)
+$workerKey = $_GET['key'] ?? ($_POST['key'] ?? '');
+if ($workerKey !== WORKER_SECRET) {
+    header('Content-Type: application/json', true, 403);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized worker trigger.']);
+    exit;
+}
+
+// 1. Fetch pending jobs - processing 1 at a time prevents API Rate Limits (429)
+$stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1");
 $stmt->execute();
 $jobs = $stmt->fetchAll();
 
+if (empty($jobs)) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'idle', 'message' => 'No pending jobs.']);
+    exit;
+}
+
 foreach ($jobs as $job) {
     try {
-        // Mark as processing
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?")->execute([$job['job_id']]);
+        // Mark as processing immediately
+        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?")
+            ->execute([$job['job_id']]);
 
-        // Build absolute path - works on both Windows XAMPP and Railway Linux
-        $uploadDir = dirname(__DIR__) . '/uploads/pdf_study/';
-        $filePath = $uploadDir . $job['file_path'];
-        
-        // Also try the path stored if it already has the full path
+        // Absolute path logic
+        $baseDir = dirname(__DIR__);
+        $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $job['file_path'];
+
         if (!file_exists($filePath)) {
-            $filePath = '../' . $job['file_path'];
+            throw new Exception("File not found at: " . $filePath);
         }
-        if (!file_exists($filePath)) throw new Exception("File not found: $filePath");
 
-        // Convert PDF to Base64 for Native Vision API
-        $pdfBase64 = base64_encode(file_get_contents($filePath));
+        // Convert PDF to Base64
+        $pdfData = file_get_contents($filePath);
+        $pdfBase64 = base64_encode($pdfData);
+        unset($pdfData); // Free memory early
+
+        $prompt = "You are an Educational Content Engine. Analyze this PDF and generate a comprehensive study pack.
         
-        $prompt = "Role: You are an expert Educational Content Creator and MCQ Generator. 
-Task: Analyze the uploaded PDF document page-by-page and generate Multiple Choice Questions (MCQs) and Flashcards for every single page without skipping any content.
+        CRITICAL RULES:
+        1. LANGUAGE: Match the PDF language (Marathi or English).
+        2. COVERAGE: Extract 100% of factual data (Dates, Names, Laws, Scientific terms).
+        3. MCQ QUALITY: 4 options, only 1 correct. Distractors must be plausible.
+        4. EXPLANATION: Provide a 'why' for each answer, referencing the content.
+        5. FORMAT: Return ONLY a valid JSON object. No markdown, no '```json' tags.
+        
+        SCHEMA:
+        {
+          \"mcqs\": [
+            {\"q\": \"Question\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation\"}
+          ],
+          \"flashcards\": [
+            {\"f\": \"Front / Concept\", \"b\": \"Back / Definition\"}
+          ]
+        }";
 
-1. Extraction Priority:
-- Static Data: For each page, first identify all 'Static Data' (Dates, Names of People/Places, Specific Figures, Laws, Scientific Formulas, and Key Events). These must not be skipped.
-- Conceptual Data: If a page lacks static data, focus on 'Conceptual Data.' Extract core theories, cause-and-effect relationships, definitions, and the primary logic.
-
-2. Output Requirements:
-- Question Volume: Produce as many questions/flashcards as needed to cover 100% of the content on dense pages, potentially up to 50 items. Do not summarize. Do not merge pages.
-- MCQ Structure: 4 distinct, plausible, slightly similar options for distractors, ensuring the user must think. Only 1 correct answer.
-- Flashcard Structure: Generate flashcards covering key definitions, concepts, and factual pairs from the content.
-- Explanation: A brief explanation/rationale for the correct answer based on the text. Include context (e.g., 'From Page X').
-
-3. Strict Constraints:
-- Language: The generated MCQs and Flashcards MUST be in the exact same language as the uploaded PDF document (e.g. Marathi or English).
-- Format: Output ONLY raw JSON matching the exact schema below! Do not include markdown backticks or prefixes outside the JSON. All data must fit inside the arrays.
-
-JSON Schema:
-{
-  \"mcqs\": [
-    {\"q\": \"Question...\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation...\"}
-  ],
-  \"flashcards\": [
-    {\"f\": \"Front / Term\", \"b\": \"Back / Definition\"}
-  ]
-}";
-
-        // 2. Call Native Gemini PDF Vision (with Transient Retry)
+        // 2. Call Gemini API with Retry Logic
         $aiResponse = "";
         $maxRetries = 3;
-        $attempt = 0;
-        
-        while ($attempt < $maxRetries) {
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
+                // Assuming callGeminiPDF handles the cURL to Google
                 $aiResponse = callGeminiPDF($prompt, $pdfBase64);
-                break; // success
+                if (!empty($aiResponse))
+                    break;
             } catch (Exception $e) {
-                $errMsg = $e->getMessage();
-                $isTransient = (strpos($errMsg, '429') !== false || strpos($errMsg, '500') !== false || strpos($errMsg, '503') !== false || stripos($errMsg, 'time') !== false || stripos($errMsg, 'resolve') !== false);
-                
-                if ($isTransient) {
-                    $attempt++;
-                    if ($attempt >= $maxRetries) throw $e;
-                    $pdo->prepare("UPDATE pdf_study_jobs SET progress = ?, error_message = ? WHERE job_id = ?")
-                        ->execute([15 + ($attempt * 5), 'AI busy, retrying in 20s...', $job['job_id']]);
-                    sleep(20);
-                } else {
+                if ($attempt == $maxRetries)
                     throw $e;
-                }
+
+                $wait = $attempt * 15; // Incremental wait: 15s, 30s
+                $pdo->prepare("UPDATE pdf_study_jobs SET error_message = ? WHERE job_id = ?")
+                    ->execute(["AI Busy (Attempt $attempt). Retrying in {$wait}s...", $job['job_id']]);
+                sleep($wait);
             }
         }
-        
-        // Aggressive JSON Extraction (Ignores conversational filler text)
+
+        unset($pdfBase64); // Free heavy base64 string
+
+        // 3. Clean and Parse JSON
         $aiResponse = trim($aiResponse);
-        $startIdx = strpos($aiResponse, '{');
-        $endIdx = strrpos($aiResponse, '}');
-        
-        if ($startIdx !== false && $endIdx !== false && $endIdx >= $startIdx) {
-            $json = substr($aiResponse, $startIdx, $endIdx - $startIdx + 1);
+        // Remove markdown code blocks if AI included them despite instructions
+        $aiResponse = preg_replace('/^```json|```$/m', '', $aiResponse);
+
+        $jsonStart = strpos($aiResponse, '{');
+        $jsonEnd = strrpos($aiResponse, '}');
+
+        if ($jsonStart !== false && $jsonEnd !== false) {
+            $cleanJson = substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
         } else {
-            $json = $aiResponse; // Fallback
-        }
-        
-        $data = json_decode($json, true);
-        
-        // Validate output structure robustly
-        if (!$data || (!isset($data['mcqs']) && !isset($data['flashcards']))) {
-            throw new Exception("AI generated an invalid format or refused to answer. Snippet: " . substr($json, 0, 150));
+            throw new Exception("AI response did not contain valid JSON structure.");
         }
 
-        // 3. Save to database
-        $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET study_content = ?, status = 'completed', progress = 100 WHERE job_id = ?");
-        $updateStmt->execute([$json, $job['job_id']]);
+        $data = json_decode($cleanJson, true);
 
-        // Cleanup: Original PDF is no longer needed after sync (handled by app sync)
-        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception("JSON Decode Error: " . json_last_error_msg());
+        }
+
+        // 4. Save to Content Table (Disposable Pattern)
+        // We save the heavy JSON here, and the Sync script will wipe it later
+        $stmtContent = $pdo->prepare("INSERT INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)");
+        $stmtContent->execute([$job['job_id'], $job['user_id'], $cleanJson]);
+
+        // 5. Update Job Status
+        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL WHERE job_id = ?")
+            ->execute([$job['job_id']]);
+
     } catch (Exception $e) {
-        error_log("Worker Error (Job " . $job['job_id'] . "): " . $e->getMessage());
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'failed', error_message = ? WHERE job_id = ?")->execute([$e->getMessage(), $job['job_id']]);
+        error_log("Veeru Worker Error: " . $e->getMessage());
+        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'failed', error_message = ? WHERE job_id = ?")
+            ->execute([$e->getMessage(), $job['job_id']]);
     }
 }
 ?>

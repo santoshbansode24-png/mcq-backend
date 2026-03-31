@@ -35,6 +35,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="veeru-app"/>
+        <data android:scheme="com.veeru.app"/>
       </intent-filter>
     </activity>
   </application>

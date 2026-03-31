@@ -32,8 +32,8 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-const config = RAILWAY_CONFIG; // ✅ Production - Railway
-// const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (using confirmed IP: 10.239.87.239)
+// const config = RAILWAY_CONFIG; // ✅ Production - Railway
+const config = RAILWAY_CONFIG; // 🔧 Local dev - XAMPP (using confirmed IP: 10.239.87.239)
 
 export default config;
 
@@ -78,4 +78,7 @@ export const checkServerConnection = async () => {
 // ========================================
 // Set this to TRUE only when ready to launch payments
 export const ENABLE_PAYMENTS = false; // Set to true when ready to launch payments
+
+// Worker Security Secret (Must match backend/config/ai_config.php)
+export const WORKER_SECRET = 'veeru_ai_worker_v2_secure_ping';
 

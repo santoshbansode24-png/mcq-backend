@@ -1,64 +1,90 @@
 <?php
 /**
  * Sync and Cleanup PDF Study Content
- * Part of the PDF-to-Exam Feature
- * Implements the "Disposable Server" pattern.
+ * Part of the Veeru App PDF-to-Exam Feature
+ * Pattern: Disposable Server (Upload -> Process -> Sync -> Wipe)
  */
 
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *'); // Essential for React Native fetch
 require_once '../config/db.php';
 
-$user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
-$job_id  = isset($_POST['job_id'])  ? intval($_POST['job_id'])  : 0;
-$action  = isset($_POST['action'])  ? $_POST['action']           : 'fetch';
+// Support both POST and JSON input (React Native sometimes sends JSON body)
+$input = json_decode(file_get_contents('php://input'), true);
+$user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : (isset($input['user_id']) ? intval($input['user_id']) : 0);
+$job_id = isset($_POST['job_id']) ? intval($_POST['job_id']) : (isset($input['job_id']) ? intval($input['job_id']) : 0);
+$action = isset($_POST['action']) ? $_POST['action'] : (isset($input['action']) ? $input['action'] : 'fetch');
 
 if (!$user_id || !$job_id) {
-    echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+    echo json_encode(['status' => 'error', 'message' => 'Missing User ID or Job ID']);
     exit();
 }
 
 try {
     if ($action === 'fetch') {
-        // 1. Fetch the generated JSON
-        $stmt = $pdo->prepare("SELECT study_pack_json FROM pdf_study_content WHERE job_id = ? AND user_id = ?");
+        // 1. Fetch the generated JSON study pack
+        $stmt = $pdo->prepare("SELECT study_pack_json, is_synced FROM pdf_study_content WHERE job_id = ? AND user_id = ?");
         $stmt->execute([$job_id, $user_id]);
         $row = $stmt->fetch();
 
         if (!$row) {
-            throw new Exception("Study pack not found or not ready yet.");
+            // Check if it's still processing in the jobs table
+            $checkJob = $pdo->prepare("SELECT status FROM pdf_study_jobs WHERE job_id = ?");
+            $checkJob->execute([$job_id]);
+            $jobStatus = $checkJob->fetch();
+
+            $msg = ($jobStatus && $jobStatus['status'] === 'processing')
+                ? "AI is still analyzing your PDF. Please wait..."
+                : "Study pack not found. It may have already been synced and wiped.";
+
+            throw new Exception($msg);
         }
 
         echo json_encode([
-            'status' => 'success', 
-            'study_pack' => json_decode($row['study_pack_json'], true)
+            'status' => 'success',
+            'study_pack' => json_decode($row['study_pack_json'], true),
+            'is_synced' => (bool) $row['is_synced']
         ]);
 
     } else if ($action === 'acknowledge') {
-        // 2. Phone confirms it has the data. Wipe server-side files.
-        
-        // A. Get file path
+        /**
+         * PHONE ACKNOWLEDGEMENT: 
+         * The mobile app confirms it has saved the JSON locally.
+         * We now wipe the heavy data from the server.
+         */
+
+        // A. Find the physical PDF file to delete
         $stmt = $pdo->prepare("SELECT file_path FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
         $stmt->execute([$job_id, $user_id]);
         $job = $stmt->fetch();
 
         if ($job && !empty($job['file_path'])) {
-            $fullPath = '../../uploads/pdf_study/' . $job['file_path'];
-            if (file_exists($fullPath)) {
-                unlink($fullPath); // Delete physical PDF
+            // Adjust this path to your actual storage directory
+            $fullPath = __DIR__ . '/../uploads/pdf_study/' . $job['file_path'];
+            if (file_exists($fullPath) && is_file($fullPath)) {
+                unlink($fullPath);
             }
         }
 
-        // B. Mark as synced and delete temporary JSON
-        $pdo->prepare("UPDATE pdf_study_content SET is_synced = 1 WHERE job_id = ?")->execute([$job_id]);
+        // B. Clear the database of heavy JSON content to save SQL storage
+        // NOTE: We keep the record in pdf_study_jobs so the user sees the "History"
+        // but we delete the heavy JSON from pdf_study_content.
         $pdo->prepare("DELETE FROM pdf_study_content WHERE job_id = ?")->execute([$job_id]);
-        
-        // C. Update Job Status to reflect cleanup
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100 WHERE job_id = ?")->execute([$job_id]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Server cleanup complete. Data is now only on user device.']);
+        // C. Update Job Status to reflect cleanup
+        $update = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100 WHERE job_id = ?");
+        $update->execute([$job_id]);
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Privacy Protocol: Server-side PDF and JSON wiped. Data exists only on your device.'
+        ]);
+    } else {
+        throw new Exception("Invalid action requested.");
     }
 
 } catch (Exception $e) {
+    http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
 ?>

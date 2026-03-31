@@ -38,10 +38,22 @@ try {
 
     // 3. Save file
     $uploadDir = dirname(__DIR__) . '/uploads/pdf_study/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0777, true);
+    }
+    
     $uniqueFileName = time() . '_' . $user_id . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
     $targetPath     = $uploadDir . $uniqueFileName;
-    if (!move_uploaded_file($tmpPath, $targetPath)) throw new Exception("Failed to save file. Check upload dir permissions.");
+    
+    // On production/Railway, '/app/backend/uploads' might be read-only if not properly managed,
+    // so we fallback to the OS temporary directory (which is safely writable).
+    if (!@move_uploaded_file($tmpPath, $targetPath)) {
+        $targetPath = sys_get_temp_dir() . '/' . $uniqueFileName;
+        if (!@move_uploaded_file($tmpPath, $targetPath)) {
+            // Absolute worst-case fallback: read directly from $tmpPath before it expires
+            $targetPath = $tmpPath; 
+        }
+    }
 
     // 4. Create Job Record (status = processing so app knows it started)
     $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, status, progress, total_pages) VALUES (?, ?, ?, ?, 'processing', 20, 0)");

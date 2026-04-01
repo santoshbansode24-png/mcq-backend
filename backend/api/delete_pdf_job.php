@@ -12,11 +12,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        // Delete the job from database
+        // 1. Unlink physical server file to prevent silent storage leaks
+        $stmt_fetch = $pdo->prepare("SELECT file_path FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
+        $stmt_fetch->execute([$job_id, $user_id]);
+        $job = $stmt_fetch->fetch();
+
+        if ($job && !empty($job['file_path'])) {
+            $filePath = $job['file_path'];
+            // Check if absolute path or relative
+            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+                $filePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
+            }
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+
+        // 2. Drop the massive extracted study JSON array
+        $pdo->prepare("DELETE FROM pdf_study_content WHERE job_id = ?")->execute([$job_id]);
+
+        // 3. Delete tracking row
         $stmt = $pdo->prepare("DELETE FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
         $stmt->execute([$job_id, $user_id]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Job deleted']);
+        echo json_encode(['status' => 'success', 'message' => 'PDF and associated AI data permanently deleted.']);
     } catch (PDOException $e) {
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }

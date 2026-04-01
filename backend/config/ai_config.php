@@ -108,7 +108,7 @@ if (!function_exists('callGeminiPDF')) {
             ],
             'generationConfig' => [
                 'temperature' => 0.4,
-                'maxOutputTokens' => 8192,
+                'maxOutputTokens' => 65536,
                 'responseMimeType' => 'application/json'
             ]
         ];

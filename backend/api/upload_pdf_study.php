@@ -56,8 +56,9 @@ try {
     }
 
     // 4. Create Job Record (status = pending for worker queue)
+    // IMPORTANT: Save the ACTUALLY RESOLVED $targetPath so the AI worker doesn't get lost
     $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, status, progress, total_pages) VALUES (?, ?, ?, ?, 'pending', 5, 0)");
-    $stmt->execute([$user_id, $folder_id, $fileName, $uniqueFileName]);
+    $stmt->execute([$user_id, $folder_id, $fileName, $targetPath]);
     $job_id = $pdo->lastInsertId();
 
     // 5. Instantly return success (Background worker takes over via cron/polling)
@@ -68,6 +69,23 @@ try {
         'job_id'    => $job_id,
         'file_name' => $fileName
     ]);
+
+    // 6. Inline AI Trigger for Local/Fast execution
+    // (Non-blocking cURL so user gets response instantly while server processes)
+    if (defined('WORKER_SECRET')) {
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+        // Safe base URL extraction
+        $baseUri = dirname($_SERVER['SCRIPT_NAME']);
+        $workerUrl = $protocol . "://" . $_SERVER['HTTP_HOST'] . $baseUri . "/pdf_worker_ai.php?key=" . WORKER_SECRET;
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $workerUrl);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 1); // 1-second timeout makes it non-blocking
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        @curl_exec($ch); // Silence warnings about timeout
+        @curl_close($ch);
+    }
+
 
 } catch (Exception $e) {
     $errMsg = $e->getMessage();

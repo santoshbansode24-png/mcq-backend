@@ -34,9 +34,13 @@ foreach ($jobs as $job) {
         $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?")
             ->execute([$job['job_id']]);
 
-        // Absolute path logic
-        $baseDir = dirname(__DIR__);
-        $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $job['file_path'];
+        // Smart Absolute Path logic: Support the new storage rules
+        $filePath = $job['file_path'];
+        if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+            // It's a legacy relative path, rebuild it
+            $baseDir = dirname(__DIR__);
+            $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
+        }
 
         if (!file_exists($filePath)) {
             throw new Exception("File not found at: " . $filePath);
@@ -47,14 +51,27 @@ foreach ($jobs as $job) {
         $pdfBase64 = base64_encode($pdfData);
         unset($pdfData); // Free memory early
 
-        $prompt = "You are an Educational Content Engine. Analyze this PDF and generate a comprehensive study pack.
+        $prompt = "Role: You are an Exhaustive Content Parser and Exam Developer. Your absolute priority is Total Information Coverage. Do not summarize; extract and transform.
+        
+        Objective: Analyze the provided PDF page text. Your goal is to convert every piece of factual, static, and conceptual data into either an MCQ or a Flashcard. If a page contains enough data for 50 questions, you must generate 50.
+        
+        SECTION 1: EXTRACTION PROTOCOLS
+        - Zero-Skip Policy: Scan every line. If a fact exists (dates, names, definitions, processes, laws, formulas), it must become a question.
+        - Granularity: Break complex paragraphs into multiple simple questions rather than one complex one.
+        - Static Data focus: Ensure boring static data (tables, lists, year of establishment, etc.) is prioritized.
+        
+        SECTION 2: DIFFICULTY BALANCING
+        For every 10 questions generated, maintain this ratio:
+        - 3 Simple: Direct fact retrieval (e.g., 'When was X founded?').
+        - 4 Moderate: Understanding and Comparison (e.g., 'Which of these is NOT a feature of X?').
+        - 3 Hard: Application and Analysis (e.g., 'If X happens, what is the most likely result for Y?').
+        
+        SECTION 3: BATCHING & SET LOGIC
+        Organize your generation process into 'Sets of 10' to maintain the difficulty ratio continuously throughout the document. However, you MUST output all generated questions into a single flat array within the JSON schema provided below. Do not create nested set objects.
         
         CRITICAL RULES:
-        1. LANGUAGE: Match the PDF language (Marathi or English).
-        2. COVERAGE: Extract 100% of factual data (Dates, Names, Laws, Scientific terms).
-        3. MCQ QUALITY: 4 options, only 1 correct. Distractors must be plausible.
-        4. EXPLANATION: Provide a 'why' for each answer, referencing the content.
-        5. FORMAT: Return ONLY a valid JSON object. No markdown, no '```json' tags.
+        1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English. DO NOT translate the content.
+        2. FORMAT: Return ONLY a valid JSON object. No markdown, no '```json' tags.
         
         SCHEMA:
         {
@@ -106,7 +123,28 @@ foreach ($jobs as $job) {
         $data = json_decode($cleanJson, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("JSON Decode Error: " . json_last_error_msg());
+            // If JSON is truncated (common with large PDFs), attempt surgical repair:
+            // Close any open arrays and objects to produce valid JSON
+            $repaired = $cleanJson;
+            // Count open braces/brackets vs closed
+            $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
+            $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');
+            // Remove trailing incomplete object (partial last question)
+            $repaired = rtrim($repaired, ", \n\r\t");
+            // Remove trailing comma before closing
+            if (substr($repaired, -1) === ',') {
+                $repaired = rtrim($repaired, ', ');
+            }
+            // Close open brackets then braces
+            for ($i = 0; $i < $openBrackets; $i++) $repaired .= ']';
+            for ($i = 0; $i < $openBraces;   $i++) $repaired .= '}';
+
+            $data = json_decode($repaired, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception("JSON Decode Error (even after repair): " . json_last_error_msg() . ". Raw prefix: " . substr($cleanJson, 0, 200));
+            }
+            // Use repaired JSON for storage
+            $cleanJson = $repaired;
         }
 
         // 4. Save to Content Table (Disposable Pattern)

@@ -12,8 +12,11 @@ try {
     $sql1 = "CREATE TABLE IF NOT EXISTS `pdf_study_jobs` (
         `job_id` INT AUTO_INCREMENT PRIMARY KEY,
         `user_id` INT NOT NULL,
+        `folder_id` INT DEFAULT NULL,
         `file_name` VARCHAR(255) NOT NULL,
         `file_path` VARCHAR(512) NOT NULL,
+        `pdf_base64` LONGTEXT DEFAULT NULL,
+        `study_content` LONGTEXT DEFAULT NULL,
         `status` ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
         `progress` INT DEFAULT 0,
         `total_pages` INT DEFAULT 0,
@@ -22,6 +25,7 @@ try {
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX (`user_id`),
+        INDEX (`folder_id`),
         INDEX (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
 

@@ -17,9 +17,17 @@ if ($workerKey !== WORKER_SECRET) {
     exit;
 }
 
-// 1. Fetch pending jobs - processing 1 at a time prevents API Rate Limits (429)
-$stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1");
-$stmt->execute();
+// --- Job Selection ---
+$forceJobId = isset($_GET['force_job_id']) ? intval($_GET['force_job_id']) : 0;
+
+if ($forceJobId > 0) {
+    // Process a specific job (used for manual retries)
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
+    $stmt->execute([$forceJobId]);
+} else {
+    // Pick next pending job (FIFO)
+    $stmt = $pdo->query("SELECT * FROM pdf_study_jobs WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1");
+}
 $jobs = $stmt->fetchAll();
 
 if (empty($jobs)) {
@@ -34,22 +42,29 @@ foreach ($jobs as $job) {
         $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?")
             ->execute([$job['job_id']]);
 
-        // Smart Absolute Path logic: Support the new storage rules
-        $filePath = $job['file_path'];
-        if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
-            // It's a legacy relative path, rebuild it
-            $baseDir = dirname(__DIR__);
-            $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
-        }
+        // --- 1. PDF RETRIEVAL LOGIC (Railway-Proof) ---
+        // If the file is missing from disk (ephemeral storage), we use the base64 from the DB.
+        $pdfBase64 = '';
+        
+        if (!empty($job['pdf_base64'])) {
+            // BEST CASE: We have the data in the DB
+            $pdfBase64 = $job['pdf_base64'];
+        } else {
+            // FALLBACK: Try to read from disk
+            $filePath = $job['file_path'];
+            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+                $baseDir = dirname(__DIR__);
+                $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
+            }
 
-        if (!file_exists($filePath)) {
-            throw new Exception("File not found at: " . $filePath);
+            if (file_exists($filePath)) {
+                $pdfData = file_get_contents($filePath);
+                $pdfBase64 = base64_encode($pdfData);
+                unset($pdfData);
+            } else {
+                throw new Exception("PDF data missing: File not on disk and no base64 in DB.");
+            }
         }
-
-        // Convert PDF to Base64
-        $pdfData = file_get_contents($filePath);
-        $pdfBase64 = base64_encode($pdfData);
-        unset($pdfData); // Free memory early
 
         $prompt = "Role: You are an Exhaustive Content Parser and Exam Developer. Your absolute priority is Total Information Coverage. Do not summarize; extract and transform.
         
@@ -89,15 +104,11 @@ foreach ($jobs as $job) {
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
-                // Assuming callGeminiPDF handles the cURL to Google
                 $aiResponse = callGeminiPDF($prompt, $pdfBase64);
-                if (!empty($aiResponse))
-                    break;
+                if (!empty($aiResponse)) break;
             } catch (Exception $e) {
-                if ($attempt == $maxRetries)
-                    throw $e;
-
-                $wait = $attempt * 15; // Incremental wait: 15s, 30s
+                if ($attempt == $maxRetries) throw $e;
+                $wait = $attempt * 5;
                 $pdo->prepare("UPDATE pdf_study_jobs SET error_message = ? WHERE job_id = ?")
                     ->execute(["AI Busy (Attempt $attempt). Retrying in {$wait}s...", $job['job_id']]);
                 sleep($wait);
@@ -108,7 +119,7 @@ foreach ($jobs as $job) {
 
         // 3. Clean and Parse JSON
         $aiResponse = trim($aiResponse);
-        // Remove markdown code blocks if AI included them despite instructions
+        // Remove markdown code blocks
         $aiResponse = preg_replace('/^```json|```$/m', '', $aiResponse);
 
         $jsonStart = strpos($aiResponse, '{');
@@ -116,6 +127,9 @@ foreach ($jobs as $job) {
 
         if ($jsonStart !== false && $jsonEnd !== false) {
             $cleanJson = substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
+        } else if ($jsonStart !== false) {
+            // Truncated at end
+            $cleanJson = substr($aiResponse, $jsonStart);
         } else {
             throw new Exception("AI response did not contain valid JSON structure.");
         }
@@ -123,27 +137,30 @@ foreach ($jobs as $job) {
         $data = json_decode($cleanJson, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            // If JSON is truncated (common with large PDFs), attempt surgical repair:
-            // Close any open arrays and objects to produce valid JSON
+            // SURGICAL REPAIR for truncated JSON
             $repaired = $cleanJson;
-            // Count open braces/brackets vs closed
+            
+            // 1. Remove trailing incomplete property/value markers
+            $repaired = rtrim($repaired, ", \n\r\t");
+            
+            // 2. If it ends inside a string, close the string
+            // Check if there's an odd number of unescaped double quotes
+            $quotesCount = preg_match_all('/(?<!\\\\)"/', $repaired);
+            if ($quotesCount % 2 != 0) {
+                $repaired .= '"';
+            }
+
+            // 3. Close open brackets and braces
             $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
             $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');
-            // Remove trailing incomplete object (partial last question)
-            $repaired = rtrim($repaired, ", \n\r\t");
-            // Remove trailing comma before closing
-            if (substr($repaired, -1) === ',') {
-                $repaired = rtrim($repaired, ', ');
-            }
-            // Close open brackets then braces
+            
             for ($i = 0; $i < $openBrackets; $i++) $repaired .= ']';
             for ($i = 0; $i < $openBraces;   $i++) $repaired .= '}';
 
             $data = json_decode($repaired, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception("JSON Decode Error (even after repair): " . json_last_error_msg() . ". Raw prefix: " . substr($cleanJson, 0, 200));
+                throw new Exception("JSON Repair Failed: " . json_last_error_msg());
             }
-            // Use repaired JSON for storage
             $cleanJson = $repaired;
         }
 

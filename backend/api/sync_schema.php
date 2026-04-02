@@ -70,6 +70,38 @@ $sql_chunks = [
         set_index INT NOT NULL,
         completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY unique_attempt (user_id, chapter_id, set_index)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+    "pdf_study_jobs" => "CREATE TABLE IF NOT EXISTS `pdf_study_jobs` (
+        `job_id` INT AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT NOT NULL,
+        `folder_id` INT DEFAULT NULL,
+        `file_name` VARCHAR(255) NOT NULL,
+        `file_path` VARCHAR(512) NOT NULL,
+        `pdf_base64` LONGTEXT DEFAULT NULL,
+        `study_content` LONGTEXT DEFAULT NULL,
+        `status` ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+        `progress` INT DEFAULT 0,
+        `total_pages` INT DEFAULT 0,
+        `processed_pages` INT DEFAULT 0,
+        `error_message` TEXT,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX (`user_id`),
+        INDEX (`folder_id`),
+        INDEX (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+    "pdf_study_content" => "CREATE TABLE IF NOT EXISTS `pdf_study_content` (
+        `content_id` INT AUTO_INCREMENT PRIMARY KEY,
+        `job_id` INT NOT NULL,
+        `user_id` INT NOT NULL,
+        `study_pack_json` LONGTEXT NOT NULL,
+        `is_synced` TINYINT(1) DEFAULT 0,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (`job_id`) REFERENCES `pdf_study_jobs`(`job_id`) ON DELETE CASCADE,
+        INDEX (`user_id`),
+        INDEX (`is_synced`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
 ];
 

@@ -59,8 +59,14 @@ try {
         $job = $stmt->fetch();
 
         if ($job && !empty($job['file_path'])) {
-            // Adjust this path to your actual storage directory
-            $fullPath = __DIR__ . '/../uploads/pdf_study/' . $job['file_path'];
+            $filePath = $job['file_path'];
+            // Smart Absolute Path check (supports local XAMPP & Railway)
+            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+                $fullPath = __DIR__ . '/../uploads/pdf_study/' . $filePath;
+            } else {
+                $fullPath = $filePath;
+            }
+            
             if (file_exists($fullPath) && is_file($fullPath)) {
                 unlink($fullPath);
             }

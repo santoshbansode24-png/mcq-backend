@@ -67,9 +67,12 @@ const PDFToExamScreen = ({ user, navigation }) => {
         return () => clearInterval(interval);
     }, [jobs]);
 
-    const triggerWorker = async () => {
+    const triggerWorker = async (forceId = null) => {
         try {
-            await axios.get(`${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}`);
+            const url = forceId 
+                ? `${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}&force_job_id=${forceId}`
+                : `${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}`;
+            await axios.get(url);
         } catch (e) {
             console.log("Worker Ping Background:", e.message);
         }
@@ -125,15 +128,27 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 headers: { 'Accept': 'application/json' },
             });
 
-            const result = await response.json();
+            const text = await response.text(); // Read as text first to avoid JSON parse crash
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (parseErr) {
+                Alert.alert("Server Error", "Server returned an unexpected response:\n" + text.substring(0, 200));
+                return;
+            }
+
             if (result.status === 'success') {
                 loadData(); 
             } else {
-                Alert.alert("Upload Failed", result.message);
+                Alert.alert("Upload Failed", result.message || "Unknown server error.");
             }
         } catch (e) {
-            Alert.alert("Error", "Check your connection or file size.");
-            console.log(e);
+            if (e.message && e.message.toLowerCase().includes('network')) {
+                Alert.alert("Connection Error", `Cannot reach server at:\n${API_URL}\n\nMake sure your phone is on WiFi (same as PC) and XAMPP Apache is running.`);
+            } else {
+                Alert.alert("Upload Error", e.message || "Unknown error occurred.");
+            }
+            console.log('Upload error:', e);
         } finally {
             setUploading(false);
         }
@@ -213,6 +228,20 @@ const PDFToExamScreen = ({ user, navigation }) => {
             console.error(e);
             Alert.alert("Error", "Check your connection");
         }
+    };
+
+    const handleRetry = (job) => {
+        Alert.alert(
+            "Retry Analysis",
+            "Do you want to retry AI analysis for this document?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Retry Now", onPress: async () => {
+                    await triggerWorker(job.job_id);
+                    loadData(true);
+                }}
+            ]
+        );
     };
 
     const executeCreateFolder = async () => {
@@ -332,8 +361,8 @@ const PDFToExamScreen = ({ user, navigation }) => {
         return (
             <TouchableOpacity 
                 style={[styles.jobCard, isReady && { borderLeftColor: statusColor, borderLeftWidth: 3 }]} 
-                onPress={() => isReady ? navigation.navigate('StudyDetail', { job: item }) : null}
-                activeOpacity={isReady ? 0.7 : 1}
+                onPress={() => isReady ? navigation.navigate('StudyDetail', { job: item }) : (isFailed ? handleRetry(item) : null)}
+                activeOpacity={isReady || isFailed ? 0.7 : 1}
                 onLongPress={() => handleJobOptions(item)}
             >
                 <View style={[styles.cardIconBox, { backgroundColor: statusColor + '15' }]}>
@@ -345,6 +374,9 @@ const PDFToExamScreen = ({ user, navigation }) => {
                         <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                         <Text style={[styles.statusText, { color: statusColor }]}>{sText}</Text>
                     </View>
+                    {isFailed && (
+                        <Text style={styles.retryHint}>Tap to retry analysis</Text>
+                    )}
                 </View>
                 {/* 3 Dots Options Button */}
                 <TouchableOpacity style={styles.optionsBtn} onPress={() => handleJobOptions(item)}>
@@ -602,6 +634,7 @@ const styles = StyleSheet.create({
     statusPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
     statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
     statusText: { fontSize: 12, fontWeight: '600' },
+    retryHint: { fontSize: 11, color: '#f43f5e', marginTop: 4, fontWeight: 'bold', fontStyle: 'italic' },
 
     emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
     emptyText: { color: '#94a3b8', fontSize: 16, fontWeight: '600', marginTop: 15 },

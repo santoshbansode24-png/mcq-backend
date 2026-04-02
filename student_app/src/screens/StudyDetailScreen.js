@@ -106,6 +106,26 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         );
     };
 
+    const refreshLocalData = async () => {
+        Alert.alert(
+            "Refresh Data?",
+            "This will clear the cached data and download fresh content from the server.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Refresh",
+                    onPress: async () => {
+                        await AsyncStorage.removeItem(getCacheKey());
+                        setLoading(true);
+                        setStudyData(null);
+                        setSyncMsg('Re-downloading study pack...');
+                        loadStudyData();
+                    }
+                }
+            ]
+        );
+    };
+
     const getCounts = () => {
         if (!studyData) return { mcqs: 0, flashcards: 0 };
         return { 
@@ -133,8 +153,8 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         } else {
             const allCards = (studyData.flashcards || []).map((f, i) => ({
                 flashcard_id: i,
-                question_front: f.b || f.back || f.q || '',
-                answer_back: f.f || f.front || f.a || '',
+                question_front: f.f || f.front || f.q || '',
+                answer_back: f.b || f.back || f.a || '',
                 subject: 'AI Vault',
                 topic: job.file_name
             }));
@@ -188,11 +208,18 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                 </View>
                 {/* Delete Button */}
                 {!loading && (
-                    <TouchableOpacity style={styles.backBtn} onPress={deleteLocalData}>
-                        <View style={[styles.glassBtn, { backgroundColor: '#ef444420' }]}>
-                            <MaterialCommunityIcons name="trash-can-outline" size={22} color="#fdba74" />
-                        </View>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity style={styles.backBtn} onPress={refreshLocalData}>
+                            <View style={[styles.glassBtn, { backgroundColor: '#38bdf820' }]}>
+                                <MaterialCommunityIcons name="refresh" size={22} color="#38bdf8" />
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.backBtn} onPress={deleteLocalData}>
+                            <View style={[styles.glassBtn, { backgroundColor: '#ef444420' }]}>
+                                <MaterialCommunityIcons name="trash-can-outline" size={22} color="#fdba74" />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </SafeAreaView>
 

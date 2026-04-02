@@ -3,7 +3,7 @@
  * GEMINI VAULT REPAIR & DIAGNOSTIC
  * This script checks the Railway configuration and fixes model name mismatches.
  */
-require_once '../config/ai_config.php';
+require_once __DIR__ . '/../config/ai_config.php';
 
 header('Content-Type: text/plain');
 

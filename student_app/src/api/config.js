@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 // LOCAL XAMPP CONFIGURATION
 // ========================================
 const LOCAL_CONFIG = {
-    SERVER_IP: '10.239.87.239',
+    SERVER_IP: '10.243.201.239',
     DOMAIN: 'localhost',
     get API_URL() {
         return Platform.OS === 'web'
@@ -32,8 +32,8 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-// const config = RAILWAY_CONFIG; // ✅ Production - Railway
-const config = RAILWAY_CONFIG; // 🔧 Local dev - XAMPP (using confirmed IP: 10.239.87.239)
+const config = RAILWAY_CONFIG; // ✅ Production - Railway (works on 4G/mobile data)
+// const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (switch back when on same WiFi as PC)
 
 export default config;
 

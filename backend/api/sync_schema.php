@@ -15,18 +15,18 @@ header('Content-Type: text/plain; charset=utf-8');
 echo "=== VEERU DATABASE SCHEMA SYNC ===\n\n";
 
 $sql_chunks = [
-    "content_progress" => "CREATE TABLE IF NOT EXISTS content_progress (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        chapter_id INT NOT NULL,
-        content_type ENUM('mcq', 'flashcard') NOT NULL,
-        set_index INT NOT NULL DEFAULT 0,
-        status ENUM('not_started', 'in_progress', 'completed') DEFAULT 'not_started',
-        score INT DEFAULT 0,
-        total INT DEFAULT 0,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_user_content_set (user_id, chapter_id, content_type, set_index)
+    "content_progress" => "CREATE TABLE IF NOT EXISTS `content_progress` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT NOT NULL,
+        `chapter_id` INT NOT NULL,
+        `content_type` ENUM('mcq', 'flashcard') NOT NULL,
+        `set_index` INT NOT NULL DEFAULT 0,
+        `status` ENUM('not_started', 'in_progress', 'completed') DEFAULT 'not_started',
+        `score` INT DEFAULT 0,
+        `total` INT DEFAULT 0,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `unique_user_content_set` (`user_id`, `chapter_id`, `content_type`, `set_index`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
     "mcq_attempts" => "CREATE TABLE IF NOT EXISTS mcq_attempts (
@@ -106,7 +106,7 @@ $sql_chunks = [
 ];
 
 foreach ($sql_chunks as $table_name => $sql) {
-    echo "Processing $table_name... ";
+    echo "Syncing $table_name... ";
     try {
         $pdo->exec($sql);
         echo "✅ OK\n";
@@ -114,6 +114,39 @@ foreach ($sql_chunks as $table_name => $sql) {
         echo "❌ ERROR: " . $e->getMessage() . "\n";
     }
 }
+
+// --- SURGICAL REPAIR (Fixing missing columns in existing tables) ---
+echo "\n=== RUNNING SURGICAL REPAIRS ===\n";
+
+$repairs = [
+    "pdf_study_jobs" => [
+        "folder_id" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `folder_id` INT DEFAULT NULL AFTER `user_id`",
+        "pdf_base64" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `pdf_base64` LONGTEXT DEFAULT NULL AFTER `file_path`",
+        "study_content" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `study_content` LONGTEXT DEFAULT NULL AFTER `pdf_base64`",
+        "error_message" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `error_message` TEXT AFTER `processed_pages`"
+    ]
+];
+
+foreach ($repairs as $table => $columns) {
+    foreach ($columns as $col => $alter_sql) {
+        // Check if column exists
+        $check = $pdo->query("SHOW COLUMNS FROM `$table` LIKE '$col'")->fetch();
+        if (!$check) {
+            echo "   Adding missing column $col to $table... ";
+            try {
+                $pdo->exec($alter_sql);
+                echo "✅ Fixed\n";
+            } catch (Exception $e) {
+                echo "❌ Fail: " . $e->getMessage() . "\n";
+            }
+        }
+    }
+}
+
+// --- STUCK JOB CLEANUP ---
+echo "   Checking for stuck jobs... ";
+$stuck = $pdo->exec("UPDATE `pdf_study_jobs` SET `status` = 'failed', `error_message` = 'Job timed out' WHERE `status` = 'processing' AND `updated_at` < DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
+echo "✅ $stuck job(s) cleared.\n";
 
 echo "\nSchema sync completed!";
 ?>

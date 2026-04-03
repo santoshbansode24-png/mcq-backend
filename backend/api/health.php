@@ -10,7 +10,7 @@ $boond_exists = file_exists($boond);
 echo json_encode([
     'status' => 'ok',
     'service' => 'Veeru Backend',
-    'version' => '2.5',
+    'version' => '3.0-PDF-Fix',
     'timestamp' => time(),
     'message' => 'Backend is reachable!',
     'diagnostic' => [

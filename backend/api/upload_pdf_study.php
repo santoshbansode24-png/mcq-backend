@@ -118,6 +118,7 @@ try {
     
     // Warn if base64 is close to or exceeds the limit
     if ($payloadSize > ($maxPacket * 0.95)) {
+        error_log("[Veeru] PDF Size Warning: $payloadSize bytes is close to max_allowed_packet ($maxPacket).");
         throw new Exception("PDF is too large for database storage ($payloadSize bytes). " .
             "The database 'max_allowed_packet' is currently " . round($maxPacket / 1024 / 1024, 1) . "MB. " .
             "Please ask administrator to increase it in my.ini (e.g., max_allowed_packet=64M).");

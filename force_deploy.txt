@@ -1,0 +1,3 @@
+Triggering fresh Railway build to fix the PDF-to-Exam deployment.
+Timestamp: 2026-04-03 23:56:00
+Version: 3.0-PDF-Fix

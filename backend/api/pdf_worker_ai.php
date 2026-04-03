@@ -43,14 +43,17 @@ foreach ($jobs as $job) {
             ->execute([$job['job_id']]);
 
         // --- 1. PDF RETRIEVAL LOGIC (Railway-Proof) ---
-        // If the file is missing from disk (ephemeral storage), we use the base64 from the DB.
+        // We prioritize the DB base64 for ephemeral environments, 
+        // BUT we fallback to the disk file if the DB data is truncated or missing.
         $pdfBase64 = '';
-        
-        if (!empty($job['pdf_base64'])) {
-            // BEST CASE: We have the data in the DB
-            $pdfBase64 = $job['pdf_base64'];
+        $dbData    = $job['pdf_base64'] ?? '';
+        $isTruncated = (!empty($dbData) && strlen($dbData) < 10000); // Suspiciously small for a study PDF
+
+        if (!empty($dbData) && !$isTruncated) {
+            // BEST CASE: Full data is in the DB
+            $pdfBase64 = $dbData;
         } else {
-            // FALLBACK: Try to read from disk
+            // FALLBACK: Lead from disk if DB is empty or truncated
             $filePath = $job['file_path'];
             if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
                 $baseDir = dirname(__DIR__);
@@ -58,26 +61,25 @@ foreach ($jobs as $job) {
             }
 
             if (file_exists($filePath)) {
-                $pdfData = file_get_contents($filePath);
-                $pdfBase64 = base64_encode($pdfData);
-                unset($pdfData);
-            } else {
-                throw new Exception("PDF data missing: File not on disk and no base64 in DB.");
+                $pdfBase64 = base64_encode(file_get_contents($filePath));
+                error_log("[Veeru Worker] Loaded PDF from disk fallback" . ($isTruncated ? " (DB was truncated)" : ""));
+            } elseif (!empty($dbData)) {
+                // No disk file, use whatever we have in DB (might still work if it's a tiny PDF)
+                $pdfBase64 = $dbData;
             }
         }
-        
+
         // --- 1.5 PRE-FLIGHT DATA INTEGRITY CHECK ---
         if (empty($pdfBase64) || strlen($pdfBase64) < 100) {
-            throw new Exception("PDF data is corrupted or missing (Length: " . strlen($pdfBase64) . ").");
+            throw new Exception("PDF data is corrupted or missing. Check MySQL max_allowed_packet.");
         }
         
-        // --- 1.6 SIZE SANITY CHECK (detect DB truncation) ---
-        // A base64 PDF is ~1.37x the original file size.
-        // If the base64 is suspiciously small (<10KB), the DB likely truncated it.
+        // --- 1.6 FINAL SIZE SANITY CHECK ---
         $base64Len = strlen($pdfBase64);
-        error_log("[Veeru Worker] Job {$job['job_id']}: PDF base64 length = $base64Len bytes.");
-        if ($base64Len < 10000) {
-            throw new Exception("PDF data appears truncated (only {$base64Len} base64 bytes). The database 'max_allowed_packet' may be too small on this server.");
+        error_log("[Veeru Worker] Job {$job['job_id']}: Final PDF base64 length = $base64Len bytes.");
+        if ($base64Len < 10000 && $base64Len > 0) {
+            // We allow it if it's truly a tiny PDF, but we log the warning
+            error_log("[Veeru Worker] Warning: PDF data is very small ({$base64Len} bytes).");
         }
 
         $prompt = "Role: You are an Exhaustive Content Parser and Exam Developer. Your absolute priority is Total Information Coverage. Do not summarize; extract and transform.

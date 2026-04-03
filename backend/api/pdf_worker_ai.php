@@ -70,6 +70,15 @@ foreach ($jobs as $job) {
         if (empty($pdfBase64) || strlen($pdfBase64) < 100) {
             throw new Exception("PDF data is corrupted or missing (Length: " . strlen($pdfBase64) . ").");
         }
+        
+        // --- 1.6 SIZE SANITY CHECK (detect DB truncation) ---
+        // A base64 PDF is ~1.37x the original file size.
+        // If the base64 is suspiciously small (<10KB), the DB likely truncated it.
+        $base64Len = strlen($pdfBase64);
+        error_log("[Veeru Worker] Job {$job['job_id']}: PDF base64 length = $base64Len bytes.");
+        if ($base64Len < 10000) {
+            throw new Exception("PDF data appears truncated (only {$base64Len} base64 bytes). The database 'max_allowed_packet' may be too small on this server.");
+        }
 
         $prompt = "Role: You are an Exhaustive Content Parser and Exam Developer. Your absolute priority is Total Information Coverage. Do not summarize; extract and transform.
         
@@ -112,10 +121,11 @@ foreach ($jobs as $job) {
                 $aiResponse = callGeminiPDF($prompt, $pdfBase64);
                 if (!empty($aiResponse)) break;
             } catch (Exception $e) {
+                error_log("[Veeru Worker] Job {$job['job_id']} Attempt $attempt Error: " . $e->getMessage());
                 if ($attempt == $maxRetries) throw $e;
                 $wait = $attempt * 5;
                 $pdo->prepare("UPDATE pdf_study_jobs SET error_message = ? WHERE job_id = ?")
-                    ->execute(["AI Busy (Attempt $attempt). Retrying in {$wait}s...", $job['job_id']]);
+                    ->execute(["AI Busy (Attempt $attempt/{$maxRetries}). Error: " . substr($e->getMessage(), 0, 200), $job['job_id']]);
                 sleep($wait);
             }
         }

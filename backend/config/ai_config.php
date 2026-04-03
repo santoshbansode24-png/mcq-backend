@@ -130,9 +130,10 @@ if (!function_exists('callGeminiPDF')) {
         if ($curlError) throw new Exception("cURL Error: " . $curlError);
         if ($httpCode !== 200) {
             $errorDetails = json_decode($response, true);
-            $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : substr($response, 0, 300);
+            $geminiMsg = $errorDetails['error']['message'] ?? 'No details';
+            $geminiStatus = $errorDetails['error']['status'] ?? '';
             error_log("Gemini PDF Fail ($httpCode): " . $response);
-            throw new Exception("Gemini API Error ($httpCode): " . $msg);
+            throw new Exception("Gemini API Error ($httpCode): $geminiMsg" . ($geminiStatus ? " [$geminiStatus]" : ""));
         }
         
         $decoded = json_decode($response, true);

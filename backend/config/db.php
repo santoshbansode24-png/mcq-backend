@@ -55,6 +55,14 @@ try {
     
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
     
+    // session-based packet size increase for PDF handling (if user lacks global PERMISSION)
+    try {
+        $pdo->exec("SET SESSION max_allowed_packet = 104857600"); // 100MB
+    } catch (Exception $e) {
+        // Silently fail if not supported, but log it
+        error_log("DB session packet size increase failed: " . $e->getMessage());
+    }
+    
 } catch (PDOException $e) {   
     // Return unified JSON error if connection fails
     header('Content-Type: application/json');

@@ -65,6 +65,11 @@ foreach ($jobs as $job) {
                 throw new Exception("PDF data missing: File not on disk and no base64 in DB.");
             }
         }
+        
+        // --- 1.5 PRE-FLIGHT DATA INTEGRITY CHECK ---
+        if (empty($pdfBase64) || strlen($pdfBase64) < 100) {
+            throw new Exception("PDF data is corrupted or missing (Length: " . strlen($pdfBase64) . ").");
+        }
 
         $prompt = "Role: You are an Exhaustive Content Parser and Exam Developer. Your absolute priority is Total Information Coverage. Do not summarize; extract and transform.
         

@@ -10,13 +10,9 @@
  * - Proper CORS headers
  * - Clear error codes from PHP upload errors
  */
+require_once 'cors_middleware.php'; // Handles CORS, error reporting, and JSON header
 set_time_limit(300);
 ini_set('memory_limit', '512M');
-
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Accept');
 
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
@@ -28,6 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $job_id = null;
+
+// --- 0. Logging Request (Diagnostic) ---
+$logData = [
+    'user_id'   => $_POST['user_id'] ?? 'MISSING',
+    'folder_id' => $_POST['folder_id'] ?? 'root',
+    'file'      => $_FILES['pdf_file']['name'] ?? 'NONE',
+    'size'      => $_FILES['pdf_file']['size'] ?? 0
+];
+error_log("[Veeru] PDF Upload Start: " . json_encode($logData));
 
 try {
     // --- 1. Validate Input ---
@@ -105,12 +110,17 @@ try {
     }
 
     // --- 6.5 CHECK DATABASE PACKET SIZE (Pre-flight) ---
-    $packetStmt = $pdo->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
-    $packetVar  = $packetStmt->fetch();
-    $maxPacket  = (int)$packetVar['Value'];
+    // MySQL session packet limit may be restricted by the global setting
+    $packetStmt  = $pdo->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
+    $packetVar   = $packetStmt->fetch();
+    $maxPacket   = (int)$packetVar['Value'];
     $payloadSize = strlen($pdfBase64);
-    if ($payloadSize > ($maxPacket * 0.9)) {
-        throw new Exception("PDF is too large for database storage ($payloadSize bytes). Maximum allowed is " . round($maxPacket / 1024 / 1024, 1) . "MB. Please contact administrator to increase max_allowed_packet.");
+    
+    // Warn if base64 is close to or exceeds the limit
+    if ($payloadSize > ($maxPacket * 0.95)) {
+        throw new Exception("PDF is too large for database storage ($payloadSize bytes). " .
+            "The database 'max_allowed_packet' is currently " . round($maxPacket / 1024 / 1024, 1) . "MB. " .
+            "Please ask administrator to increase it in my.ini (e.g., max_allowed_packet=64M).");
     }
 
     // --- 7. Create Job Record with base64 payload ---

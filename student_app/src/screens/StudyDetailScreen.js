@@ -153,8 +153,8 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         } else {
             const allCards = (studyData.flashcards || []).map((f, i) => ({
                 flashcard_id: i,
-                question_front: f.f || f.front || f.q || '',
-                answer_back: f.b || f.back || f.a || '',
+                question_front: f.q || f.question || f.b || f.back || '',
+                answer_back: f.a || f.answer || f.f || f.front || '',
                 subject: 'AI Vault',
                 topic: job.file_name
             }));

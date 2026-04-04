@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '../api/config';
 
@@ -190,9 +191,28 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
             
             // Fetch details for each selected document
             for (let id of selectedPdfs) {
+                let studyPack = null;
+                try {
+                    const localRaw = await AsyncStorage.getItem(`study_job_${id}`);
+                    if (localRaw) {
+                        studyPack = JSON.parse(localRaw);
+                    }
+                } catch (e) {
+                    console.error("Local storage error", e);
+                }
+
                 const res = await axios.get(`${API_URL}/get_pdf_study_status.php?user_id=${user?.user_id || 0}&job_id=${id}`);
                 if (res.data.status === 'success') {
-                    const studyPack = res.data.data.study_pack;
+                    if (!studyPack) {
+                        studyPack = res.data.data.study_pack;
+                        if (typeof studyPack === 'string') {
+                            try {
+                                studyPack = JSON.parse(studyPack);
+                            } catch (e) {
+                                console.error("Failed to parse studyPack JSON", e);
+                            }
+                        }
+                    }
                     fileNames.push(res.data.data.file_name.replace('.pdf', '') || 'Document');
                     
                     if (studyPack?.flashcards) {

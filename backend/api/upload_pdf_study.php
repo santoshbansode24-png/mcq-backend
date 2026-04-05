@@ -60,7 +60,9 @@ try {
     if ($file['size'] === 0) throw new Exception("File is empty (0 bytes). Check your device storage permissions.");
 
     // --- 3. Decode filename properly (handles Marathi/Hindi/URL-encoded names from Android) ---
-    $rawName = $file['name'];
+    $rawName = isset($_POST['custom_file_name']) && !empty($_POST['custom_file_name']) 
+               ? $_POST['custom_file_name'] 
+               : $file['name'];
     // Try rawurldecode first, verify it's valid UTF-8
     $decoded = rawurldecode($rawName);
     if (!mb_check_encoding($decoded, 'UTF-8')) {

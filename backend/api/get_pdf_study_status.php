@@ -72,7 +72,7 @@ try {
 
         $whereClause = implode(" AND ", $conditions);
 
-        $sql = "SELECT job_id, folder_id, file_name, status, progress, created_at 
+        $sql = "SELECT job_id, folder_id, file_name, status, progress, error_message, created_at 
                 FROM pdf_study_jobs 
                 WHERE $whereClause
                 ORDER BY created_at DESC 

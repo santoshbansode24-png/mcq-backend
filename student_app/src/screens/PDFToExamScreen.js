@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
+import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL, WORKER_SECRET } from '../api/config';
 
 const { width } = Dimensions.get('window');
@@ -58,10 +59,15 @@ const PDFToExamScreen = ({ user, navigation }) => {
     // Polling for progress
     useEffect(() => {
         let interval;
-        const hasPending = jobs.some(j => j.status === 'processing' || j.status === 'pending');
+        const activeJobs = jobs.filter(j => j.status === 'processing' || j.status === 'pending');
         
-        if (hasPending) {
-            triggerWorker();
+        if (activeJobs.length > 0) {
+            // Only nudge the worker if there is a 'pending' job (not already processing).
+            const needsNudge = activeJobs.some(j => j.status === 'pending');
+            if (needsNudge) {
+                // Fire and forget nudge. The PHP script uses ignore_user_abort(true)
+                triggerWorker();
+            }
             interval = setInterval(() => loadData(true), 5000);
         }
         return () => clearInterval(interval);
@@ -72,7 +78,8 @@ const PDFToExamScreen = ({ user, navigation }) => {
             const url = forceId 
                 ? `${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}&force_job_id=${forceId}`
                 : `${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}`;
-            await axios.get(url);
+            // Use 2-second timeout to prevent locking up all background Axios connections.
+            await axios.get(url, { timeout: 2000 });
         } catch (e) {
             console.log("Worker Ping Background:", e.message);
         }
@@ -113,34 +120,57 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
             setUploading(true);
 
-            const formData = new FormData();
-            formData.append('pdf_file', {
-                uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
-                name: file.name || 'document.pdf',
-                type: 'application/pdf',
-            });
-            formData.append('user_id', user?.user_id?.toString());
-            if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
-            
-            const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
-                method: 'POST',
-                body: formData,
-                headers: { 'Accept': 'application/json' },
-            });
-
-            const text = await response.text(); // Read as text first to avoid JSON parse crash
             let result;
-            try {
-                result = JSON.parse(text);
-            } catch (parseErr) {
-                Alert.alert("Server Error", "Server returned an unexpected response:\n" + text.substring(0, 200));
-                return;
+            if (Platform.OS === 'android') {
+                // Use FileSystem.uploadAsync for robust Android APK uploads
+                const uploadResult = await FileSystem.uploadAsync(`${API_URL}/upload_pdf_study.php`, file.uri, {
+                    fieldName: 'pdf_file',
+                    httpMethod: 'POST',
+                    uploadType: 1, // FileSystemUploadType.MULTIPART
+                    parameters: {
+                        'user_id': user?.user_id?.toString() || '0',
+                        'custom_file_name': file.name || 'document.pdf',
+                        ...(currentFolderId !== 'root' ? { 'folder_id': currentFolderId.toString() } : {})
+                    }
+                });
+                
+                try {
+                    result = JSON.parse(uploadResult.body);
+                } catch (parseErr) {
+                    Alert.alert("Server Error", "Server returned an unexpected response:\n" + uploadResult.body.substring(0, 200));
+                    setUploading(false);
+                    return;
+                }
+            } else {
+                const formData = new FormData();
+                formData.append('pdf_file', {
+                    uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
+                    name: file.name || 'document.pdf',
+                    type: 'application/pdf',
+                });
+                formData.append('user_id', user?.user_id?.toString());
+                if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
+                
+                const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' },
+                });
+
+                const text = await response.text(); // Read as text first to avoid JSON parse crash
+                try {
+                    result = JSON.parse(text);
+                } catch (parseErr) {
+                    Alert.alert("Server Error", "Server returned an unexpected response:\n" + text.substring(0, 200));
+                    setUploading(false);
+                    return;
+                }
             }
 
-            if (result.status === 'success') {
+            if (result && result.status === 'success') {
                 loadData(); 
             } else {
-                Alert.alert("Upload Failed", result.message || "Unknown server error.");
+                Alert.alert("Upload Failed", result?.message || "Unknown server error.");
             }
         } catch (e) {
             if (e.message && e.message.toLowerCase().includes('network')) {

@@ -103,6 +103,7 @@ foreach ($jobs as $job) {
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English. DO NOT translate the content.
         2. FORMAT: Return ONLY a valid JSON object. No markdown, no '```json' tags.
+        3. FLASHCARDS ARE MANDATORY: You MUST extract at least 5-10 key definitions or concepts and format them as Flashcards. Do not only generate MCQs.
         
         SCHEMA:
         {

@@ -119,7 +119,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     const handleUpload = async () => {
         try {
-            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: false });
+            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
             if (doc.canceled) return;
 
             const file = doc.assets[0];
@@ -150,6 +150,9 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     fieldName: 'pdf_file',
                     httpMethod: 'POST',
                     uploadType: 1, // FileSystemUploadType.MULTIPART
+                    headers: {
+                        'X-Custom-File-Name': encodeURIComponent(fileName)
+                    },
                     parameters: {
                         'user_id': user?.user_id?.toString() || '0',
                         'custom_file_name': fileName,

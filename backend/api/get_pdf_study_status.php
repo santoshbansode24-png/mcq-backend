@@ -16,8 +16,7 @@ $job_id = isset($_GET['job_id']) ? intval($_GET['job_id']) : 0;
 $folder_id = isset($_GET['folder_id']) ? $_GET['folder_id'] : null;
 
 if (!$user_id) {
-    http_response_code(401);
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+    echo json_encode(['status' => 'success', 'data' => [], 'count' => 0]);
     exit();
 }
 

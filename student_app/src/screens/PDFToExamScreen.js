@@ -95,9 +95,22 @@ const PDFToExamScreen = ({ user, navigation }) => {
             const jRes = await axios.get(`${API_URL}/get_pdf_study_status.php?user_id=${user?.user_id || 0}&folder_id=${jobFilter}`);
 
             if (fRes.data.status === 'success') setFolders(fRes.data.data);
-            if (jRes.data.status === 'success') setJobs(jRes.data.data);
+            if (jRes.data.status === 'success') {
+                // Ensure we don't accidentally remove an 'uploading' optimistic job if loadData is called concurrently
+                setJobs(prevJobs => {
+                    const uploadingJobs = prevJobs.filter(j => j.status === 'uploading');
+                    const serverJobs = jRes.data.data;
+                    
+                    // Filter out any uploading jobs that have now appeared in the server response
+                    const activeUploads = uploadingJobs.filter(uj => 
+                        !serverJobs.some(sj => sj.file_name === uj.file_name && sj.status !== 'uploading')
+                    );
+                    
+                    return [...activeUploads, ...serverJobs];
+                });
+            }
         } catch (e) {
-            console.error("Fetch Error:", e);
+            console.log("Fetch Error (Polling):", e.message);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -106,7 +119,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     const handleUpload = async () => {
         try {
-            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: false });
             if (doc.canceled) return;
 
             const file = doc.assets[0];
@@ -118,6 +131,16 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 return;
             }
 
+            // Optimistic UI update: Immediately show the file in the list as uploading
+            const fileName = file.name || 'document.pdf';
+            const optimisticJob = {
+                job_id: 'upload_' + Date.now(),
+                file_name: fileName,
+                status: 'uploading',
+                progress: 0
+            };
+            setJobs(prev => [optimisticJob, ...prev]);
+            
             setUploading(true);
 
             let result;
@@ -129,7 +152,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     uploadType: 1, // FileSystemUploadType.MULTIPART
                     parameters: {
                         'user_id': user?.user_id?.toString() || '0',
-                        'custom_file_name': file.name || 'document.pdf',
+                        'custom_file_name': fileName,
                         ...(currentFolderId !== 'root' ? { 'folder_id': currentFolderId.toString() } : {})
                     }
                 });
@@ -138,6 +161,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     result = JSON.parse(uploadResult.body);
                 } catch (parseErr) {
                     Alert.alert("Server Error", "Server returned an unexpected response:\n" + uploadResult.body.substring(0, 200));
+                    setJobs(prev => prev.filter(j => j.job_id !== optimisticJob.job_id)); // Remove optimistic job on error
                     setUploading(false);
                     return;
                 }
@@ -168,11 +192,14 @@ const PDFToExamScreen = ({ user, navigation }) => {
             }
 
             if (result && result.status === 'success') {
-                loadData(); 
+                // The polling mechanism will naturally replace the uploading job with the real pending/processing job
+                setTimeout(() => loadData(true), 500); 
             } else {
+                setJobs(prev => prev.filter(j => j.status !== 'uploading'));
                 Alert.alert("Upload Failed", result?.message || "Unknown server error.");
             }
         } catch (e) {
+            setJobs(prev => prev.filter(j => j.status !== 'uploading'));
             if (e.message && e.message.toLowerCase().includes('network')) {
                 Alert.alert("Connection Error", `Cannot reach server at:\n${API_URL}\n\nMake sure your phone is on WiFi (same as PC) and XAMPP Apache is running.`);
             } else {
@@ -374,12 +401,17 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const renderJobItem = ({ item }) => {
         const isReady = item.status === 'completed';
         const isFailed = item.status === 'failed';
+        const isUploading = item.status === 'uploading';
         
         let statusColor = '#3b82f6'; // Processing
         let sText = 'Analyzing... ' + (item.progress || '0') + '%';
         let iconName = 'file-document';
 
-        if (isReady) {
+        if (isUploading) {
+            statusColor = '#8b5cf6'; // Purple Uploading
+            sText = 'Uploading to Secure Vault...';
+            iconName = 'cloud-upload';
+        } else if (isReady) {
             statusColor = '#10b981'; // Green Ready
             sText = 'Ready to Study';
         } else if (isFailed) {
@@ -390,28 +422,34 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
         return (
             <TouchableOpacity 
-                style={[styles.jobCard, isReady && { borderLeftColor: statusColor, borderLeftWidth: 3 }]} 
+                style={[styles.jobCard, isReady && { borderLeftColor: statusColor, borderLeftWidth: 3 }, isUploading && { opacity: 0.8 }]} 
                 onPress={() => isReady ? navigation.navigate('StudyDetail', { job: item }) : (isFailed ? handleRetry(item) : null)}
                 activeOpacity={isReady || isFailed ? 0.7 : 1}
-                onLongPress={() => handleJobOptions(item)}
+                onLongPress={() => !isUploading && handleJobOptions(item)}
             >
                 <View style={[styles.cardIconBox, { backgroundColor: statusColor + '15' }]}>
-                     <MaterialCommunityIcons name={iconName} size={26} color={statusColor} />
+                     {isUploading ? (
+                         <ActivityIndicator size="small" color={statusColor} />
+                     ) : (
+                         <MaterialCommunityIcons name={iconName} size={26} color={statusColor} />
+                     )}
                 </View>
                 <View style={styles.cardDetails}>
                     <Text style={styles.fileName} numberOfLines={1}>{item.file_name}</Text>
                     <View style={[styles.statusPill, { backgroundColor: statusColor + '15' }]}>
-                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                        {!isUploading && <View style={[styles.statusDot, { backgroundColor: statusColor }]} />}
                         <Text style={[styles.statusText, { color: statusColor }]}>{sText}</Text>
                     </View>
                     {isFailed && (
                         <Text style={styles.retryHint}>Tap to retry analysis</Text>
                     )}
                 </View>
-                {/* 3 Dots Options Button */}
-                <TouchableOpacity style={styles.optionsBtn} onPress={() => handleJobOptions(item)}>
-                    <MaterialCommunityIcons name="dots-vertical" size={24} color="#64748b" />
-                </TouchableOpacity>
+                {/* 3 Dots Options Button - Hide while uploading */}
+                {!isUploading && (
+                    <TouchableOpacity style={styles.optionsBtn} onPress={() => handleJobOptions(item)}>
+                        <MaterialCommunityIcons name="dots-vertical" size={24} color="#64748b" />
+                    </TouchableOpacity>
+                )}
             </TouchableOpacity>
         );
     };

@@ -34,6 +34,10 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const [createFolderModalVisible, setCreateFolderModalVisible] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     
+    const [uploadModalVisible, setUploadModalVisible] = useState(false);
+    const [pendingUploadFile, setPendingUploadFile] = useState(null);
+    const [uploadFileName, setUploadFileName] = useState('');
+    
     const [renameFolderModalVisible, setRenameFolderModalVisible] = useState(false);
     const [selectedFolder, setSelectedFolder] = useState(null);
     const [editFolderName, setEditFolderName] = useState('');
@@ -119,7 +123,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     const handleUpload = async () => {
         try {
-            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: false });
             if (doc.canceled) return;
 
             const file = doc.assets[0];
@@ -131,67 +135,70 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 return;
             }
 
-            // Optimistic UI update: Immediately show the file in the list as uploading
-            const fileName = file.name || 'document.pdf';
-            const optimisticJob = {
-                job_id: 'upload_' + Date.now(),
-                file_name: fileName,
-                status: 'uploading',
-                progress: 0
-            };
-            setJobs(prev => [optimisticJob, ...prev]);
+            // Instead of uploading blindly, ask the user to confirm/fix the name
+            let defaultName = file.name || 'document.pdf';
+            // Strip .pdf for editing convenience
+            if (defaultName.toLowerCase().endsWith('.pdf')) {
+                defaultName = defaultName.substring(0, defaultName.length - 4);
+            }
             
-            setUploading(true);
+            setPendingUploadFile(file);
+            setUploadFileName(defaultName);
+            setUploadModalVisible(true);
+        } catch (e) {
+            console.log("Picker Error:", e);
+        }
+    };
 
-            let result;
-            if (Platform.OS === 'android') {
-                // Use FileSystem.uploadAsync for robust Android APK uploads
-                const uploadResult = await FileSystem.uploadAsync(`${API_URL}/upload_pdf_study.php`, file.uri, {
-                    fieldName: 'pdf_file',
-                    httpMethod: 'POST',
-                    uploadType: 1, // FileSystemUploadType.MULTIPART
-                    headers: {
-                        'X-Custom-File-Name': encodeURIComponent(fileName)
-                    },
-                    parameters: {
-                        'user_id': user?.user_id?.toString() || '0',
-                        'custom_file_name': fileName,
-                        ...(currentFolderId !== 'root' ? { 'folder_id': currentFolderId.toString() } : {})
-                    }
-                });
-                
-                try {
-                    result = JSON.parse(uploadResult.body);
-                } catch (parseErr) {
-                    Alert.alert("Server Error", "Server returned an unexpected response:\n" + uploadResult.body.substring(0, 200));
-                    setJobs(prev => prev.filter(j => j.job_id !== optimisticJob.job_id)); // Remove optimistic job on error
-                    setUploading(false);
-                    return;
-                }
-            } else {
-                const formData = new FormData();
-                formData.append('pdf_file', {
-                    uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
-                    name: file.name || 'document.pdf',
-                    type: 'application/pdf',
-                });
-                formData.append('user_id', user?.user_id?.toString());
-                if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
-                
-                const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'Accept': 'application/json' },
-                });
+    const executeUpload = async () => {
+        if (!pendingUploadFile || !uploadFileName.trim()) return;
+        setUploadModalVisible(false);
 
-                const text = await response.text(); // Read as text first to avoid JSON parse crash
-                try {
-                    result = JSON.parse(text);
-                } catch (parseErr) {
-                    Alert.alert("Server Error", "Server returned an unexpected response:\n" + text.substring(0, 200));
-                    setUploading(false);
-                    return;
-                }
+        const file = pendingUploadFile;
+        // Ensure it ends with .pdf
+        let finalName = uploadFileName.trim();
+        if (!finalName.toLowerCase().endsWith('.pdf')) finalName += '.pdf';
+
+        const optimisticJob = {
+            job_id: 'upload_' + Date.now(),
+            file_name: finalName,
+            status: 'uploading',
+            progress: 0
+        };
+        setJobs(prev => [optimisticJob, ...prev]);
+        
+        setUploading(true);
+
+        let result;
+        try {
+            
+            const formData = new FormData();
+            formData.append('pdf_file', {
+                uri: file.uri,
+                name: finalName,
+                type: 'application/pdf',
+            });
+            formData.append('user_id', user?.user_id?.toString());
+            formData.append('custom_file_name', finalName);
+            if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
+            
+            const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
+                method: 'POST',
+                body: formData,
+                headers: { 
+                    'Accept': 'application/json',
+                    'X-Custom-File-Name': encodeURIComponent(finalName)
+                },
+            });
+
+            const text = await response.text(); // Read as text first to avoid JSON parse crash
+            try {
+                result = JSON.parse(text);
+            } catch (parseErr) {
+                Alert.alert("Server Error", "Server returned an unexpected response:\n" + text.substring(0, 200));
+                setJobs(prev => prev.filter(j => j.job_id !== optimisticJob.job_id));
+                setUploading(false);
+                return;
             }
 
             if (result && result.status === 'success') {
@@ -211,6 +218,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
             console.log('Upload error:', e);
         } finally {
             setUploading(false);
+            setPendingUploadFile(null);
         }
     };
 
@@ -605,6 +613,31 @@ const PDFToExamScreen = ({ user, navigation }) => {
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.modalBtn, styles.modalBtnPrimary]} onPress={executeCreateFolder}>
                                 <Text style={styles.modalBtnTextPrimary}>Create</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Confirm Upload Name Modal */}
+            <Modal visible={uploadModalVisible} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Name this Study Set</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={uploadFileName}
+                            onChangeText={setUploadFileName}
+                            placeholder="e.g. Biology Unit 1"
+                            placeholderTextColor="#64748b"
+                            autoFocus
+                        />
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity style={styles.modalBtn} onPress={() => { setUploadModalVisible(false); setPendingUploadFile(null); }}>
+                                <Text style={styles.modalBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#fe357e' }]} onPress={executeUpload}>
+                                <Text style={styles.modalBtnTextPrimary}>Upload</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

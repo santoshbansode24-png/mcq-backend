@@ -61,7 +61,7 @@ const SplashViewScreen = ({ onFinish }) => {
             ]}>
                 {/* Mascot / Logo Image */}
                 <Image
-                    source={require('../../assets/veeru_splash_dark.jpg')}
+                    source={require('../../assets/veeru_splash_transparent.png')}
                     style={styles.logo}
                     resizeMode="contain"
                 />

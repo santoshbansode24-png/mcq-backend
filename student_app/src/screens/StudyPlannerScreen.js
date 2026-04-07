@@ -164,15 +164,17 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
     useFocusEffect(
         useCallback(() => {
+            if (!user || !user.user_id) return;
             const task = InteractionManager.runAfterInteractions(() => {
                 checkExistingPlan();
                 fetchSyllabusInfo();
             });
             return () => task.cancel();
-        }, [])
+        }, [user])
     );
 
     const checkExistingPlan = async () => {
+        if (!user || !user.user_id) return;
         try {
             // 1. Get configuration status and exam date
             const statusRes = await axios.get(`${config.API_URL}/get_study_status.php?user_id=${user.user_id}`);
@@ -220,6 +222,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
     // This function is called after plan setup or explicit date change to ensure roadmap is balanced
     const fetchAndRedistributeRoadmap = async () => {
+        if (!user || !user.user_id) return;
         setLoading(true);
         try {
             await axios.post(`${config.API_URL}/redistribute_tasks.php`, { user_id: user.user_id });
@@ -247,6 +250,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     };
 
     const fetchSyllabusInfo = async () => {
+        if (!user || !user.class_id) return;
         try {
             const response = await axios.get(`${config.API_URL}/get_subjects.php?class_id=${user.class_id}`);
             if (response.data.status === 'success') setAvailableSubjects(response.data.data);
@@ -304,6 +308,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             return;
         }
 
+        if (!user || !user.user_id) return;
         setLoading(true);
         try {
             const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {
@@ -334,6 +339,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             Alert.alert('Selection Required', 'Please select at least one chapter to build your roadmap.');
             return;
         }
+        if (!user || !user.user_id) return;
         setLoading(true);
         try {
             const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {

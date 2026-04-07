@@ -35,7 +35,7 @@ const hasMarkup = (str) => !!str && LATEX_RE.test(str);
 
 const decodeHtml = (html) => {
     if (!html) return '';
-    return html
+    let decoded = html
         .replace(/&quot;/g, '"')
         .replace(/&apos;/g, "'")
         .replace(/&#039;/g, "'")
@@ -43,6 +43,19 @@ const decodeHtml = (html) => {
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&nbsp;/g, ' ');
+        
+    // STRIP simple tags to aggressively avoid heavy WebViews for plain text
+    decoded = decoded
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<div[^>]*>/gi, '')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<br\s*[\/]?>/gi, '\n')
+        .replace(/<span[^>]*>/gi, '')
+        .replace(/<\/span>/gi, '')
+        .trim();
+        
+    return decoded;
 };
 
 const formatTime = (seconds) => {

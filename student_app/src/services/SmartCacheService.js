@@ -140,21 +140,28 @@ export const SmartCacheService = {
             }
             await SmartCacheService.checkSyncState();
         } catch (error) {
-            // console.error('[SmartCache] ❌ Sync failed:', error);
+            console.error('[SmartCache] ❌ Bulk Sync aborted early:', error.message);
+            // Allow the UI to unlock immediately
             notifyListeners({ isSyncing: false, isFullySynced: false });
+        } finally {
+            isProcessing = false;
         }
     },
 
-    /**
-     * Process items in the sync queue
-     */
     processSyncQueue: async () => {
         if (isProcessing) return;
         isProcessing = true;
 
         try {
             let queue = await SmartCacheService.getSyncQueue();
-            if (!queue || queue.length === 0) {
+            
+            // Validate queue is an array and filter out nulls/undefined to prevent crashes
+            if (!Array.isArray(queue)) {
+                queue = [];
+                await AsyncStorage.removeItem(SYNC_QUEUE_KEY);
+            }
+            
+            if (queue.length === 0) {
                 isProcessing = false;
                 await SmartCacheService.checkSyncState();
                 return;
@@ -216,15 +223,18 @@ export const SmartCacheService = {
     },
 
     /**
-     * Helper to retry a promise-based function
+     * Helper to retry a promise-based function with a strict timeout
      */
-    retry: async (fn, retries = 2, delay = 1000) => {
+    retry: async (fn, retries = 2, delay = 1000, timeoutMs = 12000) => {
         for (let i = 0; i < retries; i++) {
             try {
-                return await fn();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
+                );
+                return await Promise.race([fn(), timeoutPromise]);
             } catch (err) {
                 if (i === retries - 1) throw err;
-                console.warn(`[SmartCache] Retry ${i + 1}/${retries} failed. Retrying in ${delay}ms...`);
+                console.warn(`[SmartCache] Retry ${i + 1}/${retries} failed (${err.message}). Retrying in ${delay}ms...`);
                 await new Promise(r => setTimeout(r, delay));
             }
         }

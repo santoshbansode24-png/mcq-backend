@@ -21,6 +21,56 @@ import { fetchChapters } from '../api/chapters';
 import axios from 'axios';
 import { API_URL } from '../api/config';
 
+// Memoized Subject Card to prevent expensive gradient re-renders
+const SubjectCard = React.memo(({ subject, index, isSelected, onPress }) => {
+    const gradients = [
+        ['#FF416C', '#FF4B2B'], ['#4776E6', '#8E54E9'], ['#00B4DB', '#0083B0'],
+        ['#11998E', '#38EF7D'], ['#F7971E', '#FFD200'], ['#EC008C', '#FC6767'],
+        ['#1A2980', '#26D0CE'], ['#F09819', '#EDDE5D']
+    ];
+    const colors = gradients[index % gradients.length];
+    
+    return (
+        <TouchableOpacity
+            style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
+            onPress={() => onPress(subject)}
+            activeOpacity={0.7}
+        >
+            <LinearGradient colors={isSelected ? ['#1e293b', '#0f172a'] : colors} style={styles.subjectGradient}>
+                <Text style={styles.subjectIcon}>{subject.subject_name.charAt(0).toUpperCase()}</Text>
+                <Text style={styles.subjectName}>{subject.subject_name}</Text>
+                {isSelected && (
+                    <View style={[styles.selectedBadge, { backgroundColor: '#10b981' }]}>
+                        <Text style={styles.selectedBadgeText}>✓</Text>
+                    </View>
+                )}
+            </LinearGradient>
+        </TouchableOpacity>
+    );
+});
+
+// Memoized Chapter Item to prevent massive re-renders when selecting a single chapter
+const ChapterItem = React.memo(({ chapter, isSelected, onPress }) => {
+    return (
+        <TouchableOpacity
+            style={[styles.chapterItem, isSelected && styles.chapterItemSelected]}
+            onPress={() => onPress(chapter.chapter_id)}
+        >
+            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                {isSelected && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <View style={styles.chapterInfo}>
+                <Text style={[styles.chapterName, isSelected && styles.chapterNameSelected]}>
+                    {chapter.chapter_name}
+                </Text>
+                <Text style={styles.chapterStats}>
+                    {chapter.total_mcqs || 0} MCQs available
+                </Text>
+            </View>
+        </TouchableOpacity>
+    );
+});
+
 const MyExamScreen = ({ navigation, route, user }) => {
     // Use params if provided, otherwise fallback to user defaults
     const { overrideClassId, themeColors, title, subtitle } = route.params || {};
@@ -127,7 +177,7 @@ const MyExamScreen = ({ navigation, route, user }) => {
         }
     };
 
-    const toggleSubject = (subject) => {
+    const toggleSubject = useCallback((subject) => {
         setSelectedSubjects(prev => {
             const exists = prev.find(s => s.subject_id === subject.subject_id);
             if (exists) {
@@ -136,9 +186,9 @@ const MyExamScreen = ({ navigation, route, user }) => {
                 return [...prev, subject];
             }
         });
-    };
+    }, []);
 
-    const toggleChapter = (chapterId) => {
+    const toggleChapter = useCallback((chapterId) => {
         setSelectedChapters(prev => {
             if (prev.includes(chapterId)) {
                 return prev.filter(id => id !== chapterId);
@@ -146,7 +196,7 @@ const MyExamScreen = ({ navigation, route, user }) => {
                 return [...prev, chapterId];
             }
         });
-    };
+    }, []);
 
     const selectAllChapters = () => {
         const allChapterIds = chapters.flatMap(group => group.data.map(ch => ch.chapter_id));
@@ -223,39 +273,15 @@ const MyExamScreen = ({ navigation, route, user }) => {
                     ) : (
                         <View style={styles.subjectGrid}>
                             {subjects.map((subject, index) => {
-                                const gradients = [
-                                    ['#FF416C', '#FF4B2B'], // Red-Orange
-                                    ['#4776E6', '#8E54E9'], // Purple-Blue
-                                    ['#00B4DB', '#0083B0'], // Sky-Blue
-                                    ['#11998E', '#38EF7D'], // Green
-                                    ['#F7971E', '#FFD200'], // Golden-Yellow
-                                    ['#EC008C', '#FC6767'], // Pink-Red
-                                    ['#1A2980', '#26D0CE'], // Deep Sea Space
-                                    ['#F09819', '#EDDE5D'], // Sun
-                                ];
-                                const colors = gradients[index % gradients.length];
                                 const isSelected = selectedSubjects.some(s => s.subject_id === subject.subject_id);
-
                                 return (
-                                    <TouchableOpacity
-                                        key={subject.subject_id}
-                                        style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
-                                        onPress={() => toggleSubject(subject)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <LinearGradient
-                                            colors={isSelected ? ['#1e293b', '#0f172a'] : colors}
-                                            style={styles.subjectGradient}
-                                        >
-                                            <Text style={styles.subjectIcon}>{subject.subject_name.charAt(0).toUpperCase()}</Text>
-                                            <Text style={styles.subjectName}>{subject.subject_name}</Text>
-                                            {isSelected && (
-                                                <View style={[styles.selectedBadge, { backgroundColor: '#10b981' }]}>
-                                                    <Text style={styles.selectedBadgeText}>✓</Text>
-                                                </View>
-                                            )}
-                                        </LinearGradient>
-                                    </TouchableOpacity>
+                                    <SubjectCard 
+                                        key={subject.subject_id} 
+                                        subject={subject} 
+                                        index={index} 
+                                        isSelected={isSelected} 
+                                        onPress={toggleSubject} 
+                                    />
                                 );
                             })}
                         </View>
@@ -283,23 +309,12 @@ const MyExamScreen = ({ navigation, route, user }) => {
                                         {group.data.map((chapter) => {
                                             const isSelected = selectedChapters.includes(chapter.chapter_id);
                                             return (
-                                                <TouchableOpacity
-                                                    key={chapter.chapter_id}
-                                                    style={[styles.chapterItem, isSelected && styles.chapterItemSelected]}
-                                                    onPress={() => toggleChapter(chapter.chapter_id)}
-                                                >
-                                                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                                                        {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                                                    </View>
-                                                    <View style={styles.chapterInfo}>
-                                                        <Text style={[styles.chapterName, isSelected && styles.chapterNameSelected]}>
-                                                            {chapter.chapter_name}
-                                                        </Text>
-                                                        <Text style={styles.chapterStats}>
-                                                            {chapter.total_mcqs || 0} MCQs available
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
+                                                <ChapterItem 
+                                                    key={chapter.chapter_id} 
+                                                    chapter={chapter} 
+                                                    isSelected={isSelected} 
+                                                    onPress={toggleChapter} 
+                                                />
                                             );
                                         })}
                                     </View>

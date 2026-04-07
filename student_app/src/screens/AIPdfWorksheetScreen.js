@@ -217,8 +217,8 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
                     
                     if (studyPack?.flashcards) {
                         const mappedCards = studyPack.flashcards.map(raw => ({
-                            question_front: raw.f || raw.front || raw.q || '',
-                            answer_back: raw.b || raw.back || raw.a || ''
+                            question_front: raw.f || raw.front || raw.q || raw.question || '',
+                            answer_back: raw.b || raw.back || raw.a || raw.answer || ''
                         }));
                         allFlashcards = [...allFlashcards, ...mappedCards];
                     }
@@ -242,45 +242,57 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
             let currentMarks = 0;
             const targetMarks = totalMarks;
 
-            // Allocation weights
-            const weightLong = includeAnalysis ? 50 : 0;
-            const weightShort = includeFlashcards ? 30 : 0;
-            const weightMCQ = includeMCQs ? 20 : 0;
-            const totalWeight = weightLong + weightShort + weightMCQ;
+            let availableLong = includeAnalysis ? [...allFlashcards] : [];
+            let availableShort = includeFlashcards ? [...allFlashcards] : [];
+            let availableMCQs = includeMCQs ? [...allMCQs] : [];
 
-            let quotaLong = totalWeight > 0 ? (weightLong / totalWeight) * targetMarks : 0;
-            let quotaShort = totalWeight > 0 ? (weightShort / totalWeight) * targetMarks : 0;
-            let quotaMCQ = totalWeight > 0 ? (weightMCQ / totalWeight) * targetMarks : 0;
+            // To prevent duplicates between short and long, we shuffle ALL flashcards, and split them.
+            if (includeAnalysis && includeFlashcards) {
+               const mixedCards = shuffle([...allFlashcards]);
+               const splitIdx = Math.floor(mixedCards.length * 0.4); // 40% long, 60% short
+               availableLong = mixedCards.slice(0, splitIdx);
+               availableShort = mixedCards.slice(splitIdx);
+            } else if (includeAnalysis) {
+               availableLong = shuffle([...allFlashcards]);
+               availableShort = [];
+            } else if (includeFlashcards) {
+               availableShort = shuffle([...allFlashcards]);
+               availableLong = [];
+            }
+            availableMCQs = shuffle([...availableMCQs]);
 
-            // Use the flashcards pool for both Short and Long answers, by slicing the shuffled set
-            const shuffledFlashcards = shuffle([...allFlashcards]);
-
-            if (includeAnalysis && shuffledFlashcards.length > 0) {
-                const maxQuestions = Math.floor(quotaLong / 5);
-                const count = Math.min(Math.max(1, maxQuestions), shuffledFlashcards.length);
-                finalLong = shuffledFlashcards.splice(0, count); // remove them from pool
-                currentMarks += finalLong.length * 5;
+            // Add long questions first (5 marks)
+            while (includeAnalysis && availableLong.length > 0 && currentMarks + 5 <= targetMarks) {
+                finalLong.push(availableLong.pop());
+                currentMarks += 5;
+            }
+            
+            // Add short questions next (2 marks)
+            while (includeFlashcards && availableShort.length > 0 && currentMarks + 2 <= targetMarks) {
+                finalShort.push(availableShort.pop());
+                currentMarks += 2;
+            }
+            
+            // Add MCQs next (1 mark)
+            while (includeMCQs && availableMCQs.length > 0 && currentMarks + 1 <= targetMarks) {
+                finalMCQs.push(availableMCQs.pop());
+                currentMarks += 1;
             }
 
-            if (includeFlashcards && shuffledFlashcards.length > 0) {
-                const remainingForOthers = targetMarks - currentMarks;
-                let limit = includeMCQs ? Math.floor(remainingForOthers * 0.6) : remainingForOthers;
-                const maxQuestions = Math.floor(limit / 2);
-                const count = Math.min(Math.max(1, maxQuestions), shuffledFlashcards.length);
-                finalShort = shuffledFlashcards.splice(0, count);
-                currentMarks += finalShort.length * 2;
+            // Exceed logic if exact points not met due to strange divisions
+            if (currentMarks < targetMarks) {
+                while (includeMCQs && availableMCQs.length > 0 && currentMarks < targetMarks) {
+                     finalMCQs.push(availableMCQs.pop());
+                     currentMarks += 1;
+                }
+                while (includeFlashcards && availableShort.length > 0 && currentMarks < targetMarks) {
+                     finalShort.push(availableShort.pop());
+                     currentMarks += 2;
+                }
             }
 
-            if (includeMCQs && allMCQs.length > 0) {
-                const remaining = targetMarks - currentMarks;
-                const count = Math.min(Math.max(remaining, 5), allMCQs.length);
-                finalMCQs = shuffle([...allMCQs]).slice(0, count);
-                currentMarks += finalMCQs.length * 1;
-            }
-
-            // Construct aesthetic Subject title
             let subjectStr = fileNames.length > 2 
-                ? fileNames.slice(0,2).join(', ') + ` & ${fileNames.length - 2} others`
+                ? fileNames.slice(0,2).join(', ') + ` & +${fileNames.length - 2}`
                 : fileNames.join(' & ');
 
             if (finalMCQs.length === 0 && finalShort.length === 0 && finalLong.length === 0) {
@@ -311,12 +323,12 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
             answerKey += `<h4>Section A Answers</h4><ol>`;
             mcqs.forEach(q => {
                 mcqSection += `<li class="question-item"><div class="question-text">${q.question || q.question_text || q.q}</div><div class="options-grid">
-                    <div class="option">(A) ${q.option_a || q.options?.[0] || 'T'}</div>
-                    <div class="option">(B) ${q.option_b || q.options?.[1] || 'F'}</div>
-                    <div class="option">(C) ${q.option_c || q.options?.[2] || ''}</div>
-                    <div class="option">(D) ${q.option_d || q.options?.[3] || ''}</div>
+                    <div class="option">(A) ${q.option_a || 'True'}</div>
+                    <div class="option">(B) ${q.option_b || 'False'}</div>
+                    <div class="option">(C) ${q.option_c || ''}</div>
+                    <div class="option">(D) ${q.option_d || ''}</div>
                 </div></li>`;
-                 answerKey += `<li>${q.correct_answer || q.answer}</li>`;
+                 answerKey += `<li>${q.correct_answer || q.answer || 'A'}</li>`;
             });
             mcqSection += `</ol>`; answerKey += `</ol>`;
         }
@@ -382,11 +394,14 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
             ${mcqSection}
             ${shortSection}
             ${longSection}
-            <div class="page-break"></div>
-            <div>
-              <div class="header"><h1>Answer Key</h1></div>
-              ${answerKey}
-            </div>
+            
+            ${(mcqs.length > 0 || short.length > 0 || long.length > 0) ? `
+              <div class="page-break"></div>
+              <div>
+                <div class="header"><h1>Answer Key</h1></div>
+                ${answerKey}
+              </div>
+            ` : ''}
           </body>
         </html>
         `;

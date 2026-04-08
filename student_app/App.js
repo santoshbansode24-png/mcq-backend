@@ -103,22 +103,12 @@ export default function App() {
   // Check Server Status on App Start
   useEffect(() => {
     const initServer = async () => {
-      // Create a promise that rejects after 5 seconds to prevent indefinite hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Server check timeout')), 5000)
-      );
+      // 1. Kick off server check in the background (Non-blocking)
+      checkServerConnection().catch(e => {
+        console.log('Server check failed (likely offline):', e.message);
+      });
 
-      try {
-        // 1. Attempt Server Check (Non-blocking)
-        await Promise.race([
-          checkServerConnection(),
-          timeoutPromise
-        ]);
-      } catch (e) {
-        console.log('Server check timed out or failed (likely offline):', e.message);
-      }
-
-      // 2. Always Check Session, even if offline
+      // 2. Always Check Session immediately, even if offline
       try {
         const savedUser = await AsyncStorage.getItem('user_data');
         const userData = savedUser ? JSON.parse(savedUser) : null;

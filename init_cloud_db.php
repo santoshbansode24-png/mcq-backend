@@ -19,7 +19,7 @@ if ($db_pass === false) {
 $db_port = getenv('DB_PORT');
 
 if (!$db_host || !$db_user || !$db_pass) {
-    die("❌ Error: Missing Environment Variables. <br>Please set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME in Render.");
+    die("❌ Error: Missing Environment Variables. <br>Please set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME in Railway.");
 }
 
 echo "Attempting to connect to: <strong>$db_host</strong>...<br>";

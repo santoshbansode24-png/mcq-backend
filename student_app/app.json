@@ -11,8 +11,6 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/veeru_splash_transparent.png",
-      "resizeMode": "contain",
       "backgroundColor": "#0f172a"
     },
     "updates": {

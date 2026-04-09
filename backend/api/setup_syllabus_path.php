@@ -1,4 +1,5 @@
 <?php
+require_once 'cors_middleware.php';
 /**
  * Setup Syllabus Path API
  * Generates a day-by-day roadmap where every 2 chapters are followed

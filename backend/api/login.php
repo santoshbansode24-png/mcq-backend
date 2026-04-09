@@ -44,6 +44,9 @@ if ($isReviewerBypass) {
         'user_type' => 'student',
         'class_id' => 10, // Default to Class 3 (mapped to ID 10 in your DB)
         'class_name' => 'Class 3',
+        'board_type' => 'CBSE', // Prevent redirect to Setup screen
+        'school_name' => 'Veeru Reviewer',
+        'mobile' => '9999999999',
         'subscription_status' => 'active',
         'subscription_expiry' => '2099-12-31',
         'login_streak' => 1
@@ -53,17 +56,22 @@ if ($isReviewerBypass) {
 // --- END BULLETPROOF REVIEWER BYPASS ---
 
 try {
-    // Query database for user (by Email OR Mobile)
+    // Optimization: determine if input is email or mobile to prevent full table scan
+    $is_mobile = is_numeric($email) && strlen($email) == 10;
+    $field = $is_mobile ? 'mobile' : 'email';
+
+    // Query database for user with JOIN to get class_name in one go
     $stmt = $pdo->prepare("
-        SELECT user_id, name, email, password, user_type, class_id, 
-               subscription_status, subscription_expiry, last_login, 
-               login_streak, school_name, board_type, mobile
-        FROM users 
-        WHERE (email = ? OR mobile = ?) AND user_type = 'student'
+        SELECT u.user_id, u.name, u.email, u.password, u.user_type, u.class_id, 
+               u.subscription_status, u.subscription_expiry, u.last_login, 
+               u.login_streak, u.school_name, u.board_type, u.mobile,
+               c.class_name
+        FROM users u
+        LEFT JOIN classes c ON u.class_id = c.class_id
+        WHERE u.$field = ? AND u.user_type = 'student'
     ");
     
-    // Pass the same input twice to check against both columns
-    $stmt->execute([$email, $email]); 
+    $stmt->execute([$email]); 
     $user = $stmt->fetch();
     
     // Check if user exists
@@ -109,14 +117,6 @@ try {
 
     // Remove password from response
     unset($user['password']);
-    
-    // Get class name
-    if ($user['class_id']) {
-        $classStmt = $pdo->prepare("SELECT class_name FROM classes WHERE class_id = ?");
-        $classStmt->execute([$user['class_id']]);
-        $class = $classStmt->fetch();
-        $user['class_name'] = $class ? $class['class_name'] : null;
-    }
     
     // Success response
     sendResponse('success', 'Login successful', $user, 200);

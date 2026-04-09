@@ -1,4 +1,5 @@
 <?php
+require_once 'cors_middleware.php';
 /**
  * Redistribute Missed Tasks API
  * Automatically moves pending tasks from past days to future days
@@ -9,6 +10,13 @@ header('Content-Type: application/json');
 require_once '../config/db.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
+if (!$input) {
+    if (isset($_POST['user_id'])) {
+        $input = $_POST;
+    } else {
+        $input = json_decode($_POST['data'] ?? '{}', true);
+    }
+}
 
 if (!isset($input['user_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'User ID required']);

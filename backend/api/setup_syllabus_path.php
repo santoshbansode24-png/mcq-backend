@@ -22,6 +22,8 @@ if (!$input) {
     }
 }
 
+try {
+
 if (!isset($input['user_id']) || !isset($input['exam_date'])) {
     echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
     exit();
@@ -159,5 +161,10 @@ try {
         try { $pdo->rollBack(); } catch (Exception $rbEx) {}
     }
     echo json_encode(['status' => 'error', 'message' => 'Transaction failed: ' . $e->getMessage()]);
+}
+
+// Global catch for any unexpected fatal exceptions before the transaction
+} catch (Throwable $globalE) {
+    echo json_encode(['status' => 'error', 'message' => 'An unexpected server error occurred: ' . $globalE->getMessage()]);
 }
 ?>

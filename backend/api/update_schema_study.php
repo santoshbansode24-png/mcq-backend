@@ -15,6 +15,9 @@ try {
         // Ignore if error is duplicate column
     }
 
+    // Bypassing strict mode for the ENUM modification to prevent truncation errors on existing invalid data
+    $pdo->exec("SET SESSION sql_mode = ''");
+
     // Modify the task_type ENUM to support notes, flashcards, and mega
     $sql = "ALTER TABLE study_tasks MODIFY COLUMN task_type ENUM('revision', 'quiz', 'video', 'custom', 'practice', 'notes', 'flashcard', 'mega') NOT NULL";
     $pdo->exec($sql);

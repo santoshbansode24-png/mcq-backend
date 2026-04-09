@@ -1,4 +1,5 @@
 <?php
+require_once 'cors_middleware.php';
 /**
  * Setup Study Planner Tables
  * Creates the necessary tables for the Personal Study Planner

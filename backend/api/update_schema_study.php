@@ -15,6 +15,12 @@ try {
         // Ignore if error is duplicate column
     }
 
+    // Debug step to prove deployment
+    if (isset($_GET['check_version'])) {
+        echo json_encode(['version' => 'nuclear_fix_v3_drop_column']);
+        exit();
+    }
+
     // 1. Drop the problematic ENUM column completely
     try {
         $pdo->exec("ALTER TABLE study_tasks DROP COLUMN task_type");

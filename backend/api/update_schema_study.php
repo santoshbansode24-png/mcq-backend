@@ -15,18 +15,12 @@ try {
         // Ignore if error is duplicate column
     }
 
-    // Bypassing strict mode for the ENUM modification to prevent truncation errors on existing invalid data
-    $pdo->exec("SET SESSION sql_mode = ''");
-
-    // Temporarily set PDO error mode to WARNING to bypass exception on truncation warning
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
+    // First, clean up any existing invalid task types to prevent truncation errors
+    $pdo->exec("UPDATE study_tasks SET task_type = 'custom' WHERE task_type NOT IN ('revision', 'quiz', 'video', 'custom', 'practice', 'notes', 'flashcard', 'mega')");
 
     // Modify the task_type ENUM to support notes, flashcards, and mega
     $sql = "ALTER TABLE study_tasks MODIFY COLUMN task_type ENUM('revision', 'quiz', 'video', 'custom', 'practice', 'notes', 'flashcard', 'mega') NOT NULL";
     $pdo->exec($sql);
-    
-    // Restore PDO error mode
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     echo json_encode([
         'status' => 'success',

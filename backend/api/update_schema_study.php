@@ -15,12 +15,13 @@ try {
         // Ignore if error is duplicate column
     }
 
-    // First, clean up any existing invalid task types to prevent truncation errors
-    $pdo->exec("UPDATE study_tasks SET task_type = 'custom' WHERE task_type NOT IN ('revision', 'quiz', 'video', 'custom', 'practice', 'notes', 'flashcard', 'mega')");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
 
     // Modify the task_type ENUM to support notes, flashcards, and mega
-    $sql = "ALTER TABLE study_tasks MODIFY COLUMN task_type ENUM('revision', 'quiz', 'video', 'custom', 'practice', 'notes', 'flashcard', 'mega') NOT NULL";
+    $sql = "ALTER IGNORE TABLE study_tasks MODIFY COLUMN task_type ENUM('revision', 'quiz', 'video', 'custom', 'practice', 'notes', 'flashcard', 'mega') NOT NULL";
     $pdo->exec($sql);
+    
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     echo json_encode([
         'status' => 'success',

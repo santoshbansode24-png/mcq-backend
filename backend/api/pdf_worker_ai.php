@@ -82,37 +82,37 @@ foreach ($jobs as $job) {
             error_log("[Veeru Worker] Warning: PDF data is very small ({$base64Len} bytes).");
         }
 
-        $prompt = "Role: You are an Exhaustive Content Parser and Expert Exam Developer. Your absolute priority is high-quality information extraction and rigorous assessment generation. Do not summarize; extract and transform.
+        $prompt = "Role: You are an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
         
-        Objective: Analyze the provided PDF page text. Your goal is to convert factual, static, and conceptual data into BOTH an MCQ AND a Flashcard.
+        Objective: Analyze the provided PDF page text. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards.
         
-        SECTION 1: EXTRACTION PROTOCOLS
-        - Zero-Skip Policy: Scan every line. If a important fact exists (dates, names, definitions, processes, laws, formulas), it must become a Flashcard or an MCQ or both.
-        - Granularity: Break complex paragraphs into multiple simple data points.
-        - Flashcard Priority: EVERY single keyword, date, event, person, or definition MUST be recorded as a Flashcard.
-        
+        SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL
+        - Coverage rules: 
+           1. Extract all Definitions: Every technical term or concept must have a definition card.
+           2. Static Data: Capture all dates, names, formulas, and specific figures.
+           3. Basic Details: Ensure foundational 'What', 'Why', and 'How' questions are covered.
+        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept or fact. If a card is too complex, break it down.
+        - Answer Brevity: Ensure the flashcard 'back' (answer) is a single word or a short phrase.
+        - Mix flashcard styles on the 'front': Use direct questions (e.g., 'What is the capital of Maharashtra?') AND Fill-in-the-blanks (e.g., 'The process of plants making food is called ________.').
+
         SECTION 2: CONTENT LOAD BALANCING
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         
         SECTION 3: STRICT QUALITY STANDARDS FOR MCQs
-        - Construct clear, unambiguous, and academic-standard questions that test deep understanding, not just surface recall.
+        - Construct clear, unambiguous, and academic-standard questions that test deep understanding.
         - Create exactly 4 highly plausible and distinct options for every question. 
-        - Distractors (wrong options) MUST be challenging and intellectually rigorous. Never use obvious throwaways, joke options, or easily guessable patterns. Avoid 'All of the above' unless clinically accurate.
-        - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY the likely distractors are incorrect.
-        
-        SECTION 4: OUTPUT FORMATTING
-        - All outputs must be merged into single flat arrays inside the JSON schema.
-        - Generate the 'flashcards' array FIRST, before generating MCQs.
+        - Distractors (wrong options) MUST be challenging and intellectually rigorous. Never use obvious throwaways.
+        - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY distractors are incorrect.
         
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
-        2. FORMAT: Return ONLY a valid JSON object. No markdown, no '```json' tags.
-        3. VOLUME DEMAND: I expect a massive amount of output. Aim to generate up to the maximum constraints possible for the extracted text. DO NOT return fewer than 10 Flashcards unless the document is literally empty.
+        2. FORMAT: Return ONLY a valid JSON object. No conversational text.
+        3. VOLUME DEMAND: I expect a massive amount of output. Generate up to the maximum constraints possible for the extracted text. DO NOT return fewer than 10 Flashcards unless the document is literally empty.
         
         SCHEMA:
         {
           \"flashcards\": [
-            {\"front\": \"Front of card (Keyword/Concept)\", \"back\": \"Back of card (Definition/Explanation)\"}
+            {\"front\": \"Question or Fill-in-the-blank (Atomic)\", \"back\": \"Single word or short phrase Answer\"}
           ],
           \"mcqs\": [
             {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}

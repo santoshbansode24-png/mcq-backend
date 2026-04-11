@@ -32,17 +32,31 @@ const getTaskCfg = (type, isDone) => {
     return TASK_CONFIG[type] || TASK_CONFIG.default;
 };
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
 // ─── Animated Task Tile ──────────────────────────────────────────────────────
-const TaskTile = React.memo(({ task, index, onPress }) => {
+const TaskTile = React.memo(({ task, index, onPress, isOverdue }) => {
     const scale = useRef(new Animated.Value(0.92)).current;
     const opacity = useRef(new Animated.Value(0)).current;
+    const glow = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         Animated.parallel([
             Animated.spring(scale,   { toValue: 1, delay: index * 60, useNativeDriver: true, tension: 80 }),
             Animated.timing(opacity, { toValue: 1, delay: index * 60, duration: 280, useNativeDriver: true }),
         ]).start();
-    }, []);
+
+        if (isOverdue) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(glow, { toValue: 1, duration: 800, useNativeDriver: false }),
+                    Animated.timing(glow, { toValue: 0, duration: 800, useNativeDriver: false })
+                ])
+            ).start();
+        } else {
+            glow.setValue(0);
+        }
+    }, [isOverdue]);
 
     const isDone = task.status === 'completed';
     const isMega = task.task_type === 'mega';
@@ -52,9 +66,10 @@ const TaskTile = React.memo(({ task, index, onPress }) => {
     const cleanTitle = task.title.replace(/^(Watch|Read Notes|Notes|Quiz|Cards|Flashcards|Read|Pract)[:\s]+/i, '').trim() || task.title;
 
     if (isMega && !isDone) {
+        const megaGlow = glow.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] });
         return (
             <Animated.View style={{ transform: [{ scale }], opacity }}>
-                <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
+                <AnimatedTouchableOpacity onPress={onPress} activeOpacity={0.88} style={{ opacity: isOverdue ? megaGlow : 1 }}>
                     <LinearGradient
                         colors={['#831843', '#be185d', '#e11d48']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -79,19 +94,22 @@ const TaskTile = React.memo(({ task, index, onPress }) => {
                             <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
                         </View>
                     </LinearGradient>
-                </TouchableOpacity>
+                </AnimatedTouchableOpacity>
             </Animated.View>
         );
     }
 
+    const bgColor = glow.interpolate({ inputRange: [0, 1], outputRange: ['#ffffff', '#FEE2E2'] });
+    const borderColor = glow.interpolate({ inputRange: [0, 1], outputRange: [cfg.color, '#EF4444'] });
+
     return (
         <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <TouchableOpacity
+            <AnimatedTouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.88}
                 style={[
                     styles.taskTile,
-                    { borderLeftColor: cfg.color },
+                    { borderLeftColor: isOverdue ? borderColor : cfg.color, backgroundColor: (isOverdue && !isDone) ? bgColor : 'white' },
                     isDone && styles.taskTileDone,
                 ]}
             >
@@ -127,7 +145,7 @@ const TaskTile = React.memo(({ task, index, onPress }) => {
                     size={isDone ? 26 : 22}
                     color={isDone ? '#16A34A' : cfg.color + '70'}
                 />
-            </TouchableOpacity>
+            </AnimatedTouchableOpacity>
         </Animated.View>
     );
 });
@@ -576,14 +594,27 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
                                 {/* Tasks */}
                                 <View style={styles.tasksContainer}>
-                                    {day.tasks.map((task, tIndex) => (
-                                        <TaskTile
-                                            key={task.task_id}
-                                            task={task}
-                                            index={tIndex}
-                                            onPress={() => handleTaskPress(task)}
-                                        />
-                                    ))}
+                                    {day.tasks.map((task, tIndex) => {
+                                        let isPastOrToday = false;
+                                        try {
+                                            const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
+                                            const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+                                            isPastOrToday = day.date <= localISOTime;
+                                        } catch (e) {
+                                            isPastOrToday = day.is_yesterday || day.is_today;
+                                        }
+                                        const isOverdue = isPastOrToday && task.status !== 'completed';
+
+                                        return (
+                                            <TaskTile
+                                                key={task.task_id}
+                                                task={task}
+                                                index={tIndex}
+                                                onPress={() => handleTaskPress(task)}
+                                                isOverdue={isOverdue}
+                                            />
+                                        );
+                                    })}
                                 </View>
                             </View>
                         );

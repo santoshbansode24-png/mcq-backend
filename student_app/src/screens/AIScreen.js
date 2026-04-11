@@ -8,7 +8,8 @@ import {
     StatusBar,
     Dimensions,
     SafeAreaView,
-    Platform
+    Platform,
+    Alert
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -103,7 +104,13 @@ const AIScreen = ({ navigation }) => {
                             <TouchableOpacity
                                 key={item.id}
                                 style={[styles.tileWrapper, { width: item.width }]}
-                                onPress={() => navigation.navigate(item.screen)}
+                                onPress={() => {
+                                    if (item.id === 'homework') {
+                                        Alert.alert('Coming Soon!', 'The Homework Solver is currently in development and will be available shortly.');
+                                    } else {
+                                        navigation.navigate(item.screen);
+                                    }
+                                }}
                                 activeOpacity={0.9}
                             >
                                 {/* Gradient Card with Row Layout */}

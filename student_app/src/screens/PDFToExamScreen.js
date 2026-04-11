@@ -470,7 +470,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#0b0e14" />
+            <StatusBar barStyle="light-content" backgroundColor="#0B1121" />
             <SafeAreaView style={styles.safeArea}>
                 <FlatList
                     data={jobs}
@@ -503,7 +503,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                             {/* Main Upload Banner */}
                             <TouchableOpacity activeOpacity={0.8} onPress={handleUpload} disabled={uploading}>
                                 <LinearGradient 
-                                    colors={['#fe357e', '#8831fd']} 
+                                    colors={['#4f46e5', '#9333ea', '#db2777']} 
                                     style={styles.bannerContainer}
                                     start={{ x: 0, y: 0 }} 
                                     end={{ x: 1, y: 1 }}
@@ -513,7 +513,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     ) : (
                                         <>
                                             <View style={styles.bannerIconWrapper}>
-                                                <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#fe357e" />
+                                                <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#fbcfe8" />
                                             </View>
                                             <Text style={styles.bannerTitle}>Turn any PDF into a Study Set</Text>
                                             <Text style={styles.bannerSubtitle}>Tap to select a document from your device</Text>
@@ -569,7 +569,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.foldersScroll}>
                                 {folders.map((f, index) => {
-                                    const gradientColors = index % 2 === 0 ? ['#10b981', '#059669'] : ['#3b82f6', '#2563eb'];
+                                    const gradientColors = index % 2 === 0 ? ['#059669', '#10b981'] : ['#2563eb', '#3b82f6'];
                                     return (
                                         <TouchableOpacity 
                                             key={f.folder_id ? f.folder_id.toString() : index.toString()} 
@@ -580,7 +580,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                         >
                                             <LinearGradient colors={gradientColors} style={styles.folderGradient} start={{x:0, y:0}} end={{x:1, y:1}}>
                                                 <MaterialCommunityIcons name="folder-text-outline" size={32} color="#fff" style={styles.folderIcon} />
-                                                <Text style={styles.folderText}>{f.name}</Text>
+                                                <Text style={styles.folderText} numberOfLines={1}>{f.name}</Text>
                                             </LinearGradient>
                                         </TouchableOpacity>
                                     );
@@ -593,9 +593,11 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     }
                     ListEmptyComponent={
                         !loading && <View style={styles.emptyContainer}>
-                            <MaterialCommunityIcons name="text-box-search-outline" size={48} color="#334155" />
-                            <Text style={styles.emptyText}>No study materials yet.</Text>
-                            <Text style={styles.emptySubtext}>Upload a PDF to get started!</Text>
+                            <View style={styles.emptyIconCircle}>
+                                <MaterialCommunityIcons name="file-document-outline" size={48} color="#64748b" />
+                            </View>
+                            <Text style={styles.emptyText}>Your vault is empty</Text>
+                            <Text style={styles.emptySubtext}>Tap the banner above to spark some magic!</Text>
                         </View>
                     }
                 />
@@ -705,51 +707,52 @@ const PDFToExamScreen = ({ user, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0b0e14' },
+    container: { flex: 1, backgroundColor: '#0B1121' },
     safeArea: { flex: 1 },
     scrollContent: { padding: 20, paddingBottom: 100 },
     
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-    headerSubtitle: { fontSize: 13, color: '#94a3b8', marginTop: 2 },
+    headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+    headerSubtitle: { fontSize: 13, color: '#94a3b8', marginTop: 2, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
     headerIcons: { flexDirection: 'row', alignItems: 'center' },
-    iconBtn: { marginLeft: 15 },
+    iconBtn: { marginLeft: 15, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
 
-    bannerContainer: { padding: 25, borderRadius: 20, alignItems: 'center', marginBottom: 20 },
-    bannerIconWrapper: { backgroundColor: '#ffffff20', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-    bannerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', marginBottom: 5 },
-    bannerSubtitle: { fontSize: 12, color: '#f8fafc', opacity: 0.9 },
+    bannerContainer: { padding: 28, borderRadius: 24, alignItems: 'center', marginBottom: 24, elevation: 8, shadowColor: '#db2777', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+    bannerIconWrapper: { backgroundColor: 'rgba(255,255,255,0.15)', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+    bannerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 6 },
+    bannerSubtitle: { fontSize: 13, color: '#fbcfe8', opacity: 0.9, fontWeight: '500' },
 
     actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-    actionBlock: { flex: 1, height: 120, marginRight: 15, borderRadius: 16, overflow: 'hidden' },
-    actionGradient: { flex: 1, padding: 18, justifyContent: 'center', alignItems: 'flex-start' },
-    actionIcon: { marginBottom: 10 },
-    actionTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
-    actionSubtitle: { fontSize: 12, color: '#fff', opacity: 0.8, marginTop: 4 },
+    actionBlock: { flex: 1, height: 130, marginRight: 15, borderRadius: 20, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 4 } },
+    actionGradient: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'flex-start' },
+    actionIcon: { marginBottom: 12 },
+    actionTitle: { fontSize: 17, fontWeight: '800', color: '#fff' },
+    actionSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4, fontWeight: '600' },
 
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+    sectionTitle: { fontSize: 19, fontWeight: '800', color: '#f8fafc' },
     
     foldersScroll: { flexDirection: 'row', marginBottom: 15 },
-    folderCard: { width: 110, height: 110, marginRight: 15, borderRadius: 18, overflow: 'hidden' },
-    folderGradient: { flex: 1, padding: 15, justifyContent: 'center', alignItems: 'center' },
-    folderIcon: { marginBottom: 10 },
-    folderText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    folderCard: { width: 120, height: 120, marginRight: 15, borderRadius: 20, overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
+    folderGradient: { flex: 1, padding: 18, justifyContent: 'center', alignItems: 'center' },
+    folderIcon: { marginBottom: 12 },
+    folderText: { fontSize: 14, fontWeight: '700', color: '#fff', textAlign: 'center' },
 
-    jobCard: { backgroundColor: '#161b22', borderRadius: 16, padding: 15, flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#1f2937' },
-    cardIconBox: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    jobCard: { backgroundColor: '#1E293B', borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+    cardIconBox: { width: 54, height: 54, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
     cardDetails: { flex: 1 },
-    fileName: { fontSize: 15, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
+    fileName: { fontSize: 16, fontWeight: '800', color: '#f1f5f9', marginBottom: 6 },
     optionsBtn: { padding: 8, marginLeft: 10 },
     
-    statusPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+    statusPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
     statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
-    statusText: { fontSize: 12, fontWeight: '600' },
-    retryHint: { fontSize: 11, color: '#f43f5e', marginTop: 4, fontWeight: 'bold', fontStyle: 'italic' },
+    statusText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+    retryHint: { fontSize: 12, color: '#f43f5e', marginTop: 6, fontWeight: '700' },
 
-    emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
-    emptyText: { color: '#94a3b8', fontSize: 16, fontWeight: '600', marginTop: 15 },
-    emptySubtext: { color: '#64748b', fontSize: 13, marginTop: 5 },
+    emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 50 },
+    emptyIconCircle: { width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.03)', justifyContent: 'center', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    emptyText: { color: '#e2e8f0', fontSize: 18, fontWeight: '800', marginTop: 10 },
+    emptySubtext: { color: '#94a3b8', fontSize: 14, marginTop: 6, fontWeight: '500' },
 
     // Modal Styles
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },

@@ -54,9 +54,29 @@ export default function App() {
 
         // ── Study Planner notification ──
         if (data.type === 'STUDY_PLANNER') {
-            // Navigate to Main first (so the inner nav stack is mounted),
-            // then push StudyPlanner inside it via the custom navigation params.
-            navigationRef.navigate('Main', { initialScreen: 'StudyPlanner' });
+            if (data.taskType && data.taskType !== 'mega' && data.chapterId) {
+                const tabMap = {
+                    'quiz': 'MCQs',
+                    'video': 'Videos',
+                    'flashcard': 'Flashcards',
+                    'notes': 'Notes'
+                };
+                navigationRef.navigate('Main', {
+                    initialScreen: 'ChapterContent',
+                    initialParams: {
+                        chapter: {
+                            chapter_id: data.chapterId,
+                            chapter_name: data.taskTitle ? data.taskTitle.replace(/^(Watch|Read Notes|Notes|Quiz|Cards|Flashcards|Read|Pract)[:\s]+/i, '').trim() : 'Study Session',
+                            subject_name: data.subjectName || ''
+                        },
+                        initialTab: tabMap[data.taskType] || 'Notes'
+                    }
+                });
+            } else {
+                // Navigate to Main first (so the inner nav stack is mounted),
+                // then push StudyPlanner inside it via the custom navigation params.
+                navigationRef.navigate('Main', { initialScreen: 'StudyPlanner' });
+            }
             return;
         }
 

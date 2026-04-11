@@ -354,6 +354,8 @@ export const scheduleSmartStudyNotifications = async (todayTasks = [], yesterday
                             screen: 'StudyPlanner',
                             taskType: task.task_type,
                             chapterId: task.chapter_id,
+                            taskTitle: task.title,
+                            subjectName: task.subject
                         },
                         sound: true,
                         priority: HIGH,

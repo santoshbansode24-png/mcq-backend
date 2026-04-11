@@ -56,7 +56,7 @@ const TaskTile = React.memo(({ task, index, onPress }) => {
             <Animated.View style={{ transform: [{ scale }], opacity }}>
                 <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
                     <LinearGradient
-                        colors={['#7F1D1D', '#DC2626', '#EF4444']}
+                        colors={['#831843', '#be185d', '#e11d48']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                         style={styles.megaTileCard}
                     >
@@ -866,14 +866,16 @@ const styles = StyleSheet.create({
     progressFloatCard: {
         marginHorizontal: 16,
         marginTop: 12,
-        backgroundColor: 'white',
-        borderRadius: 18,
-        padding: 16,
-        elevation: 4,
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        borderRadius: 24,
+        padding: 20,
+        elevation: 8,
         shadowColor: '#4338ca',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.8)',
     },
     progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     progressLabel:    { fontSize: 13, fontFamily: 'NotoSans-Bold', color: '#1e293b' },
@@ -902,17 +904,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 14,
-        marginBottom: 8,
-        borderLeftWidth: 4,
-        elevation: 2,
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 12,
+        borderLeftWidth: 5,
+        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
     },
-    taskTileDone: { backgroundColor: '#F8FFFE', borderLeftColor: '#16A34A' },
+    taskTileDone: { backgroundColor: '#DCFCE7', borderLeftColor: '#16A34A' },
     taskIconCircle: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     taskContent:    { flex: 1, marginLeft: 12 },
     taskTopRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
@@ -926,13 +928,15 @@ const styles = StyleSheet.create({
 
     // ── Mega Tile ──
     megaTileCard: {
-        borderRadius: 18,
-        marginBottom: 10,
-        elevation: 6,
-        shadowColor: '#DC2626',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.28,
-        shadowRadius: 8,
+        borderRadius: 22,
+        marginBottom: 14,
+        elevation: 8,
+        shadowColor: '#be185d',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     megaInner:   { flexDirection: 'row', alignItems: 'center', padding: 16 },
     megaIconWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },

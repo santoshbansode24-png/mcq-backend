@@ -142,18 +142,19 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     // Handle deep-link from notification: if App.js passes initialScreen, push it
     useEffect(() => {
         const screen = route?.params?.initialScreen;
+        const initialParams = route?.params?.initialParams || {};
         if (screen && screen !== 'Home') {
             // Push after a short delay so the nav stack is ready
             const timer = setTimeout(() => {
                 setHistoryStack(prev => {
                     // Avoid duplicate on re-render
                     if (prev[prev.length - 1]?.screen === screen) return prev;
-                    return [...prev, { screen, params: {} }];
+                    return [...prev, { screen, params: initialParams }];
                 });
             }, 200);
             return () => clearTimeout(timer);
         }
-    }, [route?.params?.initialScreen]);
+    }, [route?.params?.initialScreen, route?.params?.initialParams]);
 
     // Save navigation history with debounce — avoids hammering AsyncStorage on rapid navigation
     const saveTimerRef = useRef(null);

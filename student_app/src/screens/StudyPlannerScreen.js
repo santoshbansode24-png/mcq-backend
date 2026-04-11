@@ -41,9 +41,11 @@ const TaskTile = React.memo(({ task, index, onPress, isOverdue }) => {
     const glow = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // Cap animation delay to 300ms to avoid long-running JS thread activity on many tasks
+        const safeDelay = Math.min(index * 50, 300);
         Animated.parallel([
-            Animated.spring(scale,   { toValue: 1, delay: index * 60, useNativeDriver: true, tension: 80 }),
-            Animated.timing(opacity, { toValue: 1, delay: index * 60, duration: 280, useNativeDriver: true }),
+            Animated.spring(scale,   { toValue: 1, delay: safeDelay, useNativeDriver: true, tension: 80 }),
+            Animated.timing(opacity, { toValue: 1, delay: safeDelay, duration: 280, useNativeDriver: true }),
         ]).start();
 
         if (isOverdue) {
@@ -168,75 +170,102 @@ const StudyPlannerScreen = ({ user, navigation }) => {
     const [allChapters, setAllChapters]               = useState([]);
     const [selectedChapters, setSelectedChapters]     = useState([]);
     const [loadingChapters, setLoadingChapters]       = useState(false);
+    
+    // Performance optimization: prevent redundant re-fetching on focus
+    const lastFetchRef = useRef(0);
 
     // Memoized derived stats — avoid recalculating on every render
-    const { allTasks, doneTasks, pct, daysLeft } = useMemo(() => {
+    const { allTasks, doneTasks, pct, daysLeft, todayISODate } = useMemo(() => {
         const allTasks  = roadmap.flatMap(d => d.tasks);
         const doneTasks = allTasks.filter(t => t.status === 'completed');
         const pct       = allTasks.length > 0 ? Math.round((doneTasks.length / allTasks.length) * 100) : 0;
+        
+        const now = new Date();
         const daysLeft  = examDate instanceof Date && !isNaN(examDate)
-            ? Math.max(0, Math.ceil((examDate - new Date()) / (1000 * 60 * 60 * 24)))
+            ? Math.max(0, Math.ceil((examDate - now) / (1000 * 60 * 60 * 24)))
             : 0;
-        return { allTasks, doneTasks, pct, daysLeft };
+
+        // Memoize local ISO date once per roadmap update
+        const tzOffset = now.getTimezoneOffset() * 60000; 
+        const todayISODate = (new Date(now.getTime() - tzOffset)).toISOString().split('T')[0];
+
+        return { allTasks, doneTasks, pct, daysLeft, todayISODate };
     }, [roadmap, examDate]);
 
     useFocusEffect(
         useCallback(() => {
             if (!user || !user.user_id) return;
+            
+            // Only re-fetch if it's been > 30 seconds or if no data exists
+            const now = Date.now();
+            if (now - lastFetchRef.current < 30000 && roadmap.length > 0) return;
+            
             const task = InteractionManager.runAfterInteractions(() => {
-                checkExistingPlan();
-                fetchSyllabusInfo();
+                initializePlanner();
             });
             return () => task.cancel();
-        }, [user])
+        }, [user, roadmap.length])
     );
 
-    const checkExistingPlan = async () => {
+    const initializePlanner = async () => {
         if (!user || !user.user_id) return;
         try {
-            // 1. Get configuration status and exam date
-            const statusRes = await axios.get(`${config.API_URL}/get_study_status.php?user_id=${user.user_id}`);
+            // Speed up: Run these in parallel
+            const [statusRes, roadmapRes, subjectsRes] = await Promise.all([
+                axios.get(`${config.API_URL}/get_study_status.php?user_id=${user.user_id}`),
+                axios.get(`${config.API_URL}/get_roadmap.php?user_id=${user.user_id}&include_past=1`),
+                axios.get(`${config.API_URL}/get_subjects.php?class_id=${user.class_id}`)
+            ]);
+
+            lastFetchRef.current = Date.now();
+
+            // 1. Handle Status & Exam Date
             let configured = false;
             let fetchedExamDate = new Date();
-
             if (statusRes.data.status === 'success' && statusRes.data.is_configured) {
                 configured = true;
                 if (statusRes.data.exam_date && statusRes.data.exam_date !== '0000-00-00' && statusRes.data.exam_date !== '1970-01-01') {
                     fetchedExamDate = new Date(statusRes.data.exam_date);
                 }
             }
-            
             setExamDate(fetchedExamDate);
             setIsConfigured(configured);
 
-            if (configured) {
-                // 2. Fetch the roadmap (including historical context for notifications)
-                const roadmapRes = await axios.get(`${config.API_URL}/get_roadmap.php?user_id=${user.user_id}&include_past=1`);
-                if (roadmapRes.data.status === 'success' && roadmapRes.data.data) {
-                    const fullRoadmap = roadmapRes.data.data;
-                    setRoadmap(fullRoadmap);
+            // 2. Handle Roadmap & Notifications
+            if (configured && roadmapRes.data.status === 'success' && roadmapRes.data.data) {
+                const fullRoadmap = roadmapRes.data.data;
+                setRoadmap(fullRoadmap);
 
-                    // Notifications: Extract today and yesterday from THIS ALREADY FETCHED data
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const yesterdayDate = new Date();
-                    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-                    const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const yesterdayDate = new Date();
+                yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+                const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
 
-                    let todayTasks = [], yesterdayTasks = [];
-                    fullRoadmap.forEach(d => {
-                        if (d.date === todayStr) todayTasks = d.tasks;
-                        if (d.date === yesterdayStr) yesterdayTasks = d.tasks;
-                    });
-                    scheduleSmartStudyNotifications(todayTasks, yesterdayTasks);
-                }
+                let todayTasks = [], yesterdayTasks = [];
+                fullRoadmap.forEach(d => {
+                    if (d.date === todayStr) todayTasks = d.tasks;
+                    if (d.date === yesterdayStr) yesterdayTasks = d.tasks;
+                });
+                scheduleSmartStudyNotifications(todayTasks, yesterdayTasks);
             }
+
+            // 3. Handle Subjects Info
+            if (subjectsRes.data.status === 'success') {
+                setAvailableSubjects(subjectsRes.data.data);
+            }
+
         } catch (error) {
-            console.error('Error in checkExistingPlan:', error);
-            setIsConfigured(false);
+            console.error('Error in initializePlanner:', error);
+            // Only set configured false if we explicitly get a "not configured" error, 
+            // otherwise keep existing state to prevent flickering.
         } finally {
             setLoading(false);
         }
     };
+
+    // Keep checkExistingPlan for backward compatibility within this file if needed, 
+    // but redirect to the faster initializePlanner
+    const checkExistingPlan = initializePlanner;
 
     // This function is called after plan setup or explicit date change to ensure roadmap is balanced
     const fetchAndRedistributeRoadmap = async () => {
@@ -267,12 +296,8 @@ const StudyPlannerScreen = ({ user, navigation }) => {
         }
     };
 
-    const fetchSyllabusInfo = async () => {
-        if (!user || !user.class_id) return;
-        try {
-            const response = await axios.get(`${config.API_URL}/get_subjects.php?class_id=${user.class_id}`);
-            if (response.data.status === 'success') setAvailableSubjects(response.data.data);
-        } catch {}
+    const fetchSyllabusInfo = () => {
+        // Now handled inside initializePlanner for better performance
     };
 
     useEffect(() => {
@@ -596,15 +621,7 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                                 {/* Tasks */}
                                 <View style={styles.tasksContainer}>
                                     {day.tasks.map((task, tIndex) => {
-                                        let isPastOrToday = false;
-                                        try {
-                                            const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
-                                            const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-                                            isPastOrToday = day.date <= localISOTime;
-                                        } catch (e) {
-                                            isPastOrToday = day.is_yesterday || day.is_today;
-                                        }
-                                        const isOverdue = isPastOrToday && task.status !== 'completed';
+                                        const isOverdue = day.date <= todayISODate && task.status !== 'completed';
 
                                         return (
                                             <TaskTile

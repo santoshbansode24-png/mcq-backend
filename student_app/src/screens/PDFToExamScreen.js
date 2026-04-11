@@ -93,10 +93,13 @@ const PDFToExamScreen = ({ user, navigation }) => {
         if (!silent) setLoading(true);
         try {
             const folderUrl = `${API_URL}/get_pdf_folders.php?user_id=${user?.user_id || 0}&parent_id=${currentFolderId}`;
-            const fRes = await axios.get(folderUrl);
-
             const jobFilter = currentFolderId === 'root' ? 'root' : currentFolderId;
-            const jRes = await axios.get(`${API_URL}/get_pdf_study_status.php?user_id=${user?.user_id || 0}&folder_id=${jobFilter}`);
+            const jobUrl = `${API_URL}/get_pdf_study_status.php?user_id=${user?.user_id || 0}&folder_id=${jobFilter}`;
+
+            const [fRes, jRes] = await Promise.all([
+                axios.get(folderUrl),
+                axios.get(jobUrl)
+            ]);
 
             if (fRes.data.status === 'success') setFolders(fRes.data.data);
             if (jRes.data.status === 'success') {
@@ -409,7 +412,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     // --- Rendering ---
 
-    const renderJobItem = ({ item }) => {
+    const renderJobItem = React.useCallback(({ item }) => {
         const isReady = item.status === 'completed';
         const isFailed = item.status === 'failed';
         const isUploading = item.status === 'uploading';
@@ -463,7 +466,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 )}
             </TouchableOpacity>
         );
-    };
+    }, [navigation]);
 
     return (
         <View style={styles.container}>
@@ -474,6 +477,10 @@ const PDFToExamScreen = ({ user, navigation }) => {
                     keyExtractor={(item) => item.job_id.toString()}
                     renderItem={renderJobItem}
                     contentContainerStyle={styles.scrollContent}
+                    initialNumToRender={8}
+                    maxToRenderPerBatch={5}
+                    windowSize={8}
+                    removeClippedSubviews={Platform.OS === 'android'}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} tintColor="#fff" />}
                     ListHeaderComponent={
                         <>

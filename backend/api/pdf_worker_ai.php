@@ -82,27 +82,32 @@ foreach ($jobs as $job) {
             error_log("[Veeru Worker] Warning: PDF data is very small ({$base64Len} bytes).");
         }
 
-        $prompt = "Role: You are an Exhaustive Content Parser and Exam Developer. Your absolute priority is Total Information Coverage. Do not summarize; extract and transform.
+        $prompt = "Role: You are an Exhaustive Content Parser and Expert Exam Developer. Your absolute priority is high-quality information extraction and rigorous assessment generation. Do not summarize; extract and transform.
         
-        Objective: Analyze the provided PDF page text. Your goal is to convert every piece of factual, static, and conceptual data into BOTH an MCQ AND a Flashcard where appropriate. Do not spare any information. If a page has 50 facts, generate 50 MCQs AND 50 Flashcards.
+        Objective: Analyze the provided PDF page text. Your goal is to convert factual, static, and conceptual data into BOTH an MCQ AND a Flashcard.
         
         SECTION 1: EXTRACTION PROTOCOLS
-        - Zero-Skip Policy: Scan every line. If a fact exists (dates, names, definitions, processes, laws, formulas), it must become a Flashcard or an MCQ or both.
+        - Zero-Skip Policy: Scan every line. If a important fact exists (dates, names, definitions, processes, laws, formulas), it must become a Flashcard or an MCQ or both.
         - Granularity: Break complex paragraphs into multiple simple data points.
         - Flashcard Priority: EVERY single keyword, date, event, person, or definition MUST be recorded as a Flashcard.
         
         SECTION 2: CONTENT LOAD BALANCING
-        - For every section of text you parse, aim for a 1:1 ratio between MCQs and Flashcards.
-        - Do not stop generating Flashcards after just a few. Create as many flashcards as you possibly can.
+        - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         
-        SECTION 3: OUTPUT FORMATTING
+        SECTION 3: STRICT QUALITY STANDARDS FOR MCQs
+        - Construct clear, unambiguous, and academic-standard questions that test deep understanding, not just surface recall.
+        - Create exactly 4 highly plausible and distinct options for every question. 
+        - Distractors (wrong options) MUST be challenging and intellectually rigorous. Never use obvious throwaways, joke options, or easily guessable patterns. Avoid 'All of the above' unless clinically accurate.
+        - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY the likely distractors are incorrect.
+        
+        SECTION 4: OUTPUT FORMATTING
         - All outputs must be merged into single flat arrays inside the JSON schema.
         - Generate the 'flashcards' array FIRST, before generating MCQs.
         
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
         2. FORMAT: Return ONLY a valid JSON object. No markdown, no '```json' tags.
-        3. HIGH VOLUME DEMAND: I expect a massive amount of Flashcards. If you return 30 MCQs, you MUST return at least 30 Flashcards. DO NOT return fewer than 10 Flashcards unless the document is literally empty.
+        3. VOLUME DEMAND: I expect a massive amount of output. Aim to generate up to the maximum constraints possible for the extracted text. DO NOT return fewer than 10 Flashcards unless the document is literally empty.
         
         SCHEMA:
         {
@@ -110,7 +115,7 @@ foreach ($jobs as $job) {
             {\"front\": \"Front of card (Keyword/Concept)\", \"back\": \"Back of card (Definition/Explanation)\"}
           ],
           \"mcqs\": [
-            {\"q\": \"Question\", \"o\": [\"A\", \"B\", \"C\", \"D\"], \"a\": 0, \"e\": \"Explanation\"}
+            {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}
           ]
         }";
 

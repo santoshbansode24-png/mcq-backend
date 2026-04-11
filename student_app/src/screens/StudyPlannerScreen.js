@@ -460,13 +460,14 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                             </TouchableOpacity>
                         </View>
                         <TouchableOpacity
-                            onPress={() => Alert.alert('Reset Planner?', 'This will clear your current roadmap. Continue?', [
+                            onPress={() => Alert.alert('Start New Plan?', 'This will clear your current roadmap so you can build a fresh one. Continue?', [
                                 { text: 'Cancel', style: 'cancel' },
-                                { text: 'Reset', style: 'destructive', onPress: () => setIsConfigured(false) },
+                                { text: 'Start Fresh', style: 'destructive', onPress: () => setIsConfigured(false) },
                             ])}
-                            style={styles.headerBtn}
+                            style={styles.headerResetBtn}
                         >
-                            <Ionicons name="refresh-outline" size={22} color="white" />
+                            <Ionicons name="refresh-outline" size={14} color="white" />
+                            <Text style={styles.headerResetText}>NEW PLAN</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -883,6 +884,18 @@ const styles = StyleSheet.create({
     },
     headerRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     headerBtn:    { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+    headerResetBtn: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: 'rgba(255,255,255,0.18)', 
+        paddingHorizontal: 10, 
+        paddingVertical: 6, 
+        borderRadius: 20,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)'
+    },
+    headerResetText: { color: 'white', fontSize: 10, fontFamily: 'NotoSans-Bold', letterSpacing: 0.5 },
     headerTitle:  { color: 'white', fontSize: 18, fontFamily: 'NotoSans-Bold', textAlign: 'center' },
     headerDateRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
     headerDateText: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontFamily: 'NotoSans-Regular' },

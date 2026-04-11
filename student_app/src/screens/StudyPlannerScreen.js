@@ -318,12 +318,12 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                 chapter_ids: selectedChapters,
             });
             if (res.data.status === 'success') {
-                fetchRoadmap();
+                checkExistingPlan();
             } else {
                 Alert.alert('Error', res.data.message || 'Something went wrong.');
             }
-        } catch {
-            Alert.alert('Error', 'Failed to connect to the server while updating the date.');
+        } catch (error) {
+            Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to connect to the server while updating the date.');
         } finally { setLoading(false); }
     };
 
@@ -351,12 +351,12 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             if (res.data.status === 'success') {
                 setIsConfigured(true);
                 setWizardStep(1);
-                fetchRoadmap();
+                checkExistingPlan();
             } else {
                 Alert.alert('Error', res.data.message || 'Something went wrong.');
             }
-        } catch {
-            Alert.alert('Error', 'Failed to connect to server.');
+        } catch (error) {
+            Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to connect to server.');
         } finally {
             setLoading(false);
         }

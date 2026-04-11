@@ -21,6 +21,8 @@ const LoginScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
 
+    const [errorMsg, setErrorMsg] = useState('');
+
     const [request, response, promptAsync] = Google.useAuthRequest({
         clientId: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com',
         redirectUri: AuthSession.makeRedirectUri({
@@ -89,9 +91,10 @@ const LoginScreen = ({ navigation }) => {
     const handleLogin = async () => {
         const trimmedEmail = email.trim();
         const trimmedPassword = password.trim();
+        setErrorMsg(''); // Reset error message
 
         if (!trimmedEmail || !trimmedPassword) {
-            Alert.alert('Error', 'Please enter email/mobile and password');
+            setErrorMsg('Please enter email/mobile and password');
             return;
         }
 
@@ -117,7 +120,7 @@ const LoginScreen = ({ navigation }) => {
             } else {
                 const msg = data?.message || 'Invalid credentials or server error';
                 console.warn("Login failed message:", msg);
-                Alert.alert('Login Failed', msg);
+                setErrorMsg(msg);
             }
         } catch (error) {
             setLoading(false);
@@ -125,8 +128,7 @@ const LoginScreen = ({ navigation }) => {
                 ? `Status: ${error.response.status} - ${JSON.stringify(error.response.data)}`
                 : error.message || error.toString();
             console.error("Login Error:", errStr);
-            window.lastError = errStr;
-            Alert.alert('Error Details', errStr);
+            setErrorMsg(errStr);
         }
     };
 
@@ -190,6 +192,8 @@ const LoginScreen = ({ navigation }) => {
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry={!isPasswordVisible}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
                             <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={styles.eyeIcon}>
                                 <Ionicons name={isPasswordVisible ? 'eye-off' : 'eye'} size={20} color="#94a3b8" />
@@ -251,11 +255,11 @@ const LoginScreen = ({ navigation }) => {
                         </TouchableOpacity>
                     )}
 
-                    {window.lastError && !loading && (
+                    {errorMsg ? (
                         <Text style={styles.errorText}>
-                            {window.lastError}
+                            {errorMsg}
                         </Text>
-                    )}
+                    ) : null}
 
                     <View style={styles.registerContainer}>
                         <Text style={styles.registerText}>Don't have an account? </Text>

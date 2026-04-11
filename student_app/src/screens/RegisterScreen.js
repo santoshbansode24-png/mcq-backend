@@ -53,6 +53,7 @@ const RegisterScreen = ({ navigation, route }) => {
   const [showClassModal, setShowClassModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com',
@@ -172,7 +173,10 @@ const RegisterScreen = ({ navigation, route }) => {
     const trimmedEmail = email.trim();
     const trimmedMobile = mobile.trim();
     const trimmedPassword = password.trim();
+    const trimmedConfirm = confirmPassword.trim();
     const trimmedSchool = schoolName.trim();
+
+    setErrorMsg("");
 
     if (
       !trimmedName ||
@@ -183,23 +187,23 @@ const RegisterScreen = ({ navigation, route }) => {
       !selectedBoard ||
       !selectedClass
     ) {
-      Alert.alert("Error", "Please fill in all fields");
+      setErrorMsg("Please fill in all fields");
       return;
     }
 
     if (trimmedMobile.length !== 10 || !/^\d+$/.test(trimmedMobile)) {
-      Alert.alert("Error", "Mobile number must be exactly 10 digits");
+      setErrorMsg("Mobile number must be exactly 10 digits");
       return;
     }
 
     if (!googleId) {
-      if (trimmedPassword !== confirmPassword) {
-        Alert.alert("Error", "Passwords do not match");
+      if (trimmedPassword !== trimmedConfirm) {
+        setErrorMsg("Passwords do not match");
         return;
       }
 
       if (trimmedPassword.length < 6) {
-        Alert.alert("Error", "Password must be at least 6 characters long");
+        setErrorMsg("Password must be at least 6 characters long");
         return;
       }
     }
@@ -477,6 +481,8 @@ const RegisterScreen = ({ navigation, route }) => {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
@@ -507,6 +513,8 @@ const RegisterScreen = ({ navigation, route }) => {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
                   <TouchableOpacity
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -522,6 +530,18 @@ const RegisterScreen = ({ navigation, route }) => {
               </View>
             </>
           )}
+
+          {errorMsg ? (
+            <Text style={{
+              color: '#ef4444',
+              textAlign: 'center',
+              marginBottom: 16,
+              fontFamily: 'NotoSans-Regular',
+              fontSize: 12,
+            }}>
+              {errorMsg}
+            </Text>
+          ) : null}
 
           <TouchableOpacity
             style={styles.buttonShadow}

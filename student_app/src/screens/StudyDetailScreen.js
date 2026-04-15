@@ -128,10 +128,17 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
 
     const getCounts = () => {
         if (!studyData) return { mcqs: 0, flashcards: 0, notes: 0 };
-        const hasNotes = studyData.notes && 
-            ((studyData.notes.definitions?.length || 0) + 
-             (studyData.notes.key_facts?.length || 0) + 
-             (studyData.notes.core_concepts?.length || 0)) > 0;
+        
+        // Robust check for notes (Supports various AI naming conventions)
+        const n = studyData.notes || {};
+        const countValues = (obj) => {
+            if (!obj) return 0;
+            return Object.keys(obj).reduce((sum, key) => {
+                return sum + (Array.isArray(obj[key]) ? obj[key].length : 0);
+            }, 0);
+        };
+        
+        const hasNotes = countValues(n) > 0;
              
         return { 
             mcqs: studyData.mcqs?.length || 0, 

@@ -59,6 +59,12 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
         );
     }
 
+    const n = notes || {};
+    const getItems = (key) => {
+        // Try exact, then capitalized, then lowercase
+        return n[key] || n[key.charAt(0).toUpperCase() + key.slice(1)] || n[key.toLowerCase()] || [];
+    };
+
     return (
         <LinearGradient colors={['#0f172a', '#020617']} style={styles.container}>
             <SafeAreaView edges={['top']} style={styles.header}>
@@ -78,7 +84,7 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
                     title="Key Definitions" 
                     icon="book-open-page-variant" 
                     color="#38bdf8" 
-                    items={notes.definitions} 
+                    items={getItems('definitions')} 
                     delay={100}
                 />
                 
@@ -86,7 +92,7 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
                     title="Essential Facts" 
                     icon="lightning-bolt" 
                     color="#f59e0b" 
-                    items={notes.key_facts} 
+                    items={getItems('key_facts')} 
                     delay={200}
                 />
                 
@@ -94,7 +100,7 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
                     title="Core Concepts" 
                     icon="brain" 
                     color="#a855f7" 
-                    items={notes.core_concepts} 
+                    items={getItems('core_concepts')} 
                     delay={300}
                 />
                 

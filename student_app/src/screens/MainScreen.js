@@ -43,6 +43,7 @@ import WorksheetGeneratorScreen from './WorksheetGeneratorScreen';
 
 import AIPdfExamScreen from './AIPdfExamScreen';
 import AIPdfWorksheetScreen from './AIPdfWorksheetScreen';
+import AIPdfNotesScreen from './AIPdfNotesScreen';
 
 import StudyPlannerScreen from './StudyPlannerScreen';
 import StudyDetailScreen from './StudyDetailScreen';
@@ -226,7 +227,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
-            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail']
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -356,6 +357,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'AIPdfExam': return <AIPdfExamScreen {...commonProps} />;
             case 'AIPdfWorksheet': return <AIPdfWorksheetScreen {...commonProps} />;
             case 'StudyDetail': return <StudyDetailScreen {...commonProps} />;
+            case 'AIPdfNotes': return <AIPdfNotesScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };

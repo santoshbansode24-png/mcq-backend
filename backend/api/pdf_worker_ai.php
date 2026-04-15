@@ -98,16 +98,17 @@ foreach ($jobs as $job) {
         
         Objective: Analyze the provided PDF page text. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards.
         
-        SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL
+        SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL (QUESTION & ANSWER FORMAT)
+        - Your ABSOLUTE priority is to create flashcards in a clear 'question' and 'answer' format.
+        - STRICT DISTRIBUTION RATIO: You MUST maintain the following distribution in your output:
+           1. 35% VERY SHORT ANSWER TYPE (Direct, precise questions with 1-2 word answers).
+           2. 35% SHORT ANSWER TYPE (Questions needing a short phrase or single sentence).
+           3. 30% FILL IN THE BLANKS (Statements using ________ for the missing concept).
         - Coverage rules: 
-           1. Extract all Definitions: Every technical term or concept must have a definition card.
-           2. Static Data: Capture all dates, names, formulas, and specific figures.
-           3. Basic Details: Ensure foundational 'What', 'Why', and 'How' questions are covered.
-        - STRICT FORMAT AND DISTRIBUTION: Create flashcards STRICTLY in a `question` and `answer` format. Your flashcard distribution MUST closely adhere to the following ratios:
-           1. 35% VERY SHORT ANSWER TYPE (Direct, concise questions with 1-2 word answers).
-           2. 35% SHORT ANSWER TYPE (Questions requiring a short phrase or single sentence answer).
-           3. 30% FILL IN THE BLANKS (Statements with a ________ for the missing key concept).
-        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept or fact. If a card is too complex, break it down.
+           1. Extract all Definitions: Technical terms must have a definition card.
+           2. Static Data: Capture dates, names, formulas, and specific figures.
+           3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
+        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Never combine multiple facts into one card.
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}

@@ -17,6 +17,7 @@ import { dataCache } from '../utils/dataCache';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
 import NetInfo from '@react-native-community/netinfo';
 import { scheduleStudyPlanNotifications } from '../utils/studyNotificationHelper';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 // --- CONSTANTS MOVED OUTSIDE FOR PERFORMANCE ---
 
@@ -1015,7 +1016,17 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const renderContent = () => {
         // Only show full-screen loader if data is empty (no cache yet)
         const tabData = getTabSpecificData(activeTab);
-        if (loading && tabData.length === 0) return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
+        if (loading && tabData.length === 0) {
+            return (
+                <View style={{ padding: 16 }}>
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                </View>
+            );
+        }
 
         // Add bottom padding to all scrollable content so it doesn't get hidden behind bottom tab navigator
         const contentContainerPadding = { paddingBottom: 120 };
@@ -1242,7 +1253,15 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         // Only show full-screen loader if specific tab data is empty
         if (loading && currentData.length === 0) {
-            return <ActivityIndicator size="large" color="#4f46e5" style={styles.loader} />;
+            return (
+                <View style={{ padding: 16 }}>
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                    <SkeletonLoader height={90} borderRadius={16} style={{ marginBottom: 12 }} />
+                </View>
+            );
         }
 
         return (

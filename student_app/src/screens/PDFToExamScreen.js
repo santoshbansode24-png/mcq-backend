@@ -37,6 +37,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const [uploadModalVisible, setUploadModalVisible] = useState(false);
     const [pendingUploadFile, setPendingUploadFile] = useState(null);
     const [uploadFileName, setUploadFileName] = useState('');
+    const [uploadDifficulty, setUploadDifficulty] = useState('mix');
     
     const [renameFolderModalVisible, setRenameFolderModalVisible] = useState(false);
     const [selectedFolder, setSelectedFolder] = useState(null);
@@ -183,6 +184,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
             });
             formData.append('user_id', user?.user_id?.toString());
             formData.append('custom_file_name', finalName);
+            formData.append('difficulty', uploadDifficulty);
             if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
             
             const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
@@ -515,7 +517,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                             <View style={styles.bannerIconWrapper}>
                                                 <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#fbcfe8" />
                                             </View>
-                                            <Text style={styles.bannerTitle}>Turn any PDF into a Study Set</Text>
+                                            <Text style={styles.bannerTitle}>Veeru Lens: PDF to Study Set</Text>
                                             <Text style={styles.bannerSubtitle}>Tap to select a document from your device</Text>
                                         </>
                                     )}
@@ -641,6 +643,20 @@ const PDFToExamScreen = ({ user, navigation }) => {
                             placeholderTextColor="#64748b"
                             autoFocus
                         />
+                        <Text style={styles.modalSubTitle}>Difficulty Level</Text>
+                        <View style={styles.difficultyContainer}>
+                            {['easy', 'moderate', 'hard', 'mix'].map(diff => (
+                                <TouchableOpacity 
+                                    key={diff}
+                                    style={[styles.diffBtn, uploadDifficulty === diff && styles.diffBtnSelected]}
+                                    onPress={() => setUploadDifficulty(diff)}
+                                >
+                                    <Text style={[styles.diffBtnText, uploadDifficulty === diff && styles.diffBtnTextSelected]}>
+                                        {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                         <View style={styles.modalActions}>
                             <TouchableOpacity style={styles.modalBtn} onPress={() => { setUploadModalVisible(false); setPendingUploadFile(null); }}>
                                 <Text style={styles.modalBtnText}>Cancel</Text>
@@ -763,7 +779,13 @@ const styles = StyleSheet.create({
     modalBtn: { paddingVertical: 10, paddingHorizontal: 15, marginLeft: 10, borderRadius: 8 },
     modalBtnPrimary: { backgroundColor: '#3b82f6' },
     modalBtnText: { color: '#94a3b8', fontSize: 16, fontWeight: '600' },
-    modalBtnTextPrimary: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+    modalBtnTextPrimary: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    modalSubTitle: { fontSize: 14, color: '#94a3b8', marginBottom: 10, fontWeight: '600', marginTop: -5 },
+    difficultyContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+    diffBtn: { flex: 1, paddingVertical: 8, marginHorizontal: 3, borderRadius: 8, backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', alignItems: 'center' },
+    diffBtnSelected: { backgroundColor: '#fe357e', borderColor: '#fe357e' },
+    diffBtnText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
+    diffBtnTextSelected: { color: '#fff' }
 });
 
 export default PDFToExamScreen;

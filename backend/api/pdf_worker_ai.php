@@ -1,6 +1,6 @@
 <?php
 /**
- * Elite AI Worker: Gemini 2.0 Native PDF Processing
+ * Veeru Lens AI Worker: Gemini 2.0 Native Analysis
  * Optimized for Railway.app & Veeru App Production
  */
 set_time_limit(600); // Increased to 10 mins for dense PDFs
@@ -82,7 +82,19 @@ foreach ($jobs as $job) {
             error_log("[Veeru Worker] Warning: PDF data is very small ({$base64Len} bytes).");
         }
 
-        $prompt = "Role: You are an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
+        $difficulty = $job['difficulty'] ?? 'mix';
+        $difficultyStr = "";
+        if ($difficulty === 'easy') {
+            $difficultyStr = "DIFFICULTY LEVEL: EASY\n- Use very simple, easy-to-understand language.\n- Focus on direct definitions, basic concepts, and surface-level facts.\n- For MCQs, create slightly easier distractors (though still not completely obvious throwaways).";
+        } elseif ($difficulty === 'moderate') {
+            $difficultyStr = "DIFFICULTY LEVEL: MODERATE\n- Use standard high-school or introductory-college academic language.\n- Test mid-level understanding and standard curriculum facts.";
+        } elseif ($difficulty === 'hard') {
+            $difficultyStr = "DIFFICULTY LEVEL: HARD\n- Use advanced framing, deep conceptual analysis, and test intricate details.\n- Focus on complex mechanisms, abstract concepts, and 'Why' frameworks.\n- For MCQs, use extremely challenging and highly plausible distractors that require deep analytical thought.";
+        } else {
+            $difficultyStr = "DIFFICULTY LEVEL: MIX (Default)\n- Balance the generated content difficulty. Aim for 30% easy foundational questions, 40% moderate standard questions, and 30% hard analytical questions across both Flashcards and MCQs.";
+        }
+
+        $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
         
         Objective: Analyze the provided PDF page text. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards.
         
@@ -91,18 +103,29 @@ foreach ($jobs as $job) {
            1. Extract all Definitions: Every technical term or concept must have a definition card.
            2. Static Data: Capture all dates, names, formulas, and specific figures.
            3. Basic Details: Ensure foundational 'What', 'Why', and 'How' questions are covered.
+        - STRICT FORMAT AND DISTRIBUTION: Create flashcards STRICTLY in a `question` and `answer` format. Your flashcard distribution MUST closely adhere to the following ratios:
+           1. 35% VERY SHORT ANSWER TYPE (Direct, concise questions with 1-2 word answers).
+           2. 35% SHORT ANSWER TYPE (Questions requiring a short phrase or single sentence answer).
+           3. 30% FILL IN THE BLANKS (Statements with a ________ for the missing key concept).
         - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept or fact. If a card is too complex, break it down.
-        - Answer Brevity: Ensure the flashcard 'back' (answer) is a single word or a short phrase.
-        - Mix flashcard styles on the 'front': Use direct questions (e.g., 'What is the capital of Maharashtra?') AND Fill-in-the-blanks (e.g., 'The process of plants making food is called ________.').
-
-        SECTION 2: CONTENT LOAD BALANCING
+        SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
+        - {$difficultyStr}
         
         SECTION 3: STRICT QUALITY STANDARDS FOR MCQs
-        - Construct clear, unambiguous, and academic-standard questions that test deep understanding.
-        - Create exactly 4 highly plausible and distinct options for every question. 
-        - Distractors (wrong options) MUST be challenging and intellectually rigorous. Never use obvious throwaways.
+        - Stem Length: Ensure question stems are meaningful and concise; avoid "fluff" or irrelevant info.
+        - Option Uniformity: All 4 options MUST be of roughly equal length. Never make the correct answer significantly longer than distractors.
+        - Plausible Distractors: Distractors must be closely related to the topic and appear technically correct to non-experts. Avoid "funny" or obviously wrong options.
+        - Academic Language: Use plain, easy-to-understand language. Avoid unnecessarily complex jargon or "tricky" phrasing.
+        - Grammatical Matching: All options must match the stem's grammar perfectly to avoid giving away the answer via grammatical clues.
         - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY distractors are incorrect.
+        
+        SECTION 4: SMART NOTES
+        - Extract ultra-short, highly scannable bullet points across three explicit categories:
+           1. definitions: Only core terminology and its meaning.
+           2. key_facts: Essential dates, numbers, formulas, or unarguable static truths.
+           3. core_concepts: Short explanations of 'how' or 'why' things work.
+        - Generate exactly 3-5 high-value bullet points per category.
         
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
@@ -111,8 +134,13 @@ foreach ($jobs as $job) {
         
         SCHEMA:
         {
+          \"notes\": {
+            \"definitions\": [\"Def 1\", \"Def 2\"],
+            \"key_facts\": [\"Fact 1\", \"Fact 2\"],
+            \"core_concepts\": [\"Concept 1\", \"Concept 2\"]
+          },
           \"flashcards\": [
-            {\"front\": \"Question or Fill-in-the-blank (Atomic)\", \"back\": \"Single word or short phrase Answer\"}
+            {\"question\": \"Question text or Fill-in-the-blank\", \"answer\": \"Answer text\"}
           ],
           \"mcqs\": [
             {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}

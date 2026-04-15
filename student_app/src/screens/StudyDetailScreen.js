@@ -127,10 +127,16 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
     };
 
     const getCounts = () => {
-        if (!studyData) return { mcqs: 0, flashcards: 0 };
+        if (!studyData) return { mcqs: 0, flashcards: 0, notes: 0 };
+        const hasNotes = studyData.notes && 
+            ((studyData.notes.definitions?.length || 0) + 
+             (studyData.notes.key_facts?.length || 0) + 
+             (studyData.notes.core_concepts?.length || 0)) > 0;
+             
         return { 
             mcqs: studyData.mcqs?.length || 0, 
-            flashcards: studyData.flashcards?.length || 0 
+            flashcards: studyData.flashcards?.length || 0,
+            notes: hasNotes ? 1 : 0
         };
     };
 
@@ -248,6 +254,28 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                             <Text style={[styles.statPillText, { color: '#38bdf8' }]}>Fully Synced</Text>
                         </View>
                     </View>
+
+                    {/* SMART NOTES SECTION */}
+                    {getCounts().notes > 0 && (
+                        <TouchableOpacity 
+                            style={[styles.glassCard, { marginBottom: 20 }]} 
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate('AIPdfNotes', { notes: studyData.notes, subjectName: job.file_name })}
+                        >
+                            <LinearGradient colors={['#f59e0b15', '#d9770605']} style={styles.cardHeader}>
+                                <View style={styles.cardHeaderLeft}>
+                                    <View style={[styles.iconBox, { backgroundColor: '#f59e0b20' }]}>
+                                        <MaterialCommunityIcons name="lightning-bolt-circle" size={26} color="#fbbf24" />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.cardTitle}>Smart Notes</Text>
+                                        <Text style={styles.cardSubtitle}>Tap to read key summaries</Text>
+                                    </View>
+                                </View>
+                                <MaterialCommunityIcons name="chevron-right-circle" size={26} color="#fbbf24" style={{marginLeft: 'auto'}} />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
 
                     {/* MCQ SECTION */}
                     {getCounts().mcqs > 0 && (

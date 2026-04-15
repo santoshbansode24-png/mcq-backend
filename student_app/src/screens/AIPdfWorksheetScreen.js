@@ -418,7 +418,7 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
                         <View>
-                            <Text style={styles.headerTitle}>PDF Worksheet</Text>
+                            <Text style={styles.headerTitle}>Veeru Lens Worksheet</Text>
                             <Text style={styles.headerSubtitle}>Create printable documents</Text>
                         </View>
                     </View>

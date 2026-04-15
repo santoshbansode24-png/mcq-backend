@@ -14,6 +14,7 @@ import axios from 'axios';
 import { InteractionManager, FlatList } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { scheduleSmartStudyNotifications } from '../utils/studyNotificationHelper';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -450,10 +451,31 @@ const StudyPlannerScreen = ({ user, navigation }) => {
 
     // ── Loading ──────────────────────────────────────────────────────────────
     if (loading) return (
-        <LinearGradient colors={['#0f172a', '#1e1b4b']} style={styles.loadingScreen}>
-            <ActivityIndicator size="large" color="#818CF8" />
-            <Text style={styles.loadingText}>Building your Victory Pipeline…</Text>
-        </LinearGradient>
+        <View style={{ flex: 1, backgroundColor: '#F1F5F9', paddingTop: insets.top + 20 }}>
+            {/* Header Mock */}
+            <SkeletonLoader height={180} borderRadius={0} style={{ marginBottom: -30, width: width }} />
+            
+            {/* Stats Mock */}
+            <View style={{ paddingHorizontal: 16, zIndex: 10 }}>
+                <SkeletonLoader height={80} borderRadius={16} style={{ marginBottom: 30, elevation: 5 }} />
+            </View>
+
+            {/* Timeline Mock */}
+            <View style={{ paddingHorizontal: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                    <SkeletonLoader height={24} width={24} borderRadius={12} />
+                    <SkeletonLoader height={20} width={100} style={{ marginLeft: 12 }} />
+                </View>
+                <SkeletonLoader height={85} borderRadius={16} style={{ marginLeft: 36, marginBottom: 12 }} />
+                <SkeletonLoader height={85} borderRadius={16} style={{ marginLeft: 36, marginBottom: 30 }} />
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                    <SkeletonLoader height={24} width={24} borderRadius={12} />
+                    <SkeletonLoader height={20} width={120} style={{ marginLeft: 12 }} />
+                </View>
+                <SkeletonLoader height={85} borderRadius={16} style={{ marginLeft: 36, marginBottom: 12 }} />
+            </View>
+        </View>
     );
 
     // ── Configured: Roadmap View ─────────────────────────────────────────────

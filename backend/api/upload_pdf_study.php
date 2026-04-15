@@ -38,6 +38,9 @@ try {
     // --- 1. Validate Input ---
     $user_id   = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
     $folder_id = isset($_POST['folder_id']) && $_POST['folder_id'] !== '' ? intval($_POST['folder_id']) : null;
+    $difficulty= isset($_POST['difficulty']) ? $_POST['difficulty'] : 'mix';
+    
+    if (!in_array($difficulty, ['easy', 'moderate', 'hard', 'mix'])) $difficulty = 'mix';
     if (!$user_id) throw new Exception("Unauthorized: user_id is required");
 
     // --- 2. Validate uploaded file ---
@@ -107,9 +110,14 @@ try {
             $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN folder_id INT DEFAULT NULL AFTER user_id");
             $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN study_content LONGTEXT DEFAULT NULL AFTER pdf_base64");
             $pdo->exec("ALTER TABLE pdf_study_jobs ADD INDEX (folder_id)");
-        } catch (Exception $migEx) {
-            // Ignore if column/index already exists
-        }
+        } catch (Exception $migEx) {}
+    }
+    
+    $checkDiff = $pdo->query("SHOW COLUMNS FROM pdf_study_jobs LIKE 'difficulty'");
+    if (!$checkDiff->fetch()) {
+        try {
+            $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN difficulty VARCHAR(20) DEFAULT 'mix' AFTER pdf_base64");
+        } catch (Exception $migEx) {}
     }
 
     // --- 6.5 CHECK DATABASE PACKET SIZE (Pre-flight) ---
@@ -129,10 +137,10 @@ try {
 
     // --- 7. Create Job Record with base64 payload ---
     $stmt = $pdo->prepare(
-        "INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, pdf_base64, status, progress, total_pages)
-         VALUES (?, ?, ?, ?, ?, 'pending', 5, 0)"
+        "INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, pdf_base64, difficulty, status, progress, total_pages)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', 5, 0)"
     );
-    $stmt->execute([$user_id, $folder_id, $fileName, $savedPath, $pdfBase64]);
+    $stmt->execute([$user_id, $folder_id, $fileName, $savedPath, $pdfBase64, $difficulty]);
     $job_id = $pdo->lastInsertId();
     unset($pdfBase64);
 

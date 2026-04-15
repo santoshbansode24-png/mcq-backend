@@ -1,7 +1,7 @@
 <?php
 /**
  * Sync and Cleanup PDF Study Content
- * Part of the Veeru App PDF-to-Exam Feature
+ * Part of the Veeru Lens Feature
  * Pattern: Disposable Server (Upload -> Process -> Sync -> Wipe)
  */
 

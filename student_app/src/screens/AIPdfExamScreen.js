@@ -21,7 +21,7 @@ import { API_URL } from '../api/config';
 const AIPdfExamScreen = ({ navigation, user }) => {
     // Theme configurations manually inherited to match MyExamScreen aesthetics
     const currentThemeColors = ['#f6d365', '#fda085'];
-    const screenTitle = 'Knowledge Vault Exam';
+    const screenTitle = 'Veeru Lens Exam';
     const screenSubtitle = 'Test yourself on multiple PDFs';
 
     const [folders, setFolders] = useState([]);

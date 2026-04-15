@@ -23,7 +23,7 @@ const AIScreen = ({ navigation }) => {
     const features = [
         {
             id: 'pdftoexam',
-            title: 'PDF-to-Exam',
+            title: 'Veeru Lens',
             subtitle: 'Doc Analyzer',
             description: 'Turn any PDF into a custom exam.',
             icon: 'document-attach',

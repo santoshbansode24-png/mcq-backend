@@ -3,7 +3,7 @@ header('Content-Type: text/plain');
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
 
-echo "🔍 VEERU PDF-TO-EXAM DIAGNOSTIC\n";
+echo "🔍 VEERU LENS DIAGNOSTIC\n";
 echo "===============================\n\n";
 
 // 1. PHP Limits

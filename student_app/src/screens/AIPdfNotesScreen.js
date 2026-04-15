@@ -61,8 +61,20 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
 
     const n = notes || {};
     const getItems = (key) => {
-        // Try exact, then capitalized, then lowercase
-        return n[key] || n[key.charAt(0).toUpperCase() + key.slice(1)] || n[key.toLowerCase()] || [];
+        // If the AI somehow returned an array instead of an object, try to extract relevant items
+        if (Array.isArray(n)) {
+            return n.filter(item => {
+                if (typeof item === 'string') return item.toLowerCase().includes(key.replace('_', ' '));
+                if (typeof item === 'object') {
+                    const vals = Object.values(item).join(' ').toLowerCase();
+                    return vals.includes(key.replace('_', ' '));
+                }
+                return false;
+            }).map(item => typeof item === 'string' ? item : Object.values(item)[0]);
+        }
+        
+        // Typical object handling: Try exact, then capitalized, then lowercase
+        return n[key] || n[key.charAt(0).toUpperCase() + key.slice(1)] || n[key.toLowerCase()] || n['smart_' + key] || n['Smart' + key] || [];
     };
 
     return (

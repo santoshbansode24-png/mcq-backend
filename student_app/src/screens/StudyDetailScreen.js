@@ -126,23 +126,36 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         );
     };
 
+    const getNotesObject = () => {
+        if (!studyData) return null;
+        return studyData.notes || studyData.Notes || studyData.smart_notes || studyData.SmartNotes || null;
+    };
+
     const getCounts = () => {
         if (!studyData) return { mcqs: 0, flashcards: 0, notes: 0 };
         
-        // Robust check for notes (Supports various AI naming conventions)
-        const n = studyData.notes || {};
-        const countValues = (obj) => {
-            if (!obj) return 0;
-            return Object.keys(obj).reduce((sum, key) => {
-                return sum + (Array.isArray(obj[key]) ? obj[key].length : 0);
-            }, 0);
-        };
+        const n = getNotesObject();
+        let hasNotes = false;
         
-        const hasNotes = countValues(n) > 0;
+        if (n) {
+            if (Array.isArray(n)) {
+                 hasNotes = n.length > 0;
+            } else if (typeof n === 'object') {
+                 Object.values(n).forEach(val => {
+                     if (Array.isArray(val) && val.length > 0) hasNotes = true;
+                     else if (typeof val === 'string' && val.trim().length > 0) hasNotes = true;
+                 });
+            } else if (typeof n === 'string') {
+                 hasNotes = n.trim().length > 0;
+            }
+        }
              
+        const mcqCount = (studyData.mcqs || studyData.MCQs || []).length;
+        const flashcardCount = (studyData.flashcards || studyData.Flashcards || studyData.FlashCards || []).length;
+
         return { 
-            mcqs: studyData.mcqs?.length || 0, 
-            flashcards: studyData.flashcards?.length || 0,
+            mcqs: mcqCount, 
+            flashcards: flashcardCount,
             notes: hasNotes ? 1 : 0
         };
     };
@@ -267,7 +280,7 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         <TouchableOpacity 
                             style={[styles.glassCard, { marginBottom: 20 }]} 
                             activeOpacity={0.8}
-                            onPress={() => navigation.navigate('AIPdfNotes', { notes: studyData.notes, subjectName: job.file_name })}
+                            onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name })}
                         >
                             <LinearGradient colors={['#f59e0b15', '#d9770605']} style={styles.cardHeader}>
                                 <View style={styles.cardHeaderLeft}>

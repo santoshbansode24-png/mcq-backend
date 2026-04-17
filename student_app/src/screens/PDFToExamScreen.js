@@ -517,7 +517,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                             <View style={styles.bannerIconWrapper}>
                                                 <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#fbcfe8" />
                                             </View>
-                                            <Text style={styles.bannerTitle}>Veeru Lens: PDF to Study Set</Text>
+                                            <Text style={styles.bannerTitle}>Veeru Lens</Text>
                                             <Text style={styles.bannerSubtitle}>Tap to select a document from your device</Text>
                                         </>
                                     )}

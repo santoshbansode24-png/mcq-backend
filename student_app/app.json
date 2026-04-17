@@ -11,8 +11,8 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "backgroundColor": "#0f172a",
-      "image": "./assets/transparent.png",
+      "backgroundColor": "#000000",
+      "image": "./assets/veeru_text_splash.png",
       "resizeMode": "contain"
     },
     "updates": {
@@ -30,6 +30,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-foreground.png",
         "backgroundColor": "#FFFFFF"
+      },
+      "splash": {
+        "backgroundColor": "#000000",
+        "image": "./assets/veeru_text_splash.png",
+        "resizeMode": "contain"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.veeru.app",

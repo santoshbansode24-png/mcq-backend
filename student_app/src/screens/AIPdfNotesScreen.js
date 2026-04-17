@@ -87,7 +87,7 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
                 <View style={styles.titleContainer}>
                     <Text style={styles.title} numberOfLines={1}>{subjectName || 'Study Material'}</Text>
-                    <Text style={styles.subtitle}>Veeru Lens Smart Notes</Text>
+                    <Text style={styles.subtitle}>Veeru Lens</Text>
                 </View>
             </SafeAreaView>
 

@@ -628,6 +628,13 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowRadius: 10,
     },
+    syncButtonSynced: {
+        backgroundColor: '#10b981',
+        borderRadius: 22,
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 10,
+    },
     syncIconContainer: {
         width: 40,
         height: 40,

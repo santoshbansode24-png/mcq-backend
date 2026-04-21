@@ -236,6 +236,7 @@ const HomeScreen = ({ user, navigation, route }) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isFullySynced, setIsFullySynced] = useState(false);
     const [hasUpdate, setHasUpdate] = useState(false);
+    const [pendingServerVersion, setPendingServerVersion] = useState(null);
     const glowAnim = useRef(new Animated.Value(0)).current;
     const syncRotAnim = useRef(new Animated.Value(0)).current;
 
@@ -254,13 +255,22 @@ const HomeScreen = ({ user, navigation, route }) => {
 
     const checkVersion = async () => {
         if (!user?.board_type) return;
-        const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
-        const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
+        try {
+            const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
+            const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
 
-        if (serverVer && (!localVer || parseInt(serverVer) > parseInt(localVer))) {
-            setHasUpdate(true);
-            setIsFullySynced(false); // New content means we are no longer fully synced
-            startGlow();
+            if (serverVer) {
+                setPendingServerVersion(serverVer);
+                if (!localVer || parseInt(serverVer) > parseInt(localVer)) {
+                    setHasUpdate(true);
+                    setIsFullySynced(false); 
+                    startGlow();
+                } else {
+                    setHasUpdate(false);
+                }
+            }
+        } catch (e) {
+            console.log('[Home] Version check error', e);
         }
     };
 
@@ -282,21 +292,33 @@ const HomeScreen = ({ user, navigation, route }) => {
         if (!hasUpdate && queue && queue.length > 0) {
             console.log('[Home] Resuming interrupted sync queue manually.');
             await SmartCacheService.processSyncQueue();
+            setIsSyncing(false);
             return;
         }
 
+        const versionToSave = pendingServerVersion;
         setHasUpdate(false);
 
-        // Removed deleted data by clearing main class cache keys
-        // subjects, chapters lists are cleared so they re-fetch from scratch
-        await dataCache.remove(`subjects_${classId}`);
-        // Trigger priority sync
-        await SmartCacheService.syncAllForClass(classId, true);
+        try {
+            // Removed deleted data by clearing main class cache keys
+            await dataCache.remove(`subjects_${classId}`);
+            
+            // Trigger priority sync
+            await SmartCacheService.syncAllForClass(classId, true);
 
-        // Update local version
-        const latestVer = await SmartCacheService.checkContentVersion(user.board_type);
-        if (latestVer) {
-            await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
+            // Update local version using either the cached pending version or a fresh fetch
+            const latestVer = versionToSave || await SmartCacheService.checkContentVersion(user.board_type);
+            if (latestVer) {
+                await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
+            }
+            
+            // Refresh subjects list after sync
+            loadSubjects(true);
+            
+        } catch (error) {
+            console.warn('[Home] Sync failed:', error.message);
+        } finally {
+            setIsSyncing(false);
         }
     };
 

@@ -118,18 +118,19 @@ export const SmartCacheService = {
             notifyListeners({ isSyncing: true, isFullySynced: false, progress: 0 });
 
             // 2. Sync GLOBAL features (Vocabulary + Mental Math)
-            // Get user from AsyncStorage if available
             const savedUser = await AsyncStorage.getItem('user_data');
             if (savedUser) {
                 const user = JSON.parse(savedUser);
                 if (user && user.user_id) {
-                    await SmartCacheService.syncGlobalContent(user.user_id);
+                    await SmartCacheService.syncGlobalContent(user.user_id).catch(e => console.warn('[SmartCache] Global content sync failed:', e.message));
                 }
             }
 
+            // 3. Process Chapter Queue
             await SmartCacheService.processSyncQueue();
 
-            let finalQueue = await SmartCacheService.getSyncQueue();
+            // 4. Mark as completed if queue is empty (or mostly empty)
+            const finalQueue = await SmartCacheService.getSyncQueue();
             if (!finalQueue || finalQueue.length === 0) {
                 await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
                     lastSync: Date.now(),
@@ -140,8 +141,7 @@ export const SmartCacheService = {
             }
             await SmartCacheService.checkSyncState();
         } catch (error) {
-            console.error('[SmartCache] ❌ Bulk Sync aborted early:', error.message);
-            // Allow the UI to unlock immediately
+            console.error('[SmartCache] ❌ Bulk Sync failed:', error.message);
             notifyListeners({ isSyncing: false, isFullySynced: false });
         } finally {
             isProcessing = false;
@@ -155,43 +155,46 @@ export const SmartCacheService = {
         try {
             let queue = await SmartCacheService.getSyncQueue();
             
-            // Validate queue is an array and filter out nulls/undefined to prevent crashes
-            if (!Array.isArray(queue)) {
-                queue = [];
-                await AsyncStorage.removeItem(SYNC_QUEUE_KEY);
-            }
-            
-            if (queue.length === 0) {
+            if (!Array.isArray(queue) || queue.length === 0) {
                 isProcessing = false;
                 await SmartCacheService.checkSyncState();
                 return;
             }
 
             let processedCount = 0;
+            let failureCount = 0;
+
             while (queue.length > 0) {
                 const chapterId = queue[0];
-                // console.log(`[SmartCache] 📥 Syncing Chapter: ${chapterId} (${queue.length} left)`);
-
-                await SmartCacheService.syncChapterContent(chapterId);
+                
+                try {
+                    // Try to sync this specific chapter
+                    await SmartCacheService.syncChapterContent(chapterId);
+                } catch (chapterErr) {
+                    console.warn(`[SmartCache] ⚠️ Chapter ${chapterId} sync failed (skipped):`, chapterErr.message);
+                    failureCount++;
+                    // If we have too many failures in a row, maybe the server is down?
+                    if (failureCount > 10) throw new Error('Too many failures, aborting queue');
+                }
 
                 queue.shift();
                 processedCount++;
 
-                // BATCH SAVE: Only hit AsyncStorage every 5 items to reduce bridge pressure
+                // Save progress periodically
                 if (processedCount % 5 === 0 || queue.length === 0) {
                     await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
                 }
 
                 notifyListeners({ isSyncing: true, isFullySynced: false, itemsLeft: queue.length });
 
-                // Small delay to prevent blocking the UI thread
-                await new Promise(r => setTimeout(r, 60));
+                // Throttle slightly to keep UI responsive
+                await new Promise(r => setTimeout(r, processedCount % 10 === 0 ? 100 : 30));
             }
+
             await SmartCacheService.checkSyncState();
         } catch (error) {
-            console.warn('[SmartCache] Queue processing error. Network may have dropped:', error);
+            console.warn('[SmartCache] Queue processing interrupted:', error.message);
             notifyListeners({ isSyncing: false, isFullySynced: false });
-            throw error;
         } finally {
             isProcessing = false;
         }

@@ -2,56 +2,72 @@ import axios from 'axios';
 import { API_URL } from './config';
 import { dataCache } from '../utils/dataCache';
 
+const CACHE_KEY = (userId) => `dual_math_progress_${userId}`;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 /**
- * Fetch mental math and abacus progress with support for caching
+ * Fetch mental math and abacus progress.
+ * Uses cache by default. Pass forceRefresh=true to bypass.
  */
 export const fetchMentalMathProgress = async (userId, forceRefresh = false) => {
-    const cacheKey = `dual_math_progress_${userId}`;
+    const key = CACHE_KEY(userId);
 
     if (!forceRefresh) {
-        const cached = await dataCache.get(cacheKey, 'analytics');
-        if (cached) {
-            return cached;
-        }
+        try {
+            const cached = await dataCache.get(key, 'analytics');
+            if (cached) return cached;
+        } catch (_) { /* Cache miss is fine */ }
     }
 
     try {
-        const response = await axios.post(`${API_URL}/get_math_progress.php`, {
-            user_id: userId
-        });
+        const response = await axios.post(
+            `${API_URL}/get_math_progress.php`,
+            { user_id: userId },
+            { timeout: 8000 }
+        );
 
-        if (response.data && response.data.status === 'success') {
-            await dataCache.set(cacheKey, response.data, 'analytics');
+        const data = response.data;
+
+        if (data && data.status === 'success') {
+            // Ensure levels are never below 1
+            data.mental_math_level = Math.max(1, parseInt(data.mental_math_level) || 1);
+            data.abacus_level      = Math.max(1, parseInt(data.abacus_level) || 1);
+            await dataCache.set(key, data, 'analytics');
         }
 
-        return response.data;
+        return data;
+
     } catch (error) {
-        console.error('[API] fetchMentalMathProgress error:', error);
-        throw error;
+        console.error('[API] fetchMentalMathProgress error:', error.message);
+        // Return safe defaults so the app never crashes due to a network issue
+        return { status: 'success', mental_math_level: 1, abacus_level: 1 };
     }
 };
 
 /**
- * Save progress for either Classic or Abacus and invalidate cache
+ * Save progress for either Classic or Abacus mode.
+ * Fire-and-forget safe (won't crash the app on failure).
  */
 export const saveMathProgress = async (userId, type, newLevel) => {
-    try {
-        const response = await axios.post(`${API_URL}/update_math_progress.php`, {
-            user_id: userId,
-            type: type, // 'classic' or 'abacus'
-            new_level: newLevel
-        });
+    const cappedLevel = Math.min(Math.max(1, newLevel), 30);
 
-        if (response.data && response.data.status === 'success') {
-            // Update local cache manually instead of waiting for next fetch
-            // We just clear it so next fetch gets fresh
-            await dataCache.remove(`dual_math_progress_${userId}`, 'analytics');
+    try {
+        const response = await axios.post(
+            `${API_URL}/update_math_progress.php`,
+            { user_id: userId, type, new_level: cappedLevel },
+            { timeout: 8000 }
+        );
+
+        if (response.data?.status === 'success') {
+            // Invalidate cache so next fetch gets fresh data
+            try { await dataCache.remove(CACHE_KEY(userId), 'analytics'); } catch (_) {}
         }
 
         return response.data;
+
     } catch (error) {
-        console.error('[API] saveMathProgress error:', error);
-        throw error;
+        // Log but never crash the app — the cached local level still works
+        console.error('[API] saveMathProgress error:', error.message);
+        return null;
     }
 };
-

@@ -1,46 +1,51 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
+
+// Handle CORS preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 require_once '../config/db.php';
 
 $data = json_decode(file_get_contents("php://input"));
 
-if (!isset($data->user_id)) {
-    echo json_encode(["status" => "error", "message" => "Missing user_id"]);
+$user_id = isset($data->user_id) ? (int)$data->user_id : 0;
+
+if ($user_id <= 0) {
+    echo json_encode(["status" => "error", "message" => "Missing or invalid user_id"]);
     exit;
 }
 
-$user_id = $data->user_id;
-
 try {
     /** @var PDO $pdo */
-    
-    // Safety check just in case the columns aren't added yet (so app doesn't crash on older schema)
-    // Try to select them
-    $stmt = $pdo->prepare("SELECT mental_math_level, abacus_level FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT mental_math_level, abacus_level FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([$user_id]);
     $progress = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($progress) {
+        // Ensure levels are never 0 or null — always at least 1
         echo json_encode([
-            "status" => "success", 
-            "mental_math_level" => (int)$progress['mental_math_level'],
-            "abacus_level" => (int)$progress['abacus_level']
+            "status"            => "success",
+            "mental_math_level" => max(1, (int)$progress['mental_math_level']),
+            "abacus_level"      => max(1, (int)$progress['abacus_level'])
         ]);
     } else {
-        // Fallback or user not found
+        // User not found — return safe defaults
         echo json_encode(["status" => "success", "mental_math_level" => 1, "abacus_level" => 1]);
     }
 
 } catch (PDOException $e) {
+    // If columns don't exist yet, return defaults so app never crashes
     if (strpos($e->getMessage(), 'Unknown column') !== false) {
-        // Columns don't exist yet, return defaults safely
         echo json_encode(["status" => "success", "mental_math_level" => 1, "abacus_level" => 1]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Database error: " . $e->getMessage()]);
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Server error"]);
     }
 }
 ?>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, SafeAreaView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
@@ -19,6 +19,7 @@ const MentalMathsScreen = ({ navigation, user }) => {
     const [maxAbacusLevel, setMaxAbacusLevel] = useState(1);
 
     const [sounds, setSounds] = useState({ correct: null, wrong: null, levelup: null });
+    const soundsRef = useRef({ correct: null, wrong: null, levelup: null });
 
     useEffect(() => {
         loadSounds();
@@ -38,24 +39,28 @@ const MentalMathsScreen = ({ navigation, user }) => {
                 { uri: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' }
             );
             setSounds({ correct: sCorrect, wrong: sWrong, levelup: sLevelUp });
+            soundsRef.current = { correct: sCorrect, wrong: sWrong, levelup: sLevelUp };
         } catch (error) {
             console.log('Error loading sounds', error);
         }
     };
 
     const unloadSounds = async () => {
-        if (sounds.correct) await sounds.correct.unloadAsync();
-        if (sounds.wrong) await sounds.wrong.unloadAsync();
-        if (sounds.levelup) await sounds.levelup.unloadAsync();
+        // Use ref not state — avoids stale closure issue on unmount
+        const s = soundsRef.current;
+        if (s.correct) await s.correct.unloadAsync().catch(() => {});
+        if (s.wrong)   await s.wrong.unloadAsync().catch(() => {});
+        if (s.levelup) await s.levelup.unloadAsync().catch(() => {});
     };
 
     const loadProgress = async () => {
         setLoading(true);
         try {
-            const res = await fetchMentalMathProgress(user.user_id, true);
-            if (res.status === 'success') {
-                 setMaxClassicLevel(res.mental_math_level || 1);
-                 setMaxAbacusLevel(res.abacus_level || 1);
+            // Use cache on first load (forceRefresh=false). This is instant if recently fetched.
+            const res = await fetchMentalMathProgress(user.user_id, false);
+            if (res && res.status === 'success') {
+                setMaxClassicLevel(Math.max(1, res.mental_math_level || 1));
+                setMaxAbacusLevel(Math.max(1, res.abacus_level || 1));
             }
         } catch (error) {
             console.log('Local progress used', error);
@@ -64,11 +69,11 @@ const MentalMathsScreen = ({ navigation, user }) => {
         }
     };
 
-    // Callback so child tabs can inform parent that a new level unlocked
-    const handleProgressUpdate = (type, newLevel) => {
-        if (type === 'classic') setMaxClassicLevel(newLevel);
-        if (type === 'abacus') setMaxAbacusLevel(newLevel);
-    };
+    // Memoized callback so child tabs don't re-render unnecessarily
+    const handleProgressUpdate = useCallback((type, newLevel) => {
+        if (type === 'classic') setMaxClassicLevel(nl => Math.max(nl, newLevel));
+        if (type === 'abacus')  setMaxAbacusLevel(nl  => Math.max(nl, newLevel));
+    }, []);
 
     if (loading) {
         return (

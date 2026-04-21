@@ -21,6 +21,7 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
     const [currentQuestion, setCurrentQuestion] = useState(null);
     const [questionCount, setQuestionCount] = useState(1);
     const [score, setScore] = useState(0);
+    const scoreRef = useRef(0); // will be set inline when score changes
 
     const [timeLeft, setTimeLeft] = useState(60);
     const [maxTimeForLevel, setMaxTimeForLevel] = useState(60);
@@ -32,6 +33,7 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
     const [feedback, setFeedback] = useState(null);
     
     const confettiRef = useRef(null);
+    const scoreRef    = useRef(0); // Ref to track live score (avoids stale closure in timer)
 
     const TOTAL_QUESTIONS = 10;
     const PASSING_SCORE = 8; // 8/10 to pass
@@ -59,7 +61,8 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
                 setTimeLeft((prev) => {
                     if (prev <= 1) {
                         clearInterval(timerRef.current);
-                        finishSet(score, true);
+                        // Use scoreRef to avoid stale closure — state 'score' would be wrong here
+                        finishSet(scoreRef.current, true);
                         return 0;
                     }
                     return prev - 1;
@@ -69,10 +72,11 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
             clearInterval(timerRef.current);
         }
         return () => clearInterval(timerRef.current);
-    }, [gameState, score]);
+    }, [gameState]);
 
     const startNewSet = useCallback(() => {
         setScore(0);
+        scoreRef.current = 0; // reset ref too
         setQuestionCount(1);
         const duration = getDurationForLevel(currentPlayingLevel);
         setTimeLeft(duration);
@@ -118,6 +122,7 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
         if (isCorrect) {
             newScore = score + 1;
             setScore(newScore);
+            scoreRef.current = newScore; // keep ref in sync
             triggerPop();
             playSound('correct');
         } else {

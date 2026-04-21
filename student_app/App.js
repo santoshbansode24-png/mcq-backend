@@ -123,7 +123,7 @@ export default function App() {
   // Check Server Status on App Start
   useEffect(() => {
     const initServer = async () => {
-      // 1. Kick off server check in the background (Non-blocking)
+      // 1. Kick off server check in the background (NON-BLOCKING - never delays splash)
       checkServerConnection().catch(e => {
         console.log('Server check failed (likely offline):', e.message);
       });
@@ -150,6 +150,13 @@ export default function App() {
     };
 
     initServer();
+    
+    // ✅ Safety net: If splash is still visible after 3 seconds, force-hide it.
+    const safetyTimer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 3000);
+
+    return () => clearTimeout(safetyTimer);
   }, []);
 
   useEffect(() => {

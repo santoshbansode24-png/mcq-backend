@@ -3,10 +3,10 @@ import { API_URL } from './config';
 import { dataCache } from '../utils/dataCache';
 
 /**
- * Fetch mental math progress with support for caching
+ * Fetch mental math and abacus progress with support for caching
  */
 export const fetchMentalMathProgress = async (userId, forceRefresh = false) => {
-    const cacheKey = `mental_math_progress_${userId}`;
+    const cacheKey = `dual_math_progress_${userId}`;
 
     if (!forceRefresh) {
         const cached = await dataCache.get(cacheKey, 'analytics');
@@ -16,7 +16,9 @@ export const fetchMentalMathProgress = async (userId, forceRefresh = false) => {
     }
 
     try {
-        const response = await axios.get(`${API_URL}/mental_math_get_progress.php?user_id=${userId}`);
+        const response = await axios.post(`${API_URL}/get_math_progress.php`, {
+            user_id: userId
+        });
 
         if (response.data && response.data.status === 'success') {
             await dataCache.set(cacheKey, response.data, 'analytics');
@@ -30,24 +32,26 @@ export const fetchMentalMathProgress = async (userId, forceRefresh = false) => {
 };
 
 /**
- * Save mental math progress and invalidate cache
+ * Save progress for either Classic or Abacus and invalidate cache
  */
-export const saveMentalMathProgress = async (userId, level, score) => {
+export const saveMathProgress = async (userId, type, newLevel) => {
     try {
-        const response = await axios.post(`${API_URL}/mental_math_save_progress.php`, {
+        const response = await axios.post(`${API_URL}/update_math_progress.php`, {
             user_id: userId,
-            level: level,
-            score: score
+            type: type, // 'classic' or 'abacus'
+            new_level: newLevel
         });
 
         if (response.data && response.data.status === 'success') {
             // Update local cache manually instead of waiting for next fetch
-            await dataCache.set(`mental_math_progress_${userId}`, response.data, 'analytics');
+            // We just clear it so next fetch gets fresh
+            await dataCache.remove(`dual_math_progress_${userId}`, 'analytics');
         }
 
         return response.data;
     } catch (error) {
-        console.error('[API] saveMentalMathProgress error:', error);
+        console.error('[API] saveMathProgress error:', error);
         throw error;
     }
 };
+

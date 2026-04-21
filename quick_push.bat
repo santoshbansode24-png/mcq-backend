@@ -1,28 +1,32 @@
 @echo off
 echo ========================================
-2: echo 🚀 Quick Push to Railway
-3: echo ========================================
-4: echo.
-5: 
-6: echo 1. Adding changes...
-7: git add .
-8: 
-9: set /p msg="Enter commit message (default: 'update'): "
-10: if "%msg%"=="" set msg=update
-11: 
-12: echo 2. Committing...
-13: git commit -m "%msg%"
-14: 
-15: echo 3. Pushing to GitHub...
-16: git push origin main
-17: 
-18: echo 4. Waiting for Railway (60s)...
-19: timeout /t 60
-20: 
-21: echo 5. Triggering Schema Update...
-22: curl -s https://api.veeruapp.in/backend/api/update_schema_study.php
-23: 
-24: echo.
-25: echo ✅ Done! Check Railway dashboard for logs.
-26: echo ========================================
-27: pause
+echo 🚀 Quick Push to Railway
+echo ========================================
+echo.
+
+echo 1. Adding changes...
+git add .
+
+set /p msg="Enter commit message (default: 'update'): "
+if "%msg%"=="" set msg=update
+
+echo 2. Committing...
+git commit -m "%msg%"
+
+echo 3. Pushing to GitHub...
+git push origin main
+
+echo 4. Waiting for Railway (60s)...
+timeout /t 60
+
+echo 5. Triggering Schema Updates...
+echo - Study Tracker...
+curl -s https://api.veeruapp.in/backend/api/update_schema_study.php
+echo.
+echo - Mental Math Hub...
+curl -s https://api.veeruapp.in/backend/api/update_schema_maths.php
+echo.
+
+echo ✅ Done! Check Railway dashboard for logs.
+echo ========================================
+pause

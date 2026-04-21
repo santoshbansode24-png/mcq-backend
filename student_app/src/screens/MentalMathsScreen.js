@@ -1,239 +1,73 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-    View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-    Animated, Vibration, SafeAreaView, Platform, Dimensions, Modal
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, SafeAreaView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
-import { MathQuestionGenerator } from '../utils/MathQuestionGenerator';
-import axios from 'axios';
-import { API_URL } from '../api/config';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import ConfettiCannon from 'react-native-confetti-cannon';
-import { fetchMentalMathProgress, saveMentalMathProgress } from '../api/mentalMath';
 
-const { width, height } = Dimensions.get('window');
+import { fetchMentalMathProgress } from '../api/mentalMath';
+import ClassicMathTab from '../components/math/ClassicMathTab';
+import AbacusTab from '../components/math/AbacusTab';
 
 const MentalMathsScreen = ({ navigation, user }) => {
     const { theme, isDarkMode } = useTheme();
     const [loading, setLoading] = useState(true);
-    const [gameState, setGameState] = useState('START');
+    const [activeTab, setActiveTab] = useState('classic'); // 'classic' or 'abacus'
 
-    const [level, setLevel] = useState(1);
-    const [currentQuestion, setCurrentQuestion] = useState(null);
-    const [questionCount, setQuestionCount] = useState(1);
-    const [score, setScore] = useState(0);
-    const [totalSets, setTotalSets] = useState(0);
+    // Max levels unlocked by user
+    const [maxClassicLevel, setMaxClassicLevel] = useState(1);
+    const [maxAbacusLevel, setMaxAbacusLevel] = useState(1);
 
-    // Timer State
-    const [timeLeft, setTimeLeft] = useState(60);
-    const [maxTimeForLevel, setMaxTimeForLevel] = useState(60);
-    const timerRef = useRef(null);
-
-    // Animations
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const shakeAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const [feedback, setFeedback] = useState(null);
-
-    // Sound Objects
-    const [soundCorrect, setSoundCorrect] = useState();
-    const [soundWrong, setSoundWrong] = useState();
-    const [soundLevelUp, setSoundLevelUp] = useState();
-
-    // Confetti Ref
-    const confettiRef = useRef(null);
-
-    const TOTAL_QUESTIONS = 10;
-    const PASSING_SCORE = 8;
-
-    const getDurationForLevel = (currentLevel) => {
-        if (currentLevel <= 5) return 30;
-        return 60;
-    };
+    const [sounds, setSounds] = useState({ correct: null, wrong: null, levelup: null });
 
     useEffect(() => {
         loadSounds();
         loadProgress();
-        return () => {
-            clearInterval(timerRef.current);
-            unloadSounds();
-        };
+        return () => unloadSounds();
     }, []);
 
     const loadSounds = async () => {
         try {
-            // Using reliable external URLs for basic sounds. 
-            // Ideally these should be local assets like require('../../assets/sounds/correct.mp3')
             const { sound: sCorrect } = await Audio.Sound.createAsync(
-                { uri: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3' }, // Ding
-                { shouldPlay: false }
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3' }
             );
             const { sound: sWrong } = await Audio.Sound.createAsync(
-                { uri: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3' }, // Error/Buzz
-                { shouldPlay: false }
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3' }
             );
             const { sound: sLevelUp } = await Audio.Sound.createAsync(
-                { uri: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' }, // Tada/Win
-                { shouldPlay: false }
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3' }
             );
-
-            setSoundCorrect(sCorrect);
-            setSoundWrong(sWrong);
-            setSoundLevelUp(sLevelUp);
+            setSounds({ correct: sCorrect, wrong: sWrong, levelup: sLevelUp });
         } catch (error) {
             console.log('Error loading sounds', error);
         }
     };
 
     const unloadSounds = async () => {
-        if (soundCorrect) await soundCorrect.unloadAsync();
-        if (soundWrong) await soundWrong.unloadAsync();
-        if (soundLevelUp) await soundLevelUp.unloadAsync();
+        if (sounds.correct) await sounds.correct.unloadAsync();
+        if (sounds.wrong) await sounds.wrong.unloadAsync();
+        if (sounds.levelup) await sounds.levelup.unloadAsync();
     };
-
-    const playSound = async (type) => {
-        try {
-            if (type === 'correct' && soundCorrect) await soundCorrect.replayAsync();
-            if (type === 'wrong' && soundWrong) await soundWrong.replayAsync();
-            if (type === 'levelup' && soundLevelUp) await soundLevelUp.replayAsync();
-        } catch (error) {
-            console.log('Error playing sound', error);
-        }
-    };
-
-    // Timer Interval Logic
-    useEffect(() => {
-        if (gameState === 'PLAYING') {
-            timerRef.current = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(timerRef.current);
-                        finishSet(score, true);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            clearInterval(timerRef.current);
-        }
-        return () => clearInterval(timerRef.current);
-    }, [gameState, score]);
 
     const loadProgress = async () => {
+        setLoading(true);
         try {
-            const res = await fetchMentalMathProgress(user.user_id);
+            const res = await fetchMentalMathProgress(user.user_id, true);
             if (res.status === 'success') {
-                const data = res.data;
-                const userLevel = parseInt(data.level) || 1;
-                setLevel(userLevel);
-                setTotalSets(parseInt(data.total_sets_completed) || 0);
-                setMaxTimeForLevel(getDurationForLevel(userLevel));
+                 setMaxClassicLevel(res.mental_math_level || 1);
+                 setMaxAbacusLevel(res.abacus_level || 1);
             }
         } catch (error) {
-            console.log('Local progress used due to network error');
+            console.log('Local progress used', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const startNewSet = useCallback(() => {
-        setScore(0);
-        setQuestionCount(1);
-        const duration = getDurationForLevel(level);
-        setTimeLeft(duration);
-        setMaxTimeForLevel(duration);
-        setGameState('PLAYING');
-        generateNextQuestion();
-    }, [level]);
-
-    const generateNextQuestion = () => {
-        fadeAnim.setValue(0);
-        shakeAnim.setValue(0);
-        scaleAnim.setValue(1);
-
-        const strategy = MathQuestionGenerator.getStrategyForLevel(level);
-        const question = MathQuestionGenerator.generate(strategy);
-        setCurrentQuestion(question);
-        setFeedback(null);
-    };
-
-    const triggerShake = () => {
-        Animated.sequence([
-            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-            Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-            Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true })
-        ]).start();
-    };
-
-    const triggerPop = () => {
-        Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
-            Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })
-        ]).start();
-    };
-
-    const handleAnswer = (selectedOption) => {
-        if (!currentQuestion || feedback) return;
-
-        const isCorrect = selectedOption === currentQuestion.answer;
-        setFeedback(isCorrect ? 'correct' : 'wrong');
-
-        let newScore = score;
-        if (isCorrect) {
-            newScore = score + 1;
-            setScore(newScore);
-            triggerPop();
-            playSound('correct');
-        } else {
-            Vibration.vibrate(100);
-            triggerShake();
-            playSound('wrong');
-        }
-
-        Animated.sequence([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-            Animated.delay(600),
-            Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true })
-        ]).start(() => {
-            if (questionCount < TOTAL_QUESTIONS) {
-                setQuestionCount(prev => prev + 1);
-                generateNextQuestion();
-            } else {
-                finishSet(newScore, false);
-            }
-        });
-    };
-
-    const finishSet = async (finalScore, isTimeUp = false) => {
-        clearInterval(timerRef.current);
-        setGameState('RESULT');
-
-        const passed = finalScore >= PASSING_SCORE;
-        const newLevel = passed ? level + 1 : level;
-
-        if (passed) {
-            playSound('levelup');
-            // Trigger confetti if available
-            if (confettiRef.current) {
-                confettiRef.current.start();
-            }
-
-            setLevel(newLevel);
-            setTotalSets(prev => prev + 1);
-            setMaxTimeForLevel(getDurationForLevel(newLevel));
-        } else {
-            playSound('wrong'); // Play failure sound for game over
-        }
-
-        try {
-            await saveMentalMathProgress(user.user_id, newLevel, finalScore);
-        } catch (error) {
-            console.error('Sync failed', error);
-        }
+    // Callback so child tabs can inform parent that a new level unlocked
+    const handleProgressUpdate = (type, newLevel) => {
+        if (type === 'classic') setMaxClassicLevel(newLevel);
+        if (type === 'abacus') setMaxAbacusLevel(newLevel);
     };
 
     if (loading) {
@@ -245,10 +79,10 @@ const MentalMathsScreen = ({ navigation, user }) => {
     }
 
     const getGradientColors = () => {
-        if (gameState === 'RESULT') return isDarkMode ? ['#1e1b4b', '#312e81'] : ['#a8edea', '#fed6e3'];
-        if (feedback === 'wrong') return ['#7f1d1d', '#991b1b'];
-        if (feedback === 'correct') return ['#14532d', '#166534'];
-        return isDarkMode ? ['#0f172a', '#1e293b'] : ['#4facfe', '#00f2fe'];
+        if (activeTab === 'abacus') {
+            return isDarkMode ? ['#4c0519', '#881337'] : ['#fecdd3', '#fda4af']; // Rosy/Red Theme for Flash
+        }
+        return isDarkMode ? ['#0f172a', '#1e293b'] : ['#4facfe', '#00f2fe']; // Blue Theme for Classic
     };
 
     return (
@@ -267,175 +101,59 @@ const MentalMathsScreen = ({ navigation, user }) => {
                     </TouchableOpacity>
                     <View style={styles.headerBadge}>
                         <Ionicons name="trophy" size={16} color="#FFD700" style={{ marginRight: 4 }} />
-                        <Text style={styles.headerBadgeText}>Level {level}</Text>
+                        <Text style={styles.headerBadgeText}>
+                            {activeTab === 'classic' ? `Lvl ${maxClassicLevel}` : `Lvl ${maxAbacusLevel}`}
+                        </Text>
                     </View>
                 </View>
 
-                {/* Confetti Cannon - Always present but triggered on demand */}
-                {gameState === 'RESULT' && score >= PASSING_SCORE && (
-                    <ConfettiCannon
-                        Ref={ref => (confettiRef.current = ref)}
-                        count={200}
-                        origin={{ x: -10, y: 0 }}
-                        autoStart={true}
-                        fadeOut={true}
-                    />
-                )}
-
-                {/* Level Controls */}
-                <View style={styles.levelControls}>
-                    <TouchableOpacity
-                        style={styles.controlBtn}
-                        onPress={() => { setLevel(1); setGameState('START'); }}
+                {/* Custom Segmented Tab Bar */}
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity 
+                        style={[styles.tabButton, activeTab === 'classic' && styles.activeTab]}
+                        onPress={() => setActiveTab('classic')}
+                        activeOpacity={0.8}
                     >
-                        <Ionicons name="refresh-circle" size={20} color="#fff" />
-                        <Text style={styles.controlBtnText}>Level 1</Text>
+                        <Text style={[styles.tabText, activeTab === 'classic' && styles.activeTabText]}>Mental Math</Text>
                     </TouchableOpacity>
-
-                    {level > 1 && (
-                        <TouchableOpacity
-                            style={styles.controlBtn}
-                            onPress={() => { setLevel(level - 1); setGameState('START'); }}
-                        >
-                            <Ionicons name="chevron-back-circle" size={20} color="#fff" />
-                            <Text style={styles.controlBtnText}>Previous Level</Text>
-                        </TouchableOpacity>
-                    )}
+                    
+                    <TouchableOpacity 
+                        style={[styles.tabButton, activeTab === 'abacus' && styles.activeTabAbacus]}
+                        onPress={() => setActiveTab('abacus')}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'abacus' && styles.activeTabText]}>Abacus</Text>
+                        <View style={styles.newBadge}>
+                            <Text style={styles.newBadgeTxt}>NEW</Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.content}>
-                    {gameState === 'START' && (
-                        <Animated.View style={[styles.card, { transform: [{ scale: 1 }] }]}>
-                            <View style={styles.iconCircle}>
-                                <Text style={styles.emoji}>🧠</Text>
-                            </View>
-                            <Text style={[styles.title, { color: '#333' }]}>Speed Math</Text>
-
-                            <Text style={[styles.subtitle, { color: '#666' }]}>
-                                Solve {TOTAL_QUESTIONS} questions in {maxTimeForLevel} seconds!
-                            </Text>
-
-                            <View style={styles.rulesContainer}>
-                                <Text style={styles.ruleText}>⏱️ {maxTimeForLevel} Seconds</Text>
-                                <Text style={styles.ruleText}>✅ Need {PASSING_SCORE} correct to pass</Text>
-                            </View>
-
-                            <TouchableOpacity
-                                style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-                                onPress={startNewSet}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.primaryButtonText}>Start Challenge</Text>
-                                <Ionicons name="play" size={20} color="#fff" style={{ marginLeft: 8 }} />
-                            </TouchableOpacity>
-                        </Animated.View>
-                    )}
-
-                    {gameState === 'PLAYING' && currentQuestion && (
-                        <View style={styles.gameWrapper}>
-                            <View style={styles.gameHeader}>
-                                <View style={styles.scorePill}>
-                                    <Text style={styles.scoreText}>Score: {score}</Text>
-                                </View>
-
-                                <View style={[styles.timerPill, timeLeft <= 10 && styles.timerUrgent]}>
-                                    <Ionicons name="time" size={18} color="#fff" style={{ marginRight: 5 }} />
-                                    <Text style={styles.timerText}>{timeLeft}s</Text>
-                                </View>
-
-                                <View style={styles.scorePill}>
-                                    <Text style={styles.scoreText}>{questionCount}/{TOTAL_QUESTIONS}</Text>
-                                </View>
-                            </View>
-
-                            <Animated.View
-                                style={[
-                                    styles.questionCard,
-                                    { transform: [{ translateX: shakeAnim }, { scale: scaleAnim }] }
-                                ]}
-                            >
-                                <Text style={styles.questionText}>{currentQuestion.question}</Text>
-
-                                <Animated.View style={[
-                                    styles.feedbackOverlay,
-                                    {
-                                        opacity: fadeAnim,
-                                        backgroundColor: feedback === 'correct' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)'
-                                    }
-                                ]}>
-                                    <Ionicons name={feedback === 'correct' ? "checkmark-circle" : "close-circle"} size={40} color="#fff" />
-                                    <Text style={styles.feedbackText}>{feedback === 'correct' ? 'Great!' : 'Oops!'}</Text>
-                                </Animated.View>
-                            </Animated.View>
-
-                            <View style={styles.optionsGrid}>
-                                {currentQuestion.options.map((option, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={styles.optionButton}
-                                        onPress={() => handleAnswer(option)}
-                                        disabled={feedback !== null}
-                                        activeOpacity={0.7}
-                                    >
-                                        <Text style={styles.optionText}>{option}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                    )}
-
-                    {gameState === 'RESULT' && (
-                        <View style={styles.card}>
-                            {score >= PASSING_SCORE && (
-                                <View style={{ position: 'absolute', top: -100, zIndex: -1 }}>
-                                    {/* Placeholder for extra effects */}
-                                </View>
-                            )}
-
-                            <View style={styles.iconCircle}>
-                                <Text style={styles.emoji}>{score >= PASSING_SCORE ? '🎉' : '⏰'}</Text>
-                            </View>
-                            <Text style={styles.title}>
-                                {timeLeft === 0 && score < PASSING_SCORE ? "Time's Up!" :
-                                    score >= PASSING_SCORE ? 'Awesome!' : 'Try Again!'}
-                            </Text>
-
-                            <Text style={styles.bigScore}>{score}<Text style={styles.totalScore}>/{TOTAL_QUESTIONS}</Text></Text>
-
-                            <Text style={styles.resultMessage}>
-                                {score >= PASSING_SCORE
-                                    ? `Promoted to Level ${level}!`
-                                    : `You need ${PASSING_SCORE} correct in ${maxTimeForLevel}s.`}
-                            </Text>
-
-                            <View style={styles.buttonRow}>
-                                {score >= PASSING_SCORE ? (
-                                    <TouchableOpacity
-                                        style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-                                        onPress={startNewSet}
-                                    >
-                                        <Text style={styles.primaryButtonText}>Next Level</Text>
-                                        <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity
-                                        style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-                                        onPress={startNewSet}
-                                    >
-                                        <Text style={styles.primaryButtonText}>Replay Level</Text>
-                                        <Ionicons name="refresh" size={20} color="#fff" style={{ marginLeft: 8 }} />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        </View>
+                    {activeTab === 'classic' ? (
+                        <ClassicMathTab 
+                            userLevel={maxClassicLevel} 
+                            maxLevelAllowed={maxClassicLevel}
+                            onProgressUpdate={handleProgressUpdate}
+                            user={user}
+                            sounds={sounds}
+                        />
+                    ) : (
+                        <AbacusTab 
+                            userLevel={maxAbacusLevel}
+                            maxLevelAllowed={maxAbacusLevel}
+                            onProgressUpdate={handleProgressUpdate}
+                            user={user}
+                            sounds={sounds}
+                        />
                     )}
                 </View>
+
             </SafeAreaView>
         </View>
     );
 };
 
-// Styles remain exactly the same as before
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
@@ -454,90 +172,62 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     },
     headerBadgeText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-    levelControls: {
-        flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 10,
-        paddingHorizontal: 20
+    
+    // Tab Bar Styles
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        marginHorizontal: 20,
+        borderRadius: 30,
+        padding: 4,
+        marginTop: 10
     },
-    controlBtn: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', // Darker background for visibility
-        paddingHorizontal: 16, paddingVertical: 10, borderRadius: 25, gap: 6,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', // Distinct border
-        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3
-    },
-    controlBtnText: { color: '#fff', fontSize: 13, fontWeight: 'bold', letterSpacing: 0.5 },
-    content: { flex: 1, padding: 20, justifyContent: 'center' },
-    card: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 30, padding: 30,
-        alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2, shadowRadius: 20, elevation: 10,
-    },
-    iconCircle: {
-        width: 80, height: 80, backgroundColor: '#f0f9ff', borderRadius: 40,
-        justifyContent: 'center', alignItems: 'center', marginBottom: 20,
-    },
-    emoji: { fontSize: 40 },
-    title: { fontSize: 26, fontWeight: '800', marginBottom: 5, color: '#1e293b', fontFamily: 'NotoSans-Bold' },
-    subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 15, color: '#64748b', fontFamily: 'NotoSans-Regular' },
-    rulesContainer: {
-        backgroundColor: '#f1f5f9', padding: 15, borderRadius: 12, marginBottom: 25, width: '100%',
-    },
-    ruleText: { fontSize: 14, color: '#475569', textAlign: 'center', marginBottom: 5, fontWeight: '600', fontFamily: 'NotoSans-Bold' },
-    primaryButton: {
-        flexDirection: 'row', width: '100%', paddingVertical: 18, borderRadius: 20,
-        justifyContent: 'center', alignItems: 'center', shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
-    },
-    primaryButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
-    buttonRow: { flexDirection: 'row', width: '100%', marginTop: 20 },
-    outlineButton: {
-        paddingHorizontal: 25, paddingVertical: 16, borderRadius: 20, borderWidth: 2,
-        justifyContent: 'center', alignItems: 'center',
-    },
-    outlineButtonText: { fontSize: 16, fontWeight: '700' },
-    gameWrapper: { flex: 1, justifyContent: 'center' },
-    gameHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    scorePill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 15 },
-    scoreText: { color: '#fff', fontWeight: 'bold', fontSize: 16, fontFamily: 'NotoSans-Bold' },
-    timerPill: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)',
-        paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'
-    },
-    timerUrgent: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-    timerText: { color: '#fff', fontWeight: 'bold', fontSize: 18, fontFamily: 'NotoSans-Bold' },
-    questionCard: {
-        backgroundColor: '#fff', borderRadius: 30, height: 200, justifyContent: 'center',
-        alignItems: 'center', marginBottom: 30, shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20,
-        elevation: 10, overflow: 'hidden',
-    },
-    questionText: { fontSize: 48, fontWeight: '900', color: '#1e293b', fontFamily: 'NotoSans-Bold' },
-    feedbackOverlay: {
-        ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10,
-    },
-    feedbackText: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 10 },
-    optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 15 },
-    optionButton: {
-        width: (width - 55) / 2,
-        backgroundColor: '#ffffff', // Solid white for visibility
-        paddingVertical: 25,
-        borderRadius: 25,
+    tabButton: {
+        flex: 1,
+        paddingVertical: 12,
         alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 25,
+        flexDirection: 'row'
+    },
+    activeTab: {
+        backgroundColor: '#3b82f6', // Blue for Classic
         shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 4,
-        marginBottom: 15,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        elevation: 3
     },
-    optionText: {
-        fontSize: 32, // Increased slightly for readability
+    activeTabAbacus: {
+        backgroundColor: '#e11d48', // Red for Abacus
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        elevation: 3
+    },
+    tabText: {
+        color: 'rgba(255,255,255,0.7)',
         fontWeight: 'bold',
-        color: '#1e293b', // Dark Slate/Blue for high contrast
-        fontFamily: 'NotoSans-Bold',
+        fontSize: 15
     },
-    bigScore: { fontSize: 60, fontWeight: '900', color: '#333', marginVertical: 10, fontFamily: 'NotoSans-Bold' },
-    totalScore: { fontSize: 24, color: '#888', fontWeight: '500' },
-    resultMessage: { fontSize: 16, color: '#666', marginBottom: 20 },
+    activeTabText: {
+        color: '#fff',
+    },
+    newBadge: {
+        backgroundColor: '#fde047',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 10,
+        marginLeft: 6,
+        transform: [{translateY: -8}]
+    },
+    newBadgeTxt: {
+        fontSize: 9,
+        fontWeight: '900',
+        color: '#ca8a04'
+    },
+    content: {
+        flex: 1
+    }
 });
 
 export default MentalMathsScreen;

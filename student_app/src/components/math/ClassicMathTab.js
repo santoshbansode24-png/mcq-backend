@@ -33,7 +33,6 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
     const [feedback, setFeedback] = useState(null);
     
     const confettiRef = useRef(null);
-    const scoreRef    = useRef(0); // Ref to track live score (avoids stale closure in timer)
 
     const TOTAL_QUESTIONS = 10;
     const PASSING_SCORE = 8; // 8/10 to pass

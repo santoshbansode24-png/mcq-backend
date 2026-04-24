@@ -50,25 +50,37 @@ if (!function_exists('callGeminiAPI')) {
             ]
         ];
         
-        $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        
-        $response = curl_exec($ch);
-        $curlError = curl_error($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($curlError) throw new Exception("cURL Error: " . $curlError);
-        if ($httpCode !== 200) {
-            $errorDetails = json_decode($response, true);
-            $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : $response;
-            throw new Exception("Gemini API Error ($httpCode): " . $msg);
+        $maxRetries = 3;
+        $retryDelay = 2; // initial delay in seconds
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            
+            $response = curl_exec($ch);
+            $curlError = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 429 && $attempt < $maxRetries) {
+                sleep($retryDelay);
+                $retryDelay *= 2; // exponential backoff
+                continue;
+            }
+            
+            if ($curlError) throw new Exception("cURL Error: " . $curlError);
+            if ($httpCode !== 200) {
+                $errorDetails = json_decode($response, true);
+                $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : $response;
+                throw new Exception("Gemini API Error ($httpCode): " . $msg);
+            }
+            break; // Success
         }
         
         $decoded = json_decode($response, true);
@@ -113,27 +125,39 @@ if (!function_exists('callGeminiPDF')) {
             ]
         ];
         
-        $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 240); // 4 min for large PDFs
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        
-        $response = curl_exec($ch);
-        $curlError = curl_error($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($curlError) throw new Exception("cURL Error: " . $curlError);
-        if ($httpCode !== 200) {
-            $errorDetails = json_decode($response, true);
-            $geminiMsg = $errorDetails['error']['message'] ?? 'No details';
-            $geminiStatus = $errorDetails['error']['status'] ?? '';
-            error_log("Gemini PDF Fail ($httpCode): " . $response);
-            throw new Exception("Gemini API Error ($httpCode): $geminiMsg" . ($geminiStatus ? " [$geminiStatus]" : ""));
+        $maxRetries = 3;
+        $retryDelay = 3; // initial delay in seconds
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 240); // 4 min for large PDFs
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            
+            $response = curl_exec($ch);
+            $curlError = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 429 && $attempt < $maxRetries) {
+                sleep($retryDelay);
+                $retryDelay *= 2; // exponential backoff
+                continue;
+            }
+            
+            if ($curlError) throw new Exception("cURL Error: " . $curlError);
+            if ($httpCode !== 200) {
+                $errorDetails = json_decode($response, true);
+                $geminiMsg = $errorDetails['error']['message'] ?? 'No details';
+                $geminiStatus = $errorDetails['error']['status'] ?? '';
+                error_log("Gemini PDF Fail ($httpCode) [Attempt $attempt]: " . $response);
+                throw new Exception("Gemini API Error ($httpCode): $geminiMsg" . ($geminiStatus ? " [$geminiStatus]" : ""));
+            }
+            break; // Success
         }
         
         $decoded = json_decode($response, true);

@@ -112,6 +112,13 @@ foreach ($jobs as $job) {
         - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer Sentence or Phrase\"}.
         - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn.
         - QUALITY OVER QUANTITY: Do not generate 'filler' questions. Only generate cards for information that is actually worth studying.
+        
+        - GOLD STANDARD EXAMPLES (FOLLOW THIS QUALITY LEVEL):
+          1. [BAD]: \"Co-operation\" -> \"Working together.\"
+          2. [GOOD]: \"What is the primary economic objective of a Co-operative society?\" -> \"To protect and promote the common economic interests of its members through mutual help.\"
+          3. [BAD]: \"Farmers\" -> \"People who farm.\"
+          4. [GOOD]: \"________ are the primary beneficiaries of the rural co-operative credit system in India.\" -> \"Small and marginal farmers\"
+          5. [GOOD]: \"How does a co-operative society ensure democratic control among its members?\" -> \"By following the principle of 'one member, one vote' regardless of shareholding.\"
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}

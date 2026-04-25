@@ -332,6 +332,11 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
+        backgroundColor: '#eef2ff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
     placeholderTitle: {
         fontSize: 22,
         fontWeight: 'bold',

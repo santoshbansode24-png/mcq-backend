@@ -100,16 +100,18 @@ foreach ($jobs as $job) {
         
         SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL (QUESTION & ANSWER FORMAT)
         - Your ABSOLUTE priority is to create flashcards in a clear 'question' and 'answer' format.
+        - NO SINGLE WORD QUESTIONS: Never use a single word as a question. Every flashcard question MUST be a complete, grammatically correct sentence.
         - STRICT DISTRIBUTION RATIO: You MUST maintain the following distribution in your output:
-           1. 35% VERY SHORT ANSWER TYPE (Direct questions with 1-3 word answers).
-           2. 35% SHORT ANSWER TYPE (Questions needing a single clear sentence).
-           3. 30% FILL IN THE BLANKS (Use ________ in the question for the missing answer).
+           1. 35% VERY SHORT ANSWER TYPE (Full questions requiring a precise 1-3 word answer).
+           2. 35% SHORT ANSWER TYPE (Full questions needing a clear explanatory sentence).
+           3. 30% FILL IN THE BLANKS (A complete sentence using ________ for the missing concept).
         - Coverage rules: 
            1. Extract all Definitions: Technical terms must have a definition card.
            2. Static Data: Capture dates, names, formulas, and specific figures.
            3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
-        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"...\", \"answer\": \"...\"}.
-        - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn. Avoid trivial or "filler" questions.
+        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer Sentence or Phrase\"}.
+        - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn.
+        - QUALITY OVER QUANTITY: Do not generate 'filler' questions. Only generate cards for information that is actually worth studying.
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}
@@ -132,7 +134,7 @@ foreach ($jobs as $job) {
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
         2. FORMAT: Return ONLY a valid JSON object. No conversational text.
-        3. VOLUME DEMAND: I expect a massive amount of output. Generate up to the maximum constraints possible for the extracted text. DO NOT return fewer than 10 Flashcards unless the document is literally empty.
+        3. QUALITY DEMAND: Prioritize the relevance and depth of the questions over the total number. Generate only the most important questions for the provided text. Do not return fewer than 5 high-quality flashcards.
         
         SCHEMA:
         {

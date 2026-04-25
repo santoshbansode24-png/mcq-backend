@@ -262,9 +262,12 @@ const HomeScreen = ({ user, navigation, route }) => {
             if (serverVer) {
                 setPendingServerVersion(serverVer);
                 if (!localVer || parseInt(serverVer) > parseInt(localVer)) {
-                    setHasUpdate(true);
-                    setIsFullySynced(false); 
-                    startGlow();
+                    // Only flag as update if we aren't actively syncing it right now
+                    if (!isSyncing) {
+                        setHasUpdate(true);
+                        setIsFullySynced(false); 
+                        startGlow();
+                    }
                 } else {
                     setHasUpdate(false);
                 }
@@ -300,18 +303,18 @@ const HomeScreen = ({ user, navigation, route }) => {
         setHasUpdate(false);
 
         try {
+            // Update local version immediately so navigating away doesn't cause it to be flagged as 'red' again
+            const latestVer = versionToSave || await SmartCacheService.checkContentVersion(user.board_type);
+            if (latestVer) {
+                await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
+            }
+
             // Removed deleted data by clearing main class cache keys
             await dataCache.remove(`subjects_${classId}`);
             
             // Trigger priority sync
             await SmartCacheService.syncAllForClass(classId, true);
 
-            // Update local version using either the cached pending version or a fresh fetch
-            const latestVer = versionToSave || await SmartCacheService.checkContentVersion(user.board_type);
-            if (latestVer) {
-                await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
-            }
-            
             // Refresh subjects list after sync
             loadSubjects(true);
             

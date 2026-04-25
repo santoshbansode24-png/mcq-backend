@@ -31,7 +31,7 @@ try {
             n.chapter_id,
             n.title,
             n.file_path,
-            -- n.content, -- Optimization: Exclude heavy content, fetch only when needed
+            n.content,
             n.note_type,
             n.created_at,
             ch.chapter_name

@@ -7,7 +7,7 @@
     "version": "1.0.31",
     "jsEngine": "hermes",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/adaptive-foreground_clean.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
@@ -29,7 +29,7 @@
     "android": {
       "backgroundColor": "#000000",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-foreground.png",
+        "foregroundImage": "./assets/adaptive-foreground_clean.png",
         "backgroundColor": "#FFFFFF"
       },
       "splash": {

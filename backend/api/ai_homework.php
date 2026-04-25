@@ -107,18 +107,27 @@ try {
     $fullReply = "";
     $tokensUsed = 0;
     $apiError = "";
+    $buffer = "";
 
-    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed, &$apiError) {
-        // Check if the response is a raw JSON error instead of an SSE stream
-        if (strpos(trim($data), '{"error":') === 0) {
+    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed, &$apiError, &$buffer) {
+        // If it looks like a direct JSON error (not an SSE stream)
+        if (strpos(trim($data), '{"error":') === 0 || (!empty($apiError) && empty($buffer))) {
             $apiError .= $data;
             return strlen($data);
         }
 
-        $lines = explode("\n", $data);
-        foreach ($lines as $line) {
+        $buffer .= $data;
+        
+        // Process complete lines
+        while (($pos = strpos($buffer, "\n")) !== false) {
+            $line = substr($buffer, 0, $pos);
+            $buffer = substr($buffer, $pos + 1);
+            
+            $line = trim($line);
             if (strpos($line, 'data: ') === 0) {
                 $jsonStr = substr($line, 6);
+                if ($jsonStr === '[DONE]') continue;
+
                 $decoded = json_decode($jsonStr, true);
                 
                 if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {

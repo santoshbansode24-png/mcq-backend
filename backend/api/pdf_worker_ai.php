@@ -109,6 +109,7 @@ foreach ($jobs as $job) {
            2. Static Data: Capture dates, names, formulas, and specific figures.
            3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
         - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"...\", \"answer\": \"...\"}.
+        - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn. Avoid trivial or "filler" questions.
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}

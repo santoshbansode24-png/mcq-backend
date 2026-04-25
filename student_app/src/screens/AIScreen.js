@@ -24,28 +24,26 @@ const AIScreen = ({ navigation }) => {
         {
             id: 'pdftoexam',
             title: 'Veeru Lens',
-            subtitle: 'Doc Analyzer',
-            description: 'Turn any PDF into a custom exam.',
+            subtitle: 'AI Doc Intelligence',
+            description: 'Turn any PDF into a custom exam or flashcards.',
             icon: 'document-attach',
-            // Indigo to Deep Blue
-            color1: '#4f46e5',
-            color2: '#2563eb',
+            color1: '#6366f1',
+            color2: '#4f46e5',
             screen: 'PDFToExam',
             width: '100%',
-            height: 110
+            height: 120
         },
         {
             id: 'homework',
             title: 'Homework Helper',
-            subtitle: 'Snap & Solve',
-            description: 'Get instant step-by-step help.',
+            subtitle: 'Snap, Solve & Learn',
+            description: 'Get instant step-by-step tutoring help.',
             icon: 'camera',
-            // Vibrant Purple to Pink
-            color1: '#7c3aed',
-            color2: '#d946ef',
+            color1: '#8b5cf6',
+            color2: '#7c3aed',
             screen: 'HomeworkSolver',
             width: '100%',
-            height: 110
+            height: 120
         }
     ];
 
@@ -104,13 +102,7 @@ const AIScreen = ({ navigation }) => {
                             <TouchableOpacity
                                 key={item.id}
                                 style={[styles.tileWrapper, { width: item.width }]}
-                                onPress={() => {
-                                    if (item.id === 'homework') {
-                                        Alert.alert('Coming Soon!', 'The Homework Solver is currently in development and will be available shortly.');
-                                    } else {
-                                        navigation.navigate(item.screen);
-                                    }
-                                }}
+                                onPress={() => navigation.navigate(item.screen)}
                                 activeOpacity={0.9}
                             >
                                 {/* Gradient Card with Row Layout */}
@@ -120,6 +112,12 @@ const AIScreen = ({ navigation }) => {
                                     end={{ x: 1, y: 1 }}
                                     style={[styles.rowTile, { height: item.height }]}
                                 >
+                                    {/* Glassy Glow Overlay */}
+                                    <LinearGradient
+                                        colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0)']}
+                                        style={styles.glossyOverlay}
+                                    />
+
                                     {/* Icon Left */}
                                     <View style={styles.iconContainerRow}>
                                         <Ionicons name={item.icon} size={32} color={item.color1} />
@@ -129,11 +127,12 @@ const AIScreen = ({ navigation }) => {
                                     <View style={styles.textContainerRow}>
                                         <Text style={styles.rowTitle}>{item.title}</Text>
                                         <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
+                                        <Text style={styles.rowDescription} numberOfLines={2}>{item.description}</Text>
                                     </View>
 
                                     {/* Arrow Right */}
                                     <View style={styles.arrowContainerRow}>
-                                        <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.9)" />
+                                        <Ionicons name="chevron-forward" size={24} color="#fff" />
                                     </View>
                                 </LinearGradient>
                             </TouchableOpacity>
@@ -263,44 +262,68 @@ const styles = StyleSheet.create({
     },
     rowTile: {
         width: '100%',
-        borderRadius: 20,
+        borderRadius: 24,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        justifyContent: 'space-between', // Spread items
+        justifyContent: 'space-between',
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    glossyOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
     },
     iconContainerRow: {
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255,255,255,0.9)',
+        width: 60,
+        height: 60,
+        borderRadius: 20,
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     textContainerRow: {
         flex: 1,
         justifyContent: 'center',
     },
     rowTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 19,
+        fontWeight: '900',
         color: 'white',
-        marginBottom: 4,
+        marginBottom: 2,
         fontFamily: 'NotoSans-Bold',
     },
     rowSubtitle: {
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.85)',
+        textTransform: 'uppercase',
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        fontFamily: 'NotoSans-Bold',
+        marginBottom: 4,
+    },
+    rowDescription: {
         fontSize: 12,
         color: 'rgba(255,255,255,0.9)',
-        textTransform: 'uppercase',
-        fontWeight: '600',
-        letterSpacing: 0.5,
-        fontFamily: 'NotoSans-Bold',
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 16,
     },
     arrowContainerRow: {
         padding: 8,
         backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
     },
 });
 

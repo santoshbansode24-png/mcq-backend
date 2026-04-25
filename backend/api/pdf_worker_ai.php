@@ -101,14 +101,14 @@ foreach ($jobs as $job) {
         SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL (QUESTION & ANSWER FORMAT)
         - Your ABSOLUTE priority is to create flashcards in a clear 'question' and 'answer' format.
         - STRICT DISTRIBUTION RATIO: You MUST maintain the following distribution in your output:
-           1. 35% VERY SHORT ANSWER TYPE (Direct, precise questions with 1-2 word answers).
-           2. 35% SHORT ANSWER TYPE (Questions needing a short phrase or single sentence).
-           3. 30% FILL IN THE BLANKS (Statements using ________ for the missing concept).
+           1. 35% VERY SHORT ANSWER TYPE (Direct questions with 1-3 word answers).
+           2. 35% SHORT ANSWER TYPE (Questions needing a single clear sentence).
+           3. 30% FILL IN THE BLANKS (Use ________ in the question for the missing answer).
         - Coverage rules: 
            1. Extract all Definitions: Technical terms must have a definition card.
            2. Static Data: Capture dates, names, formulas, and specific figures.
            3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
-        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Never combine multiple facts into one card.
+        - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"...\", \"answer\": \"...\"}.
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}

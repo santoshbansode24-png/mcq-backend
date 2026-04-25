@@ -5,8 +5,10 @@ import { useTheme } from '../context/ThemeContext';
 import { API_URL } from '../api/config';
 import { streamFetch } from '../api/streaming';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +23,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
     const [solution, setSolution] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState('English');
+    const scrollRef = useRef(null);
 
     const getUserId = async () => {
         try {
@@ -83,19 +86,27 @@ const HomeworkSolverScreen = ({ navigation }) => {
 
         setSolution('');
         setLoading(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         try {
+            // 1. COMPRESS IMAGE BEFORE UPLOAD (Optimization)
+            const manipResult = await ImageManipulator.manipulateAsync(
+                image,
+                [{ resize: { width: 1024 } }], // Resize to 1024px width
+                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
             const userId = await getUserId();
             const PROXY_URL = `${API_URL}/ai_homework.php`;
 
             const formData = new FormData();
             formData.append('image', {
-                uri: image,
+                uri: manipResult.uri,
                 type: 'image/jpeg',
                 name: 'homework.jpg',
             });
             formData.append('language', language);
-            formData.append('prompt', "Solve this problem. Give a simple and straightforward answer.");
+            formData.append('prompt', "Solve this problem. Provide a clear, step-by-step educational explanation.");
             if (userId) formData.append('user_id', userId);
 
             await streamFetch(
@@ -107,10 +118,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 (chunk) => {
                     if (chunk.status === 'success' && chunk.chunk) {
                         setSolution(prev => prev + chunk.chunk);
+                        // Auto-scroll to bottom (Optimization)
+                        scrollRef.current?.scrollToEnd({ animated: true });
                     }
                 },
                 () => {
                     setLoading(false);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 },
                 (error) => {
                     setLoading(false);
@@ -121,6 +135,12 @@ const HomeworkSolverScreen = ({ navigation }) => {
             setLoading(false);
             Alert.alert('Error', 'An unexpected error occurred.');
         }
+    };
+
+    const copyToClipboard = async () => {
+        await Clipboard.setStringAsync(solution);
+        Haptics.selectionAsync();
+        Alert.alert('Success', 'Solution copied to clipboard! 📋');
     };
 
     return (
@@ -150,7 +170,12 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 </LinearGradient>
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                ref={scrollRef}
+                style={styles.content} 
+                contentContainerStyle={{ paddingBottom: 60 }} 
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Image Preview & Action Area */}
                 <View style={styles.card}>
                     <View style={styles.imageWrapper}>
@@ -246,8 +271,14 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 {solution ? (
                     <View style={styles.solutionContainer}>
                         <View style={styles.solutionHeader}>
-                            <Ionicons name="sparkles" size={24} color="#4f46e5" />
-                            <Text style={styles.solutionTitle}>AI Brainstorm Results</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                <Ionicons name="sparkles" size={24} color="#4f46e5" />
+                                <Text style={styles.solutionTitle}>AI Brainstorm Results</Text>
+                            </View>
+                            <TouchableOpacity onPress={copyToClipboard} style={styles.copyButton}>
+                                <Ionicons name="copy-outline" size={20} color="#4f46e5" />
+                                <Text style={styles.copyText}>Copy</Text>
+                            </TouchableOpacity>
                         </View>
                         <View style={styles.solutionCard}>
                             <Text style={styles.solutionText}>{solution}</Text>
@@ -431,8 +462,24 @@ const styles = StyleSheet.create({
     solutionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 16,
         paddingHorizontal: 10,
+    },
+    copyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#eef2ff',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        gap: 5,
+    },
+    copyText: {
+        fontSize: 12,
+        color: '#4f46e5',
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     },
     solutionTitle: {
         fontSize: 22,

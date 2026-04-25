@@ -44,9 +44,13 @@ $prompt = $_POST['prompt'] ?? "Solve this homework problem.";
 
 // Append Language & Style Instruction
 $prompt .= "\n\nOUTPUT INSTRUCTIONS:\n";
-$prompt .= "1. Language: Provide the solution ENTIRELY in " . $language . ". (Use Devanagari for Hindi/Marathi).\n";
-$prompt .= "2. Style: Be SHORT, CLEAR, and CONCISE. Avoid unnecessary introductions or fluff. Go straight to the solution.\n";
-$prompt .= "3. Format: Use bullet points or steps if needed, but keep them brief.";
+$prompt .= "1. ROLE: Act as an expert academic tutor. Do not just give the answer; explain the logic.\n";
+$prompt .= "2. LANGUAGE: Provide the entire response in " . $language . ". (Use clear Devanagari for Hindi/Marathi).\n";
+$prompt .= "3. STRUCTURE:\n";
+$prompt .= "   - Concept: Briefly explain the core topic or formula used.\n";
+$prompt .= "   - Steps: Provide a logical, numbered step-by-step solution.\n";
+$prompt .= "   - Final Answer: State the final result clearly at the end.\n";
+$prompt .= "4. STYLE: Use simple language that a student can understand. Keep it educational and encouraging.";
 
 // Read image data and convert to base64
 $imageData = file_get_contents($file['tmp_name']);

@@ -25,45 +25,40 @@ const AIScreen = ({ navigation }) => {
             id: 'pdftoexam',
             title: 'Veeru Lens',
             subtitle: 'AI Doc Intelligence',
-            description: 'Turn any PDF into a custom exam or flashcards.',
+            description: 'Turn any PDF into a custom exam or smart flashcards instantly.',
             icon: 'document-attach',
-            color1: '#6366f1',
-            color2: '#4f46e5',
+            color1: '#f43f5e', // Rose
+            color2: '#fb923c', // Orange
+            iconColor: '#f43f5e',
             screen: 'PDFToExam',
-            width: '100%',
-            height: 120
+            height: 140
         },
         {
             id: 'homework',
             title: 'Homework Helper',
             subtitle: 'Snap, Solve & Learn',
-            description: 'Get instant step-by-step tutoring help.',
+            description: 'Get step-by-step expert tutoring help for any problem.',
             icon: 'camera',
-            color1: '#8b5cf6',
-            color2: '#7c3aed',
+            color1: '#0ea5e9', // Sky Blue
+            color2: '#10b981', // Emerald
+            iconColor: '#0ea5e9',
             screen: 'HomeworkSolver',
-            width: '100%',
-            height: 120
+            height: 140
         }
     ];
 
     return (
         <View style={styles.container}>
-            {/* Set translucent to true so the background gradient flows behind the status bar */}
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-            <ScrollView
-                style={styles.content}
-                showsVerticalScrollIndicator={false}
-                // Important: bounces={false} prevents the white gap when pulling down
-                bounces={false}
-            >
-                {/* Header Section */}
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false} bounces={false}>
+                {/* Premium Header */}
                 <View style={styles.headerContainer}>
-                    <LinearGradient
-                        colors={['#1e1b4b', '#312e81']}
-                        style={styles.headerBackground}
-                    >
+                    <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.headerBackground}>
+                        {/* Decorative Background Elements */}
+                        <View style={[styles.headerDeco, { top: -20, right: -20, width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(99,102,241,0.15)' }]} />
+                        <View style={[styles.headerDeco, { top: 60, left: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(236,72,153,0.1)' }]} />
+
                         <View style={styles.headerContent}>
                             <View>
                                 <Text style={styles.greeting}>AI Learning Hub</Text>
@@ -74,7 +69,6 @@ const AIScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        {/* Quick Stats Card */}
                         <View style={styles.statsCard}>
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>12</Text>
@@ -95,51 +89,54 @@ const AIScreen = ({ navigation }) => {
                 </View>
 
                 <View style={styles.scrollContent}>
-                    <Text style={styles.sectionTitle}>Tools</Text>
+                    <Text style={styles.sectionTitle}>Smart Tools</Text>
 
                     <View style={styles.grid}>
                         {features.map((item) => (
                             <TouchableOpacity
                                 key={item.id}
-                                style={[styles.tileWrapper, { width: item.width }]}
+                                style={styles.tileWrapper}
                                 onPress={() => navigation.navigate(item.screen)}
                                 activeOpacity={0.9}
                             >
-                                {/* Gradient Card with Row Layout */}
                                 <LinearGradient
                                     colors={[item.color1, item.color2]}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                     style={[styles.rowTile, { height: item.height }]}
                                 >
-                                    {/* Glassy Glow Overlay */}
+                                    {/* Glassy Overlay for Shine */}
                                     <LinearGradient
-                                        colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0)']}
+                                        colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
                                         style={styles.glossyOverlay}
                                     />
 
-                                    {/* Icon Left */}
-                                    <View style={styles.iconContainerRow}>
-                                        <Ionicons name={item.icon} size={32} color={item.color1} />
+                                    {/* Floating Geometric Shapes for 3D Effect */}
+                                    <View style={[styles.shape, { top: -20, right: -10, width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                                    <View style={[styles.shape, { bottom: -30, right: 40, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)' }]} />
+
+                                    {/* Left Content Area */}
+                                    <View style={styles.contentLeft}>
+                                        <View style={styles.iconBadge}>
+                                            <Ionicons name={item.icon} size={28} color={item.iconColor} />
+                                        </View>
+                                        <View style={styles.textStack}>
+                                            <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
+                                            <Text style={styles.rowTitle}>{item.title}</Text>
+                                            <Text style={styles.rowDescription} numberOfLines={2}>{item.description}</Text>
+                                        </View>
                                     </View>
 
-                                    {/* Text Middle */}
-                                    <View style={styles.textContainerRow}>
-                                        <Text style={styles.rowTitle}>{item.title}</Text>
-                                        <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
-                                        <Text style={styles.rowDescription} numberOfLines={2}>{item.description}</Text>
-                                    </View>
-
-                                    {/* Arrow Right */}
-                                    <View style={styles.arrowContainerRow}>
-                                        <Ionicons name="chevron-forward" size={24} color="#fff" />
+                                    {/* Right Arrow Button */}
+                                    <View style={styles.arrowBadge}>
+                                        <Ionicons name="arrow-forward" size={24} color={item.color1} />
                                     </View>
                                 </LinearGradient>
                             </TouchableOpacity>
                         ))}
                     </View>
 
-                    <View style={{ height: 40 }} />
+                    <View style={{ height: 60 }} />
                 </View>
             </ScrollView>
         </View>
@@ -152,178 +149,200 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     headerContainer: {
-        // Removed fixed marginBottom to let the StatsCard define the space
-        paddingBottom: 30,
+        paddingBottom: 35,
     },
     headerBackground: {
-        // DYNAMIC PADDING: Accounts for Status bar height on Android and Notch on iOS
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 20 : 60,
-        paddingHorizontal: 20,
-        paddingBottom: 60, // Increased to make room for the absolute positioned stats card
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
+        paddingHorizontal: 24,
+        paddingBottom: 65,
+        borderBottomLeftRadius: 40,
+        borderBottomRightRadius: 40,
+        position: 'relative',
+        overflow: 'visible',
+    },
+    headerDeco: {
+        position: 'absolute',
     },
     headerContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 25,
+        zIndex: 2,
     },
     greeting: {
-        fontSize: 26,
-        fontWeight: '800',
+        fontSize: 28,
+        fontWeight: '900',
         color: '#fff',
         letterSpacing: -0.5,
         fontFamily: 'NotoSans-Bold',
     },
     subGreeting: {
-        fontSize: 15,
-        color: 'rgba(255,255,255,0.7)',
-        marginTop: 2,
+        fontSize: 16,
+        color: '#cbd5e1',
+        marginTop: 4,
         fontFamily: 'NotoSans-Regular',
     },
     profileButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: 'rgba(255,255,255,0.15)',
+        backdropFilter: 'blur(10px)',
     },
     statsCard: {
         flexDirection: 'row',
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 18,
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        paddingVertical: 20,
         position: 'absolute',
-        bottom: -25, // Overlaps the bottom of the header
-        left: 20,
-        right: 20,
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
+        bottom: -30,
+        left: 24,
+        right: 24,
+        elevation: 12,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
         justifyContent: 'space-around',
         alignItems: 'center',
+        zIndex: 10,
     },
     statItem: {
         alignItems: 'center',
         flex: 1,
     },
     statNumber: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#1e293b',
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#0f172a',
         fontFamily: 'NotoSans-Bold',
     },
     statLabel: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#64748b',
-        marginTop: 2,
-        fontWeight: '600',
+        marginTop: 4,
+        fontWeight: '700',
         textTransform: 'uppercase',
+        letterSpacing: 0.5,
         fontFamily: 'NotoSans-Bold',
     },
     statDivider: {
         width: 1,
-        height: 20,
-        backgroundColor: '#f1f5f9',
+        height: 24,
+        backgroundColor: '#e2e8f0',
     },
     content: {
         flex: 1,
     },
     scrollContent: {
-        paddingTop: 30,
+        paddingTop: 45,
         paddingHorizontal: 20,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#1e293b',
-        marginBottom: 16,
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#0f172a',
+        marginBottom: 20,
         fontFamily: 'NotoSans-Bold',
+        letterSpacing: -0.5,
     },
     grid: {
-        flexDirection: 'column', // Stack vertically
-        gap: 16, // Vertical gap
-        marginBottom: 24,
+        flexDirection: 'column',
+        gap: 20,
     },
     tileWrapper: {
-        marginBottom: 0,
-        borderRadius: 20,
+        borderRadius: 28,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        elevation: 8,
     },
     rowTile: {
         width: '100%',
-        borderRadius: 24,
+        borderRadius: 28,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         justifyContent: 'space-between',
+        position: 'relative',
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
     },
     glossyOverlay: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: '50%',
+        height: '45%',
     },
-    iconContainerRow: {
-        width: 60,
-        height: 60,
-        borderRadius: 20,
+    shape: {
+        position: 'absolute',
+    },
+    contentLeft: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 2,
+    },
+    iconBadge: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
         backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
-        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowRadius: 6,
+        elevation: 5,
     },
-    textContainerRow: {
+    textStack: {
         flex: 1,
-        justifyContent: 'center',
-    },
-    rowTitle: {
-        fontSize: 19,
-        fontWeight: '900',
-        color: 'white',
-        marginBottom: 2,
-        fontFamily: 'NotoSans-Bold',
+        paddingRight: 10,
     },
     rowSubtitle: {
-        fontSize: 10,
-        color: 'rgba(255,255,255,0.85)',
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.9)',
         textTransform: 'uppercase',
-        fontWeight: 'bold',
-        letterSpacing: 1,
+        fontWeight: '900',
+        letterSpacing: 1.2,
         fontFamily: 'NotoSans-Bold',
         marginBottom: 4,
     },
-    rowDescription: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.9)',
-        fontFamily: 'NotoSans-Regular',
-        lineHeight: 16,
+    rowTitle: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#ffffff',
+        marginBottom: 4,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: -0.5,
     },
-    arrowContainerRow: {
-        padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
+    rowDescription: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.85)',
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 18,
+    },
+    arrowBadge: {
+        width: 44,
+        height: 44,
+        backgroundColor: '#fff',
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 6,
     },
 });
 

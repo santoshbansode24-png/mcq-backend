@@ -110,19 +110,60 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             try {
                 const L = layoutRef.current;
                 const cb = cropBoxRef.current;
-                const scaleX = actualWidth / L.width;
-                const scaleY = actualHeight / L.height;
+                
+                // Calculate rendered dimensions inside the "contain" view
+                const imageRatio = actualWidth / actualHeight;
+                const layoutRatio = L.width / L.height;
+                
+                let renderedWidth, renderedHeight, offsetX, offsetY;
 
-                const cropAction = {
-                    originX: Math.max(0, cb.x * scaleX),
-                    originY: Math.max(0, cb.y * scaleY),
-                    width:   cb.width  * scaleX,
-                    height:  cb.height * scaleY,
+                if (imageRatio > layoutRatio) {
+                    // Image fills width, black bars on top/bottom
+                    renderedWidth = L.width;
+                    renderedHeight = L.width / imageRatio;
+                    offsetX = 0;
+                    offsetY = (L.height - renderedHeight) / 2;
+                } else {
+                    // Image fills height, black bars on left/right
+                    renderedHeight = L.height;
+                    renderedWidth = L.height * imageRatio;
+                    offsetX = (L.width - renderedWidth) / 2;
+                    offsetY = 0;
+                }
+
+                // Calculate scale from rendered pixels to actual image pixels
+                const scale = actualWidth / renderedWidth; // Both X and Y scale are identical now
+
+                // Map crop box coordinates to actual image coordinates
+                let cropAction = {
+                    originX: Math.max(0, (cb.x - offsetX) * scale),
+                    originY: Math.max(0, (cb.y - offsetY) * scale),
+                    width: cb.width * scale,
+                    height: cb.height * scale,
                 };
 
-                // Clamp to image bounds
-                if (cropAction.originX + cropAction.width  > actualWidth)  cropAction.width  = actualWidth  - cropAction.originX;
-                if (cropAction.originY + cropAction.height > actualHeight) cropAction.height = actualHeight - cropAction.originY;
+                // Clamp to image bounds safely
+                if (cropAction.originX + cropAction.width > actualWidth) {
+                    cropAction.width = actualWidth - cropAction.originX;
+                }
+                if (cropAction.originY + cropAction.height > actualHeight) {
+                    cropAction.height = actualHeight - cropAction.originY;
+                }
+                
+                // Ensure no negative values due to dragging into black bars
+                if (cropAction.originX < 0) {
+                    cropAction.width += cropAction.originX; // reduce width
+                    cropAction.originX = 0;
+                }
+                if (cropAction.originY < 0) {
+                    cropAction.height += cropAction.originY; // reduce height
+                    cropAction.originY = 0;
+                }
+
+                // If completely dragged out of bounds, fallback
+                if (cropAction.width <= 0 || cropAction.height <= 0) {
+                    cropAction = { originX: 0, originY: 0, width: actualWidth, height: actualHeight };
+                }
 
                 const result = await ImageManipulator.manipulateAsync(
                     imageUri,

@@ -65,11 +65,11 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
             if (res.data.status === 'success' && res.data.study_pack) {
                 const pack = res.data.study_pack;
                 
-                setSyncMsg('Saving to device memory...');
+                setSyncMsg('Preparing your study material...');
                 await AsyncStorage.setItem(cacheKey, JSON.stringify(pack));
                 setStudyData(pack);
                 
-                setSyncMsg('Erasing from server (Privacy Protection)...');
+                setSyncMsg('Almost ready! Please wait a moment...');
                 const ackData = new FormData();
                 ackData.append('user_id', user?.user_id?.toString() || '0');
                 ackData.append('job_id', job.job_id.toString());

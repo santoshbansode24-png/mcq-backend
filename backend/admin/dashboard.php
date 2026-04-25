@@ -163,251 +163,10 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Veeru</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-        }
-        
-        /* Header */
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-        }
-        
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        /* Centered Switch Board Button */
-        .center-actions {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 10;
-        }
-        
-        .btn-switch-board {
-            background: #ff9f43; /* Bright Orange */
-            color: white;
-            padding: 10px 25px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 700;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: 2px solid white;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-switch-board:hover {
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-            background: #ffcd19; /* Lighter Orange */
-            color: #333;
-        }
-        
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        
-        .admin-info {
-            text-align: right;
-        }
-        
-        .admin-info .name {
-            font-weight: 600;
-            font-size: 15px;
-        }
-        
-        .admin-info .email {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-        
-        .btn-logout {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            padding: 10px 20px;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .btn-logout:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        
-        /* Navigation */
-        .nav {
-            background: white;
-            padding: 0 40px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        
-        .nav ul {
-            list-style: none;
-            display: flex;
-            gap: 5px;
-        }
-        
-        .nav li a {
-            display: block;
-            padding: 18px 25px;
-            color: #666;
-            text-decoration: none;
-            font-weight: 500;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-        }
-        
-        .nav li a:hover,
-        .nav li a.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-        }
-        
-        /* Main Content */
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 40px;
-        }
-        
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .stat-card .icon {
-            font-size: 40px;
-            margin-bottom: 15px;
-        }
-        
-        .stat-card .label {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-card .value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #333;
-        }
-        
-        /* Recent Activity */
-        .section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
-        
-        .section h2 {
-            font-size: 20px;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .activity-list {
-            list-style: none;
-        }
-        
-        .activity-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        
-        .activity-info {
-            flex: 1;
-        }
-        
-        .activity-info .student {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .activity-info .details {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .activity-score {
-            text-align: right;
-        }
-        
-        .activity-score .score {
-            font-size: 24px;
-            font-weight: 700;
-            color: #667eea;
-        }
-        
-        .activity-score .time {
-            font-size: 12px;
-            color: #999;
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-    </style>
+    <!-- Modern Admin CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
     <!-- Header -->
@@ -474,56 +233,56 @@ try {
         <!-- Statistics -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="icon">👨‍🎓</div>
+                <div class="icon" style="color: #4f46e5;"><i class="fa-solid fa-user-graduate"></i></div>
                 <div class="label">Total Students</div>
                 <div class="value"><?php echo $stats['student'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">👨‍🏫</div>
+                <div class="icon" style="color: #10b981;"><i class="fa-solid fa-chalkboard-user"></i></div>
                 <div class="label">Total Teachers</div>
                 <div class="value"><?php echo $stats['teacher'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">📚</div>
+                <div class="icon" style="color: #f59e0b;"><i class="fa-solid fa-book"></i></div>
                 <div class="label">Total Subjects</div>
                 <div class="value"><?php echo $stats['subjects'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">📖</div>
+                <div class="icon" style="color: #6366f1;"><i class="fa-solid fa-file-contract"></i></div>
                 <div class="label">Total Chapters</div>
                 <div class="value"><?php echo $stats['chapters'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">❓</div>
+                <div class="icon" style="color: #ec4899;"><i class="fa-solid fa-list-check"></i></div>
                 <div class="label">Total MCQs</div>
                 <div class="value"><?php echo $stats['mcqs'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">🎥</div>
+                <div class="icon" style="color: #ef4444;"><i class="fa-solid fa-video"></i></div>
                 <div class="label">Total Videos</div>
                 <div class="value"><?php echo $stats['videos'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">📝</div>
+                <div class="icon" style="color: #8b5cf6;"><i class="fa-solid fa-note-sticky"></i></div>
                 <div class="label">Total Notes</div>
                 <div class="value"><?php echo $stats['notes'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon">📊</div>
+                <div class="icon" style="color: #0ea5e9;"><i class="fa-solid fa-chart-line"></i></div>
                 <div class="label">Quiz Attempts</div>
                 <div class="value"><?php echo $stats['attempts'] ?? 0; ?></div>
             </div>
 
             <!-- New AI Settings Card -->
             <a href="ai_settings.php" class="stat-card" style="text-decoration: none; border: 2px solid #667eea; background: #eef2ff;">
-                <div class="icon">🤖</div>
+                <div class="icon" style="color: #4338ca;"><i class="fa-solid fa-robot"></i></div>
                 <div class="label" style="color: #4338ca; font-weight: bold;">AI Settings</div>
                 <div class="value" style="font-size: 20px; color: #667eea;">Manage Limits</div>
             </a>

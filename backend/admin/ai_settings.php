@@ -42,18 +42,10 @@ if (!$currentRequestLimit) $currentRequestLimit = 5;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Settings - Veeru Admin</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; padding: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
-        input[type="number"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { background: #667eea; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background 0.3s; }
-        button:hover { background: #5a6fd1; }
-        .back-link { display: block; margin-top: 20px; text-align: center; color: #666; text-decoration: none; }
-        .info { font-size: 14px; color: #888; margin-top: 5px; }
-    </style>
+    <!-- Modern Admin CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
     <div class="container">

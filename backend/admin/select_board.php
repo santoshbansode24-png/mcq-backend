@@ -34,70 +34,10 @@ if (isset($_GET['board'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Board - Veeru Admin</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 800px;
-            width: 90%;
-        }
-        h1 { color: #2d3748; margin-bottom: 10px; }
-        p { color: #718096; margin-bottom: 30px; }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        
-        .card {
-            background: #f8f9fa;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 30px 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: inherit;
-            display: block;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        }
-        
-        .icon { font-size: 40px; margin-bottom: 15px; display: block; }
-        .title { font-weight: 700; font-size: 18px; color: #4a5568; display: block; }
-        
-        .card.cbse:hover .title { color: #1976d2; }
-        .card.marathi:hover .title { color: #388e3c; }
-        .card.semi:hover .title { color: #f57c00; }
-        .card.scholarship:hover .title { color: #9c27b0; }
-
-        
-        .logout {
-            margin-top: 30px;
-            display: inline-block;
-            color: #718096;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        .logout:hover { color: #e53e3e; }
-    </style>
+    <!-- Modern Admin CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
     <div class="container">

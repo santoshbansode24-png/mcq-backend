@@ -22,48 +22,10 @@ $sendOneUrl = "{$apiBase}/weekly_report.php?secret={$secret}&user_id=";
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Weekly WhatsApp Reports — Veeru Admin</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-  .header { background: linear-gradient(135deg, #1e293b, #0f172a); padding: 24px 32px; border-bottom: 1px solid #334155; }
-  .header h1 { font-size: 22px; color: #38bdf8; }
-  .header p  { color: #94a3b8; font-size: 14px; margin-top: 4px; }
-  .container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
-
-  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-  .card h2 { font-size: 16px; color: #38bdf8; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-
-  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
-  .btn-green  { background: #16a34a; color: #fff; }
-  .btn-green:hover  { background: #15803d; }
-  .btn-blue   { background: #0284c7; color: #fff; }
-  .btn-blue:hover   { background: #0369a1; }
-  .btn-yellow { background: #d97706; color: #fff; }
-  .btn-yellow:hover { background: #b45309; }
-  .btn-red    { background: #dc2626; color: #fff; }
-  .btn-red:hover    { background: #b91c1c; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .preview-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; color: #a3e635; max-height: 400px; overflow-y: auto; }
-
-  .user-test { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .user-test input { flex: 1; min-width: 120px; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; }
-  .user-test input:focus { outline: none; border-color: #38bdf8; }
-
-  .status-ok  { color: #4ade80; }
-  .status-err { color: #f87171; }
-
-  .cron-info { background: #1e3a5f; border: 1px solid #1d4ed8; border-radius: 8px; padding: 16px; }
-  .cron-info code { display: block; background: #0f172a; padding: 10px 14px; border-radius: 6px; margin-top: 8px; font-family: monospace; font-size: 13px; color: #38bdf8; word-break: break-all; }
-
-  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff44; border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
-  th { text-align: left; padding: 8px 12px; background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155; }
-  td { padding: 8px 12px; border-bottom: 1px solid #1e293b; }
-  tr:hover td { background: #1e2d45; }
-</style>
+<!-- Modern Admin CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
 

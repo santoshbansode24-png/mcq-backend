@@ -138,7 +138,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
             {/* Header */}
             <View style={styles.headerContainer}>
                 <LinearGradient
-                    colors={['#be185d', '#db2777']}
+                    colors={['#4f46e5', '#7c3aed']}
                     style={styles.headerBackground}
                 >
                     <View style={styles.headerContent}>
@@ -159,7 +159,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         ) : (
                             <View style={styles.placeholderContainer}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="camera" size={40} color="#db2777" />
+                                    <Ionicons name="camera" size={40} color="#6366f1" />
                                 </View>
                                 <Text style={styles.placeholderTitle}>Snap a Photo</Text>
                                 <Text style={styles.placeholderText}>
@@ -186,9 +186,9 @@ const HomeworkSolverScreen = ({ navigation }) => {
                     {!image && (
                         <View style={styles.buttonRow}>
                             <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
-                                <LinearGradient colors={['#fce7f3', '#fbcfe8']} style={styles.buttonGradient}>
-                                    <Ionicons name="camera" size={24} color="#db2777" />
-                                    <Text style={styles.buttonText}>Camera</Text>
+                                <LinearGradient colors={['#eef2ff', '#e0e7ff']} style={styles.buttonGradient}>
+                                    <Ionicons name="camera" size={24} color="#4f46e5" />
+                                    <Text style={[styles.buttonText, { color: '#4f46e5' }]}>Camera</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.actionButton} onPress={pickImage}>
@@ -227,7 +227,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         disabled={loading}
                     >
                         <LinearGradient
-                            colors={['#db2777', '#be185d']}
+                            colors={['#6366f1', '#4f46e5']}
                             style={styles.solveGradient}
                         >
                             {loading ? (
@@ -246,8 +246,8 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 {solution ? (
                     <View style={styles.solutionContainer}>
                         <View style={styles.solutionHeader}>
-                            <Ionicons name="school" size={24} color="#be185d" />
-                            <Text style={styles.solutionTitle}>Step-by-Step Solution</Text>
+                            <Ionicons name="sparkles" size={24} color="#4f46e5" />
+                            <Text style={styles.solutionTitle}>AI Brainstorm Results</Text>
                         </View>
                         <View style={styles.solutionCard}>
                             <Text style={styles.solutionText}>{solution}</Text>
@@ -269,10 +269,15 @@ const styles = StyleSheet.create({
     },
     headerBackground: {
         paddingTop: 50,
-        paddingBottom: 20,
+        paddingBottom: 25,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 8,
     },
     headerContent: {
         flexDirection: 'row',
@@ -303,12 +308,12 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     imageWrapper: {
-        height: 300,
-        borderRadius: 20,
-        backgroundColor: '#fdf2f8',
+        height: 320,
+        borderRadius: 24,
+        backgroundColor: '#f8fafc',
         overflow: 'hidden',
-        borderWidth: 2,
-        borderColor: '#fce7f3',
+        borderWidth: 1.5,
+        borderColor: '#e2e8f0',
         borderStyle: 'dashed',
         position: 'relative',
     },
@@ -327,21 +332,16 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#fce7f3',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
     placeholderTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: '#be185d',
+        color: '#4f46e5',
         marginBottom: 10,
         fontFamily: 'NotoSans-Bold',
     },
     placeholderText: {
         textAlign: 'center',
-        color: '#831843',
+        color: '#64748b',
         lineHeight: 24,
         fontFamily: 'NotoSans-Regular',
     },
@@ -399,20 +399,20 @@ const styles = StyleSheet.create({
         fontFamily: 'NotoSans-Bold',
     },
     solveButton: {
-        borderRadius: 20,
+        borderRadius: 24,
         overflow: 'hidden',
         marginBottom: 30,
-        elevation: 4,
-        shadowColor: '#db2777',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
+        elevation: 6,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
     },
     solveGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 18,
+        paddingVertical: 20,
     },
     solveButtonText: {
         color: '#fff',
@@ -430,9 +430,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
     solutionTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: '#be185d',
+        color: '#4f46e5',
         marginLeft: 10,
         fontFamily: 'NotoSans-Bold',
     },
@@ -453,17 +453,24 @@ const styles = StyleSheet.create({
     languageContainer: {
         marginBottom: 20,
         backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 20,
+        padding: 20,
+        borderRadius: 24,
         borderWidth: 1,
-        borderColor: '#fce7f3',
+        borderColor: '#e2e8f0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
     },
     languageTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#be185d',
-        marginBottom: 10,
+        color: '#4f46e5',
+        marginBottom: 12,
         fontFamily: 'NotoSans-Bold',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     languageRow: {
         flexDirection: 'row',
@@ -471,20 +478,20 @@ const styles = StyleSheet.create({
     },
     langButton: {
         flex: 1,
-        paddingVertical: 10,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#fce7f3',
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: '#f1f5f9',
         alignItems: 'center',
-        backgroundColor: '#fff9fc',
+        backgroundColor: '#f8fafc',
     },
     activeLangButton: {
-        backgroundColor: '#be185d',
-        borderColor: '#be185d',
+        backgroundColor: '#4f46e5',
+        borderColor: '#4f46e5',
     },
     langText: {
-        color: '#be185d',
-        fontWeight: '600',
+        color: '#64748b',
+        fontWeight: '700',
         fontFamily: 'NotoSans-Bold',
     },
     activeLangText: {

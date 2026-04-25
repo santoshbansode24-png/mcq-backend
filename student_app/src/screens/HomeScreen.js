@@ -65,8 +65,9 @@ const HomeListHeader = React.memo(({
     syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress 
 }) => {
     const getCloudIcon = () => {
+        if (isSyncing)       return { name: 'cloud-sync',     color: '#fff' };
+        if (isFullySynced && !hasUpdate) return { name: 'cloud-check', color: '#10b981' };
         if (hasUpdate)       return { name: 'cloud-download', color: '#fff' };
-        if (isFullySynced)   return { name: 'cloud-check',    color: '#10b981' };
         return                      { name: 'cloud-sync',     color: theme.primary };
     };
     const cloudIcon = getCloudIcon();
@@ -303,20 +304,25 @@ const HomeScreen = ({ user, navigation, route }) => {
         setHasUpdate(false);
 
         try {
-            // Update local version immediately so navigating away doesn't cause it to be flagged as 'red' again
+            // Trigger priority sync
+            await SmartCacheService.syncAllForClass(classId, true);
+
+            // Update local version AFTER successful sync
             const latestVer = versionToSave || await SmartCacheService.checkContentVersion(user.board_type);
             if (latestVer) {
                 await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
             }
+            
+            setHasUpdate(false);
+            setIsFullySynced(true);
 
             // Removed deleted data by clearing main class cache keys
             await dataCache.remove(`subjects_${classId}`);
             
-            // Trigger priority sync
-            await SmartCacheService.syncAllForClass(classId, true);
-
             // Refresh subjects list after sync
             loadSubjects(true);
+            
+            Alert.alert('Sync Complete! 🚀', 'All content is now available offline.');
             
         } catch (error) {
             console.warn('[Home] Sync failed:', error.message);

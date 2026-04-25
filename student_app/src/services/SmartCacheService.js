@@ -192,6 +192,16 @@ export const SmartCacheService = {
             }
 
             await SmartCacheService.checkSyncState();
+
+            // Final safety: if queue is empty, mark status as completed
+            if (!queue || queue.length === 0) {
+                const status = await SmartCacheService.getSyncStatus();
+                await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
+                    ...(status || {}),
+                    lastSync: Date.now(),
+                    status: 'completed'
+                }));
+            }
         } catch (error) {
             console.warn('[SmartCache] Queue processing interrupted:', error.message);
             notifyListeners({ isSyncing: false, isFullySynced: false });

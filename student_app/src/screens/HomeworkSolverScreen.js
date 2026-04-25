@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
+import Markdown from 'react-native-markdown-display';
 
 const { width } = Dimensions.get('window');
 
@@ -282,7 +283,9 @@ const HomeworkSolverScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.solutionCard}>
-                            <Text style={styles.solutionText}>{solution}</Text>
+                            <Markdown style={markdownStyles}>
+                                {solution}
+                            </Markdown>
                         </View>
                     </View>
                 ) : null}
@@ -550,6 +553,47 @@ const styles = StyleSheet.create({
     activeLangText: {
         color: '#fff',
         fontFamily: 'NotoSans-Bold',
+});
+
+const markdownStyles = StyleSheet.create({
+    body: {
+        fontSize: 16,
+        lineHeight: 26,
+        color: '#334155',
+        fontFamily: 'NotoSans-Regular',
+    },
+    heading1: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        marginTop: 10,
+        marginBottom: 5,
+        fontFamily: 'NotoSans-Bold',
+    },
+    heading2: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        marginTop: 10,
+        marginBottom: 5,
+        fontFamily: 'NotoSans-Bold',
+    },
+    strong: {
+        fontWeight: 'bold',
+        color: '#db2777',
+        fontFamily: 'NotoSans-Bold',
+    },
+    bullet_list: {
+        marginTop: 5,
+        marginBottom: 5,
+    },
+    list_item: {
+        flexDirection: 'row',
+        marginBottom: 5,
+    },
+    paragraph: {
+        marginTop: 5,
+        marginBottom: 5,
     }
 });
 

@@ -4,10 +4,10 @@
     "slug": "mcq-student-app",
     "owner": "virajbansode",
     "scheme": "com.veeru.app",
-    "version": "1.0.31",
+    "version": "1.0.32",
     "jsEngine": "hermes",
     "orientation": "portrait",
-    "icon": "./assets/backup_icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
@@ -29,7 +29,7 @@
     "android": {
       "backgroundColor": "#000000",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/backup_icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "splash": {
@@ -39,7 +39,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.veeru.app",
-      "versionCode": 31,
+      "versionCode": 32,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

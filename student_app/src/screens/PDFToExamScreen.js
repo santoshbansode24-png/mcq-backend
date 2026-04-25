@@ -505,7 +505,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                             {/* Main Upload Banner */}
                             <TouchableOpacity activeOpacity={0.8} onPress={handleUpload} disabled={uploading}>
                                 <LinearGradient 
-                                    colors={['#4f46e5', '#9333ea', '#db2777']} 
+                                    colors={['#8b5cf6', '#d946ef', '#06b6d4']} 
                                     style={styles.bannerContainer}
                                     start={{ x: 0, y: 0 }} 
                                     end={{ x: 1, y: 1 }}
@@ -515,7 +515,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     ) : (
                                         <>
                                             <View style={styles.bannerIconWrapper}>
-                                                <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#fbcfe8" />
+                                                <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#ffffff" />
                                             </View>
                                             <Text style={styles.bannerTitle}>Veeru Lens</Text>
                                             <Text style={styles.bannerSubtitle}>Tap to select a document from your device</Text>
@@ -532,7 +532,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     onPress={() => navigation.navigate('AIPdfWorksheet')}
                                 >
                                     <LinearGradient 
-                                        colors={['#ff512f', '#dd2476']} 
+                                        colors={['#06b6d4', '#3b82f6']} 
                                         style={styles.actionGradient} 
                                         start={{ x: 0, y: 0 }} 
                                         end={{ x: 1, y: 1 }}
@@ -549,7 +549,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     onPress={() => navigation.navigate('AIPdfExam')}
                                 >
                                     <LinearGradient 
-                                        colors={['#f6d365', '#fda085']} 
+                                        colors={['#8b5cf6', '#a855f7']} 
                                         style={styles.actionGradient} 
                                         start={{ x: 0, y: 0 }} 
                                         end={{ x: 1, y: 1 }}
@@ -571,7 +571,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.foldersScroll}>
                                 {folders.map((f, index) => {
-                                    const gradientColors = index % 2 === 0 ? ['#059669', '#10b981'] : ['#2563eb', '#3b82f6'];
+                                    const gradientColors = index % 2 === 0 ? ['#0ea5e9', '#0284c7'] : ['#a855f7', '#7e22ce'];
                                     return (
                                         <TouchableOpacity 
                                             key={f.folder_id ? f.folder_id.toString() : index.toString()} 
@@ -661,7 +661,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                             <TouchableOpacity style={styles.modalBtn} onPress={() => { setUploadModalVisible(false); setPendingUploadFile(null); }}>
                                 <Text style={styles.modalBtnText}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#fe357e' }]} onPress={executeUpload}>
+                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#06b6d4' }]} onPress={executeUpload}>
                                 <Text style={styles.modalBtnTextPrimary}>Upload</Text>
                             </TouchableOpacity>
                         </View>
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     modalSubTitle: { fontSize: 14, color: '#94a3b8', marginBottom: 10, fontWeight: '600', marginTop: -5 },
     difficultyContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
     diffBtn: { flex: 1, paddingVertical: 8, marginHorizontal: 3, borderRadius: 8, backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', alignItems: 'center' },
-    diffBtnSelected: { backgroundColor: '#fe357e', borderColor: '#fe357e' },
+    diffBtnSelected: { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' },
     diffBtnText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
     diffBtnTextSelected: { color: '#fff' }
 });

@@ -90,14 +90,15 @@ class AiUsageManager {
         $query = "INSERT INTO ai_usage (user_id, usage_date, tokens_used, request_count) 
                   VALUES (:user_id, :date, :tokens, 1) 
                   ON DUPLICATE KEY UPDATE 
-                  tokens_used = tokens_used + :tokens, 
+                  tokens_used = tokens_used + :tokens_update, 
                   request_count = request_count + 1";
         
         $stmt = $this->conn->prepare($query);
         $stmt->execute([
             ':user_id' => $this->userId,
             ':date' => $today,
-            ':tokens' => $tokensUsed
+            ':tokens' => $tokensUsed,
+            ':tokens_update' => $tokensUsed
         ]);
     }
 }

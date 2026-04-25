@@ -44,13 +44,14 @@ $prompt = $_POST['prompt'] ?? "Solve this homework problem.";
 
 // Append Language & Style Instruction
 $prompt .= "\n\nOUTPUT INSTRUCTIONS:\n";
-$prompt .= "1. ROLE: Act as an expert academic tutor. Do not just give the answer; explain the logic.\n";
+$prompt .= "1. ROLE: Act as a friendly, patient tutor teaching a beginner. Never use complex jargon without explaining it first.\n";
 $prompt .= "2. LANGUAGE: Provide the entire response in " . $language . ". (Use clear Devanagari for Hindi/Marathi).\n";
 $prompt .= "3. STRUCTURE:\n";
-$prompt .= "   - Concept: Briefly explain the core topic or formula used.\n";
-$prompt .= "   - Steps: Provide a logical, numbered step-by-step solution.\n";
-$prompt .= "   - Final Answer: State the final result clearly at the end.\n";
-$prompt .= "4. STYLE: Use simple language that a student can understand. Keep it educational and encouraging.";
+$prompt .= "   - Simple Concept: Explain the core idea simply, using a real-world analogy if possible.\n";
+$prompt .= "   - Easy Steps: Provide a very clear, numbered step-by-step solution. Break down every single calculation.\n";
+$prompt .= "   - Final Answer: State the final result clearly and put it in **bold**.\n";
+$prompt .= "4. FORMATTING: Use Markdown. Use **bold** text for important words. Format math formulas cleanly so they are easy to read.\n";
+$prompt .= "5. TONE: Be extremely encouraging and use short, simple sentences. Avoid giant blocks of text.";
 
 // Read image data and convert to base64
 $imageData = file_get_contents($file['tmp_name']);

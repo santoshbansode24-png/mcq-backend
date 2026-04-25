@@ -376,8 +376,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="login-container">
         <div class="logo">
             <div class="logo-icon">🎓</div>
-            <h1>MCQ Admin</h1>
-            <p>Project 2.0 - Admin Panel</p>
+            <h1>Veeru Admin</h1>
+            <p>Premium Vivid v2.0.1</p>
+            <!-- DEPLOY_SIG: 1777135000_VIVID_UPGRADE -->
         </div>
         
         <?php if ($error): ?>

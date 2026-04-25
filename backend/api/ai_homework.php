@@ -20,7 +20,7 @@ if (file_exists('../config/ai_config.php')) {
 
 // Check if image file is uploaded
 if (!isset($_FILES['image'])) {
-    echo json_encode(['status' => 'error', 'message' => 'No image uploaded.']);
+    echo "data: " . json_encode(['status' => 'error', 'message' => 'No image uploaded.']) . "\n\n";
     exit;
 }
 
@@ -33,7 +33,7 @@ if ($userId > 0) {
     $aiManager = new AiUsageManager($userId);
     $canProceed = $aiManager->canMakeRequest();
     if ($canProceed !== true) {
-         echo json_encode(['status' => 'error', 'message' => $canProceed]);
+         echo "data: " . json_encode(['status' => 'error', 'message' => $canProceed]) . "\n\n";
          exit;
     }
 }
@@ -106,8 +106,15 @@ try {
 
     $fullReply = "";
     $tokensUsed = 0;
+    $apiError = "";
 
-    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed) {
+    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed, &$apiError) {
+        // Check if the response is a raw JSON error instead of an SSE stream
+        if (strpos(trim($data), '{"error":') === 0) {
+            $apiError .= $data;
+            return strlen($data);
+        }
+
         $lines = explode("\n", $data);
         foreach ($lines as $line) {
             if (strpos($line, 'data: ') === 0) {
@@ -135,6 +142,16 @@ try {
     curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    // Handle Gemini API Errors
+    if (!empty($apiError)) {
+        $errDecoded = json_decode($apiError, true);
+        $errMsg = $errDecoded['error']['message'] ?? 'Unknown API Error';
+        echo "data: " . json_encode(["status" => "error", "message" => "AI Error: " . $errMsg]) . "\n\n";
+        if (ob_get_level()) ob_flush();
+        flush();
+        exit;
+    }
 
     // Final Tracking
     if ($userId > 0 && $tokensUsed > 0) {

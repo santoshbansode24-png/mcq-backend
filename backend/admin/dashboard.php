@@ -56,9 +56,9 @@ if (isset($_GET['setup_scholarship'])) {
             ON DUPLICATE KEY UPDATE subject_name = subject_name
         ");
         
-        $setupMessage = '<div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin: 20px 40px; border: 1px solid #c3e6cb;">✅ Scholarship & Olympiad classes and subjects created successfully!</div>';
+        $setupMessage = '<div class="alert">✅ Scholarship & Olympiad classes and subjects created successfully!</div>';
     } catch (Exception $e) {
-        $setupMessage = '<div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin: 20px 40px; border: 1px solid #f5c6cb;">❌ Error: ' . $e->getMessage() . '</div>';
+        $setupMessage = '<div class="alert" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">❌ Error: ' . $e->getMessage() . '</div>';
     }
 }
 
@@ -104,12 +104,6 @@ try {
             WHERE s.class_id IN ($class_ids_str)
         ")->fetchColumn();
         
-        $stats['notes'] = $pdo->query("
-            SELECT COUNT(*) FROM notes n 
-            JOIN chapters ch ON n.chapter_id = ch.chapter_id 
-            JOIN subjects s ON ch.subject_id = s.subject_id 
-            WHERE s.class_id IN ($class_ids_str)
-        ")->fetchColumn();
         $stats['notes'] = $pdo->query("
             SELECT COUNT(*) FROM notes n 
             JOIN chapters ch ON n.chapter_id = ch.chapter_id 
@@ -163,32 +157,28 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Veeru</title>
-    <!-- Modern Admin CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Premium Admin CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_theme.css?v=1777115478">
+    <link rel="stylesheet" href="admin_theme.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <!-- Header -->
-    <div class="header">
-        <h1>🎓 MCQ Admin Panel</h1>
+    <div class="header glass">
+        <h1>🎓 Veeru Admin</h1>
         
         <!-- Centered Switch Button -->
         <div class="center-actions">
             <a href="select_board.php" class="btn-switch-board">
                 🔁 Switch Board
             </a>
-            <div style="margin-top: 10px; font-weight: 800; color: #fff; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap;">
-                Running: <span style="color: #667eea; background: #fff; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><?php echo htmlspecialchars($board_name); ?></span>
-            </div>
+            <span>Running: <?php echo htmlspecialchars($board_name); ?></span>
         </div>
 
         <div class="header-right">
             <div class="admin-info">
-                <div class="name" style="margin-bottom: 3px;">
-                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
-                        <?php echo htmlspecialchars($board_name); ?>
-                    </span>
+                <div class="name">
+                    <span><?php echo htmlspecialchars($board_name); ?></span>
                     &nbsp; <?php echo htmlspecialchars($_SESSION['admin_name']); ?>
                 </div>
                 <div class="email"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></div>
@@ -200,18 +190,18 @@ try {
     <!-- Navigation -->
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php" class="active">Dashboard</a></li>
-            <li><a href="users.php">Users</a></li>
-            <li><a href="classes.php">Classes</a></li>
-            <li><a href="subjects.php">Subjects</a></li>
-            <li><a href="chapters.php">Chapters</a></li>
-            <li><a href="mcqs.php">MCQs</a></li>
-            <li><a href="videos.php">Videos</a></li>
-            <li><a href="notes.php">Notes</a></li>
-            <li><a href="flashcards.php">Flashcards</a></li>
-            <li><a href="quick_revision.php">Quick Revision</a></li>
-            <li><a href="content_manager.php">Content Manager</a></li>
-            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
+            <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+            <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
+            <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
+            <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
+            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+            <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
+            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+            <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>
     
@@ -221,11 +211,11 @@ try {
         
         <!-- Setup Scholarship Button (only show if Scholarship board is selected) -->
         <?php if ($selected_board === 'Scholarship'): ?>
-        <div style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); padding: 20px; border-radius: 15px; margin-bottom: 30px; text-align: center;">
-            <h3 style="color: white; margin-bottom: 10px;">🏆 Scholarship & Olympiad Setup</h3>
-            <p style="color: rgba(255,255,255,0.9); margin-bottom: 15px; font-size: 14px;">Click below to create the 3 Scholarship levels and all subjects in the database</p>
-            <a href="?setup_scholarship=1" onclick="return confirm('This will create Scholarship classes (Primary, Upper Primary, Secondary) and their subjects. Continue?')" style="background: white; color: #4A00E0; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                ⚡ Setup Scholarship Data
+        <div style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); padding: 30px; border-radius: 20px; margin-bottom: 40px; text-align: center; box-shadow: 0 10px 25px rgba(142, 45, 226, 0.3);">
+            <h3 style="color: white; margin-bottom: 10px; font-weight: 800;">🏆 Scholarship & Olympiad Setup</h3>
+            <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px; font-size: 15px;">Automatically initialize level-wise subjects for the Scholarship board.</p>
+            <a href="?setup_scholarship=1" onclick="return confirm('This will create Scholarship classes and subjects. Continue?')" style="background: white; color: #4A00E0; padding: 14px 35px; border-radius: 12px; text-decoration: none; font-weight: 800; display: inline-block;">
+                ⚡ Initialize Scholarship Data
             </a>
         </div>
         <?php endif; ?>
@@ -233,64 +223,58 @@ try {
         <!-- Statistics -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="icon" style="color: #4f46e5;"><i class="fa-solid fa-user-graduate"></i></div>
+                <div class="icon"><i class="fa-solid fa-user-graduate"></i></div>
                 <div class="label">Total Students</div>
                 <div class="value"><?php echo $stats['student'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon" style="color: #10b981;"><i class="fa-solid fa-chalkboard-user"></i></div>
+                <div class="icon"><i class="fa-solid fa-chalkboard-user"></i></div>
                 <div class="label">Total Teachers</div>
                 <div class="value"><?php echo $stats['teacher'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon" style="color: #f59e0b;"><i class="fa-solid fa-book"></i></div>
+                <div class="icon"><i class="fa-solid fa-book"></i></div>
                 <div class="label">Total Subjects</div>
                 <div class="value"><?php echo $stats['subjects'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon" style="color: #6366f1;"><i class="fa-solid fa-file-contract"></i></div>
+                <div class="icon"><i class="fa-solid fa-file-contract"></i></div>
                 <div class="label">Total Chapters</div>
                 <div class="value"><?php echo $stats['chapters'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon" style="color: #ec4899;"><i class="fa-solid fa-list-check"></i></div>
+                <div class="icon"><i class="fa-solid fa-list-check"></i></div>
                 <div class="label">Total MCQs</div>
                 <div class="value"><?php echo $stats['mcqs'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon" style="color: #ef4444;"><i class="fa-solid fa-video"></i></div>
+                <div class="icon"><i class="fa-solid fa-video"></i></div>
                 <div class="label">Total Videos</div>
                 <div class="value"><?php echo $stats['videos'] ?? 0; ?></div>
             </div>
             
             <div class="stat-card">
-                <div class="icon" style="color: #8b5cf6;"><i class="fa-solid fa-note-sticky"></i></div>
+                <div class="icon"><i class="fa-solid fa-note-sticky"></i></div>
                 <div class="label">Total Notes</div>
                 <div class="value"><?php echo $stats['notes'] ?? 0; ?></div>
             </div>
-            
-            <div class="stat-card">
-                <div class="icon" style="color: #0ea5e9;"><i class="fa-solid fa-chart-line"></i></div>
-                <div class="label">Quiz Attempts</div>
-                <div class="value"><?php echo $stats['attempts'] ?? 0; ?></div>
-            </div>
 
             <!-- New AI Settings Card -->
-            <a href="ai_settings.php" class="stat-card" style="text-decoration: none; border: 2px solid #667eea; background: #eef2ff;">
-                <div class="icon" style="color: #4338ca;"><i class="fa-solid fa-robot"></i></div>
-                <div class="label" style="color: #4338ca; font-weight: bold;">AI Settings</div>
-                <div class="value" style="font-size: 20px; color: #667eea;">Manage Limits</div>
+            <a href="ai_settings.php" class="stat-card ai-card" style="text-decoration: none;">
+                <div class="icon"><i class="fa-solid fa-robot"></i></div>
+                <div class="label">AI Settings</div>
+                <div class="value" style="font-size: 20px;">Manage Limits</div>
             </a>
         </div>
         
         <!-- Recent Activity -->
         <div class="section">
-            <h2>📈 Recent Quiz Attempts</h2>
+            <h2><i class="fa-solid fa-chart-line"></i> Recent Quiz Attempts</h2>
             <?php if (!empty($recentActivities)): ?>
                 <ul class="activity-list">
                     <?php foreach ($recentActivities as $activity): ?>
@@ -310,7 +294,9 @@ try {
                     <?php endforeach; ?>
                 </ul>
             <?php else: ?>
-                <div class="no-data">No quiz attempts yet</div>
+                <div style="padding: 40px; text-align: center; color: var(--text-muted); font-weight: 600;">
+                    No quiz attempts found for this board yet.
+                </div>
             <?php endif; ?>
         </div>
     </div>

@@ -74,14 +74,7 @@ class AiUsageManager {
 
         // Check if ANY limit is reached
         if ($tokensUsed >= $tokenLimit || $requestsMade >= $requestLimit) {
-            // Calculate hours until reset (midnight)
-            $now = time();
-            $midnight = strtotime('tomorrow');
-            $hoursToWait = ceil(($midnight - $now) / 3600);
-            
-            $limitType = ($requestsMade >= $requestLimit) ? "day's attempt" : "daily token";
-            
-            return "You have reached your $limitType limit. Upgrade your plan for Unlimited access, or try again in $hoursToWait hours.";
+            return "LIMIT EXHAUSTED: You have reached your daily limit. You can use this feature after 12 hours.";
         }
 
         return true;

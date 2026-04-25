@@ -76,6 +76,9 @@ if (!function_exists('callGeminiAPI')) {
             
             if ($curlError) throw new Exception("cURL Error: " . $curlError);
             if ($httpCode !== 200) {
+                if ($httpCode === 429) {
+                    throw new Exception("LIMIT EXHAUSTED: You can use this feature after 12 hours.");
+                }
                 $errorDetails = json_decode($response, true);
                 $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : $response;
                 throw new Exception("Gemini API Error ($httpCode): " . $msg);
@@ -151,6 +154,9 @@ if (!function_exists('callGeminiPDF')) {
             
             if ($curlError) throw new Exception("cURL Error: " . $curlError);
             if ($httpCode !== 200) {
+                if ($httpCode === 429) {
+                    throw new Exception("LIMIT EXHAUSTED: You can use this feature after 12 hours.");
+                }
                 $errorDetails = json_decode($response, true);
                 $geminiMsg = $errorDetails['error']['message'] ?? 'No details';
                 $geminiStatus = $errorDetails['error']['status'] ?? '';

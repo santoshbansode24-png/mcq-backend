@@ -12,15 +12,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/db.php';
 
-$data = json_decode(file_get_contents("php://input"));
+// Support both JSON POST and traditional GET/POST
+$user_id   = 0;
+$type      = '';
+$new_level = 0;
 
-$user_id   = isset($data->user_id)   ? (int)$data->user_id   : 0;
-$type      = isset($data->type)      ? trim($data->type)      : '';
-$new_level = isset($data->new_level) ? (int)$data->new_level  : 0;
+$rawInput = file_get_contents("php://input");
+if (!empty($rawInput)) {
+    $decoded = json_decode($rawInput, true);
+    $user_id   = isset($decoded['user_id'])   ? (int)$decoded['user_id']   : 0;
+    $type      = isset($decoded['type'])      ? trim($decoded['type'])      : '';
+    $new_level = isset($decoded['new_level']) ? (int)$decoded['new_level']  : 0;
+}
+
+// Fallback to traditional $_REQUEST if JSON is empty
+if ($user_id <= 0) {
+    $user_id   = isset($_REQUEST['user_id'])   ? (int)$_REQUEST['user_id']   : 0;
+    $type      = isset($_REQUEST['type'])      ? trim($_REQUEST['type'])      : '';
+    $new_level = isset($_REQUEST['new_level']) ? (int)$_REQUEST['new_level']  : 0;
+}
 
 // Input Validation
 if ($user_id <= 0 || $new_level <= 0 || !in_array($type, ['classic', 'abacus'])) {
-    echo json_encode(["status" => "error", "message" => "Missing or invalid parameters"]);
+    echo json_encode(["status" => "error", "message" => "Missing or invalid parameters (user_id: $user_id, type: $type, level: $new_level)"]);
     exit;
 }
 

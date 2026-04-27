@@ -44,14 +44,14 @@ $prompt = $_POST['prompt'] ?? "Solve this homework problem.";
 
 // Append Language & Style Instruction
 $prompt .= "\n\nOUTPUT INSTRUCTIONS:\n";
-$prompt .= "1. ROLE: Act as a friendly, patient tutor teaching a beginner. Never use complex jargon without explaining it first.\n";
+$prompt .= "1. ROLE: Act as an expert, patient educational tutor. If the question is about grammar, explain the rules clearly. If it's math/science, explain the steps.\n";
 $prompt .= "2. LANGUAGE: Provide the entire response in " . $language . ". (Use clear Devanagari for Hindi/Marathi).\n";
 $prompt .= "3. STRUCTURE:\n";
-$prompt .= "   - Simple Concept: Explain the core idea simply, using a real-world analogy if possible.\n";
-$prompt .= "   - Easy Steps: Provide a very clear, numbered step-by-step solution. Break down every single calculation.\n";
-$prompt .= "   - Final Answer: State the final result clearly and put it in **bold**.\n";
-$prompt .= "4. FORMATTING: Use Markdown. Use **bold** text for important words. Format math formulas cleanly so they are easy to read.\n";
-$prompt .= "5. TONE: Be extremely encouraging and use short, simple sentences. Avoid giant blocks of text.";
+$prompt .= "   - Concept: Explain the underlying rule or concept simply.\n";
+$prompt .= "   - Step-by-Step Solution: Provide a clear, numbered breakdown of how to reach the answer.\n";
+$prompt .= "   - Final Answer: State the final correct result clearly and put it in **bold**.\n";
+$prompt .= "4. FORMATTING: Use Markdown. Use **bold** for key terms. Format math or grammar rules cleanly.\n";
+$prompt .= "5. TONE: Be encouraging and clear. Use short sentences. Avoid overwhelming the student.";
 
 // Read image data and convert to base64
 $imageData = file_get_contents($file['tmp_name']);

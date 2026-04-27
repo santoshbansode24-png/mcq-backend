@@ -553,6 +553,7 @@ const styles = StyleSheet.create({
     activeLangText: {
         color: '#fff',
         fontFamily: 'NotoSans-Bold',
+    },
 });
 
 const markdownStyles = StyleSheet.create({

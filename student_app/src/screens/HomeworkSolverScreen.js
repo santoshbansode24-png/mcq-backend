@@ -108,7 +108,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 name: 'homework.jpg',
             });
             formData.append('language', language);
-            formData.append('prompt', "Solve this problem. Provide a clear, step-by-step educational explanation.");
+            formData.append('prompt', "Please answer the question shown in the image. If it's a grammar or language question, explain the rule. If it's a math/science question, provide the steps.");
             if (userId) formData.append('user_id', userId);
 
             await streamFetch(
@@ -140,9 +140,18 @@ const HomeworkSolverScreen = ({ navigation }) => {
     };
 
     const copyToClipboard = async () => {
-        await Clipboard.setStringAsync(solution);
-        Haptics.selectionAsync();
-        Alert.alert('Success', 'Solution copied to clipboard! 📋');
+        try {
+            if (Clipboard && Clipboard.setStringAsync) {
+                await Clipboard.setStringAsync(solution);
+                Haptics.selectionAsync();
+                Alert.alert('Success', 'Solution copied to clipboard! 📋');
+            } else {
+                Alert.alert('Error', 'Clipboard feature is not available on this device version.');
+            }
+        } catch (e) {
+            console.warn("Clipboard error", e);
+            Alert.alert('Error', 'Failed to copy to clipboard.');
+        }
     };
 
     return (

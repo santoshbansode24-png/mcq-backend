@@ -106,80 +106,78 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
         if (!layoutRef.current || !imageUri) return;
         setProcessing(true);
 
-        Image.getSize(imageUri, async (actualWidth, actualHeight) => {
-            try {
-                const L = layoutRef.current;
-                const cb = cropBoxRef.current;
-                
-                // Calculate rendered dimensions inside the "contain" view
-                const imageRatio = actualWidth / actualHeight;
-                const layoutRatio = L.width / L.height;
-                
-                let renderedWidth, renderedHeight, offsetX, offsetY;
+        try {
+            // Get actual dimensions reliably using ImageManipulator
+            const { width: actualWidth, height: actualHeight } = await ImageManipulator.manipulateAsync(imageUri, []);
+            
+            const L = layoutRef.current;
+            const cb = cropBoxRef.current;
+            
+            // Calculate rendered dimensions inside the "contain" view
+            const imageRatio = actualWidth / actualHeight;
+            const layoutRatio = L.width / L.height;
+            
+            let renderedWidth, renderedHeight, offsetX, offsetY;
 
-                if (imageRatio > layoutRatio) {
-                    // Image fills width, black bars on top/bottom
-                    renderedWidth = L.width;
-                    renderedHeight = L.width / imageRatio;
-                    offsetX = 0;
-                    offsetY = (L.height - renderedHeight) / 2;
-                } else {
-                    // Image fills height, black bars on left/right
-                    renderedHeight = L.height;
-                    renderedWidth = L.height * imageRatio;
-                    offsetX = (L.width - renderedWidth) / 2;
-                    offsetY = 0;
-                }
-
-                // Calculate scale from rendered pixels to actual image pixels
-                const scale = actualWidth / renderedWidth; // Both X and Y scale are identical now
-
-                // Map crop box coordinates to actual image coordinates
-                let cropAction = {
-                    originX: Math.max(0, (cb.x - offsetX) * scale),
-                    originY: Math.max(0, (cb.y - offsetY) * scale),
-                    width: cb.width * scale,
-                    height: cb.height * scale,
-                };
-
-                // Clamp to image bounds safely
-                if (cropAction.originX + cropAction.width > actualWidth) {
-                    cropAction.width = actualWidth - cropAction.originX;
-                }
-                if (cropAction.originY + cropAction.height > actualHeight) {
-                    cropAction.height = actualHeight - cropAction.originY;
-                }
-                
-                // Ensure no negative values due to dragging into black bars
-                if (cropAction.originX < 0) {
-                    cropAction.width += cropAction.originX; // reduce width
-                    cropAction.originX = 0;
-                }
-                if (cropAction.originY < 0) {
-                    cropAction.height += cropAction.originY; // reduce height
-                    cropAction.originY = 0;
-                }
-
-                // If completely dragged out of bounds, fallback
-                if (cropAction.width <= 0 || cropAction.height <= 0) {
-                    cropAction = { originX: 0, originY: 0, width: actualWidth, height: actualHeight };
-                }
-
-                const result = await ImageManipulator.manipulateAsync(
-                    imageUri,
-                    [{ crop: cropAction }],
-                    { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG }
-                );
-                setProcessing(false);
-                onCropComplete(result.uri);
-            } catch (err) {
-                console.error('Crop failed:', err);
-                setProcessing(false);
+            if (imageRatio > layoutRatio) {
+                // Image fills width, black bars on top/bottom
+                renderedWidth = L.width;
+                renderedHeight = L.width / imageRatio;
+                offsetX = 0;
+                offsetY = (L.height - renderedHeight) / 2;
+            } else {
+                // Image fills height, black bars on left/right
+                renderedHeight = L.height;
+                renderedWidth = L.height * imageRatio;
+                offsetX = (L.width - renderedWidth) / 2;
+                offsetY = 0;
             }
-        }, (err) => {
-            console.error('getSize failed:', err);
+
+            // Calculate scale from rendered pixels to actual image pixels
+            const scale = actualWidth / renderedWidth;
+
+            // Map crop box coordinates to actual image coordinates
+            // Use Math.round to avoid floating point issues with ImageManipulator
+            let originX = Math.round((cb.x - offsetX) * scale);
+            let originY = Math.round((cb.y - offsetY) * scale);
+            let width = Math.round(cb.width * scale);
+            let height = Math.round(cb.height * scale);
+
+            // Clamp and ensure valid values
+            if (originX < 0) {
+                width += originX; // reduce width
+                originX = 0;
+            }
+            if (originY < 0) {
+                height += originY; // reduce height
+                originY = 0;
+            }
+
+            // Ensure width/height don't exceed image bounds
+            if (originX + width > actualWidth) width = actualWidth - originX;
+            if (originY + height > actualHeight) height = actualHeight - originY;
+
+            // Final safety check - if box is outside or zero
+            if (width <= 0 || height <= 0) {
+                originX = 0; originY = 0; width = actualWidth; height = actualHeight;
+            }
+
+            const cropAction = { originX, originY, width, height };
+
+            const result = await ImageManipulator.manipulateAsync(
+                imageUri,
+                [{ crop: cropAction }],
+                { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG }
+            );
+            
             setProcessing(false);
-        });
+            onCropComplete(result.uri);
+        } catch (err) {
+            console.error('Crop failed:', err);
+            setProcessing(false);
+            // Fallback: just return the original image if crop fails
+            onCropComplete(imageUri);
+        }
     };
 
     if (!visible || !imageUri) return null;

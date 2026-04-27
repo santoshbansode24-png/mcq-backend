@@ -21,37 +21,27 @@ if (!defined('GEMINI_API_KEY')) {
     }
 }
 
-// 2. Define API URL - Using gemini-2.0-flash (confirmed available for this key)
+// 2. Define API URL - Using gemini-1.5-flash for higher quotas and stability
 if (!defined('GEMINI_API_URL')) {
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
 }
 
 /**
  * Helper function to call Gemini API
  * Throws Exceptions on error for cleaner handling in the main script.
- * * @param string $prompt The prompt to send
- * @param array $options Optional settings (temperature, maxOutputTokens)
- * @return string The AI response text
- * @throws Exception If the API call fails
  */
 if (!function_exists('callGeminiAPI')) {
     function callGeminiAPI($prompt, $options = []) {
         $payload = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
-            ],
+            'contents' => [['parts' => [['text' => $prompt]]]],
             'generationConfig' => [
-                'temperature' => isset($options['temperature']) ? $options['temperature'] : 0.7,
-                'maxOutputTokens' => isset($options['maxOutputTokens']) ? $options['maxOutputTokens'] : 800
+                'temperature' => $options['temperature'] ?? 0.7,
+                'maxOutputTokens' => $options['maxOutputTokens'] ?? 1024
             ]
         ];
         
         $maxRetries = 3;
-        $retryDelay = 2; // initial delay in seconds
+        $retryDelay = 5; // Start with 5s delay for 429s
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
@@ -59,67 +49,48 @@ if (!function_exists('callGeminiAPI')) {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             
             $response = curl_exec($ch);
-            $curlError = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
             
             if ($httpCode === 429 && $attempt < $maxRetries) {
                 sleep($retryDelay);
-                $retryDelay *= 2; // exponential backoff
+                $retryDelay *= 2; 
                 continue;
             }
             
-            if ($curlError) throw new Exception("cURL Error: " . $curlError);
             if ($httpCode !== 200) {
                 if ($httpCode === 429) {
-                    throw new Exception("LIMIT EXHAUSTED: You can use this feature after 12 hours.");
+                    throw new Exception("AI BUSY (429): Free tier limit reached. Upgrade to Paid Tier in AI Studio for permanent solution.");
                 }
                 $errorDetails = json_decode($response, true);
-                $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : $response;
-                throw new Exception("Gemini API Error ($httpCode): " . $msg);
+                $msg = $errorDetails['error']['message'] ?? "API Error $httpCode";
+                throw new Exception("Gemini API Error: " . $msg);
             }
-            break; // Success
+            break;
         }
         
         $decoded = json_decode($response, true);
-        if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
-            return $decoded['candidates'][0]['content']['parts'][0]['text'];
-        }
-        throw new Exception("Invalid response format.");
+        return $decoded['candidates'][0]['content']['parts'][0]['text'] ?? throw new Exception("Invalid response format.");
     }
 }
 
 /**
  * Call Gemini with Native PDF Support
- * @param string $prompt
- * @param string $base64PDF
  */
 if (!function_exists('callGeminiPDF')) {
-    // Worker Security Secret (Must match between App and Server)
     define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
 
     function callGeminiPDF($prompt, $base64PDF, $options = []) {
-        if (empty(GEMINI_API_KEY)) {
-            throw new Exception("GEMINI_API_KEY is not set. Add it to Railway Environment Variables.");
-        }
+        if (empty(GEMINI_API_KEY)) throw new Exception("GEMINI_API_KEY missing.");
+
         $payload = [
             'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt],
-                        [
-                            'inlineData' => [
-                                'mimeType' => 'application/pdf',
-                                'data' => $base64PDF
-                            ]
-                        ]
-                    ]
-                ]
+                ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => 'application/pdf', 'data' => $base64PDF]]]]
             ],
             'generationConfig' => [
                 'temperature' => 0.4,
@@ -129,7 +100,7 @@ if (!function_exists('callGeminiPDF')) {
         ];
         
         $maxRetries = 3;
-        $retryDelay = 3; // initial delay in seconds
+        $retryDelay = 10; // 10s backoff for heavy PDF tasks
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
@@ -137,42 +108,32 @@ if (!function_exists('callGeminiPDF')) {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 240); // 4 min for large PDFs
+            curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 min
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             
             $response = curl_exec($ch);
-            $curlError = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
             
             if ($httpCode === 429 && $attempt < $maxRetries) {
                 sleep($retryDelay);
-                $retryDelay *= 2; // exponential backoff
+                $retryDelay *= 2;
                 continue;
             }
             
-            if ($curlError) throw new Exception("cURL Error: " . $curlError);
             if ($httpCode !== 200) {
                 if ($httpCode === 429) {
-                    throw new Exception("LIMIT EXHAUSTED: You can use this feature after 12 hours.");
+                    throw new Exception("VEERU LENS BUSY (429): Quota exhausted. Please upgrade to Paid Tier in Google AI Studio to handle large PDFs.");
                 }
                 $errorDetails = json_decode($response, true);
-                $geminiMsg = $errorDetails['error']['message'] ?? 'No details';
-                $geminiStatus = $errorDetails['error']['status'] ?? '';
-                error_log("Gemini PDF Fail ($httpCode) [Attempt $attempt]: " . $response);
-                throw new Exception("Gemini API Error ($httpCode): $geminiMsg" . ($geminiStatus ? " [$geminiStatus]" : ""));
+                $msg = $errorDetails['error']['message'] ?? "Unknown Error";
+                throw new Exception("Gemini PDF Error ($httpCode): $msg");
             }
-            break; // Success
+            break;
         }
         
         $decoded = json_decode($response, true);
-        if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
-            return $decoded['candidates'][0]['content']['parts'][0]['text'];
-        }
-        // Log what we got for debugging
-        error_log("Gemini PDF invalid response: " . substr($response, 0, 500));
-        throw new Exception("Invalid PDF AI response. Response keys: " . implode(',', array_keys($decoded ?? [])));
+        return $decoded['candidates'][0]['content']['parts'][0]['text'] ?? throw new Exception("Invalid PDF AI response.");
     }
 }
 

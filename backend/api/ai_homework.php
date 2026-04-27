@@ -111,26 +111,38 @@ try {
     $buffer = "";
 
     curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed, &$apiError, &$buffer) {
-        // If it looks like a direct JSON error (not an SSE stream)
-        if (strpos(trim($data), '{"error":') === 0 || (!empty($apiError) && empty($buffer))) {
+        $dataLength = strlen($data);
+        
+        // Check for direct JSON error (usually 4xx or 5xx)
+        if (strpos(trim($data), '{"error":') === 0) {
             $apiError .= $data;
-            return strlen($data);
+            return $dataLength;
         }
 
         $buffer .= $data;
         
-        // Process complete lines
+        // Process complete lines from the SSE stream
         while (($pos = strpos($buffer, "\n")) !== false) {
             $line = substr($buffer, 0, $pos);
             $buffer = substr($buffer, $pos + 1);
             
             $line = trim($line);
+            if (empty($line)) continue;
+
             if (strpos($line, 'data: ') === 0) {
                 $jsonStr = substr($line, 6);
                 if ($jsonStr === '[DONE]') continue;
 
                 $decoded = json_decode($jsonStr, true);
                 
+                // Check if the API returned an error inside the SSE stream
+                if (isset($decoded['error'])) {
+                    $msg = $decoded['error']['message'] ?? 'AI Stream Error';
+                    echo "data: " . json_encode(["status" => "error", "message" => "AI Error: " . $msg]) . "\n\n";
+                    ob_flush(); flush();
+                    return 0; // Stop the stream
+                }
+
                 if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
                     $partText = $decoded['candidates'][0]['content']['parts'][0]['text'];
                     $fullReply .= $partText;
@@ -145,7 +157,7 @@ try {
                 }
             }
         }
-        return strlen($data);
+        return $dataLength;
     });
 
     if (ob_get_level()) ob_end_flush();
@@ -153,13 +165,12 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    // Handle Gemini API Errors
+    // Handle any caught API Errors that didn't stop the stream
     if (!empty($apiError)) {
         $errDecoded = json_decode($apiError, true);
         $errMsg = $errDecoded['error']['message'] ?? 'Unknown API Error';
-        echo "data: " . json_encode(["status" => "error", "message" => "AI Error: " . $errMsg]) . "\n\n";
-        if (ob_get_level()) ob_flush();
-        flush();
+        echo "data: " . json_encode(["status" => "error", "message" => "AI Error ($httpCode): " . $errMsg]) . "\n\n";
+        ob_flush(); flush();
         exit;
     }
 

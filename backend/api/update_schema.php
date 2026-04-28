@@ -31,5 +31,9 @@ addColumnRequest($pdo, 'users', 'school_name', 'VARCHAR(255) DEFAULT NULL');
 // Add board
 addColumnRequest($pdo, 'users', 'board', "ENUM('CBSE', 'State Board') DEFAULT NULL");
 
+// Add mental math levels
+addColumnRequest($pdo, 'users', 'mental_math_level', 'INT DEFAULT 1');
+addColumnRequest($pdo, 'users', 'abacus_level', 'INT DEFAULT 1');
+
 echo "<p>Done.</p>";
 ?>

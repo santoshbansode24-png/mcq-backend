@@ -122,6 +122,8 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         setSolution(prev => prev + chunk.chunk);
                         // Auto-scroll to bottom (Optimization)
                         scrollRef.current?.scrollToEnd({ animated: true });
+                    } else if (chunk.status === 'error') {
+                        Alert.alert('AI Busy', 'The AI is currently handling too many requests (Error 429). Please try again in a few minutes.');
                     }
                 },
                 () => {

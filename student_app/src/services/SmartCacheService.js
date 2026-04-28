@@ -98,17 +98,30 @@ export const SmartCacheService = {
                 console.log(`[SmartCache] 🧹 Cleared old sync queue for priority sync`);
             }
 
-            // 1. Sync Subjects
-            const subjectRes = await fetchSubjects(classId, true);
-            if (subjectRes.status !== 'success') return;
-            const subjects = subjectRes.data;
+            // 1. Sync Subjects (Wrapped in retry to prevent infinite hang)
+            const subjectRes = await SmartCacheService.retry(() => fetchSubjects(classId, true));
+            const isSubjectSuccess = subjectRes && (subjectRes.status === 'success' || Array.isArray(subjectRes.data) || Array.isArray(subjectRes));
+            
+            if (!isSubjectSuccess) {
+                console.warn('[SmartCache] Failed to fetch subjects, aborting sync');
+                return;
+            }
+
+            const subjects = Array.isArray(subjectRes) ? subjectRes : (subjectRes.data || []);
 
             // Initialize Queue
             const fullQueue = [];
             for (const subject of subjects) {
-                const chapterRes = await fetchChapters(subject.subject_id, true);
-                if (chapterRes.status === 'success') {
-                    chapterRes.data.forEach(ch => fullQueue.push(ch.chapter_id));
+                try {
+                    const chapterRes = await SmartCacheService.retry(() => fetchChapters(subject.subject_id, true));
+                    const isChapterSuccess = chapterRes && (chapterRes.status === 'success' || Array.isArray(chapterRes.data) || Array.isArray(chapterRes));
+                    
+                    if (isChapterSuccess) {
+                        const chapters = Array.isArray(chapterRes) ? chapterRes : (chapterRes.data || []);
+                        chapters.forEach(ch => fullQueue.push(ch.chapter_id));
+                    }
+                } catch (e) {
+                    console.warn(`[SmartCache] Failed to fetch chapters for subject ${subject.subject_id}`);
                 }
             }
 
@@ -268,8 +281,11 @@ export const SmartCacheService = {
             ]);
 
             // 2. Pre-fetch MCQ images
-            if (mcqRes && mcqRes.status === 'success' && Array.isArray(mcqRes.data)) {
-                mcqRes.data.forEach(item => {
+            const mcqData = Array.isArray(mcqRes) ? mcqRes : (mcqRes?.data || []);
+            const isMcqSuccess = Array.isArray(mcqRes) || mcqRes?.status === 'success';
+
+            if (isMcqSuccess && Array.isArray(mcqData)) {
+                mcqData.forEach(item => {
                     if (item.image_url) {
                         const imgUri = item.image_url.startsWith('http') ? item.image_url : `${BASE_URL}/uploads/${item.image_url}`;
                         Image.prefetch(imgUri).catch(e => {}); // Silent failure for missing images

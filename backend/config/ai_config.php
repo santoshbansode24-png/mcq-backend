@@ -17,7 +17,7 @@ if (!defined('GEMINI_API_KEY')) {
         if (!$envKey) $envKey = $_ENV['GEMINI_API_KEY'] ?? '';
         if (!$envKey) $envKey = $_SERVER['GEMINI_API_KEY'] ?? '';
         // DO NOT remove this - define a safe empty string fallback to prevent fatal PHP errors
-        define('GEMINI_API_KEY', $envKey ?: '');
+        define('GEMINI_API_KEY', trim($envKey ?: ''));
     }
 }
 

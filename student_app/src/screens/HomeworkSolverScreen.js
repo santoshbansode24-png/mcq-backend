@@ -49,13 +49,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
 
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: false, // Disable system cropper
+            allowsEditing: true, // Use native OS freeform cropper
             quality: 1,
         });
 
         if (!result.canceled) {
-            setOriginalImage(result.assets[0].uri);
-            setCropperVisible(true); // Open custom cropper
+            setImage(result.assets[0].uri);
+            setSolution('');
         }
     };
 
@@ -67,20 +67,14 @@ const HomeworkSolverScreen = ({ navigation }) => {
         }
 
         let result = await ImagePicker.launchCameraAsync({
-            allowsEditing: false, // Disable system cropper
+            allowsEditing: true, // Use native OS freeform cropper
             quality: 1,
         });
 
         if (!result.canceled) {
-            setOriginalImage(result.assets[0].uri);
-            setCropperVisible(true); // Open custom cropper
+            setImage(result.assets[0].uri);
+            setSolution('');
         }
-    };
-
-    const handleCropComplete = (croppedUri) => {
-        setCropperVisible(false);
-        setImage(croppedUri);
-        setSolution('');
     };
 
     const handleSolve = async () => {
@@ -160,14 +154,6 @@ const HomeworkSolverScreen = ({ navigation }) => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#be185d" />
 
-            {/* Custom Cropper Modal */}
-            <CustomImageCropper
-                visible={cropperVisible}
-                imageUri={originalImage}
-                onCropComplete={handleCropComplete}
-                onCancel={() => setCropperVisible(false)}
-            />
-
             {/* Header */}
             <View style={styles.headerContainer}>
                 <LinearGradient
@@ -209,14 +195,6 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         {image && (
                             <TouchableOpacity style={styles.closeButton} onPress={() => { setImage(null); setSolution(''); setOriginalImage(null); }}>
                                 <Ionicons name="close" size={20} color="#fff" />
-                            </TouchableOpacity>
-                        )}
-
-                        {/* Re-Crop Button */}
-                        {image && originalImage && (
-                            <TouchableOpacity style={styles.reCropButton} onPress={() => setCropperVisible(true)}>
-                                <Ionicons name="crop" size={20} color="#fff" />
-                                <Text style={styles.reCropText}>Crop</Text>
                             </TouchableOpacity>
                         )}
                     </View>

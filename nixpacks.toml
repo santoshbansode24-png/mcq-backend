@@ -1,9 +1,2 @@
-# Deployment Signature: 2026-04-21-v4
-[phases.setup]
-nixPkgs = ["php82", "php82Packages.composer", "php82Extensions.pdo_mysql", "php82Extensions.bcmath", "php82Extensions.gd", "php82Extensions.zip"]
-
-[phases.build]
-cmds = ["composer install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts"]
-
-[start]
-cmd = "php -d upload_max_filesize=50M -d post_max_size=50M -d memory_limit=256M -S 0.0.0.0:$PORT"
+[variables]
+NIXPACKS_PHP_VERSION = '8.2.27'

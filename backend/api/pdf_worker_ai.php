@@ -123,7 +123,8 @@ foreach ($jobs as $job) {
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}
         
-        SECTION 3: STRICT QUALITY STANDARDS FOR MCQs
+        SECTION 3: HIGH-VOLUME MCQ GENERATION & QUALITY STANDARDS
+        - MAXIMIZE MCQ COUNT: You MUST generate as many relevant MCQs as possible from the provided text. Do not stop at just 5 or 10. Extract every single testable concept, fact, date, formula, and definition into a separate MCQ. Exhaustive coverage is your primary goal here.
         - Stem Length: Ensure question stems are meaningful and concise; avoid 'fluff' or irrelevant info.
         - Option Uniformity: All 4 options MUST be of roughly equal length. Never make the correct answer significantly longer than distractors.
         - Plausible Distractors: Distractors must be closely related to the topic and appear technically correct to non-experts. Avoid 'funny' or obviously wrong options.

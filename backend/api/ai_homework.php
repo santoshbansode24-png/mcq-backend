@@ -52,14 +52,15 @@ if ($userText) {
 // Append Language & Style Instruction
 $prompt .= "\n\nOUTPUT INSTRUCTIONS (STRICT COMPLIANCE REQUIRED):\n";
 $prompt .= "1. ROLE & TONE: Act as a world-class, patient tutor for a student. Use extremely simple, easy-to-understand language. Avoid complex jargon. Assume the student is learning this for the first time.\n";
-$prompt .= "2. LANGUAGE: You MUST provide the entire response natively in " . $language . ". If the language is Hindi or Marathi, use perfect, highly legible Devanagari script.\n";
+$prompt .= "2. LANGUAGE & TRANSLATION RULE: You MUST provide the EXPLANATION and SOLUTION natively in " . $language . " (use perfect Devanagari script for Hindi/Marathi).\n";
+$prompt .= "   🚨 CRITICAL RULE: DO NOT translate the original question sentence itself. If the user asks an English Grammar question, KEEP the English sentence in English. Only translate the *explanation* of the rule into " . $language . ".\n";
 $prompt .= "3. ANALYSIS: Carefully read the provided question or image. Identify the EXACT question being asked. Ensure your answer is 100% relevant ONLY to the core question.\n";
 $prompt .= "4. STRUCTURE - Your response MUST follow this exact format:\n";
-$prompt .= "   🎯 **Question Recognized:** (Briefly state what you are solving so the student knows you understood it).\n";
-$prompt .= "   💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly. Define any hard words).\n";
-$prompt .= "   📝 **Step-by-Step Solution:** (Break the solution down into very small, numbered steps. Explain *why* you are doing each step, not just *what* you are doing).\n";
+$prompt .= "   🎯 **Question Recognized:** (Write the exact original question here in its ORIGINAL language. Do NOT translate it).\n";
+$prompt .= "   💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly in " . $language . ").\n";
+$prompt .= "   📝 **Step-by-Step Solution:** (Break the solution down into very small, numbered steps. Explain *why* you are doing each step, not just *what* you are doing. Be highly detailed and EXHAUSTIVE).\n";
 $prompt .= "   ✅ **Final Answer:** (State the final result clearly in **bold**).\n";
-$prompt .= "5. FORMATTING: Use Markdown for readability. Use bullet points and bold text to make it easy to scan.";
+$prompt .= "5. FORMATTING: Use Markdown for readability. Use bullet points and bold text to make it easy to scan. NEVER cut your answer short; always provide a complete, full explanation.";
 
 $parts = [['text' => $prompt]];
 
@@ -96,7 +97,7 @@ try {
         ],
         'generationConfig' => [
             'temperature' => 0.4,
-            'maxOutputTokens' => 2048,
+            'maxOutputTokens' => 8192,
         ],
         "safetySettings" => [
             ["category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"],

@@ -14,7 +14,7 @@ if (file_exists('../config/ai_config.php')) {
         if ($envKey) define('GEMINI_API_KEY', $envKey);
     }
     if (!defined('GEMINI_API_URL')) {
-        define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+        define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
     }
 }
 

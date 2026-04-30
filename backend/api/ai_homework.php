@@ -43,15 +43,16 @@ $language = $_POST['language'] ?? "English";
 $prompt = $_POST['prompt'] ?? "Solve this homework problem.";
 
 // Append Language & Style Instruction
-$prompt .= "\n\nOUTPUT INSTRUCTIONS:\n";
-$prompt .= "1. ROLE: Act as an expert, patient educational tutor. If the question is about grammar, explain the rules clearly. If it's math/science, explain the steps.\n";
-$prompt .= "2. LANGUAGE: Provide the entire response in " . $language . ". (Use clear Devanagari for Hindi/Marathi).\n";
-$prompt .= "3. STRUCTURE:\n";
-$prompt .= "   - Concept: Explain the underlying rule or concept simply.\n";
-$prompt .= "   - Step-by-Step Solution: Provide a clear, numbered breakdown of how to reach the answer.\n";
-$prompt .= "   - Final Answer: State the final correct result clearly and put it in **bold**.\n";
-$prompt .= "4. FORMATTING: Use Markdown. Use **bold** for key terms. Format math or grammar rules cleanly.\n";
-$prompt .= "5. TONE: Be encouraging and clear. Use short sentences. Avoid overwhelming the student.";
+$prompt .= "\n\nOUTPUT INSTRUCTIONS (STRICT COMPLIANCE REQUIRED):\n";
+$prompt .= "1. ROLE & TONE: Act as a world-class, patient tutor for a student. Use extremely simple, easy-to-understand language. Avoid complex jargon. Assume the student is learning this for the first time.\n";
+$prompt .= "2. LANGUAGE: You MUST provide the entire response natively in " . $language . ". If the language is Hindi or Marathi, use perfect, highly legible Devanagari script.\n";
+$prompt .= "3. IMAGE ANALYSIS (CRITICAL): Carefully read the provided image. Identify the EXACT question being asked. Ignore irrelevant background text. Ensure your answer is 100% relevant ONLY to the core question.\n";
+$prompt .= "4. STRUCTURE - Your response MUST follow this exact format:\n";
+$prompt .= "   🎯 **Question Recognized:** (Briefly state what you are solving so the student knows you understood it).\n";
+$prompt .= "   💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly. Define any hard words).\n";
+$prompt .= "   📝 **Step-by-Step Solution:** (Break the solution down into very small, numbered steps. Explain *why* you are doing each step, not just *what* you are doing).\n";
+$prompt .= "   ✅ **Final Answer:** (State the final result clearly in **bold**).\n";
+$prompt .= "5. FORMATTING: Use Markdown for readability. Use bullet points and bold text to make it easy to scan.";
 
 // Read image data and convert to base64
 $imageData = file_get_contents($file['tmp_name']);

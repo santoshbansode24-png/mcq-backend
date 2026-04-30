@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert, StatusBar, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert, StatusBar, Dimensions, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { API_URL } from '../api/config';
@@ -23,6 +23,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
     const [cropperVisible, setCropperVisible] = useState(false);
 
     const [solution, setSolution] = useState('');
+    const [userText, setUserText] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState('English');
     const scrollRef = useRef(null);
@@ -78,31 +79,42 @@ const HomeworkSolverScreen = ({ navigation }) => {
     };
 
     const handleSolve = async () => {
-        if (!image) return;
+        if (!image && !userText.trim()) {
+            Alert.alert('Empty Request', 'Please upload an image or type a question.');
+            return;
+        }
 
         setSolution('');
         setLoading(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         try {
-            // 1. COMPRESS IMAGE BEFORE UPLOAD (Optimization)
-            const manipResult = await ImageManipulator.manipulateAsync(
-                image,
-                [{ resize: { width: 1024 } }], // Resize to 1024px width
-                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-            );
-
             const userId = await getUserId();
             const PROXY_URL = `${API_URL}/ai_homework.php`;
 
             const formData = new FormData();
-            formData.append('image', {
-                uri: manipResult.uri,
-                type: 'image/jpeg',
-                name: 'homework.jpg',
-            });
+            
+            if (image) {
+                // 1. COMPRESS IMAGE BEFORE UPLOAD (Optimization)
+                const manipResult = await ImageManipulator.manipulateAsync(
+                    image,
+                    [{ resize: { width: 1024 } }], // Resize to 1024px width
+                    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+                );
+
+                formData.append('image', {
+                    uri: manipResult.uri,
+                    type: 'image/jpeg',
+                    name: 'homework.jpg',
+                });
+            }
+            
+            if (userText.trim()) {
+                formData.append('user_text', userText.trim());
+            }
+
             formData.append('language', language);
-            formData.append('prompt', "Please answer the question shown in the image. If it's a grammar or language question, explain the rule. If it's a math/science question, provide the steps.");
+            formData.append('prompt', "Please answer the question. If it's a grammar or language question, explain the rule. If it's a math/science question, provide the steps.");
             if (userId) formData.append('user_id', userId);
 
             await streamFetch(
@@ -217,8 +229,22 @@ const HomeworkSolverScreen = ({ navigation }) => {
                     )}
                 </View>
 
+                {/* Text Input Area */}
+                <View style={styles.textInputContainer}>
+                    <Text style={styles.inputLabel}>Or type your question here:</Text>
+                    <TextInput
+                        style={styles.textInput}
+                        placeholder="e.g. What is the Pythagorean theorem?"
+                        placeholderTextColor="#94a3b8"
+                        multiline
+                        numberOfLines={4}
+                        value={userText}
+                        onChangeText={setUserText}
+                    />
+                </View>
+
                 {/* Language Selector */}
-                {image && (
+                {(image || userText.trim() !== '') && (
                     <View style={styles.languageContainer}>
                         <Text style={styles.languageTitle}>Answer Language:</Text>
                         <View style={styles.languageRow}>
@@ -236,7 +262,7 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 )}
 
                 {/* Solve Button */}
-                {image && (
+                {(image || userText.trim() !== '') && (
                     <TouchableOpacity
                         style={[styles.solveButton, { opacity: loading ? 0.7 : 1 }]}
                         onPress={handleSolve}
@@ -542,6 +568,36 @@ const styles = StyleSheet.create({
     activeLangText: {
         color: '#fff',
         fontFamily: 'NotoSans-Bold',
+    },
+    textInputContainer: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+    },
+    inputLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#4f46e5',
+        marginBottom: 10,
+        fontFamily: 'NotoSans-Bold',
+    },
+    textInput: {
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        padding: 15,
+        minHeight: 100,
+        textAlignVertical: 'top',
+        fontSize: 16,
+        color: '#334155',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        fontFamily: 'NotoSans-Regular',
     },
 });
 

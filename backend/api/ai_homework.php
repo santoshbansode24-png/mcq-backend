@@ -18,9 +18,12 @@ if (file_exists('../config/ai_config.php')) {
     }
 }
 
-// Check if image file is uploaded
-if (!isset($_FILES['image'])) {
-    echo "data: " . json_encode(['status' => 'error', 'message' => 'No image uploaded.']) . "\n\n";
+// Check if there is neither an image nor text prompt
+$hasImage = isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK;
+$hasText = isset($_POST['user_text']) && !empty(trim($_POST['user_text']));
+
+if (!$hasImage && !$hasText) {
+    echo "data: " . json_encode(['status' => 'error', 'message' => 'Please provide a text question or upload an image.']) . "\n\n";
     exit;
 }
 
@@ -38,15 +41,19 @@ if ($userId > 0) {
     }
 }
 
-$file = $_FILES['image'];
 $language = $_POST['language'] ?? "English";
+$userText = $_POST['user_text'] ?? "";
 $prompt = $_POST['prompt'] ?? "Solve this homework problem.";
+
+if ($userText) {
+    $prompt .= "\n\nSTUDENT'S TYPED QUESTION:\n\"" . $userText . "\"\n";
+}
 
 // Append Language & Style Instruction
 $prompt .= "\n\nOUTPUT INSTRUCTIONS (STRICT COMPLIANCE REQUIRED):\n";
 $prompt .= "1. ROLE & TONE: Act as a world-class, patient tutor for a student. Use extremely simple, easy-to-understand language. Avoid complex jargon. Assume the student is learning this for the first time.\n";
 $prompt .= "2. LANGUAGE: You MUST provide the entire response natively in " . $language . ". If the language is Hindi or Marathi, use perfect, highly legible Devanagari script.\n";
-$prompt .= "3. IMAGE ANALYSIS (CRITICAL): Carefully read the provided image. Identify the EXACT question being asked. Ignore irrelevant background text. Ensure your answer is 100% relevant ONLY to the core question.\n";
+$prompt .= "3. ANALYSIS: Carefully read the provided question or image. Identify the EXACT question being asked. Ensure your answer is 100% relevant ONLY to the core question.\n";
 $prompt .= "4. STRUCTURE - Your response MUST follow this exact format:\n";
 $prompt .= "   🎯 **Question Recognized:** (Briefly state what you are solving so the student knows you understood it).\n";
 $prompt .= "   💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly. Define any hard words).\n";
@@ -54,10 +61,21 @@ $prompt .= "   📝 **Step-by-Step Solution:** (Break the solution down into ver
 $prompt .= "   ✅ **Final Answer:** (State the final result clearly in **bold**).\n";
 $prompt .= "5. FORMATTING: Use Markdown for readability. Use bullet points and bold text to make it easy to scan.";
 
-// Read image data and convert to base64
-$imageData = file_get_contents($file['tmp_name']);
-$base64Image = base64_encode($imageData);
-$mimeType = $file['type'];
+$parts = [['text' => $prompt]];
+
+if ($hasImage) {
+    $file = $_FILES['image'];
+    $imageData = file_get_contents($file['tmp_name']);
+    $base64Image = base64_encode($imageData);
+    $mimeType = $file['type'];
+    
+    $parts[] = [
+        'inlineData' => [
+            'mimeType' => $mimeType,
+            'data' => $base64Image
+        ]
+    ];
+}
 
 try {
     // 5. Setup Streaming Headers
@@ -73,15 +91,7 @@ try {
     $payload = [
         'contents' => [
             [
-                'parts' => [
-                    ['text' => $prompt],
-                    [
-                        'inlineData' => [
-                            'mimeType' => $mimeType,
-                            'data' => $base64Image
-                        ]
-                    ]
-                ]
+                'parts' => $parts
             ]
         ],
         'generationConfig' => [

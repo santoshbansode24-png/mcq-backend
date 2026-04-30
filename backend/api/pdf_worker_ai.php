@@ -124,10 +124,10 @@ foreach ($jobs as $job) {
         - {$difficultyStr}
         
         SECTION 3: STRICT QUALITY STANDARDS FOR MCQs
-        - Stem Length: Ensure question stems are meaningful and concise; avoid "fluff" or irrelevant info.
+        - Stem Length: Ensure question stems are meaningful and concise; avoid 'fluff' or irrelevant info.
         - Option Uniformity: All 4 options MUST be of roughly equal length. Never make the correct answer significantly longer than distractors.
-        - Plausible Distractors: Distractors must be closely related to the topic and appear technically correct to non-experts. Avoid "funny" or obviously wrong options.
-        - Academic Language: Use plain, easy-to-understand language. Avoid unnecessarily complex jargon or "tricky" phrasing.
+        - Plausible Distractors: Distractors must be closely related to the topic and appear technically correct to non-experts. Avoid 'funny' or obviously wrong options.
+        - Academic Language: Use plain, easy-to-understand language. Avoid unnecessarily complex jargon or 'tricky' phrasing.
         - Grammatical Matching: All options must match the stem's grammar perfectly to avoid giving away the answer via grammatical clues.
         - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY distractors are incorrect.
         

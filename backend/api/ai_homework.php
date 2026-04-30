@@ -66,8 +66,7 @@ try {
     header('X-Accel-Buffering: no');
 
     // 6. Gemini Configuration - STREAMING
-    // Using gemini-2.0-flash as primary
-    $model = 'gemini-2.0-flash';
+    $model = 'gemini-2.5-flash';
     $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/$model:streamGenerateContent?key=" . GEMINI_API_KEY . "&alt=sse";
 
     $payload = [

@@ -68,7 +68,7 @@ class AiUsageManager {
             $stmt->execute([':user_id' => $this->userId, ':date' => $today]);
             $data = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if (!$data) return true; // User record not found, allow for now
+            if (!$data) return "User account not found. Unauthorized."; // CRITICAL: Do not allow bypass for fake user IDs
             
             // 1. PREMIUM BYPASS: If Active, skip all limits
             if ($data['subscription_status'] === 'active') {
@@ -103,16 +103,15 @@ class AiUsageManager {
         
         try {
             // Standard INSERT ... ON DUPLICATE KEY UPDATE
-            // Using VALUES() refers to the value specified in the INSERT part, 
-            // avoiding the need for duplicate named parameters which causes 'Invalid parameter number' in some environments.
+            // Avoid using deprecated VALUES() to prevent 'Invalid parameter number' / syntax errors.
             $query = "INSERT INTO ai_usage (user_id, usage_date, tokens_used, request_count) 
                       VALUES (?, ?, ?, 1) 
                       ON DUPLICATE KEY UPDATE 
-                      tokens_used = tokens_used + VALUES(tokens_used), 
+                      tokens_used = tokens_used + ?, 
                       request_count = request_count + 1";
             
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([$this->userId, $today, $tokens]);
+            $stmt->execute([$this->userId, $today, $tokens, $tokens]);
         } catch (Exception $e) {
             // SILENT ERROR: Do not crash the app if usage logging fails.
             // The user already received their response; tracking failure is internal.

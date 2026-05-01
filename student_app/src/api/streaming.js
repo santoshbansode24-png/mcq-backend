@@ -18,24 +18,46 @@ export const streamFetch = async (url, options, onChunk, onDone, onError) => {
         }
 
         let lastIndex = 0;
+        let buffer = '';
+        let finished = false;
+
+        const safeOnDone = () => {
+            if (!finished) {
+                finished = true;
+                if (onDone) onDone();
+            }
+        };
+
+        const safeOnError = (err) => {
+            if (!finished) {
+                finished = true;
+                if (onError) onError(err);
+            }
+        };
 
         xhr.onreadystatechange = () => {
             if (xhr.readyState === 3 || xhr.readyState === 4) {
                 const newText = xhr.responseText.substring(lastIndex);
                 lastIndex = xhr.responseText.length;
 
-                const lines = newText.split('\n');
+                buffer += newText;
+                const lines = buffer.split('\n');
+                
+                // The last element is either an incomplete line or an empty string.
+                // Pop it off and hold it in the buffer for the next chunk.
+                buffer = lines.pop();
+
                 lines.forEach(line => {
                     if (line.startsWith('data: ')) {
                         const dataStr = line.substring(6).trim();
                         if (dataStr === '[DONE]') {
-                            if (onDone) onDone();
+                            safeOnDone();
                         } else {
                             try {
                                 const json = JSON.parse(dataStr);
                                 // Surface API-level errors (e.g., "No image uploaded", rate limits)
-                                if (json.status === 'error' && onError) {
-                                    onError(new Error(json.message || 'Server returned an error'));
+                                if (json.status === 'error') {
+                                    safeOnError(new Error(json.message || 'Server returned an error'));
                                 } else {
                                     if (onChunk) onChunk(json);
                                 }
@@ -49,15 +71,15 @@ export const streamFetch = async (url, options, onChunk, onDone, onError) => {
 
             if (xhr.readyState === 4) {
                 if (xhr.status !== 200) {
-                    if (onError) onError(new Error(`Server Error: ${xhr.status}`));
+                    safeOnError(new Error(`Server Error: ${xhr.status}`));
                 } else {
-                    if (onDone) onDone();
+                    safeOnDone();
                 }
             }
         };
 
         xhr.onerror = (e) => {
-            if (onError) onError(new Error('Network Error'));
+            safeOnError(new Error('Network Error'));
         };
 
         xhr.send(options.body || null);

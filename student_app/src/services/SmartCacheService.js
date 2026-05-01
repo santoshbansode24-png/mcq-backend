@@ -70,6 +70,11 @@ export const SmartCacheService = {
      * Bulk sync all data for a specific class
      */
     syncAllForClass: async (classId, isPriority = false) => {
+        if (isProcessing && !isPriority) {
+            console.log(`[SmartCache] ⚠️ Sync already in progress. Ignoring bulk sync request.`);
+            return;
+        }
+
         try {
             // Cooldown check: Don't sync more than once every 6 hours automatically
             // But if it's Priority (user just changed class/board), bypass cooldown
@@ -84,19 +89,22 @@ export const SmartCacheService = {
                 if (queue && queue.length > 0 && !isProcessing) {
                     console.log(`[SmartCache] ⏯️ Resuming interrupted sync for ${queue.length} items...`);
                     await SmartCacheService.processSyncQueue();
-                } else {
-                    await SmartCacheService.checkSyncState();
                 }
                 return;
             }
 
             console.log(`[SmartCache] 🔄 Starting bulk sync for class ${classId} (Priority: ${isPriority})...`);
 
+            isProcessing = true;
+
             if (isPriority) {
                 // Clear any old queue if user manually forces a priority sync (e.g. changing class)
                 await AsyncStorage.removeItem(SYNC_QUEUE_KEY);
                 console.log(`[SmartCache] 🧹 Cleared old sync queue for priority sync`);
             }
+
+            // Tell UI we are syncing
+            notifyListeners({ isSyncing: true, isFullySynced: false, progress: 0 });
 
             // 1. Sync Subjects (Wrapped in retry to prevent infinite hang)
             const subjectRes = await SmartCacheService.retry(() => fetchSubjects(classId, true));
@@ -128,8 +136,6 @@ export const SmartCacheService = {
             // Save queue to storage so we can resume if app closes
             await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(fullQueue));
 
-            notifyListeners({ isSyncing: true, isFullySynced: false, progress: 0 });
-
             // 2. Sync GLOBAL features (Vocabulary + Mental Math)
             const savedUser = await AsyncStorage.getItem('user_data');
             if (savedUser) {
@@ -140,7 +146,7 @@ export const SmartCacheService = {
             }
 
             // 3. Process Chapter Queue
-            await SmartCacheService.processSyncQueue();
+            await SmartCacheService.processSyncQueue(true);
 
             // 4. Mark as completed if queue is empty (or mostly empty)
             const finalQueue = await SmartCacheService.getSyncQueue();
@@ -152,26 +158,23 @@ export const SmartCacheService = {
                 }));
                 // console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
             }
-            await SmartCacheService.checkSyncState();
         } catch (error) {
             console.error('[SmartCache] ❌ Bulk Sync failed:', error.message);
-            notifyListeners({ isSyncing: false, isFullySynced: false });
         } finally {
             isProcessing = false;
+            await SmartCacheService.checkSyncState();
         }
     },
 
-    processSyncQueue: async () => {
-        if (isProcessing) return;
+    processSyncQueue: async (internalCall = false) => {
+        if (!internalCall && isProcessing) return;
         isProcessing = true;
 
         try {
             let queue = await SmartCacheService.getSyncQueue();
             
             if (!Array.isArray(queue) || queue.length === 0) {
-                isProcessing = false;
-                await SmartCacheService.checkSyncState();
-                return;
+                return; // Let finally block handle the state check
             }
 
             let processedCount = 0;
@@ -204,8 +207,6 @@ export const SmartCacheService = {
                 await new Promise(r => setTimeout(r, processedCount % 10 === 0 ? 100 : 30));
             }
 
-            await SmartCacheService.checkSyncState();
-
             // Final safety: if queue is empty, mark status as completed
             if (!queue || queue.length === 0) {
                 const status = await SmartCacheService.getSyncStatus();
@@ -217,9 +218,9 @@ export const SmartCacheService = {
             }
         } catch (error) {
             console.warn('[SmartCache] Queue processing interrupted:', error.message);
-            notifyListeners({ isSyncing: false, isFullySynced: false });
         } finally {
             isProcessing = false;
+            await SmartCacheService.checkSyncState();
         }
     },
 
@@ -238,7 +239,7 @@ export const SmartCacheService = {
             await SmartCacheService.retry(() => fetchVocabStats(userId, true));
 
             // Pre-download the first 3 sets of Vocabulary (0-2) as they are common for starting
-            for (let i = 0; i <= 3; i++) {
+            for (let i = 0; i < 3; i++) {
                 await SmartCacheService.retry(() => fetchVocabSet(userId, i));
             }
 
@@ -253,12 +254,16 @@ export const SmartCacheService = {
      */
     retry: async (fn, retries = 2, delay = 1000, timeoutMs = 12000) => {
         for (let i = 0; i < retries; i++) {
+            let timeoutId;
             try {
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
-                );
-                return await Promise.race([fn(), timeoutPromise]);
+                const timeoutPromise = new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs);
+                });
+                const result = await Promise.race([fn(), timeoutPromise]);
+                clearTimeout(timeoutId);
+                return result;
             } catch (err) {
+                clearTimeout(timeoutId);
                 if (i === retries - 1) throw err;
                 console.warn(`[SmartCache] Retry ${i + 1}/${retries} failed (${err.message}). Retrying in ${delay}ms...`);
                 await new Promise(r => setTimeout(r, delay));
@@ -272,7 +277,7 @@ export const SmartCacheService = {
     syncChapterContent: async (chapterId) => {
         try {
             // 1. Fetch JSON Content in Parallel for speed
-            const [mcqRes] = await Promise.all([
+            const results = await Promise.allSettled([
                 SmartCacheService.retry(() => fetchMCQs(chapterId, true)),
                 SmartCacheService.retry(() => fetchFlashcards(chapterId, true)),
                 SmartCacheService.retry(() => fetchQuickRevision(chapterId, true)),
@@ -280,7 +285,15 @@ export const SmartCacheService = {
                 SmartCacheService.retry(() => fetchVideos(chapterId, true))
             ]);
 
+            // If ALL endpoints failed, it's likely a network issue. Abort to pause the queue.
+            const allFailed = results.every(r => r.status === 'rejected');
+            if (allFailed) {
+                throw new Error('All endpoints failed. Likely network connection issue.');
+            }
+
             // 2. Pre-fetch MCQ images
+            const mcqResult = results[0];
+            const mcqRes = mcqResult.status === 'fulfilled' ? mcqResult.value : null;
             const mcqData = Array.isArray(mcqRes) ? mcqRes : (mcqRes?.data || []);
             const isMcqSuccess = Array.isArray(mcqRes) || mcqRes?.status === 'success';
 

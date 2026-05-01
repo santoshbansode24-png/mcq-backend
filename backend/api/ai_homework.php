@@ -18,6 +18,11 @@ if (file_exists('../config/ai_config.php')) {
     }
 }
 
+if (!defined('GEMINI_API_KEY') || empty(GEMINI_API_KEY)) {
+    echo "data: " . json_encode(['status' => 'error', 'message' => 'AI Service is currently unavailable (Configuration missing).']) . "\n\n";
+    exit;
+}
+
 // Check if there is neither an image nor text prompt
 $hasImage = isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK;
 $hasText = isset($_POST['user_text']) && !empty(trim($_POST['user_text']));
@@ -31,14 +36,17 @@ if (!$hasImage && !$hasText) {
 require_once 'AiUsageManager.php';
 $userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0; 
 
-// Only enforce limits if we have a valid user ID. 
-if ($userId > 0) {
-    $aiManager = new AiUsageManager($userId);
-    $canProceed = $aiManager->canMakeRequest();
-    if ($canProceed !== true) {
-         echo "data: " . json_encode(['status' => 'error', 'message' => $canProceed]) . "\n\n";
-         exit;
-    }
+// Critical Security Fix: Prevent unauthorized users from bypassing token limits
+if ($userId <= 0) {
+    echo "data: " . json_encode(['status' => 'error', 'message' => 'Unauthorized access. Please log in to use the AI solver.']) . "\n\n";
+    exit;
+}
+
+$aiManager = new AiUsageManager($userId);
+$canProceed = $aiManager->canMakeRequest();
+if ($canProceed !== true) {
+     echo "data: " . json_encode(['status' => 'error', 'message' => $canProceed]) . "\n\n";
+     exit;
 }
 
 $language = $_POST['language'] ?? "English";
@@ -49,26 +57,44 @@ if ($userText) {
     $prompt .= "\n\nSTUDENT'S TYPED QUESTION:\n\"" . $userText . "\"\n";
 }
 
-// Append Language & Style Instruction
-$prompt .= "\n\nOUTPUT INSTRUCTIONS (STRICT COMPLIANCE REQUIRED):\n";
-$prompt .= "1. ROLE & TONE: Act as a world-class, patient tutor for a student. Use extremely simple, easy-to-understand language. Avoid complex jargon. Assume the student is learning this for the first time.\n";
-$prompt .= "2. LANGUAGE & TRANSLATION RULE: You MUST provide the EXPLANATION and SOLUTION natively in " . $language . " (use perfect Devanagari script for Hindi/Marathi).\n";
-$prompt .= "   🚨 CRITICAL RULE: DO NOT translate the original question sentence itself. If the user asks an English Grammar question, KEEP the English sentence in English. Only translate the *explanation* of the rule into " . $language . ".\n";
-$prompt .= "3. ANALYSIS: Carefully read the provided question or image. Identify the EXACT question being asked. Ensure your answer is 100% relevant ONLY to the core question.\n";
-$prompt .= "4. STRUCTURE - Your response MUST follow this exact format:\n";
-$prompt .= "   🎯 **Question Recognized:** (Write the exact original question here in its ORIGINAL language. Do NOT translate it).\n";
-$prompt .= "   💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly in " . $language . ").\n";
-$prompt .= "   📝 **Step-by-Step Solution:** (Break the solution down into very small, numbered steps. Explain *why* you are doing each step, not just *what* you are doing. Be highly detailed and EXHAUSTIVE).\n";
-$prompt .= "   ✅ **Final Answer:** (State the final result clearly in **bold**).\n";
-$prompt .= "5. FORMATTING: Use Markdown for readability. Use bullet points and bold text to make it easy to scan. NEVER cut your answer short; always provide a complete, full explanation.";
+// Extract formatting and rules into System Instructions for better Gemini compliance
+$sysInstruction = "Act as a world-class, patient tutor for a student. Use extremely simple, easy-to-understand language. Avoid complex jargon. Assume the student is learning this for the first time.\n";
+$sysInstruction .= "You MUST provide the EXPLANATION and SOLUTION natively in " . $language . ".\n";
+$langLower = strtolower($language);
+if ($langLower === 'hindi' || $langLower === 'marathi') {
+    $sysInstruction .= "Ensure you use perfect Devanagari script for " . $language . ".\n";
+}
+$sysInstruction .= "🚨 CRITICAL RULE: DO NOT translate the original question sentence itself. If the user asks an English Grammar question, KEEP the English sentence in English. Only translate the *explanation* of the rule into " . $language . ".\n";
+$sysInstruction .= "Carefully read the provided question or image. Identify the EXACT question being asked. Ensure your answer is 100% relevant ONLY to the core question.\n";
+$sysInstruction .= "🧠 **CRITICAL REASONING RULE (Chain of Thought):** If the problem involves Math, Physics, or Logic, you MUST calculate the answer step-by-step internally. Validate every intermediate calculation. Do NOT skip algebraic steps. Double-check your final arithmetic before presenting the final answer to prevent hallucinations.\n";
+$sysInstruction .= "Your response MUST follow this exact format:\n";
+$sysInstruction .= "🎯 **Question Recognized:** (Write the exact original question here in its ORIGINAL language. Do NOT translate it).\n";
+$sysInstruction .= "💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly in " . $language . ").\n";
+$sysInstruction .= "📝 **Step-by-Step Solution:** (Break the solution down into very small, numbered steps. Explain *why* you are doing each step, not just *what* you are doing. Be highly detailed and EXHAUSTIVE).\n";
+$sysInstruction .= "✅ **Final Answer:** (State the final result clearly in **bold**).\n";
+$sysInstruction .= "Use Markdown for readability. Use bullet points and bold text to make it easy to scan. NEVER cut your answer short; always provide a complete, full explanation.";
 
 $parts = [['text' => $prompt]];
 
 if ($hasImage) {
     $file = $_FILES['image'];
+    
+    // Safety check: Validate file size (max 10MB) to prevent memory exhaustion
+    if ($file['size'] > 10485760) {
+        echo "data: " . json_encode(['status' => 'error', 'message' => 'Image exceeds the 10MB size limit. Please upload a smaller image.']) . "\n\n";
+        exit;
+    }
+
+    $mimeType = $file['type'];
+    $validMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    
+    if (!in_array($mimeType, $validMimes)) {
+        echo "data: " . json_encode(['status' => 'error', 'message' => 'Unsupported image format. Please use JPEG, PNG, or WEBP.']) . "\n\n";
+        exit;
+    }
+
     $imageData = file_get_contents($file['tmp_name']);
     $base64Image = base64_encode($imageData);
-    $mimeType = $file['type'];
     
     $parts[] = [
         'inlineData' => [
@@ -90,6 +116,11 @@ try {
     $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/$model:streamGenerateContent?key=" . GEMINI_API_KEY . "&alt=sse";
 
     $payload = [
+        'systemInstruction' => [
+            'parts' => [
+                ['text' => $sysInstruction]
+            ]
+        ],
         'contents' => [
             [
                 'parts' => $parts
@@ -172,9 +203,17 @@ try {
     });
 
     if (ob_get_level()) ob_end_flush();
-    curl_exec($ch);
+    $result = curl_exec($ch);
+    $curlError = curl_error($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    // If cURL fails completely (e.g., DNS issue or strict 120s timeout)
+    if ($result === false && !empty($curlError)) {
+        echo "data: " . json_encode(["status" => "error", "message" => "AI Server Connection Error: " . $curlError]) . "\n\n";
+        ob_flush(); flush();
+        exit;
+    }
 
     // Handle any caught API Errors that didn't stop the stream
     if (!empty($apiError)) {

@@ -97,13 +97,18 @@ const HomeworkSolverScreen = ({ navigation }) => {
             const formData = new FormData();
             
             if (image) {
-                // The image has already been normalized, perfectly cropped, and compressed at high quality
-                // by CustomImageCropper. We upload it directly to prevent double-compression quality loss.
-                formData.append('image', {
-                    uri: image,
-                    type: 'image/jpeg',
-                    name: 'homework.jpg',
-                });
+                // WEB FIX: Browser fetch requires a Blob, not a native file object
+                if (Platform.OS === 'web') {
+                    const response = await fetch(image);
+                    const blob = await response.blob();
+                    formData.append('image', blob, 'homework.jpg');
+                } else {
+                    formData.append('image', {
+                        uri: image,
+                        type: 'image/jpeg',
+                        name: 'homework.jpg',
+                    });
+                }
             }
             
             if (userText.trim()) {
@@ -218,14 +223,22 @@ const HomeworkSolverScreen = ({ navigation }) => {
                     </View>
 
                     {!image && (
-                        <View style={styles.buttonRow}>
-                            <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
+                        <View style={[styles.buttonRow, userText.trim().length > 0 && { opacity: 0.5 }]}>
+                            <TouchableOpacity 
+                                style={styles.actionButton} 
+                                onPress={takePhoto}
+                                disabled={userText.trim().length > 0}
+                            >
                                 <LinearGradient colors={['#eef2ff', '#e0e7ff']} style={styles.buttonGradient}>
                                     <Ionicons name="camera" size={24} color="#4f46e5" />
                                     <Text style={[styles.buttonText, { color: '#4f46e5' }]}>Camera</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButton} onPress={pickImage}>
+                            <TouchableOpacity 
+                                style={styles.actionButton} 
+                                onPress={pickImage}
+                                disabled={userText.trim().length > 0}
+                            >
                                 <LinearGradient colors={['#e0f2fe', '#bae6fd']} style={styles.buttonGradient}>
                                     <Ionicons name="images" size={24} color="#0284c7" />
                                     <Text style={[styles.buttonText, { color: '#0284c7' }]}>Gallery</Text>
@@ -239,13 +252,14 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 <View style={styles.textInputContainer}>
                     <Text style={styles.inputLabel}>Or type your question here:</Text>
                     <TextInput
-                        style={styles.textInput}
-                        placeholder="e.g. What is the Pythagorean theorem?"
+                        style={[styles.textInput, image && { backgroundColor: '#f1f5f9', color: '#94a3b8' }]}
+                        placeholder={image ? "Text disabled (Image uploaded)" : "e.g. What is the Pythagorean theorem?"}
                         placeholderTextColor="#94a3b8"
                         multiline
                         numberOfLines={4}
                         value={userText}
                         onChangeText={setUserText}
+                        editable={!image}
                     />
                 </View>
 

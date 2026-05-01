@@ -320,9 +320,11 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                                 <View style={[styles.corner, styles.bl]} {...blR.panHandlers} />
                                 <View style={[styles.corner, styles.br]} {...brR.panHandlers} />
                             </View>
-                        </>
-                    ) : null}
-                </View>
+                            </>
+                        )}
+                    </>
+                ) : null}
+            </View>
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Drag the box · Pull corners to resize</Text>

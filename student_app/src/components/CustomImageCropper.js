@@ -31,13 +31,19 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             });
 
             let actions = [];
+            
+            // FIX: Force a 0-degree rotation. This tells ImageManipulator to read the EXIF 
+            // orientation (e.g. 'Rotate 90 CW' from a phone camera) and physically bake 
+            // that rotation into the raw pixels, stripping the EXIF tag. 
+            // This guarantees the visual layout exactly matches the pixel array.
+            actions.push({ rotate: 0 });
+
             // Optimize memory by downscaling huge images before cropping (Max 2048px)
             if (w > 2048 || h > 2048) {
                 if (w > h) actions.push({ resize: { width: 2048 } });
                 else actions.push({ resize: { height: 2048 } });
             }
 
-            // This action strips EXIF and bakes the rotation into the pixels
             const result = await ImageManipulator.manipulateAsync(uri, actions, { compress: 1, format: ImageManipulator.SaveFormat.JPEG });
             setWorkingUri(result.uri);
         } catch (e) {

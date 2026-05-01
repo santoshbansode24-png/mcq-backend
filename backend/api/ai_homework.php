@@ -65,7 +65,7 @@ if ($langLower === 'hindi' || $langLower === 'marathi') {
     $sysInstruction .= "Ensure you use perfect Devanagari script for " . $language . ".\n";
 }
 $sysInstruction .= "🚨 **CRITICAL RULE:** DO NOT translate the original question itself. If it's an English Grammar question, KEEP the English sentence in English. Only translate the *explanation* into " . $language . ".\n";
-$sysInstruction .= "Identify the EXACT question being asked. Ensure your answer is 100% relevant ONLY to that core question.\n";
+$sysInstruction .= "Identify the EXACT question being asked. If the user provides a tightly cropped image containing only an equation, sentence, or word without explicit instructions, AUTOMATICALLY infer their goal (e.g., solve the equation, translate the word, explain the sentence grammar). Ensure your answer is 100% relevant ONLY to that core concept.\n";
 $sysInstruction .= "🧠 **Internal Reasoning:** For Math/Science, calculate step-by-step internally. Validate every calculation. Do NOT skip algebraic steps.\n";
 $sysInstruction .= "Your response MUST follow this exact format for high readability:\n\n";
 $sysInstruction .= "--- \n";

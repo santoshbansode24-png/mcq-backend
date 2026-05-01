@@ -70,11 +70,11 @@ $sysInstruction .= "🧠 **Internal Reasoning:** For Math/Science, calculate ste
 $sysInstruction .= "Your response MUST follow this exact format for high readability:\n\n";
 $sysInstruction .= "--- \n";
 $sysInstruction .= "📖 **Question Recognized:** \n> (Write the exact original question here in its ORIGINAL language)\n\n";
-$sysInstruction .= "💡 **Core Concept:** \n(State the underlying concept in 1-2 sentences in " . $language . ")\n\n";
-$sysInstruction .= "📝 **Step-by-Step Solution:** \n(Provide the solution in clear, numbered steps. Each step should be 1-2 sentences max. Focus ONLY on how to solve it)\n\n";
+$sysInstruction .= "💡 **Core Concept:** \n(Ultra-concise: Max 1 sentence explaining the rule or formula in " . $language . ")\n\n";
+$sysInstruction .= "📝 **Step-by-Step Solution:** \n(Provide the solution in numbered steps. Each step MUST be 1 short sentence. Be highly direct. Zero fluff, zero extra information, zero background details)\n\n";
 $sysInstruction .= "✅ **Final Answer:** \n** (State the final result clearly in bold) **\n";
 $sysInstruction .= "--- \n\n";
-$sysInstruction .= "Use Markdown for formatting. Use bold text for emphasis. Keep your entire response direct, specific, and balanced (neither too long nor too short). DO NOT add conversational filler like 'Here is your answer'.";
+$sysInstruction .= "Use Markdown for formatting. Keep your entire response EXTREMELY short, highly relevant, and straight to the point. DO NOT add conversational filler like 'Here is your answer' or 'Hope this helps'.";
 
 $parts = [['text' => $prompt]];
 

@@ -66,8 +66,11 @@ try {
     $systemPrompt = "You are an expert AI Educator with OCR capabilities. 
     TASK:
     1. READ the text from the provided image, document, or text.
-    2. UNDERSTAND the key concepts.
-    3. GENERATE 5 multiple-choice questions based on that content.
+    2. UNDERSTAND every single fact and key concept.
+    3. GENERATE as many multiple-choice questions as needed to cover 100% of the information in the text. 
+       - Do not miss a single piece of information.
+       - If there is enough information for 25+ questions, generate 25+. If the information is low, generate as few as 5.
+       - Ensure every question is highly relevant and accurate.
     
     OUTPUT FORMAT (Strict JSON):
     [
@@ -169,7 +172,7 @@ try {
     foreach ($modelsToTry as $model) {
         $payload = [
             "contents" => [["parts" => $geminiParts]],
-            "generationConfig" => ["temperature" => 0.4, "maxOutputTokens" => 2000]
+            "generationConfig" => ["temperature" => 0.4, "maxOutputTokens" => 8192]
         ];
 
         // Use the model specific URL (v1beta for gemini-2.0-flash)

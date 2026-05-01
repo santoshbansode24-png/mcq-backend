@@ -111,8 +111,7 @@ foreach ($jobs as $job) {
            3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
         - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer Sentence or Phrase\"}.
         - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn.
-        - QUALITY OVER QUANTITY: Do not generate 'filler' questions. Only generate cards for information that is actually worth studying.
-        
+        - QUALITY AND EXHAUSTIVE EXTRACTION: Do not generate 'filler' questions, but do NOT miss a single important fact. Generate a flashcard for EVERY SINGLE piece of information, concept, definition, and fact present in the text to ensure 100% coverage.        
         - GOLD STANDARD EXAMPLES (FOLLOW THIS QUALITY LEVEL):
           1. [BAD]: \"Co-operation\" -> \"Working together.\"
           2. [GOOD]: \"What is the primary economic objective of a Co-operative society?\" -> \"To protect and promote the common economic interests of its members through mutual help.\"
@@ -133,16 +132,16 @@ foreach ($jobs as $job) {
         - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY distractors are incorrect.
         
         SECTION 4: SMART NOTES
-        - Extract ultra-short, highly scannable bullet points across three explicit categories:
+        - Extract short, highly scannable bullet points across three explicit categories:
            1. definitions: Only core terminology and its meaning.
            2. key_facts: Essential dates, numbers, formulas, or unarguable static truths.
            3. core_concepts: Short explanations of 'how' or 'why' things work.
-        - Generate exactly 3-5 high-value bullet points per category.
+        - EXHAUSTIVE EXTRACTION: Do not limit to 3-5 points. Generate as many bullet points as needed to capture 100% of the vital information in the text. Do not miss a single concept or fact.
         
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
         2. FORMAT: Return ONLY a valid JSON object. No conversational text.
-        3. QUALITY DEMAND: Prioritize the relevance and depth of the questions over the total number. Generate only the most important questions for the provided text. Do not return fewer than 5 high-quality flashcards.
+        3. QUALITY & QUANTITY DEMAND: You MUST generate as much content (notes, flashcards, MCQs) as possible to cover 100% of the information. Do not stop at a set limit. If there is enough information for 50 flashcards and 50 MCQs, generate them all. Ensure every single piece of information is relevant.
         
         SCHEMA:
         {

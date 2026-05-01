@@ -13,6 +13,7 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
     const [layout, setLayout] = useState(null);
     const [cropBox, setCropBox] = useState({ x: 50, y: 100, width: 220, height: 220 });
     const [processing, setProcessing] = useState(false);
+    const actualDimensionsRef = useRef(null);
 
     React.useEffect(() => {
         if (visible && imageUri) {
@@ -45,9 +46,11 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             }
 
             const result = await ImageManipulator.manipulateAsync(uri, actions, { compress: 1, format: ImageManipulator.SaveFormat.JPEG });
+            actualDimensionsRef.current = { w: result.width, h: result.height };
             setWorkingUri(result.uri);
         } catch (e) {
             console.warn("Image prep failed, falling back", e);
+            actualDimensionsRef.current = { w, h };
             setWorkingUri(uri);
         } finally {
             setPreparing(false);
@@ -192,10 +195,19 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
         setProcessing(true);
 
         try {
-            // Get actual dimensions of the normalized working image
-            const { actualWidth, actualHeight } = await new Promise((resolve, reject) => {
-                Image.getSize(workingUri, (w, h) => resolve({ actualWidth: w, actualHeight: h }), reject);
-            });
+            // FIX: Use the true physical dimensions captured directly from ImageManipulator.
+            // React Native Web's Image.getSize() returns logical pixels (divided by devicePixelRatio),
+            // which completely ruins the crop bounding math on high-density screens.
+            let actualWidth = actualDimensionsRef.current?.w;
+            let actualHeight = actualDimensionsRef.current?.h;
+
+            if (!actualWidth || !actualHeight) {
+                const size = await new Promise((resolve, reject) => {
+                    Image.getSize(workingUri, (w, h) => resolve({ actualWidth: w, actualHeight: h }), reject);
+                });
+                actualWidth = size.actualWidth;
+                actualHeight = size.actualHeight;
+            }
             
             const L = layoutRef.current;
             const cb = cropBoxRef.current;

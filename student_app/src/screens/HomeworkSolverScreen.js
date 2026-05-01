@@ -50,12 +50,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
 
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true, // Use native OS freeform cropper
+            allowsEditing: false, // Disable native OS cropper
             quality: 1,
         });
 
         if (!result.canceled) {
-            setImage(result.assets[0].uri);
+            setOriginalImage(result.assets[0].uri);
+            setCropperVisible(true);
             setSolution('');
         }
     };
@@ -68,12 +69,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
         }
 
         let result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true, // Use native OS freeform cropper
+            allowsEditing: false, // Disable native OS cropper
             quality: 1,
         });
 
         if (!result.canceled) {
-            setImage(result.assets[0].uri);
+            setOriginalImage(result.assets[0].uri);
+            setCropperVisible(true);
             setSolution('');
         }
     };
@@ -95,15 +97,10 @@ const HomeworkSolverScreen = ({ navigation }) => {
             const formData = new FormData();
             
             if (image) {
-                // 1. COMPRESS IMAGE BEFORE UPLOAD (Optimization)
-                const manipResult = await ImageManipulator.manipulateAsync(
-                    image,
-                    [{ resize: { width: 1024 } }], // Resize to 1024px width
-                    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-                );
-
+                // The image has already been normalized, perfectly cropped, and compressed at high quality
+                // by CustomImageCropper. We upload it directly to prevent double-compression quality loss.
                 formData.append('image', {
-                    uri: manipResult.uri,
+                    uri: image,
                     type: 'image/jpeg',
                     name: 'homework.jpg',
                 });
@@ -129,7 +126,9 @@ const HomeworkSolverScreen = ({ navigation }) => {
                         // Auto-scroll to bottom (Optimization)
                         scrollRef.current?.scrollToEnd({ animated: true });
                     } else if (chunk.status === 'error') {
-                        Alert.alert('AI Busy', 'The AI is currently handling too many requests (Error 429). Please try again in a few minutes.');
+                        setLoading(false);
+                        const errorMsg = chunk.message || 'The AI is currently handling too many requests. Please try again in a few minutes.';
+                        Alert.alert('AI Error', errorMsg);
                     }
                 },
                 () => {
@@ -209,6 +208,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
                                 <Ionicons name="close" size={20} color="#fff" />
                             </TouchableOpacity>
                         )}
+
+                        {image && originalImage && (
+                            <TouchableOpacity style={styles.reCropButton} onPress={() => setCropperVisible(true)}>
+                                <Ionicons name="crop" size={16} color="#fff" />
+                                <Text style={styles.reCropText}>Adjust Crop</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {!image && (
@@ -244,9 +250,8 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 </View>
 
                 {/* Language Selector */}
-                {(image || userText.trim() !== '') && (
-                    <View style={styles.languageContainer}>
-                        <Text style={styles.languageTitle}>Answer Language:</Text>
+                <View style={styles.languageContainer}>
+                    <Text style={styles.languageTitle}>Answer Language:</Text>
                         <View style={styles.languageRow}>
                             {['English', 'Hindi', 'Marathi'].map((lang) => (
                                 <TouchableOpacity
@@ -259,12 +264,10 @@ const HomeworkSolverScreen = ({ navigation }) => {
                             ))}
                         </View>
                     </View>
-                )}
 
                 {/* Solve Button */}
-                {(image || userText.trim() !== '') && (
-                    <TouchableOpacity
-                        style={[styles.solveButton, { opacity: loading ? 0.7 : 1 }]}
+                <TouchableOpacity
+                    style={[styles.solveButton, { opacity: loading ? 0.7 : 1 }]}
                         onPress={handleSolve}
                         disabled={loading}
                     >
@@ -282,7 +285,6 @@ const HomeworkSolverScreen = ({ navigation }) => {
                             )}
                         </LinearGradient>
                     </TouchableOpacity>
-                )}
 
                 {/* Solution Display */}
                 {solution ? (
@@ -305,6 +307,19 @@ const HomeworkSolverScreen = ({ navigation }) => {
                     </View>
                 ) : null}
             </ScrollView>
+
+            <CustomImageCropper
+                visible={cropperVisible}
+                imageUri={originalImage}
+                onCropComplete={(croppedUri) => {
+                    setImage(croppedUri);
+                    setCropperVisible(false);
+                }}
+                onCancel={() => {
+                    setCropperVisible(false);
+                    if (!image) setOriginalImage(null);
+                }}
+            />
         </View>
     );
 };
@@ -358,7 +373,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     imageWrapper: {
-        height: 320,
+        height: 220,
         borderRadius: 24,
         backgroundColor: '#f8fafc',
         overflow: 'hidden',
@@ -376,12 +391,12 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 40,
+        padding: 20,
     },
     iconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         backgroundColor: '#eef2ff',
         justifyContent: 'center',
         alignItems: 'center',
@@ -591,7 +606,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
         borderRadius: 16,
         padding: 15,
-        minHeight: 100,
+        minHeight: 80,
         textAlignVertical: 'top',
         fontSize: 16,
         color: '#334155',

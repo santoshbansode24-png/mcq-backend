@@ -69,10 +69,10 @@ $sysInstruction .= "Carefully read the provided question or image. Identify the 
 $sysInstruction .= "🧠 **CRITICAL REASONING RULE (Chain of Thought):** If the problem involves Math, Physics, or Logic, you MUST calculate the answer step-by-step internally. Validate every intermediate calculation. Do NOT skip algebraic steps. Double-check your final arithmetic before presenting the final answer to prevent hallucinations.\n";
 $sysInstruction .= "Your response MUST follow this exact format:\n";
 $sysInstruction .= "🎯 **Question Recognized:** (Write the exact original question here in its ORIGINAL language. Do NOT translate it).\n";
-$sysInstruction .= "💡 **Core Concept (Full Definition):** (Explain the underlying rule, formula, or concept simply and thoroughly in " . $language . ").\n";
-$sysInstruction .= "📝 **Step-by-Step Solution:** (Break the solution down into very small, numbered steps. Explain *why* you are doing each step, not just *what* you are doing. Be highly detailed and EXHAUSTIVE).\n";
-$sysInstruction .= "✅ **Final Answer:** (State the final result clearly in **bold**).\n";
-$sysInstruction .= "Use Markdown for readability. Use bullet points and bold text to make it easy to scan. NEVER cut your answer short; always provide a complete, full explanation.";
+$sysInstruction .= "💡 **Core Concept:** (Briefly state the underlying rule, formula, or concept in 1-2 sentences in " . $language . ").\n";
+$sysInstruction .= "📝 **Step-by-Step Solution:** (Provide the solution in clear, numbered steps. Keep the explanation for each step strictly to 1-2 short sentences. Be highly specific and focus ONLY on the mechanics of solving the problem. Do not write long paragraphs).\n";
+$sysInstruction .= "✅ **Final Answer:** (State the final result clearly in **bold**, without any extra fluff or concluding remarks).\n";
+$sysInstruction .= "Use Markdown for readability. Use bullet points and bold text. Keep your entire response balanced: highly specific, directly answering the question, neither too long nor too short. DO NOT add conversational filler like 'Here is the solution' or 'Hope this helps'.";
 
 $parts = [['text' => $prompt]];
 
@@ -138,19 +138,28 @@ try {
         ]
     ];
 
-    $ch = curl_init($apiUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-
+    $maxRetries = 3;
+    $retryDelay = 5; // Start with 5 seconds delay
     $fullReply = "";
     $tokensUsed = 0;
     $apiError = "";
-    $buffer = "";
+    $httpCode = 0;
+    $curlError = "";
+
+    for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+
+        $fullReply = "";
+        $tokensUsed = 0;
+        $apiError = "";
+        $buffer = "";
 
     curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$fullReply, &$tokensUsed, &$apiError, &$buffer) {
         $dataLength = strlen($data);
@@ -202,11 +211,22 @@ try {
         return $dataLength;
     });
 
-    if (ob_get_level()) ob_end_flush();
-    $result = curl_exec($ch);
-    $curlError = curl_error($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+        if (ob_get_level()) ob_end_flush();
+        $result = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // If it's a 429 Quota Error, we silently wait and retry instead of failing
+        if ($httpCode === 429 && $attempt < $maxRetries) {
+            sleep($retryDelay);
+            $retryDelay *= 2; // Exponential backoff (5s, 10s)
+            continue;
+        }
+
+        // Break out of the loop if successful or if it's a different error
+        break;
+    }
 
     // If cURL fails completely (e.g., DNS issue or strict 120s timeout)
     if ($result === false && !empty($curlError)) {

@@ -202,6 +202,7 @@ try {
             <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
             <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
+            <li><a href="../api/ai_billing_audit.php" target="_blank"><i class="fa-solid fa-receipt"></i> AI Billing</a></li>
         </ul>
     </nav>
     
@@ -268,7 +269,13 @@ try {
             <a href="ai_settings.php" class="stat-card ai-card" style="text-decoration: none;">
                 <div class="icon"><i class="fa-solid fa-robot"></i></div>
                 <div class="label">AI Settings</div>
-                <div class="value" style="font-size: 20px;">Manage Limits</div>
+                <div class="value" style="font-size: 20px;">Limits</div>
+            </a>
+
+            <a href="../api/ai_billing_audit.php" target="_blank" class="stat-card ai-card" style="text-decoration: none; border-color: #059669; background: #ecfdf5;">
+                <div class="icon" style="background: #d1fae5; color: #059669;"><i class="fa-solid fa-receipt"></i></div>
+                <div class="label" style="color: #059669;">AI Billing</div>
+                <div class="value" style="font-size: 20px; color: #065f46;">View Audit</div>
             </a>
         </div>
         

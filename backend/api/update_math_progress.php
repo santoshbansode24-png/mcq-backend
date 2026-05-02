@@ -49,7 +49,7 @@ try {
         $stmt = $pdo->prepare(
             "UPDATE users 
              SET mental_math_level = ? 
-             WHERE id = ? 
+             WHERE user_id = ? 
              AND (mental_math_level IS NULL OR mental_math_level < ?)"
         );
         $stmt->execute([$new_level, $user_id, $new_level]);
@@ -57,7 +57,7 @@ try {
         $stmt = $pdo->prepare(
             "UPDATE users 
              SET abacus_level = ? 
-             WHERE id = ? 
+             WHERE user_id = ? 
              AND (abacus_level IS NULL OR abacus_level < ?)"
         );
         $stmt->execute([$new_level, $user_id, $new_level]);

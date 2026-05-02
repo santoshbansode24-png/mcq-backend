@@ -69,19 +69,29 @@ try {
     $tasks_per_day = ceil($count / $remaining_days);
 
     $current_task_idx = 0;
+    $updates_by_date = [];
+
     for ($d = 0; $d < $remaining_days; $d++) {
         $new_date = date('Y-m-d', strtotime("+$d days", $today->getTimestamp()));
+        $date_task_ids = [];
         
         for ($t = 0; $t < $tasks_per_day; $t++) {
-            if ($current_task_idx >= $count) break 2; // Break both loops if all tasks moved
-            
-            $tid = $missed_tasks[$current_task_idx];
-            
-            $stmt_update = $pdo->prepare("UPDATE study_tasks SET task_date = ? WHERE task_id = ?");
-            $stmt_update->execute([$new_date, $tid]);
-            
+            if ($current_task_idx >= $count) break;
+            $date_task_ids[] = $missed_tasks[$current_task_idx];
             $current_task_idx++;
         }
+
+        if (!empty($date_task_ids)) {
+            $updates_by_date[$new_date] = $date_task_ids;
+        }
+        if ($current_task_idx >= $count) break;
+    }
+
+    // Execute bulk updates per date
+    foreach ($updates_by_date as $new_date => $task_ids) {
+        $in_clause = implode(',', array_map('intval', $task_ids));
+        $stmt_update = $pdo->prepare("UPDATE study_tasks SET task_date = ? WHERE task_id IN ($in_clause)");
+        $stmt_update->execute([$new_date]);
     }
 
     $pdo->commit();

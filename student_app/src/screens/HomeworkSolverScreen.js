@@ -128,8 +128,8 @@ const HomeworkSolverScreen = ({ navigation }) => {
                 (chunk) => {
                     if (chunk.status === 'success' && chunk.chunk) {
                         setSolution(prev => prev + chunk.chunk);
-                        // Auto-scroll to bottom (Optimization)
-                        scrollRef.current?.scrollToEnd({ animated: true });
+                        // Auto-scroll to bottom (Optimization: disabled animation for smoother rapid streaming)
+                        scrollRef.current?.scrollToEnd({ animated: false });
                     } else if (chunk.status === 'error') {
                         setLoading(false);
                         const errorMsg = chunk.message || 'The AI is currently handling too many requests. Please try again in a few minutes.';
@@ -223,11 +223,10 @@ const HomeworkSolverScreen = ({ navigation }) => {
                     </View>
 
                     {!image && (
-                        <View style={[styles.buttonRow, userText.trim().length > 0 && { opacity: 0.5 }]}>
+                        <View style={styles.buttonRow}>
                             <TouchableOpacity 
                                 style={styles.actionButton} 
                                 onPress={takePhoto}
-                                disabled={userText.trim().length > 0}
                             >
                                 <LinearGradient colors={['#eef2ff', '#e0e7ff']} style={styles.buttonGradient}>
                                     <Ionicons name="camera" size={24} color="#4f46e5" />
@@ -237,7 +236,6 @@ const HomeworkSolverScreen = ({ navigation }) => {
                             <TouchableOpacity 
                                 style={styles.actionButton} 
                                 onPress={pickImage}
-                                disabled={userText.trim().length > 0}
                             >
                                 <LinearGradient colors={['#e0f2fe', '#bae6fd']} style={styles.buttonGradient}>
                                     <Ionicons name="images" size={24} color="#0284c7" />
@@ -250,16 +248,15 @@ const HomeworkSolverScreen = ({ navigation }) => {
 
                 {/* Text Input Area */}
                 <View style={styles.textInputContainer}>
-                    <Text style={styles.inputLabel}>Or type your question here:</Text>
+                    <Text style={styles.inputLabel}>{image ? "Add specific instructions (Optional):" : "Or type your question here:"}</Text>
                     <TextInput
-                        style={[styles.textInput, image && { backgroundColor: '#f1f5f9', color: '#94a3b8' }]}
-                        placeholder={image ? "Text disabled (Image uploaded)" : "e.g. What is the Pythagorean theorem?"}
+                        style={styles.textInput}
+                        placeholder={image ? "e.g. Explain the 3rd step, Translate the second line..." : "e.g. What is the Pythagorean theorem?"}
                         placeholderTextColor="#94a3b8"
                         multiline
                         numberOfLines={4}
                         value={userText}
                         onChangeText={setUserText}
-                        editable={!image}
                     />
                 </View>
 

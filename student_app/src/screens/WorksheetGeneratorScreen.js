@@ -22,6 +22,53 @@ import { fetchSubjects } from '../api/subjects';
 import { fetchChapters } from '../api/chapters';
 import { fetchMCQs, fetchFlashcards, fetchQuickRevision } from '../api/content';
 
+// Memoized Subject Card
+const SubjectCard = React.memo(({ subject, index, isSelected, onPress }) => {
+    const gradients = [
+        ['#FF6B6B', '#FFD93D'],  // Vibrant Coral to Golden Yellow
+        ['#4ECDC4', '#44A8FF'],  // Turquoise to Sky Blue
+        ['#A8E6CF', '#56CCF2'],  // Mint Green to Ocean Blue
+        ['#FF8C42', '#FF3E96'],  // Orange to Hot Pink
+        ['#667EEA', '#764BA2'],  // Indigo to Purple
+        ['#F093FB', '#F5576C']   // Pink to Coral Red
+    ];
+    const colors = gradients[index % gradients.length];
+
+    return (
+        <TouchableOpacity
+            style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
+            onPress={() => onPress(subject)}
+            activeOpacity={0.8}
+        >
+            <LinearGradient
+                colors={isSelected ? ['#A855F7', '#C026D3'] : colors}
+                style={styles.subjectGradient}
+            >
+                <Text style={styles.subjectInitial}>{subject.subject_name.charAt(0)}</Text>
+                <Text style={styles.subjectName}>{subject.subject_name}</Text>
+                {isSelected && <Text style={styles.checkBadge}>✓</Text>}
+            </LinearGradient>
+        </TouchableOpacity>
+    );
+});
+
+// Memoized Chapter Item
+const ChapterItem = React.memo(({ chapter, isSelected, onPress }) => {
+    return (
+        <TouchableOpacity
+            style={[styles.chapterItem, isSelected && styles.chapterItemSelected]}
+            onPress={() => onPress(chapter.chapter_id)}
+        >
+            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                {isSelected && <Ionicons name="checkmark" size={16} color="white" />}
+            </View>
+            <Text style={[styles.chapterText, isSelected && { color: '#C026D3', fontWeight: 'bold' }]}>
+                {chapter.chapter_name}
+            </Text>
+        </TouchableOpacity>
+    );
+});
+
 const WorksheetGeneratorScreen = ({ navigation, user }) => {
     const { theme, isDarkMode } = useTheme();
 
@@ -107,20 +154,20 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
     };
 
     // Toggles
-    const toggleSubject = (subject) => {
+    const toggleSubject = React.useCallback((subject) => {
         setSelectedSubjects(prev => {
             const exists = prev.find(s => s.subject_id === subject.subject_id);
             if (exists) return prev.filter(s => s.subject_id !== subject.subject_id);
             return [...prev, subject];
         });
-    };
+    }, []);
 
-    const toggleChapter = (chapterId) => {
+    const toggleChapter = React.useCallback((chapterId) => {
         setSelectedChapterIds(prev => {
             if (prev.includes(chapterId)) return prev.filter(id => id !== chapterId);
             return [...prev, chapterId];
         });
-    };
+    }, []);
 
     const selectAllChapters = () => {
         const allIds = chapters.flatMap(group => group.data.map(c => c.chapter_id));
@@ -526,36 +573,15 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                         <ActivityIndicator size="large" color="#C026D3" />
                     ) : (
                         <View style={styles.grid}>
-                            {subjects.map((subject, index) => {
-                                const isSelected = selectedSubjects.find(s => s.subject_id === subject.subject_id);
-                                const gradients = [
-                                    ['#FF6B6B', '#FFD93D'],  // Vibrant Coral to Golden Yellow
-                                    ['#4ECDC4', '#44A8FF'],  // Turquoise to Sky Blue
-                                    ['#A8E6CF', '#56CCF2'],  // Mint Green to Ocean Blue
-                                    ['#FF8C42', '#FF3E96'],  // Orange to Hot Pink
-                                    ['#667EEA', '#764BA2'],  // Indigo to Purple
-                                    ['#F093FB', '#F5576C']   // Pink to Coral Red
-                                ];
-                                const colors = gradients[index % gradients.length];
-
-                                return (
-                                    <TouchableOpacity
-                                        key={subject.subject_id}
-                                        style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
-                                        onPress={() => toggleSubject(subject)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <LinearGradient
-                                            colors={isSelected ? ['#A855F7', '#C026D3'] : colors}
-                                            style={styles.subjectGradient}
-                                        >
-                                            <Text style={styles.subjectInitial}>{subject.subject_name.charAt(0)}</Text>
-                                            <Text style={styles.subjectName}>{subject.subject_name}</Text>
-                                            {isSelected && <Text style={styles.checkBadge}>✓</Text>}
-                                        </LinearGradient>
-                                    </TouchableOpacity>
-                                );
-                            })}
+                            {subjects.map((subject, index) => (
+                                <SubjectCard
+                                    key={subject.subject_id}
+                                    subject={subject}
+                                    index={index}
+                                    isSelected={!!selectedSubjects.find(s => s.subject_id === subject.subject_id)}
+                                    onPress={toggleSubject}
+                                />
+                            ))}
                         </View>
                     )}
                 </View>
@@ -577,23 +603,14 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                                 {chapters.map((group) => (
                                     <View key={group.subjectId} style={{ marginBottom: 15 }}>
                                         <Text style={styles.groupTitle}>{group.subjectName}</Text>
-                                        {group.data.map(chapter => {
-                                            const isSelected = selectedChapterIds.includes(chapter.chapter_id);
-                                            return (
-                                                <TouchableOpacity
-                                                    key={chapter.chapter_id}
-                                                    style={[styles.chapterItem, isSelected && styles.chapterItemSelected]}
-                                                    onPress={() => toggleChapter(chapter.chapter_id)}
-                                                >
-                                                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                                                        {isSelected && <Ionicons name="checkmark" size={16} color="white" />}
-                                                    </View>
-                                                    <Text style={[styles.chapterText, isSelected && { color: '#C026D3', fontWeight: 'bold' }]}>
-                                                        {chapter.chapter_name}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
+                                        {group.data.map(chapter => (
+                                            <ChapterItem
+                                                key={chapter.chapter_id}
+                                                chapter={chapter}
+                                                isSelected={selectedChapterIds.includes(chapter.chapter_id)}
+                                                onPress={toggleChapter}
+                                            />
+                                        ))}
                                     </View>
                                 ))}
                             </View>

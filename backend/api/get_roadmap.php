@@ -32,6 +32,7 @@ try {
     // Group by date
     $roadmap = [];
     $today   = date('Y-m-d');
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
     foreach ($tasks as $task) {
         $date = $task['task_date'];
         if (!isset($roadmap[$date])) {
@@ -39,7 +40,7 @@ try {
                 'date'         => $date,
                 'display_date' => date('D, M j', strtotime($date)),
                 'is_today'     => ($date === $today),
-                'is_yesterday' => ($date === date('Y-m-d', strtotime('-1 day'))),
+                'is_yesterday' => ($date === $yesterday),
                 'tasks'        => []
             ];
         }

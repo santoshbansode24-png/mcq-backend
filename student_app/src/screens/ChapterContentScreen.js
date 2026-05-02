@@ -331,6 +331,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
             if (navigation.unregisterBackInterceptor) {
                 navigation.unregisterBackInterceptor();
             }
+            // Cleanup TTS on unmount
+            Speech.stop();
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

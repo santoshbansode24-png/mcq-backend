@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Animated, Vibration, Dimensions
+    View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { MathQuestionGenerator } from '../../utils/MathQuestionGenerator';
 import { Ionicons } from '@expo/vector-icons';
@@ -123,9 +124,10 @@ const ClassicMathTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, so
             setScore(newScore);
             scoreRef.current = newScore; // keep ref in sync
             triggerPop();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             playSound('correct');
         } else {
-            Vibration.vibrate(100);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             triggerShake();
             playSound('wrong');
         }
@@ -369,4 +371,4 @@ const styles = StyleSheet.create({
     resultMessage: { fontSize: 16, color: '#666', marginBottom: 20, textAlign: 'center' },
 });
 
-export default ClassicMathTab;
+export default React.memo(ClassicMathTab);

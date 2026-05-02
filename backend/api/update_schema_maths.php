@@ -23,7 +23,7 @@ try {
 
     // Add index for fast lookups (ignores if already exists)
     try {
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_users_math_levels ON users (id, mental_math_level, abacus_level)");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_users_math_levels ON users (user_id, mental_math_level, abacus_level)");
         echo "<p style='color:green'>✅ Index on math level columns added/verified.</p>";
     } catch (PDOException $idxErr) {
         echo "<p style='color:orange'>⚠️ Index already exists or not supported: " . $idxErr->getMessage() . "</p>";

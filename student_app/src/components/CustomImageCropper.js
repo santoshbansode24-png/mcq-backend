@@ -14,6 +14,7 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
     const [cropBox, setCropBox] = useState({ x: 50, y: 100, width: 220, height: 220 });
     const [processing, setProcessing] = useState(false);
     const actualDimensionsRef = useRef(null);
+    const imageBoundsRef = useRef(null);
 
     React.useEffect(() => {
         if (visible && imageUri) {
@@ -43,6 +44,9 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             if (w > 2048 || h > 2048) {
                 if (w > h) actions.push({ resize: { width: 2048 } });
                 else actions.push({ resize: { height: 2048 } });
+            } else {
+                // FORCE a resize even if small to guarantee EXIF is stripped and baked on all Android devices
+                actions.push({ resize: { width: w } });
             }
 
             const result = await ImageManipulator.manipulateAsync(uri, actions, { compress: 1, format: ImageManipulator.SaveFormat.JPEG });
@@ -69,15 +73,16 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
     };
 
     const constrain = (box) => {
-        const L = layoutRef.current;
-        if (!L) return box;
+        const bounds = imageBoundsRef.current;
+        if (!bounds) return box;
         let { x, y, width, height } = box;
-        if (width < 60) width = 60;
-        if (height < 60) height = 60;
-        if (x < 0) x = 0;
-        if (y < 0) y = 0;
-        if (x + width > L.width)  { x = L.width - width;  if (x < 0) { x = 0; width = L.width; } }
-        if (y + height > L.height){ y = L.height - height; if (y < 0) { y = 0; height = L.height; } }
+        const MIN_SIZE = 60;
+        if (width < MIN_SIZE) width = MIN_SIZE;
+        if (height < MIN_SIZE) height = MIN_SIZE;
+        if (x < bounds.x) x = bounds.x;
+        if (y < bounds.y) y = bounds.y;
+        if (x + width > bounds.x + bounds.width)  { x = bounds.x + bounds.width - width;  if (x < bounds.x) { x = bounds.x; width = bounds.width; } }
+        if (y + height > bounds.y + bounds.height){ y = bounds.y + bounds.height - height; if (y < bounds.y) { y = bounds.y; height = bounds.height; } }
         return { x, y, width, height };
     };
 
@@ -85,9 +90,34 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
         const { width, height } = e.nativeEvent.layout;
         layoutRef.current = { width, height };
         setLayout({ width, height });
-        const w = width * 0.8;
-        const h = Math.min(height * 0.5, w * 0.6); // Start with a landscape-ish box for text
-        const box = constrain({ x: (width - w) / 2, y: (height - h) / 2, width: w, height: h });
+
+        let rWidth = width;
+        let rHeight = height;
+        let oX = 0;
+        let oY = 0;
+
+        if (actualDimensionsRef.current) {
+            const actualWidth = actualDimensionsRef.current.w;
+            const actualHeight = actualDimensionsRef.current.h;
+            const imageRatio = actualWidth / actualHeight;
+            const layoutRatio = width / height;
+
+            if (imageRatio > layoutRatio) {
+                rWidth = width;
+                rHeight = width / imageRatio;
+                oY = (height - rHeight) / 2;
+            } else {
+                rHeight = height;
+                rWidth = height * imageRatio;
+                oX = (width - rWidth) / 2;
+            }
+        }
+
+        imageBoundsRef.current = { x: oX, y: oY, width: rWidth, height: rHeight };
+
+        const w = rWidth * 0.8;
+        const h = Math.min(rHeight * 0.5, w * 0.6); // Start with a landscape-ish box for text
+        const box = constrain({ x: oX + (rWidth - w) / 2, y: oY + (rHeight - h) / 2, width: w, height: h });
         updateBox(box);
     };
 
@@ -163,12 +193,12 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             }
 
             // Now apply global bounds
-            const L = layoutRef.current;
-            if (L) {
-                if (newX < 0) { newW += newX; newX = 0; }
-                if (newY < 0) { newH += newY; newY = 0; }
-                if (newX + newW > L.width) newW = L.width - newX;
-                if (newY + newH > L.height) newH = L.height - newY;
+            const bounds = imageBoundsRef.current;
+            if (bounds) {
+                if (newX < bounds.x) { newW -= (bounds.x - newX); newX = bounds.x; }
+                if (newY < bounds.y) { newH -= (bounds.y - newY); newY = bounds.y; }
+                if (newX + newW > bounds.x + bounds.width) newW = bounds.x + bounds.width - newX;
+                if (newY + newH > bounds.y + bounds.height) newH = bounds.y + bounds.height - newY;
                 
                 // Final safety
                 if (newW < MIN_SIZE) newW = MIN_SIZE;
@@ -211,57 +241,34 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             
             const L = layoutRef.current;
             const cb = cropBoxRef.current;
+            const bounds = imageBoundsRef.current;
             
-            // Calculate rendered dimensions inside the "contain" view
-            const imageRatio = actualWidth / actualHeight;
-            const layoutRatio = L.width / L.height;
-            
-            let renderedWidth, renderedHeight, offsetX, offsetY;
-
-            if (imageRatio > layoutRatio) {
-                // Image fills width, black bars on top/bottom
-                renderedWidth = L.width;
-                renderedHeight = L.width / imageRatio;
-                offsetX = 0;
-                offsetY = (L.height - renderedHeight) / 2;
-            } else {
-                // Image fills height, black bars on left/right
-                renderedHeight = L.height;
-                renderedWidth = L.height * imageRatio;
-                offsetX = (L.width - renderedWidth) / 2;
-                offsetY = 0;
-            }
+            if (!bounds) return;
 
             // Calculate scale from rendered pixels to actual image pixels
-            const scale = actualWidth / renderedWidth;
+            const scale = actualWidth / bounds.width;
 
             // Map crop box coordinates to actual image coordinates
             // Use Math.round to avoid floating point issues with ImageManipulator
-            let originX = Math.round((cb.x - offsetX) * scale);
-            let originY = Math.round((cb.y - offsetY) * scale);
-            let width = Math.round(cb.width * scale);
-            let height = Math.round(cb.height * scale);
+            let originX = Math.round((cb.x - bounds.x) * scale);
+            let originY = Math.round((cb.y - bounds.y) * scale);
+            let cropWidth = Math.round(cb.width * scale);
+            let cropHeight = Math.round(cb.height * scale);
 
             // Clamp and ensure valid values
-            if (originX < 0) {
-                width += originX; // reduce width
-                originX = 0;
-            }
-            if (originY < 0) {
-                height += originY; // reduce height
-                originY = 0;
-            }
+            if (originX < 0) originX = 0;
+            if (originY < 0) originY = 0;
 
             // Ensure width/height don't exceed image bounds
-            if (originX + width > actualWidth) width = actualWidth - originX;
-            if (originY + height > actualHeight) height = actualHeight - originY;
+            if (originX + cropWidth > actualWidth) cropWidth = actualWidth - originX;
+            if (originY + cropHeight > actualHeight) cropHeight = actualHeight - originY;
 
             // Final safety check - if box is outside or zero
-            if (width <= 0 || height <= 0) {
-                originX = 0; originY = 0; width = actualWidth; height = actualHeight;
+            if (cropWidth <= 0 || cropHeight <= 0) {
+                originX = 0; originY = 0; cropWidth = actualWidth; cropHeight = actualHeight;
             }
 
-            const cropAction = { originX, originY, width, height };
+            const cropAction = { originX, originY, width: cropWidth, height: cropHeight };
 
             const result = await ImageManipulator.manipulateAsync(
                 workingUri,
@@ -300,7 +307,7 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                 </View>
 
                 {/* Image + Crop Overlay */}
-                <View style={styles.cropContainer}>
+                <View style={styles.cropContainer} pointerEvents={processing ? 'none' : 'auto'}>
                     {preparing ? (
                         <View style={styles.loaderContainer}>
                             <ActivityIndicator size="large" color="#FFD700" />

@@ -246,7 +246,12 @@ const HomeScreen = ({ user, navigation, route }) => {
     useEffect(() => {
         const unsubscribe = SmartCacheService.subscribe((status) => {
             if (status.isSyncing !== undefined) setIsSyncing(status.isSyncing);
-            if (status.isFullySynced !== undefined) setIsFullySynced(status.isFullySynced);
+            if (status.isFullySynced !== undefined) {
+                setIsFullySynced(status.isFullySynced);
+                if (status.isFullySynced) {
+                    checkVersion();
+                }
+            }
         });
 
         checkVersion();

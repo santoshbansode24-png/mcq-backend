@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Animated, Vibration, Dimensions
+    View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -125,6 +126,7 @@ const AbacusTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, sounds 
         const isCorrect = parseInt(userAnswer, 10) === correctAnswer;
         
         if (isCorrect) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             playSound('levelup');
             if (confettiRef.current) confettiRef.current.start();
             setGameState('RESULT');
@@ -141,7 +143,7 @@ const AbacusTab = ({ userLevel, maxLevelAllowed, onProgressUpdate, user, sounds 
             }
             
         } else {
-            Vibration.vibrate(100);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             playSound('wrong');
             setGameState('RESULT');
         }
@@ -306,4 +308,4 @@ const styles = StyleSheet.create({
     keyTxt: { fontSize: 28, fontWeight: '700', color: '#1e293b' }
 });
 
-export default AbacusTab;
+export default React.memo(AbacusTab);

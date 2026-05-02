@@ -333,25 +333,12 @@ const FlashcardsScreen = ({ navigation, route }) => {
         outputRange: [0, 1]
     });
 
-    // Z-Index Optimization for proper touch handling
-    const frontZIndex = flipAnim.interpolate({
-        inputRange: [0, 90],
-        outputRange: [1, 0] // Front is clickable when 0-90
-    });
-
-    const backZIndex = flipAnim.interpolate({
-        inputRange: [90, 180],
-        outputRange: [0, 1] // Back is clickable when 90-180
-    });
-
-
     const frontAnimatedStyle = {
         transform: [
             { perspective: 1000 },
             { rotateY: frontInterpolate }
         ],
-        opacity: frontOpacity,
-        zIndex: frontZIndex
+        opacity: frontOpacity
     };
 
     const backAnimatedStyle = {
@@ -359,8 +346,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
             { perspective: 1000 },
             { rotateY: backInterpolate }
         ],
-        opacity: backOpacity,
-        zIndex: backZIndex
+        opacity: backOpacity
     };
 
     // Get gradient colors for current card

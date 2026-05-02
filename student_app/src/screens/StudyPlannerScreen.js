@@ -226,7 +226,8 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             if (statusRes.data.status === 'success' && statusRes.data.is_configured) {
                 configured = true;
                 if (statusRes.data.exam_date && statusRes.data.exam_date !== '0000-00-00' && statusRes.data.exam_date !== '1970-01-01') {
-                    fetchedExamDate = new Date(statusRes.data.exam_date);
+                    const [y, m, d] = statusRes.data.exam_date.split('-');
+                    fetchedExamDate = new Date(y, m - 1, d);
                 }
             }
             setExamDate(fetchedExamDate);
@@ -237,10 +238,12 @@ const StudyPlannerScreen = ({ user, navigation }) => {
                 const fullRoadmap = roadmapRes.data.data;
                 setRoadmap(fullRoadmap);
 
-                const todayStr = new Date().toISOString().split('T')[0];
-                const yesterdayDate = new Date();
-                yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-                const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+                const now = new Date();
+                const tzOffset = now.getTimezoneOffset() * 60000;
+                const todayStr = new Date(now.getTime() - tzOffset).toISOString().split('T')[0];
+                
+                const yesterdayDate = new Date(now.getTime() - 86400000);
+                const yesterdayStr = new Date(yesterdayDate.getTime() - tzOffset).toISOString().split('T')[0];
 
                 let todayTasks = [], yesterdayTasks = [];
                 fullRoadmap.forEach(d => {
@@ -278,10 +281,12 @@ const StudyPlannerScreen = ({ user, navigation }) => {
             if (res.data.status === 'success') {
                 setRoadmap(res.data.data);
                 
-                const todayStr = new Date().toISOString().split('T')[0];
-                const yesterdayDate = new Date();
-                yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-                const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+                const now = new Date();
+                const tzOffset = now.getTimezoneOffset() * 60000;
+                const todayStr = new Date(now.getTime() - tzOffset).toISOString().split('T')[0];
+                
+                const yesterdayDate = new Date(now.getTime() - 86400000);
+                const yesterdayStr = new Date(yesterdayDate.getTime() - tzOffset).toISOString().split('T')[0];
 
                 let todayTasks = [], yesterdayTasks = [];
                 res.data.data.forEach(d => {
@@ -355,9 +360,12 @@ const StudyPlannerScreen = ({ user, navigation }) => {
         if (!user || !user.user_id) return;
         setLoading(true);
         try {
+            const tzOffset = newDate.getTimezoneOffset() * 60000;
+            const localDateStr = new Date(newDate.getTime() - tzOffset).toISOString().split('T')[0];
+
             const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {
                 user_id: user.user_id,
-                exam_date: newDate.toISOString().split('T')[0],
+                exam_date: localDateStr,
                 subject_ids: selectedSubjects,
                 chapter_ids: selectedChapters,
             });
@@ -386,9 +394,12 @@ const StudyPlannerScreen = ({ user, navigation }) => {
         if (!user || !user.user_id) return;
         setLoading(true);
         try {
+            const tzOffset = examDate.getTimezoneOffset() * 60000;
+            const localDateStr = new Date(examDate.getTime() - tzOffset).toISOString().split('T')[0];
+            
             const res = await axios.post(`${config.API_URL}/setup_syllabus_path.php`, {
                 user_id: user.user_id,
-                exam_date: examDate.toISOString().split('T')[0],
+                exam_date: localDateStr,
                 subject_ids: selectedSubjects,
                 chapter_ids: selectedChapters,
             });

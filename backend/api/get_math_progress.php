@@ -32,7 +32,7 @@ if ($user_id <= 0) {
 try {
     /** @var PDO $pdo */
     // Optimization: Only select necessary columns
-    $stmt = $pdo->prepare("SELECT mental_math_level, abacus_level FROM users WHERE id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT mental_math_level, abacus_level FROM users WHERE user_id = ? LIMIT 1");
     $stmt->execute([$user_id]);
     $progress = $stmt->fetch(PDO::FETCH_ASSOC);
 

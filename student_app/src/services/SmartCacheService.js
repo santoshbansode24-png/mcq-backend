@@ -156,6 +156,16 @@ export const SmartCacheService = {
                     classId: classId,
                     status: 'completed'
                 }));
+                // UPDATE LOCAL VERSION TO CLEAR 'HAS UPDATE' IN UI
+                if (savedUser) {
+                    const user = JSON.parse(savedUser);
+                    if (user && user.board_type) {
+                        const latestVer = await SmartCacheService.checkContentVersion(user.board_type);
+                        if (latestVer) {
+                            await AsyncStorage.setItem(`@local_ver_${user.board_type}`, latestVer.toString());
+                        }
+                    }
+                }
                 // console.log(`[SmartCache] ✅ Bulk sync completed for class ${classId}`);
             }
         } catch (error) {

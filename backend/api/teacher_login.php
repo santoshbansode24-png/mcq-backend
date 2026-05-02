@@ -1,24 +1,17 @@
 <?php
 /**
  * Teacher Login API
- * Veeru
- * 
- * Endpoint: POST /api/teacher_login.php
- * Purpose: Authenticate teacher users
  */
 
 require_once 'cors_middleware.php';
 require_once '../config/db.php';
 
-// Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendResponse('error', 'Only POST requests are allowed. Received: ' . $_SERVER['REQUEST_METHOD'], null, 405);
+    sendResponse('error', 'Only POST requests are allowed', null, 405);
 }
 
-// Get JSON input
 $input = getJsonInput();
 
-// Validate required fields
 $required = ['email', 'password'];
 $missing = validateRequired($input, $required);
 
@@ -26,58 +19,34 @@ if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
-// Sanitize inputs
 $email = sanitizeInput($input['email']);
 $password = $input['password'];
 
-// Validate email format (Skip strict email check if it looks like a phone number)
-// Simple check: If it has no '@', assume it's a mobile number, otherwise validate email
-if (strpos($email, '@') !== false) {
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        sendResponse('error', 'Invalid email format', null, 400);
-    }
-}
-
 try {
-    // Query database for user (by Email OR Mobile and user_type = 'teacher')
-    $stmt = $pdo->prepare("
-        SELECT user_id, name, email, password, user_type, subscription_status 
-        FROM users 
-        WHERE (email = ? OR mobile = ?) AND user_type = 'teacher'
-    ");
-    
-    // Pass the same input twice to check against both columns
-    $stmt->execute([$email, $email]); 
-    $user = $stmt->fetch();
-    
-    // Check if user exists
-    if (!$user) {
-        sendResponse('error', 'Invalid email/mobile or password', null, 401);
+    $stmt = $pdo->prepare("SELECT id, name, email, password_hash, school_name FROM teachers WHERE email = ?");
+    $stmt->execute([$email]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$teacher) {
+        sendResponse('error', 'Invalid email or password', null, 401);
     }
-    
-    // Verify password
-    if (!password_verify($password, $user['password'])) {
-        sendResponse('error', 'Invalid email/mobile or password', null, 401);
+
+    if (!password_verify($password, $teacher['password_hash'])) {
+        sendResponse('error', 'Invalid email or password', null, 401);
     }
-    
-    // Remove password from response
-    unset($user['password']);
-    
-    // Get teacher statistics
-    $statsStmt = $pdo->prepare("
-        SELECT 
-            (SELECT COUNT(DISTINCT class_id) FROM notifications WHERE teacher_id = ?) as total_classes,
-            (SELECT COUNT(*) FROM notifications WHERE teacher_id = ?) as notifications_sent
-    ");
-    $statsStmt->execute([$user['user_id'], $user['user_id']]);
-    $stats = $statsStmt->fetch();
-    
-    $user['stats'] = $stats;
-    
-    // Success response
-    sendResponse('success', 'Login successful', $user, 200);
-    
+
+    // Get assigned classes
+    $classStmt = $pdo->prepare("SELECT class_id FROM teacher_classes WHERE teacher_id = ?");
+    $classStmt->execute([$teacher['id']]);
+    $classes = $classStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    unset($teacher['password_hash']);
+    $teacher['classes'] = $classes;
+    $teacher['user_type'] = 'teacher';
+
+    sendResponse('success', 'Login successful', $teacher, 200);
+
 } catch (PDOException $e) {
-    sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);
+    sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
 }
 ?>

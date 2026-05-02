@@ -47,6 +47,7 @@ import AIPdfNotesScreen from './AIPdfNotesScreen';
 
 import StudyPlannerScreen from './StudyPlannerScreen';
 import StudyDetailScreen from './StudyDetailScreen';
+import ClassUpdatesScreen from './ClassUpdatesScreen';
 
 // --- Tab Button Component ---
 const TabButton = React.memo(({ icon, label, isActive, onPress, theme }) => {
@@ -227,7 +228,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         const mapping = {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
-            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes']
+            'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'],
+            'ClassUpdates': ['ClassUpdates']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;
@@ -241,8 +243,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             return;
         }
 
-        // Check if we are just switching tabs (Home, AI, Subjects)
-        const isRootTab = ['Home', 'Subjects', 'AI'].includes(screen);
+        // Check if we are just switching tabs (Home, AI, Subjects, ClassUpdates)
+        const isRootTab = ['Home', 'Subjects', 'AI', 'ClassUpdates'].includes(screen);
 
         if (isRootTab) {
             // Reset stack if switching to a root tab
@@ -358,6 +360,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'AIPdfWorksheet': return <AIPdfWorksheetScreen {...commonProps} />;
             case 'StudyDetail': return <StudyDetailScreen {...commonProps} />;
             case 'AIPdfNotes': return <AIPdfNotesScreen {...commonProps} />;
+            case 'ClassUpdates': return <ClassUpdatesScreen {...commonProps} />;
             default: return <HomeScreen {...commonProps} />;
         }
     };
@@ -366,6 +369,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         { key: 'Home', icon: 'home', label: t('home') },
         { key: 'Subjects', icon: 'book', label: t('subject') },
         { key: 'AI', icon: 'sparkles', label: t('aiTools') },
+        { key: 'ClassUpdates', icon: 'school', label: 'Updates' },
     ];
 
     return (

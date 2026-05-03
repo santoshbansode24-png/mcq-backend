@@ -54,10 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $teacher_id = intval($_POST['teacher_id']);
     $class_id = intval($_POST['class_id']);
     
+    // Generate a unique 6-character code
+    $class_code = strtoupper(substr(str_shuffle("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6));
+    
     try {
-        $stmt = $pdo->prepare("INSERT IGNORE INTO teacher_classes (teacher_id, class_id) VALUES (?, ?)");
-        $stmt->execute([$teacher_id, $class_id]);
-        $message = "<div class='alert'>Class assigned successfully!</div>";
+        // Ensure column exists
+        $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN IF NOT EXISTS class_code VARCHAR(10) DEFAULT NULL");
+        
+        $stmt = $pdo->prepare("INSERT IGNORE INTO teacher_classes (teacher_id, class_id, class_code) VALUES (?, ?, ?)");
+        $stmt->execute([$teacher_id, $class_id, $class_code]);
+        $message = "<div class='alert'>Class assigned successfully! Code: " . $class_code . "</div>";
     } catch (PDOException $e) {
         $message = "<div class='alert' style='background: #fee2e2; color: #991b1b;'>Error: " . $e->getMessage() . "</div>";
     }
@@ -92,7 +98,7 @@ $teacher_classes = [];
 if (count($teachers) > 0) {
     $teacher_ids = implode(',', array_map(function($t) { return $t['user_id']; }, $teachers));
     $tc_stmt = $pdo->query("
-        SELECT tc.teacher_id, tc.class_id, c.class_name, c.board_type 
+        SELECT tc.teacher_id, tc.class_id, tc.class_code, c.class_name, c.board_type 
         FROM teacher_classes tc 
         JOIN classes c ON tc.class_id = c.class_id 
         WHERE tc.teacher_id IN ($teacher_ids)
@@ -213,7 +219,8 @@ if (count($teachers) > 0) {
                             foreach ($teacher_classes[$t_id] as $tc) {
                                 $isCurrentBoard = ($tc['board_type'] === $selected_board);
                                 $badgeClass = $isCurrentBoard ? 'class-badge current-board' : 'class-badge';
-                                echo "<div class='{$badgeClass}'>Class {$tc['class_name']} 
+                                $code = $tc['class_code'] ? " <span style='color:#6366f1;font-family:monospace;background:#e0e7ff;padding:2px 4px;border-radius:4px;margin-left:4px'>{$tc['class_code']}</span>" : "";
+                                echo "<div class='{$badgeClass}'>Class {$tc['class_name']} {$code}
                                       <a href='?remove_class={$tc['class_id']}&teacher_id={$t_id}' class='remove-class' title='Remove' onclick='return confirm(\"Remove this class?\")'>×</a></div>";
                             }
                         } else {

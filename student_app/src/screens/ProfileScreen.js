@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, Switch, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, Switch, ScrollView, Linking, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,6 +22,9 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
     const [helpModalVisible, setHelpModalVisible] = useState(false);
     const [securityModalVisible, setSecurityModalVisible] = useState(false); // Security sub-menu
     const [historyModalVisible, setHistoryModalVisible] = useState(false);
+    const [joinClassModalVisible, setJoinClassModalVisible] = useState(false);
+    const [classCodeInput, setClassCodeInput] = useState('');
+    const [joiningClass, setJoiningClass] = useState(false);
     const [examHistory, setExamHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [classes, setClasses] = useState([]);
@@ -160,8 +163,58 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         }
                     }
                 }
-            ]
         );
+    };
+
+    const handleJoinClass = async () => {
+        if (!classCodeInput || classCodeInput.trim().length !== 6) {
+            Alert.alert('Invalid Code', 'Please enter a valid 6-character class code.');
+            return;
+        }
+
+        if (!user?.user_id) return;
+
+        setJoiningClass(true);
+        try {
+            const response = await axios.post(`${API_URL}/join_class_by_code.php`, {
+                user_id: user.user_id,
+                class_code: classCodeInput.trim().toUpperCase()
+            });
+
+            if (response.data.status === 'success') {
+                const { school_name, class_id, class_name } = response.data.data;
+                
+                // Update local state
+                setCurrentClassId(class_id);
+                setCurrentClassName(class_name);
+                
+                // Update AsyncStorage
+                const storedUser = await AsyncStorage.getItem('user_data');
+                if (storedUser) {
+                    const parsedUser = JSON.parse(storedUser);
+                    parsedUser.class_id = class_id;
+                    parsedUser.class_name = class_name;
+                    parsedUser.school_name = school_name;
+                    await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
+                }
+                
+                // Update parent context
+                if (onUserUpdate) {
+                    onUserUpdate({ class_id, class_name, school_name });
+                }
+
+                Alert.alert('Success', response.data.message);
+                setJoinClassModalVisible(false);
+                setClassCodeInput('');
+            } else {
+                Alert.alert('Error', response.data.message || 'Failed to join class.');
+            }
+        } catch (error) {
+            console.error('Join Class Error:', error);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to verify class code.');
+        } finally {
+            setJoiningClass(false);
+        }
     };
 
     const languages = [
@@ -374,6 +427,25 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                                 )}
                             />
                         )}
+
+                        {/* Join Teacher's Class Button */}
+                        <TouchableOpacity 
+                            style={{ 
+                                marginTop: 15, 
+                                backgroundColor: theme.primary + '15', 
+                                padding: 12, 
+                                borderRadius: 12, 
+                                alignItems: 'center',
+                                borderWidth: 1,
+                                borderColor: theme.primary + '30',
+                                flexDirection: 'row',
+                                justifyContent: 'center'
+                            }}
+                            onPress={() => setJoinClassModalVisible(true)}
+                        >
+                            <Ionicons name="school" size={18} color={theme.primary} style={{ marginRight: 8 }} />
+                            <Text style={{ color: theme.primary, fontWeight: 'bold' }}>Join a Teacher's Class</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -656,6 +728,68 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                             onPress={() => setHistoryModalVisible(false)}
                         >
                             <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Join Class by Code Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={joinClassModalVisible}
+                onRequestClose={() => setJoinClassModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalView, { backgroundColor: theme.card }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>JOIN CLASS</Text>
+                        <Text style={{ color: theme.textSecondary, marginBottom: 20, textAlign: 'center' }}>
+                            Ask your teacher for the 6-character Class Code and enter it below.
+                        </Text>
+
+                        <View style={{ width: '100%', marginBottom: 20 }}>
+                            <TextInput
+                                style={{
+                                    borderWidth: 2,
+                                    borderColor: theme.primary,
+                                    borderRadius: 12,
+                                    padding: 15,
+                                    fontSize: 24,
+                                    fontWeight: 'bold',
+                                    textAlign: 'center',
+                                    color: theme.text,
+                                    backgroundColor: theme.background,
+                                    letterSpacing: 5,
+                                    textTransform: 'uppercase'
+                                }}
+                                placeholder="XXXXXX"
+                                placeholderTextColor={theme.textSecondary}
+                                value={classCodeInput}
+                                onChangeText={setClassCodeInput}
+                                maxLength={6}
+                                autoCapitalize="characters"
+                                editable={!joiningClass}
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.closeButton, { backgroundColor: theme.primary, marginBottom: 10 }]}
+                            onPress={handleJoinClass}
+                            disabled={joiningClass || classCodeInput.length !== 6}
+                        >
+                            {joiningClass ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Join Class</Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={{ padding: 10 }}
+                            onPress={() => setJoinClassModalVisible(false)}
+                            disabled={joiningClass}
+                        >
+                            <Text style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Cancel</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

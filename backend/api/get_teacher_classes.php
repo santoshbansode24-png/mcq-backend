@@ -18,7 +18,7 @@ if ($teacher_id <= 0) {
 
 try {
     $stmt = $pdo->prepare("
-        SELECT tc.class_id, c.class_name, 
+        SELECT tc.class_id, c.class_name, tc.class_code,
                (SELECT COUNT(*) FROM users u WHERE u.class_id = tc.class_id AND u.school_name = t.school_name AND u.user_type = 'student') as student_count
         FROM teacher_classes tc
         JOIN classes c ON tc.class_id = c.class_id

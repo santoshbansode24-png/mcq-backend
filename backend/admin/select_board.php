@@ -66,10 +66,12 @@ if (isset($_GET['board'])) {
         h1 { font-size: 36px; font-weight: 800; color: #1e293b; margin-bottom: 10px; letter-spacing: -1px; }
         p { color: #64748b; margin-bottom: 40px; font-size: 16px; }
         .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 20px;
             margin-bottom: 40px;
+            width: 100%;
         }
         .card {
             text-decoration: none;
@@ -82,6 +84,9 @@ if (isset($_GET['board'])) {
             flex-direction: column;
             align-items: center;
             gap: 15px;
+            flex: 1 1 200px;
+            max-width: 250px;
+            min-width: 200px;
         }
         .card i { font-size: 40px; transition: all 0.3s; }
         .card .title { font-weight: 700; color: #334155; font-size: 16px; line-height: 1.3; }
@@ -115,7 +120,7 @@ if (isset($_GET['board'])) {
 </head>
 <body>
     <div class="container">
-        <h1>Welcome Back! 👋</h1>
+        <h1>Welcome Admin! 👋</h1>
         <p>Which Educational Board are you managing today?</p>
         <div class="grid">
             <a href="?board=CBSE" class="card cbse">

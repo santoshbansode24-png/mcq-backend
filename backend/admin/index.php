@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $admin = $stmt->fetch();
             
             if ($admin && password_verify($password, $admin['password'])) {
+                // Security: Regenerate session ID to prevent session fixation
+                session_regenerate_id(true);
+                
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_id'] = $admin['user_id'];
                 $_SESSION['admin_name'] = $admin['name'];
@@ -36,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 header('Location: select_board.php');
                 exit();
             } else {
+                // Security: Basic throttle to slow down brute force
+                sleep(1);
                 $error = 'Invalid email or password';
             }
         } catch (PDOException $e) {
@@ -221,8 +226,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             left: 18px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 20px;
-            opacity: 0.5;
+            font-size: 18px;
+            color: #94a3b8;
             transition: all 0.3s;
         }
         
@@ -375,10 +380,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     <div class="login-container">
         <div class="logo">
-            <div class="logo-icon">🎓</div>
+            <div class="logo-icon"><i class="fa-solid fa-user-shield" style="color: white;"></i></div>
             <h1>Veeru Admin</h1>
-            <p>Premium Vivid v2.0.1</p>
-            <!-- DEPLOY_SIG: 1777135000_VIVID_UPGRADE -->
+            <p>Secure Portal v2.1.0</p>
         </div>
         
         <?php if ($error): ?>
@@ -400,7 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         required 
                         autofocus
                     >
-                    <span class="input-icon">📧</span>
+                    <i class="fa-solid fa-envelope input-icon"></i>
                 </div>
             </div>
             
@@ -411,29 +415,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         type="password" 
                         id="password" 
                         name="password" 
-                        placeholder="Enter your password" 
+                        placeholder="••••••••" 
                         required
                     >
-                    <span class="input-icon">🔒</span>
+                    <i class="fa-solid fa-lock input-icon"></i>
                 </div>
             </div>
             
             <button type="submit" class="btn-login">
-                Login to Admin Panel
+                Sign In to Portal <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left: 8px;"></i>
             </button>
         </form>
-        
-        <div class="default-creds">
-            <strong>🔑 Default Credentials</strong>
-            <div class="cred-item">
-                <span class="cred-label">Email:</span>
-                <span class="cred-value">admin@example.com</span>
-            </div>
-            <div class="cred-item">
-                <span class="cred-label">Password:</span>
-                <span class="cred-value">admin123</span>
-            </div>
-        </div>
     </div>
 </body>
 </html>

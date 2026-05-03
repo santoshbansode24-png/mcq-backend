@@ -290,18 +290,19 @@ $flashcards = $flashcards_query->fetchAll();
     
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php">Dashboard</a></li>
-            <li><a href="users.php">Users</a></li>
-            <li><a href="classes.php">Classes</a></li>
-            <li><a href="subjects.php">Subjects</a></li>
-            <li><a href="chapters.php">Chapters</a></li>
-            <li><a href="mcqs.php">MCQs</a></li>
-            <li><a href="videos.php">Videos</a></li>
-            <li><a href="notes.php">Notes</a></li>
-            <li><a href="flashcards.php" class="active">Flashcards</a></li>
-            <li><a href="quick_revision.php">Quick Revision</a></li>
-            <li><a href="content_manager.php">Content Manager</a></li>
-            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
+            <li><a href="dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
+            <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
+            <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
+            <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
+            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+            <li><a href="flashcards.php" class="active"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
+            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+            <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>
     
@@ -384,15 +385,15 @@ $flashcards = $flashcards_query->fetchAll();
         </div>
 
         <div class="card">
-            <h2>Recent Flashcards</h2>
+            <h2><i class="fa-solid fa-bolt"></i> Recent Flashcards (<?php echo $board_name; ?>)</h2>
             <table>
                 <thead>
                     <tr>
-                        <th width="30%">Question</th>
-                        <th>Answer</th>
-                        <th>Chapter</th>
-                        <th>Subject</th>
-                        <th>Action</th>
+                        <th width="30%"><i class="fa-solid fa-question-circle"></i> Question</th>
+                        <th><i class="fa-solid fa-comment-dots"></i> Answer</th>
+                        <th><i class="fa-solid fa-file-lines"></i> Chapter</th>
+                        <th><i class="fa-solid fa-book"></i> Subject</th>
+                        <th><i class="fa-solid fa-bolt"></i> Action</th>
                     </tr>
                 </thead>
                 <tbody>

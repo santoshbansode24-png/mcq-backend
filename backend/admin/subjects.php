@@ -50,14 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Normalize subject name to UPPERCASE
     $normalized_name = normalizeSubjectName($name);
     
-    // Check for duplicates
-    if (isDuplicateSubject($pdo, $normalized_name, $class_id)) {
-        $error = "⚠️ Duplicate Subject: A subject with this name already exists for the selected class!";
+    // Proper Duplicate Check
+    $check_dup = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE subject_name = ? AND class_id = ?");
+    $check_dup->execute([$normalized_name, $class_id]);
+    
+    if ($check_dup->fetchColumn() > 0) {
+        $error = "⚠️ Duplicate Subject: '$normalized_name' already exists in this class!";
     } else {
         try {
             $stmt = $pdo->prepare("INSERT INTO subjects (subject_name, class_id, description) VALUES (?, ?, ?)");
             $stmt->execute([$normalized_name, $class_id, $desc]);
-            $message = "✓ Subject added successfully! (Auto-capitalized to: $normalized_name)";
+            $message = "✓ Subject added successfully! ($normalized_name)";
         } catch (PDOException $e) {
             $error = "❌ Error: Database error occurred";
         }
@@ -90,22 +93,19 @@ $classes = $classes_query->fetchAll();
     <!-- Modern Admin CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_theme.css?v=1777135263">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
         
-        <!-- Centered Switch Button -->
         <div class="center-actions">
-            <a href="select_board.php" class="btn-switch-board">
-                🔁 Switch Board
-            </a>
+            <a href="select_board.php" class="btn-switch-board">🔁 Switch Board</a>
         </div>
 
         <div class="header-right">
             <div class="admin-info">
-                <div class="name" style="margin-bottom: 3px;">
+                <div class="name">
                     <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
                         <?php echo htmlspecialchars($board_name); ?>
                     </span>
@@ -119,67 +119,73 @@ $classes = $classes_query->fetchAll();
     
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php">Dashboard</a></li>
-            <li><a href="users.php">Users</a></li>
-            <li><a href="classes.php">Classes</a></li>
-            <li><a href="subjects.php" class="active">Subjects</a></li>
-            <li><a href="chapters.php">Chapters</a></li>
-            <li><a href="mcqs.php">MCQs</a></li>
-            <li><a href="videos.php">Videos</a></li>
-            <li><a href="notes.php">Notes</a></li>
-            <li><a href="flashcards.php">Flashcards</a></li>
-            <li><a href="quick_revision.php">Quick Revision</a></li>
-            <li><a href="content_manager.php">Content Manager</a></li>
-            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
+            <li><a href="dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
+            <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
+            <li><a href="subjects.php" class="active"><i class="fa-solid fa-book"></i> Subjects</a></li>
+            <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
+            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+            <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
+            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+            <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>
     
     <div class="container">
-        <div class="card">
-            <h2>Add New Subject</h2>
-            <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
+        <div class="card" style="max-width: 600px;">
+            <h2><i class="fa-solid fa-plus-circle"></i> Add New Subject</h2>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Adding to: <strong><?php echo $board_name; ?></strong></p>
+            <?php if($message): ?><div class="alert success"><?php echo $message; ?></div><?php endif; ?>
             <?php if($error): ?><div class="alert" style="background: #f8d7da; color: #721c24; border-color: #dc3545;"><?php echo $error; ?></div><?php endif; ?>
             <form method="POST">
                 <div class="form-grid">
                     <select name="class_id" required>
                         <option value="">Select Class</option>
                         <?php foreach($classes as $class): ?>
-                            <option value="<?php echo $class['class_id']; ?>">
-                                <?php echo htmlspecialchars($class['class_name']); ?>
-                            </option>
+                            <option value="<?php echo $class['class_id']; ?>">Class <?php echo htmlspecialchars($class['class_name']); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <input type="text" name="subject_name" placeholder="Subject Name (e.g. Mathematics)" required>
-                    <input type="text" name="description" placeholder="Description (Optional)">
+                    <input type="text" name="description" placeholder="Description (Optional)" style="grid-column: span 2;">
                 </div>
                 <button type="submit" class="btn-add">Add Subject</button>
             </form>
         </div>
 
         <div class="card">
-            <h2>All Subjects (<?php echo $board_name; ?>)</h2>
+            <h2><i class="fa-solid fa-book"></i> All Subjects (<?php echo $board_name; ?>)</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Class</th>
-                        <th>Subject Name</th>
-                        <th>Description</th>
-                        <th>Chapters</th>
-                        <th>Action</th>
+                        <th><i class="fa-solid fa-layer-group"></i> Class</th>
+                        <th><i class="fa-solid fa-tag"></i> Subject Name</th>
+                        <th><i class="fa-solid fa-align-left"></i> Description</th>
+                        <th><i class="fa-solid fa-file-lines"></i> Total Chapters</th>
+                        <th><i class="fa-solid fa-bolt"></i> Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($subjects as $subject): ?>
+                    <?php if(empty($subjects)): ?>
                     <tr>
-                        <td><strong><?php echo htmlspecialchars($subject['class_name']); ?></strong></td>
-                        <td><?php echo htmlspecialchars($subject['subject_name']); ?></td>
-                        <td><?php echo htmlspecialchars($subject['description']); ?></td>
-                        <td><?php echo $subject['chapter_count']; ?> chapters</td>
-                        <td>
-                            <a href="?delete=<?php echo $subject['subject_id']; ?>" class="btn-delete" onclick="return confirm('Delete this subject? All chapters and MCQs will be deleted!')">Delete</a>
-                        </td>
+                        <td colspan="5" style="text-align: center; color: #666; padding: 20px;">No subjects found for this board.</td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <?php foreach($subjects as $subject): ?>
+                        <tr>
+                            <td><span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 13px;">Class <?php echo htmlspecialchars($subject['class_name']); ?></span></td>
+                            <td><strong><?php echo htmlspecialchars($subject['subject_name']); ?></strong></td>
+                            <td><small style="color: #666;"><?php echo htmlspecialchars($subject['description'] ?: '-'); ?></small></td>
+                            <td><span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 13px;"><?php echo $subject['chapter_count']; ?> chapters</span></td>
+                            <td>
+                                <a href="?delete=<?php echo $subject['subject_id']; ?>" class="btn-delete" onclick="return confirm('Delete this subject? All chapters and MCQs will be deleted!')"><i class="fa-solid fa-trash"></i> Delete</a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

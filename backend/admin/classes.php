@@ -41,20 +41,22 @@ $message = '';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = sanitizeInput($_POST['class_name']);
-    // Board is now fixed from session
     $board = $selected_board; 
     
     // Normalize class name to UPPERCASE
     $normalized_name = normalizeClassName($name);
     
-    // Check for duplicates
-    if (isDuplicateClass($pdo, $normalized_name, 1, null)) { // Assuming board_id = 1 for now
-        $error = "⚠️ Duplicate Class: A class with this name already exists for this board!";
+    // Proper Board-Specific Duplicate Check
+    $check_dup = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE class_name = ? AND board_type = ?");
+    $check_dup->execute([$normalized_name, $board]);
+    
+    if ($check_dup->fetchColumn() > 0) {
+        $error = "⚠️ Duplicate Class: '$normalized_name' already exists in $board_name!";
     } else {
         try {
             $stmt = $pdo->prepare("INSERT INTO classes (class_name, board_type) VALUES (?, ?)");
             $stmt->execute([$normalized_name, $board]);
-            $message = "✓ Class added successfully! (Auto-capitalized to: $normalized_name)";
+            $message = "✓ Class added successfully! ($normalized_name)";
         } catch (PDOException $e) {
             $error = "❌ Error: Database error occurred";
         }
@@ -64,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Get Classes (Filtered by Board)
 $classes = $pdo->prepare("
     SELECT c.*, 
-    (SELECT COUNT(*) FROM users WHERE class_id = c.class_id) as student_count,
+    (SELECT COUNT(*) FROM users WHERE class_id = c.class_id AND user_type = 'student') as student_count,
     (SELECT COUNT(*) FROM subjects WHERE class_id = c.class_id) as subject_count
     FROM classes c 
     WHERE board_type = ?
@@ -79,25 +81,21 @@ $classes = $classes->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Classes - MCQ Admin</title>
-    <!-- Modern Admin CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_theme.css?v=1777135263">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
         
-        <!-- Centered Switch Button -->
         <div class="center-actions">
-            <a href="select_board.php" class="btn-switch-board">
-                🔁 Switch Board
-            </a>
+            <a href="select_board.php" class="btn-switch-board">🔁 Switch Board</a>
         </div>
 
         <div class="header-right">
             <div class="admin-info">
-                <div class="name" style="margin-bottom: 3px;">
+                <div class="name">
                     <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
                         <?php echo htmlspecialchars($board_name); ?>
                     </span>
@@ -111,56 +109,62 @@ $classes = $classes->fetchAll();
     
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php">Dashboard</a></li>
-            <li><a href="users.php">Users</a></li>
-            <li><a href="classes.php" class="active">Classes</a></li>
-            <li><a href="subjects.php">Subjects</a></li>
-            <li><a href="chapters.php">Chapters</a></li>
-            <li><a href="mcqs.php">MCQs</a></li>
-            <li><a href="videos.php">Videos</a></li>
-            <li><a href="notes.php">Notes</a></li>
-            <li><a href="flashcards.php">Flashcards</a></li>
-            <li><a href="quick_revision.php">Quick Revision</a></li>
-            <li><a href="content_manager.php">Content Manager</a></li>
-            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
+            <li><a href="dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
+            <li><a href="classes.php" class="active"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
+            <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
+            <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
+            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+            <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
+            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+            <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>
     
     <div class="container">
         <div class="card" style="max-width: 500px;">
-            <h2>Add New Class</h2>
+            <h2><i class="fa-solid fa-plus-circle"></i> Add New Class</h2>
             <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Adding to: <strong><?php echo $board_name; ?></strong></p>
-            <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
+            <?php if($message): ?><div class="alert success"><?php echo $message; ?></div><?php endif; ?>
             <?php if($error): ?><div class="alert" style="background: #f8d7da; color: #721c24; border-color: #dc3545;"><?php echo $error; ?></div><?php endif; ?>
             <form method="POST">
                 <input type="text" name="class_name" placeholder="Class Name (e.g. Class 10)" required>
-                <!-- Board Type is Hidden/Fixed -->
                 <button type="submit" class="btn-add">Add Class</button>
             </form>
         </div>
 
         <div class="card">
-            <h2>All Classes (<?php echo $board_name; ?>)</h2>
+            <h2><i class="fa-solid fa-layer-group"></i> All Classes (<?php echo $board_name; ?>)</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Class Name</th>
-                        <th>Total Students</th>
-                        <th>Total Subjects</th>
-                        <th>Action</th>
+                        <th><i class="fa-solid fa-tag"></i> Class Name</th>
+                        <th><i class="fa-solid fa-users"></i> Total Students</th>
+                        <th><i class="fa-solid fa-book"></i> Total Subjects</th>
+                        <th><i class="fa-solid fa-bolt"></i> Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($classes as $class): ?>
+                    <?php if (empty($classes)): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($class['class_name']); ?></td>
-                        <td><?php echo $class['student_count']; ?> students</td>
-                        <td><?php echo $class['subject_count']; ?> subjects</td>
-                        <td>
-                            <a href="?delete=<?php echo $class['class_id']; ?>" class="btn-delete" onclick="return confirm('Delete this class? All students and subjects in this class will be deleted!')">Delete</a>
-                        </td>
+                        <td colspan="4" style="text-align: center; color: #666; padding: 20px;">No classes found for this board.</td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <?php foreach($classes as $class): ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($class['class_name']); ?></strong></td>
+                            <td><span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 13px;"><?php echo $class['student_count']; ?> students</span></td>
+                            <td><span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 13px;"><?php echo $class['subject_count']; ?> subjects</span></td>
+                            <td>
+                                <a href="?delete=<?php echo $class['class_id']; ?>" class="btn-delete" onclick="return confirm('Delete this class? All students and subjects in this class will be deleted!')"><i class="fa-solid fa-trash"></i> Delete</a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

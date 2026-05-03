@@ -31,29 +31,34 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_content') {
     $data = [];
     
     try {
+        // Enforce board security for get_content
+        $board_join = "JOIN chapters ch ON t.chapter_id = ch.chapter_id JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id";
+        $board_where = "t.chapter_id = ? AND c.board_type = ?";
+        $params = [$chapter_id, $selected_board];
+
         if ($type == 'mcqs') {
-            $stmt = $pdo->prepare("SELECT mcq_id as id, question as title, difficulty as subtitle FROM mcqs WHERE chapter_id = ? ORDER BY mcq_id DESC");
-            $stmt->execute([$chapter_id]);
+            $stmt = $pdo->prepare("SELECT t.mcq_id as id, t.question as title, t.difficulty as subtitle FROM mcqs t $board_join WHERE $board_where ORDER BY t.mcq_id DESC");
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         elseif ($type == 'notes') {
-            $stmt = $pdo->prepare("SELECT note_id as id, title, file_path as subtitle FROM notes WHERE chapter_id = ? ORDER BY note_id DESC");
-            $stmt->execute([$chapter_id]);
+            $stmt = $pdo->prepare("SELECT t.note_id as id, t.title, t.file_path as subtitle FROM notes t $board_join WHERE $board_where ORDER BY t.note_id DESC");
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         elseif ($type == 'videos') {
-            $stmt = $pdo->prepare("SELECT video_id as id, title, url as subtitle FROM videos WHERE chapter_id = ? ORDER BY video_id DESC");
-            $stmt->execute([$chapter_id]);
+            $stmt = $pdo->prepare("SELECT t.video_id as id, t.title, t.url as subtitle FROM videos t $board_join WHERE $board_where ORDER BY t.video_id DESC");
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         elseif ($type == 'flashcards') {
-            $stmt = $pdo->prepare("SELECT id as id, question_front as title, answer_back as subtitle FROM flashcards WHERE chapter_id = ? ORDER BY id DESC");
-            $stmt->execute([$chapter_id]);
+            $stmt = $pdo->prepare("SELECT t.id as id, t.question_front as title, t.answer_back as subtitle FROM flashcards t $board_join WHERE $board_where ORDER BY t.id DESC");
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         elseif ($type == 'quick_revision') {
-            $stmt = $pdo->prepare("SELECT revision_id as id, title, LEFT(summary, 50) as subtitle FROM quick_revision WHERE chapter_id = ? ORDER BY revision_id DESC");
-            $stmt->execute([$chapter_id]);
+            $stmt = $pdo->prepare("SELECT t.revision_id as id, t.title, LEFT(t.summary, 50) as subtitle FROM quick_revision t $board_join WHERE $board_where ORDER BY t.revision_id DESC");
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         
@@ -64,7 +69,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_content') {
     exit();
 }
 
-// 2. DELETE CONTENT
 // 2. DELETE CONTENT
 if (isset($_POST['action']) && $_POST['action'] == 'delete_content') {
     $id = intval($_POST['id']);
@@ -207,7 +211,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'download_selected') {
         
         // Generate CSV
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=veeru_mcqs_' . date('Y-m-d') . '.csv');
+        header('Content-Disposition: attachment; filename=veeru_content_' . date('Y-m-d') . '.csv');
         
         $output = fopen('php://output', 'w');
         fputs($output, "\xEF\xBB\xBF"); // Add BOM for Excel
@@ -228,7 +232,6 @@ if (isset($_POST['action']) && $_POST['action'] == 'download_selected') {
         exit();
         
     } catch (PDOException $e) {
-        // Can't return JSON here easily as headers might be sent, but we'll try
         die('Database Error: ' . $e->getMessage());
     }
 }
@@ -334,7 +337,6 @@ $all_chapters_query = $pdo->prepare("
 ");
 $all_chapters_query->execute([$selected_board]);
 $all_chapters = $all_chapters_query->fetchAll();
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -345,23 +347,20 @@ $all_chapters = $all_chapters_query->fetchAll();
     <!-- Modern Admin CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_theme.css?v=1777135263">
+    <link rel="stylesheet" href="admin_theme.css">
 </head>
 <body>
 
     <div class="header">
         <h1>📑 Content Manager</h1>
         
-        <!-- Centered Switch Button -->
         <div class="center-actions">
-            <a href="select_board.php" class="btn-switch-board">
-                🔁 Switch Board
-            </a>
+            <a href="select_board.php" class="btn-switch-board">🔁 Switch Board</a>
         </div>
 
         <div class="header-right">
             <div class="admin-info">
-                <div class="name" style="margin-bottom: 3px;">
+                <div class="name">
                     <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
                         <?php echo htmlspecialchars($board_name); ?>
                     </span>
@@ -375,18 +374,19 @@ $all_chapters = $all_chapters_query->fetchAll();
     
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php">Dashboard</a></li>
-            <li><a href="users.php">Users</a></li>
-            <li><a href="classes.php">Classes</a></li>
-            <li><a href="subjects.php">Subjects</a></li>
-            <li><a href="chapters.php">Chapters</a></li>
-            <li><a href="mcqs.php">MCQs</a></li>
-            <li><a href="videos.php">Videos</a></li>
-            <li><a href="notes.php">Notes</a></li>
-            <li><a href="flashcards.php">Flashcards</a></li>
-            <li><a href="quick_revision.php">Quick Revision</a></li>
-            <li><a href="content_manager.php" class="active">Content Manager</a></li>
-            <li><a href="ai_settings.php">🤖 AI Settings</a></li>
+            <li><a href="dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
+            <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
+            <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
+            <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
+            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+            <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
+            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+            <li><a href="content_manager.php" class="active"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>
     
@@ -394,7 +394,7 @@ $all_chapters = $all_chapters_query->fetchAll();
         
         <!-- Filter Section -->
         <div class="card">
-            <h2>Select Content Source</h2>
+            <h2><i class="fa-solid fa-filter"></i> Select Content Source</h2>
             <div class="filters">
                 <div class="filter-group">
                     <label>Class</label>
@@ -428,11 +428,11 @@ $all_chapters = $all_chapters_query->fetchAll();
             
             <div class="content-types-wrapper">
                 <div class="content-types">
-                    <button class="type-btn" data-type="mcqs" onclick="switchType('mcqs')">📝 MCQs</button>
-                    <button class="type-btn" data-type="notes" onclick="switchType('notes')">📄 Notes</button>
-                    <button class="type-btn" data-type="videos" onclick="switchType('videos')">🎥 Videos</button>
-                    <button class="type-btn" data-type="quick_revision" onclick="switchType('quick_revision')">⚡ Quick Revision</button>
-                    <button class="type-btn" data-type="flashcards" onclick="switchType('flashcards')">🎴 Flashcards</button>
+                    <button class="type-btn active" data-type="mcqs" onclick="switchType('mcqs')"><i class="fa-solid fa-list-check"></i> MCQs</button>
+                    <button class="type-btn" data-type="notes" onclick="switchType('notes')"><i class="fa-solid fa-note-sticky"></i> Notes</button>
+                    <button class="type-btn" data-type="videos" onclick="switchType('videos')"><i class="fa-solid fa-video"></i> Videos</button>
+                    <button class="type-btn" data-type="quick_revision" onclick="switchType('quick_revision')"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</button>
+                    <button class="type-btn" data-type="flashcards" onclick="switchType('flashcards')"><i class="fa-solid fa-bolt"></i> Flashcards</button>
                 </div>
             </div>
             
@@ -445,15 +445,15 @@ $all_chapters = $all_chapters_query->fetchAll();
                         <input type="checkbox" id="select_all" onchange="toggleSelectAll()"> Select All
                     </label>
                     <button onclick="deleteSelected()" style="background: #e53e3e; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-right: 10px;">
-                        🗑️ Delete Selected
+                        <i class="fa-solid fa-trash"></i> Delete Selected
                     </button>
                     <button onclick="downloadSelected()" style="background: #48bb78; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                        ⬇️ Download CSV
+                        <i class="fa-solid fa-download"></i> Download CSV
                     </button>
                 </div>
             </div>
             
-            <div id="loading_indicator" class="loading" style="display: none;">Loading content...</div>
+            <div id="loading_indicator" class="loading" style="display: none;"><i class="fa-solid fa-spinner fa-spin"></i> Loading content...</div>
             
             <!-- Hidden form for download -->
             <form id="download_form" method="POST" action="content_manager.php" target="_blank" style="display:none;">
@@ -616,7 +616,7 @@ $all_chapters = $all_chapters_query->fetchAll();
                         <div class="item-title">${escapeHtml(item.title)}</div>
                         <span class="item-subtitle">${escapeHtml(item.subtitle || '')}</span>
                     </div>
-                    <button class="btn-delete" onclick="deleteItem(${item.id})">Delete</button>
+                    <button class="btn-delete" onclick="deleteItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
         }

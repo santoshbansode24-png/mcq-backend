@@ -358,16 +358,30 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     else incorrect++;
                 });
 
-                await axios.post(`${API_URL}/save_exam_history.php`, {
-                    user_id: userId,
-                    chapter_ids: route.params?.chapterIds?.join(',') || '',
-                    subject_names: subjectName || '',
-                    correct,
-                    incorrect,
-                    unanswered,
-                    total: questions.length,
-                    time_seconds: finalTimeRef.current
-                });
+                if (route.params?.update_id) {
+                    // Send to teacher's class exam results
+                    await axios.post(`${API_URL}/submit_class_exam.php`, {
+                        user_id: userId,
+                        update_id: route.params.update_id,
+                        correct,
+                        incorrect,
+                        unanswered,
+                        total: questions.length,
+                        time_seconds: finalTimeRef.current
+                    });
+                } else {
+                    // Save to normal personal exam history
+                    await axios.post(`${API_URL}/save_exam_history.php`, {
+                        user_id: userId,
+                        chapter_ids: route.params?.chapterIds?.join(',') || '',
+                        subject_names: subjectName || '',
+                        correct,
+                        incorrect,
+                        unanswered,
+                        total: questions.length,
+                        time_seconds: finalTimeRef.current
+                    });
+                }
             }
         } catch (e) {
             console.log('[Exam] Failed to save history', e);

@@ -23,7 +23,7 @@ $email = sanitizeInput($input['email']);
 $password = $input['password'];
 
 try {
-    $stmt = $pdo->prepare("SELECT id, name, email, password_hash, school_name FROM teachers WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT user_id as id, user_id, name, email, password, school_name, mobile FROM users WHERE email = ? AND user_type = 'teacher'");
     $stmt->execute([$email]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -31,16 +31,16 @@ try {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
 
-    if (!password_verify($password, $teacher['password_hash'])) {
+    if (!password_verify($password, $teacher['password'])) {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
 
     // Get assigned classes
     $classStmt = $pdo->prepare("SELECT class_id FROM teacher_classes WHERE teacher_id = ?");
-    $classStmt->execute([$teacher['id']]);
+    $classStmt->execute([$teacher['user_id']]);
     $classes = $classStmt->fetchAll(PDO::FETCH_COLUMN);
 
-    unset($teacher['password_hash']);
+    unset($teacher['password']);
     $teacher['classes'] = $classes;
     $teacher['user_type'] = 'teacher';
 

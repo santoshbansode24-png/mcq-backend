@@ -78,7 +78,8 @@ const ClassUpdatesScreen = ({ navigation, user }) => {
                 navigation.navigate('MyExamTest', {
                     questions: item.payload.questions || [], 
                     totalQuestions: item.payload.questions?.length || 0,
-                    subjectName: "Teacher Exam"
+                    subjectName: "Teacher Exam",
+                    update_id: item.update_id
                 });
             }
         } else if (item.update_type === 'worksheet') {

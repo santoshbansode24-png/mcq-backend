@@ -19,10 +19,10 @@ if ($teacher_id <= 0) {
 try {
     $stmt = $pdo->prepare("
         SELECT tc.class_id, c.class_name, 
-               (SELECT COUNT(*) FROM users u WHERE u.class_id = tc.class_id AND u.school_name = t.school_name) as student_count
+               (SELECT COUNT(*) FROM users u WHERE u.class_id = tc.class_id AND u.school_name = t.school_name AND u.user_type = 'student') as student_count
         FROM teacher_classes tc
         JOIN classes c ON tc.class_id = c.class_id
-        JOIN teachers t ON tc.teacher_id = t.id
+        JOIN users t ON tc.teacher_id = t.user_id AND t.user_type = 'teacher'
         WHERE tc.teacher_id = ?
     ");
     $stmt->execute([$teacher_id]);

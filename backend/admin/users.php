@@ -48,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get Users
 // Get Users (Filtered by Board via Class)
 $users = $pdo->prepare("
     SELECT u.*, c.class_name 
@@ -71,16 +70,14 @@ $classes = $classes_query->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Users - MCQ Admin</title>
-    <!-- Modern Admin CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_theme.css?v=1777135263">
+    <link rel="stylesheet" href="admin_theme.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
         
-        <!-- Centered Switch Button -->
         <div class="center-actions">
             <a href="select_board.php" class="btn-switch-board">
                 🔁 Switch Board
@@ -105,6 +102,7 @@ $classes = $classes_query->fetchAll();
         <ul>
             <li><a href="dashboard.php">Dashboard</a></li>
             <li><a href="users.php" class="active">Users</a></li>
+            <li><a href="teachers.php">Teachers</a></li>
             <li><a href="classes.php">Classes</a></li>
             <li><a href="subjects.php">Subjects</a></li>
             <li><a href="chapters.php">Chapters</a></li>

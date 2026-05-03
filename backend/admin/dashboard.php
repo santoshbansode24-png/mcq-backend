@@ -192,6 +192,7 @@ try {
         <ul>
             <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
             <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
             <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
             <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
             <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>

@@ -42,9 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("INSERT INTO users (name, email, mobile, phone, password, user_type, class_id, subscription_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW())");
         // Save mobile to both mobile and phone columns
         $stmt->execute([$name, $email, $mobile, $mobile, $password, $type, $class_id]);
-        $message = "User added successfully!";
+        $message = "✓ User added successfully!";
     } catch (PDOException $e) {
-        $message = "Error: " . $e->getMessage();
+        if ($e->getCode() == 23000) {
+            $message = "⚠️ Error: A user with this email address ($email) already exists.";
+        } else {
+            $message = "❌ Error: " . $e->getMessage();
+        }
     }
 }
 

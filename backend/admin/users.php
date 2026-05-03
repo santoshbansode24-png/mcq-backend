@@ -52,16 +52,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get Users (Filtered by Board via Class)
-$users = $pdo->prepare("
+// Get Filter Parameters
+$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$filter_type = isset($_GET['f_type']) ? sanitizeInput($_GET['f_type']) : '';
+
+// Build Query
+$query_str = "
     SELECT u.*, c.class_name 
     FROM users u 
     LEFT JOIN classes c ON u.class_id = c.class_id 
-    WHERE user_type != 'admin' AND (c.board_type = ? OR u.user_type = 'teacher')
-    ORDER BY u.created_at DESC
-");
-$users->execute([$selected_board]);
-$users = $users->fetchAll();
+    WHERE u.user_type != 'admin'
+";
+
+$params = [];
+
+// Apply Board Filter (only for students, teachers are global usually but we check board context)
+$query_str .= " AND (c.board_type = ? OR u.user_type = 'teacher')";
+$params[] = $selected_board;
+
+if ($search_query) {
+    $query_str .= " AND (u.name LIKE ? OR u.email LIKE ? OR u.mobile LIKE ?)";
+    $params[] = "%$search_query%";
+    $params[] = "%$search_query%";
+    $params[] = "%$search_query%";
+}
+
+if ($filter_type) {
+    $query_str .= " AND u.user_type = ?";
+    $params[] = $filter_type;
+}
+
+$query_str .= " ORDER BY u.created_at DESC LIMIT 200";
+
+$users_q = $pdo->prepare($query_str);
+$users_q->execute($params);
+$users = $users_q->fetchAll();
 
 // Get Classes for dropdown
 $classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_id");
@@ -148,19 +173,33 @@ $classes = $classes_query->fetchAll();
 
         <!-- Users List -->
         <div class="card">
-            <h2>All Users (Updated)</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>All Users</h2>
+                <form method="GET" style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" name="search" placeholder="Name, Email or Phone..." value="<?php echo htmlspecialchars($search_query); ?>" style="width: 250px; margin-bottom: 0;">
+                    <select name="f_type" style="margin-bottom: 0; width: 130px;">
+                        <option value="">All Types</option>
+                        <option value="student" <?php echo $filter_type == 'student' ? 'selected' : ''; ?>>Students</option>
+                        <option value="teacher" <?php echo $filter_type == 'teacher' ? 'selected' : ''; ?>>Teachers</option>
+                    </select>
+                    <button type="submit" class="btn-add" style="margin: 0; padding: 10px 15px;"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <?php if($search_query || $filter_type): ?>
+                        <a href="users.php" class="btn-delete" style="padding: 10px; text-decoration: none;"><i class="fa-solid fa-xmark"></i></a>
+                    <?php endif; ?>
+                </form>
+            </div>
             <table>
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Name</th>
-                        <th>School</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Type</th>
-                        <th>Class</th>
-                        <th>Joined</th>
-                        <th>Action</th>
+                        <th><i class="fa-solid fa-user"></i> Name</th>
+                        <th><i class="fa-solid fa-school"></i> School</th>
+                        <th><i class="fa-solid fa-envelope"></i> Email</th>
+                        <th><i class="fa-solid fa-phone"></i> Phone</th>
+                        <th><i class="fa-solid fa-id-card"></i> Type</th>
+                        <th><i class="fa-solid fa-graduation-cap"></i> Class</th>
+                        <th><i class="fa-solid fa-calendar-day"></i> Joined</th>
+                        <th><i class="fa-solid fa-bolt"></i> Action</th>
                     </tr>
                 </thead>
                 <tbody>

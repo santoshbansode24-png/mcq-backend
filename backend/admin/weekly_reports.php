@@ -8,7 +8,15 @@
 
 session_start();
 // Basic admin guard (reuse your existing admin auth if available)
-// if (!isset($_SESSION['admin_logged_in'])) { header('Location: login.php'); exit; }
+if (!isset($_SESSION['admin_logged_in'])) {
+    header('Location: index.php');
+    exit();
+}
+
+if (!isset($_SESSION['admin_selected_board'])) {
+    header('Location: select_board.php');
+    exit();
+}
 
 $secret    = getenv('CRON_SECRET') ?: 'veeru_weekly_2026';
 $apiBase   = 'https://api.veeruapp.in/backend/api';

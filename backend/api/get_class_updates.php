@@ -21,7 +21,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT cu.update_id, cu.update_type, cu.title, cu.message, cu.payload, cu.created_at, t.name as teacher_name
         FROM class_updates cu
-        JOIN teachers t ON cu.teacher_id = t.id
+        JOIN users t ON cu.teacher_id = t.user_id AND t.user_type = 'teacher'
         WHERE cu.school_name = ? AND cu.class_id = ?
         ORDER BY cu.created_at DESC
         LIMIT 50

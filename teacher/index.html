@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>Veeru Teacher Portal</title>
     <!-- PWA Setup -->
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#10B981" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
@@ -28,7 +28,7 @@
       }
     </style>
   <meta name="theme-color" content="#4f46e5">
-<link rel="icon" href="/favicon.ico" /></head>
+<link rel="icon" href="favicon.ico" /></head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -42,7 +42,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+          navigator.workerRegistration = navigator.serviceWorker.register('service-worker.js').then(function(registration) {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
           }, function(err) {
             console.log('ServiceWorker registration failed: ', err);
@@ -50,6 +50,6 @@
         });
       }
     </script>
-  <script src="/_expo/static/js/web/index-21caf60e596e2cd11f46bc5043c9b216.js" defer></script>
+  <script src="_expo/static/js/web/index-21caf60e596e2cd11f46bc5043c9b216.js" defer></script>
 </body>
 </html>

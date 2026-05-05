@@ -1,0 +1,23 @@
+{
+  "short_name": "Veeru Teacher",
+  "name": "Veeru Teacher Portal",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/?source=pwa",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#10B981",
+  "orientation": "portrait",
+  "description": "Administrative Portal for Veeru Teachers."
+}

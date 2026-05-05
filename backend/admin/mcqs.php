@@ -136,7 +136,7 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
 </head>
 <body>
     <div class="header">
-        <h1>🎓 MCQ Admin Panel</h1>
+        <h1>🎓 📝 MCQs Management</h1>
         <div class="header-right">
             <div class="admin-info">
                 <div class="name"><span><?php echo $board_name; ?></span> <?php echo $_SESSION['admin_name']; ?></div>

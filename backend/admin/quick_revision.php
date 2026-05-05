@@ -227,7 +227,7 @@ $revisions = $revisions_query->fetchAll();
 </head>
 <body>
     <div class="header">
-        <h1>🎓 MCQ Admin Panel</h1>
+        <h1>🎓 ⏱️ Quick Revision Management</h1>
         
         <!-- Centered Switch Button -->
         <div class="center-actions">

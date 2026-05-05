@@ -10,13 +10,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse('error', 'Only POST requests are allowed', null, 405);
 }
 
+// Get JSON input or standard POST data (Hybrid Support)
 $input = getJsonInput();
+if (!$input) {
+    $input = $_POST;
+}
 
 $required = ['email', 'password'];
 $missing = validateRequired($input, $required);
 
 if (!empty($missing)) {
-    sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
+    sendResponse('error', 'Please enter your email and password.', ['missing' => $missing], 400);
 }
 
 $email = sanitizeInput($input['email']);

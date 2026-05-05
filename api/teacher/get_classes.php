@@ -8,6 +8,7 @@
  */
 
 require_once '../../config/db.php';
+require_once '../cors_middleware.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -28,19 +29,21 @@ if (!empty($missing)) {
 $teacher_id = (int)$input['teacher_id'];
 
 try {
-    // Get all classes with student count
+    // Get assigned classes with student count for this specific teacher
     $stmt = $pdo->prepare("
         SELECT 
             c.class_id,
             c.class_name,
-            COUNT(DISTINCT s.id) as student_count
-        FROM classes c
-        LEFT JOIN students s ON s.class_id = c.class_id
-        GROUP BY c.class_id, c.class_name
+            tc.division_name,
+            tc.class_code,
+            (SELECT COUNT(*) FROM users u WHERE u.class_id = c.class_id AND u.user_type = 'student') as student_count
+        FROM teacher_classes tc
+        JOIN classes c ON tc.class_id = c.class_id
+        WHERE tc.teacher_id = ?
         ORDER BY c.class_name ASC
     ");
     
-    $stmt->execute();
+    $stmt->execute([$teacher_id]);
     $classes = $stmt->fetchAll();
     
     sendResponse('success', 'Classes fetched successfully', $classes, 200);

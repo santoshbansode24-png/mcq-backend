@@ -15,15 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse('error', 'Only POST requests are allowed. Received: ' . $_SERVER['REQUEST_METHOD'], null, 405);
 }
 
-// Get JSON input
+// Get JSON input or standard POST data (Hybrid Support)
 $input = getJsonInput();
+if (!$input) {
+    $input = $_POST;
+}
 
 // Validate required fields
 $required = ['email', 'password'];
 $missing = validateRequired($input, $required);
 
 if (!empty($missing)) {
-    sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
+    sendResponse('error', 'Please enter email and password.', ['missing' => $missing], 400);
 }
 
 // Sanitize inputs
@@ -36,11 +39,11 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    // Query database for teacher
+    // Robust query: case-insensitive user_type check and trimmed email
     $stmt = $pdo->prepare("
-        SELECT user_id, name, email, password, user_type, phone 
+        SELECT user_id, name, email, password, user_type, phone, school_name, mobile
         FROM users 
-        WHERE email = ? AND user_type = 'teacher'
+        WHERE LOWER(email) = LOWER(?) AND LOWER(user_type) = 'teacher'
     ");
     
     $stmt->execute([$email]);
@@ -48,11 +51,13 @@ try {
     
     // Check if user exists
     if (!$user) {
+        error_log("Teacher login failed: No user found for $email");
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
     // Verify password
     if (!password_verify($password, $user['password'])) {
+        error_log("Teacher login failed: Password mismatch for $email");
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     

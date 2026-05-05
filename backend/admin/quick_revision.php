@@ -157,7 +157,7 @@ $revisions_query = $pdo->prepare("
     JOIN subjects s ON ch.subject_id = s.subject_id
     JOIN classes c ON s.class_id = c.class_id
     WHERE c.board_type = ?
-    ORDER BY qr.created_at DESC
+    ORDER BY qr.created_at DESC LIMIT 200
 ");
 $revisions_query->execute([$selected_board]);
 $revisions = $revisions_query->fetchAll();

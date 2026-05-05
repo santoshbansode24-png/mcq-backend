@@ -90,7 +90,7 @@ $videos_query = $pdo->prepare("
     JOIN subjects s ON ch.subject_id = s.subject_id
     JOIN classes c ON s.class_id = c.class_id
     WHERE c.board_type = ?
-    ORDER BY v.created_at DESC
+    ORDER BY v.created_at DESC LIMIT 200
 ");
 $videos_query->execute([$selected_board]);
 $videos = $videos_query->fetchAll();

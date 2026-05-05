@@ -190,7 +190,7 @@ $notes_query = $pdo->prepare("
     JOIN subjects s ON ch.subject_id = s.subject_id
     JOIN classes c ON s.class_id = c.class_id
     WHERE c.board_type = ?
-    ORDER BY n.created_at DESC
+    ORDER BY n.created_at DESC LIMIT 200
 ");
 $notes_query->execute([$selected_board]);
 $notes = $notes_query->fetchAll();

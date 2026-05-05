@@ -48,7 +48,6 @@ try {
             option_d,
             correct_answer,
             explanation,
-            explanation,
             difficulty,
             medium,
             image_url

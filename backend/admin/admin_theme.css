@@ -418,3 +418,26 @@ input:focus, select:focus, textarea:focus {
     background: #ef4444;
     color: white !important;
 }
+
+/* Additional Utility Buttons */
+.btn-small { padding: 6px 12px; font-size: 12px; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; border: none; transition: background 0.2s; }
+.btn-plus { background: #dcfce7; color: #166534; }
+.btn-plus:hover { background: #bbf7d0; }
+.btn-remove { background: #fee2e2; color: #991b1b; }
+.btn-remove:hover { background: #fecaca; }
+.btn-download { background: #f1f5f9; color: var(--primary); padding: 8px 16px; border-radius: var(--radius-md); text-decoration: none; font-weight: 600; font-size: 13px; display: inline-block; transition: background 0.2s; }
+.btn-download:hover { background: #e2e8f0; }
+
+/* Weekly Reports Buttons */
+.btn-blue { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn-blue:hover { background: var(--primary-hover); }
+.btn-yellow { background: #ca8a04; color: white; border: none; padding: 10px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn-yellow:hover { background: #a16207; }
+.btn-red { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn-red:hover { background: #dc2626; }
+
+/* Quick Revision UI */
+.csv-section { margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-md); }
+.qa-container { margin-bottom: 20px; padding: 15px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-md); }
+.qa-row { display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 10px; margin-bottom: 10px; align-items: start; }
+@media (max-width: 768px) { .qa-row { grid-template-columns: 1fr; } }

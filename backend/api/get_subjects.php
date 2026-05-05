@@ -32,14 +32,11 @@ try {
             s.description,
             s.class_id,
             c.class_name,
-            COUNT(DISTINCT ch.chapter_id) as total_chapters,
-            COUNT(DISTINCT m.mcq_id) as total_mcqs
+            (SELECT COUNT(*) FROM chapters WHERE subject_id = s.subject_id) as total_chapters,
+            (SELECT COUNT(*) FROM mcqs m INNER JOIN chapters ch ON m.chapter_id = ch.chapter_id WHERE ch.subject_id = s.subject_id) as total_mcqs
         FROM subjects s
         INNER JOIN classes c ON s.class_id = c.class_id
-        LEFT JOIN chapters ch ON s.subject_id = ch.subject_id
-        LEFT JOIN mcqs m ON ch.chapter_id = m.chapter_id
         WHERE s.class_id = ?
-        GROUP BY s.subject_id, s.subject_name, s.description, s.class_id, c.class_name
         ORDER BY s.subject_name ASC
     ");
     

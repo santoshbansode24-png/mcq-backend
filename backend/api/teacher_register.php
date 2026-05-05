@@ -36,22 +36,22 @@ if (!is_array($class_ids) || empty($class_ids)) {
 try {
     $pdo->beginTransaction();
 
-    // Check if email exists
-    $stmt = $pdo->prepare("SELECT id FROM teachers WHERE email = ?");
+    // Check if email exists in users table
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
         $pdo->rollBack();
-        sendResponse('error', 'Email already registered as a teacher.', null, 409);
+        sendResponse('error', 'Email already registered. Please login or use a different email.', null, 409);
     }
 
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-    // Insert Teacher
-    $insertStmt = $pdo->prepare("INSERT INTO teachers (name, email, password_hash, school_name) VALUES (?, ?, ?, ?)");
+    // Insert into users table as a teacher
+    $insertStmt = $pdo->prepare("INSERT INTO users (name, email, password, school_name, user_type, subscription_status, created_at) VALUES (?, ?, ?, ?, 'teacher', 'active', NOW())");
     $insertStmt->execute([$name, $email, $hashed_password, $school_name]);
     $teacher_id = $pdo->lastInsertId();
 
-    // Insert Classes
+    // Insert Classes into teacher_classes (using user_id)
     $classStmt = $pdo->prepare("INSERT IGNORE INTO teacher_classes (teacher_id, class_id) VALUES (?, ?)");
     foreach ($class_ids as $class_id) {
         $classStmt->execute([$teacher_id, filter_var($class_id, FILTER_VALIDATE_INT)]);
@@ -59,7 +59,7 @@ try {
 
     $pdo->commit();
 
-    sendResponse('success', 'Teacher registration successful', ['teacher_id' => $teacher_id, 'name' => $name, 'school_name' => $school_name], 201);
+    sendResponse('success', 'Teacher registration successful. You can now login.', ['teacher_id' => $teacher_id, 'name' => $name, 'school_name' => $school_name], 201);
 
 } catch (PDOException $e) {
     $pdo->rollBack();

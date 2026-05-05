@@ -23,11 +23,14 @@ $email = sanitizeInput($input['email']);
 $password = $input['password'];
 
 try {
-    $stmt = $pdo->prepare("SELECT user_id as id, user_id, name, email, password, school_name, mobile FROM users WHERE email = ? AND user_type = 'teacher'");
+    // Robust query: case-insensitive user_type check and trimmed email
+    $stmt = $pdo->prepare("SELECT user_id as id, user_id, name, email, password, school_name, mobile FROM users WHERE LOWER(email) = LOWER(?) AND LOWER(user_type) = 'teacher'");
     $stmt->execute([$email]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$teacher) {
+        // Log the failure for debugging (optional, but good for production)
+        error_log("Teacher login failed: No user found with email $email and user_type 'teacher'");
         sendResponse('error', 'Invalid email or password', null, 401);
     }
 

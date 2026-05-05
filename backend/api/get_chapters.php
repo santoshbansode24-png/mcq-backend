@@ -53,16 +53,12 @@ try {
                 ch.chapter_order,
                 ch.subject_id,
                 s.subject_name,
-                COUNT(DISTINCT v.video_id) as total_videos,
-                COUNT(DISTINCT n.note_id) as total_notes,
-                COUNT(DISTINCT m.mcq_id) as total_mcqs
+                (SELECT COUNT(*) FROM videos WHERE chapter_id = ch.chapter_id) as total_videos,
+                (SELECT COUNT(*) FROM notes WHERE chapter_id = ch.chapter_id) as total_notes,
+                (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ch.chapter_id) as total_mcqs
             FROM chapters ch
             INNER JOIN subjects s ON ch.subject_id = s.subject_id
-            LEFT JOIN videos v ON ch.chapter_id = v.chapter_id
-            LEFT JOIN notes n ON ch.chapter_id = n.chapter_id
-            LEFT JOIN mcqs m ON ch.chapter_id = m.chapter_id
             WHERE ch.subject_id = ?
-            GROUP BY ch.chapter_id, ch.chapter_name, ch.description, ch.chapter_order, ch.subject_id, s.subject_name
             ORDER BY ch.chapter_order ASC, ch.chapter_name ASC
         ");
     }

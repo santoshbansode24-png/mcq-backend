@@ -37,6 +37,13 @@ try {
     } catch (PDOException $e) {
         $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN class_code VARCHAR(10) DEFAULT NULL");
     }
+
+    // Ensure division_name column exists
+    try {
+        $pdo->query("SELECT division_name FROM teacher_classes LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN division_name VARCHAR(50) DEFAULT NULL");
+    }
 } catch (PDOException $e) {
     // Ignore schema check errors silently to avoid breaking the page
     error_log("Schema Check Error: " . $e->getMessage());
@@ -92,8 +99,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             }
         }
         
-        $stmt = $pdo->prepare("INSERT IGNORE INTO teacher_classes (teacher_id, class_id, class_code) VALUES (?, ?, ?)");
-        $stmt->execute([$teacher_id, $class_id, $class_code]);
+        $division_name = isset($_POST['division_name']) ? sanitizeInput($_POST['division_name']) : '';
+        
+        $stmt = $pdo->prepare("INSERT IGNORE INTO teacher_classes (teacher_id, class_id, class_code, division_name) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$teacher_id, $class_id, $class_code, $division_name]);
         $message = "<div class='alert'>✓ Class assigned successfully! Unique Code: <strong>" . $class_code . "</strong></div>";
     } catch (PDOException $e) {
         $message = "<div class='alert' style='background: #fee2e2; color: #991b1b;'>Error: " . $e->getMessage() . "</div>";
@@ -129,7 +138,7 @@ $teacher_classes = [];
 if (count($teachers) > 0) {
     $teacher_ids = implode(',', array_map(function($t) { return $t['user_id']; }, $teachers));
     $tc_stmt = $pdo->query("
-        SELECT tc.teacher_id, tc.class_id, tc.class_code, c.class_name, c.board_type 
+        SELECT tc.teacher_id, tc.class_id, tc.class_code, tc.division_name, c.class_name, c.board_type 
         FROM teacher_classes tc 
         JOIN classes c ON tc.class_id = c.class_id 
         WHERE tc.teacher_id IN ($teacher_ids)
@@ -250,8 +259,9 @@ if (count($teachers) > 0) {
                             foreach ($teacher_classes[$t_id] as $tc) {
                                 $isCurrentBoard = ($tc['board_type'] === $selected_board);
                                 $badgeClass = $isCurrentBoard ? 'class-badge current-board' : 'class-badge';
+                                $div = !empty($tc['division_name']) ? " (" . htmlspecialchars($tc['division_name']) . ")" : "";
                                 $code = $tc['class_code'] ? " <span style='color:#6366f1;font-family:monospace;background:#e0e7ff;padding:2px 4px;border-radius:4px;margin-left:4px'>{$tc['class_code']}</span>" : "";
-                                echo "<div class='{$badgeClass}'>Class {$tc['class_name']} {$code}
+                                echo "<div class='{$badgeClass}'>Class {$tc['class_name']}{$div} {$code}
                                       <a href='?remove_class={$tc['class_id']}&teacher_id={$t_id}' class='remove-class' title='Remove' onclick='return confirm(\"Remove this class?\")'>×</a></div>";
                             }
                         } else {
@@ -269,6 +279,7 @@ if (count($teachers) > 0) {
                                 <option value="<?php echo $bc['class_id']; ?>">Class <?php echo $bc['class_name']; ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <input type="text" name="division_name" placeholder="Div (e.g. Rose)" style="width: 100px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
                         <button type="submit">Assign</button>
                     </form>
                 </div>

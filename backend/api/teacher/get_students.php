@@ -8,6 +8,7 @@
  */
 
 require_once '../../config/db.php';
+require_once '../cors_middleware.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -28,16 +29,18 @@ if (!empty($missing)) {
 $class_id = (int)$input['class_id'];
 
 try {
-    // Get all students in the class
+    // Get all students in the class from the users table
     $stmt = $pdo->prepare("
         SELECT 
-            id,
+            user_id as id,
             name,
             email,
-            phone,
+            mobile,
+            school_name,
+            division_name,
             created_at
-        FROM students
-        WHERE class_id = ?
+        FROM users
+        WHERE class_id = ? AND user_type = 'student'
         ORDER BY name ASC
     ");
     

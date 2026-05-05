@@ -8,6 +8,7 @@
  */
 
 require_once '../../config/db.php';
+require_once '../cors_middleware.php';
 
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

@@ -20,6 +20,28 @@ $board_name = $_SESSION['board_name'];
 
 $message = '';
 
+// Ensure teacher_classes table exists and has class_code column
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS teacher_classes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        teacher_id INT NOT NULL,
+        class_id INT NOT NULL,
+        class_code VARCHAR(10) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_teacher_class (teacher_id, class_id)
+    )");
+    
+    // Ensure class_code column exists if table was created earlier without it
+    try {
+        $pdo->query("SELECT class_code FROM teacher_classes LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN class_code VARCHAR(10) DEFAULT NULL");
+    }
+} catch (PDOException $e) {
+    // Ignore schema check errors silently to avoid breaking the page
+    error_log("Schema Check Error: " . $e->getMessage());
+}
+
 // Handle Delete Teacher
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);

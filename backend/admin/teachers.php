@@ -27,8 +27,7 @@ try {
         teacher_id INT NOT NULL,
         class_id INT NOT NULL,
         class_code VARCHAR(10) DEFAULT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_teacher_class (teacher_id, class_id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
     
     // Ensure class_code column exists if table was created earlier without it
@@ -43,6 +42,13 @@ try {
         $pdo->query("SELECT division_name FROM teacher_classes LIMIT 1");
     } catch (PDOException $e) {
         $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN division_name VARCHAR(50) DEFAULT NULL");
+    }
+
+    // Drop the unique key so teachers can have multiple divisions of the same class (e.g. Class 3 Rose, Class 3 Tulip)
+    try {
+        $pdo->exec("ALTER TABLE teacher_classes DROP INDEX unique_teacher_class");
+    } catch (PDOException $e) {
+        // Ignored if index doesn't exist
     }
 } catch (PDOException $e) {
     // Ignore schema check errors silently to avoid breaking the page

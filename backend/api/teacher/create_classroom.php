@@ -33,6 +33,13 @@ try {
         $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN class_code VARCHAR(10) DEFAULT NULL");
     }
 
+    // 2.5 Drop unique key to allow multiple divisions of the same class
+    try {
+        $pdo->exec("ALTER TABLE teacher_classes DROP INDEX unique_teacher_class");
+    } catch (PDOException $e) {
+        // Ignore
+    }
+
     // 3. Generate Unique 6-Digit Code
     $is_unique = false;
     $class_code = '';

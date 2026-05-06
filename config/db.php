@@ -101,4 +101,25 @@ function convertUtf8($data) {
 function sanitizeInput($data) {
     return strip_tags(trim($data ?? ''));
 }
+
+/**
+ * Helper function to get JSON input
+ */
+function getJsonInput() {
+    $input = file_get_contents('php://input');
+    return json_decode($input, true);
+}
+
+/**
+ * Helper function to validate required fields
+ */
+function validateRequired($data, $requiredFields) {
+    $missing = [];
+    foreach ($requiredFields as $field) {
+        if (!isset($data[$field]) || empty(trim($data[$field] ?? ''))) {
+            $missing[] = $field;
+        }
+    }
+    return $missing;
+}
 ?>

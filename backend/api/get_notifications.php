@@ -13,18 +13,32 @@ if (!isset($_GET['class_id'])) {
 $class_id = $_GET['class_id'];
 
 try {
-    // Fetch notifications for the class
+    // Fetch from class_updates table (Teacher materials and announcements)
     $stmt = $pdo->prepare("
-        SELECT n.*, u.name as teacher_name 
-        FROM notifications n
-        JOIN users u ON n.teacher_id = u.user_id
-        WHERE n.class_id = ?
-        ORDER BY n.created_at DESC
-        LIMIT 20
+        SELECT 
+            cu.id as notification_id,
+            cu.title,
+            cu.message,
+            cu.update_type,
+            cu.payload,
+            cu.created_at,
+            u.name as teacher_name 
+        FROM class_updates cu
+        JOIN users u ON cu.teacher_id = u.user_id
+        WHERE cu.class_id = ?
+        ORDER BY cu.created_at DESC
+        LIMIT 50
     ");
     
     $stmt->execute([$class_id]);
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Parse JSON payload
+    foreach ($notifications as &$n) {
+        if ($n['payload']) {
+            $n['payload'] = json_decode($n['payload'], true);
+        }
+    }
     
     sendResponse('success', 'Notifications fetched successfully', $notifications, 200);
 } catch (PDOException $e) {

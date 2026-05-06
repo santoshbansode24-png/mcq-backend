@@ -25,7 +25,7 @@ if ($teacher_id <= 0 || $class_id <= 0 || empty($title)) {
 
 // Fetch teacher school name for isolation
 try {
-    $tStmt = $pdo->prepare("SELECT school_name FROM teachers WHERE id = ?");
+    $tStmt = $pdo->prepare("SELECT school_name FROM users WHERE user_id = ?");
     $tStmt->execute([$teacher_id]);
     $teacherInfo = $tStmt->fetch(PDO::FETCH_ASSOC);
     

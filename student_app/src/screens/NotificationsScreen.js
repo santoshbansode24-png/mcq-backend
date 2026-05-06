@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Linking, Image } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
+import { BASE_URL } from '../api/config';
 
 const NotificationsScreen = ({ navigation, user }) => {
     const { theme, isDarkMode } = useTheme();
@@ -33,25 +34,52 @@ const NotificationsScreen = ({ navigation, user }) => {
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    const renderItem = useCallback(({ item }) => (
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <View style={styles.iconContainer}>
-                    <Text style={styles.iconText}>🔔</Text>
+    const renderItem = useCallback(({ item }) => {
+        const hasFile = item.payload && item.payload.file_url;
+        const isPdf = item.update_type === 'pdf';
+        const isPhoto = item.update_type === 'photo';
+
+        const openAttachment = () => {
+            if (hasFile) {
+                const url = `${BASE_URL}/${item.payload.file_url}`;
+                Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+            }
+        };
+
+        return (
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                    <View style={[styles.iconContainer, { backgroundColor: isPdf ? '#FEE2E2' : isPhoto ? '#ECFDF5' : '#EEF2FF' }]}>
+                        <Text style={styles.iconText}>{isPdf ? '📄' : isPhoto ? '🖼️' : '📢'}</Text>
+                    </View>
+                    <View style={styles.titleContainer}>
+                        <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{item.title}</Text>
+                        <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+                    </View>
                 </View>
-                <View style={styles.titleContainer}>
-                    <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{item.title}</Text>
-                    <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+                <View style={styles.cardBody}>
+                    <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
+                    
+                    {hasFile && (
+                        <TouchableOpacity style={styles.attachmentButton} onPress={openAttachment}>
+                            <MaterialCommunityIcons 
+                                name={isPdf ? "file-pdf-box" : "image"} 
+                                size={20} 
+                                color={isPdf ? "#EF4444" : "#10B981"} 
+                            />
+                            <Text style={[styles.attachmentText, { color: isPdf ? "#EF4444" : "#10B981" }]}>
+                                {isPdf ? 'View PDF Document' : 'View Image Attachment'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <View style={styles.teacherBadge}>
+                        <Text style={styles.teacher}>Sent by: {item.teacher_name}</Text>
+                    </View>
                 </View>
             </View>
-            <View style={styles.cardBody}>
-                <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
-                <View style={styles.teacherBadge}>
-                    <Text style={styles.teacher}>Sent by: {item.teacher_name}</Text>
-                </View>
-            </View>
-        </View>
-    ), [theme]);
+        );
+    }, [theme]);
 
     return (
         <View style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
@@ -212,6 +240,21 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         fontFamily: 'NotoSans-Bold',
+    },
+    attachmentButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        padding: 10,
+        borderRadius: 12,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    attachmentText: {
+        marginLeft: 8,
+        fontSize: 13,
+        fontWeight: 'bold',
     }
 });
 

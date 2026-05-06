@@ -17,8 +17,25 @@ if (!empty($missing)) {
 $teacher_id = intval($data['teacher_id']);
 $class_id = intval($data['class_id']);
 $division_name = isset($data['division_name']) ? sanitizeInput($data['division_name']) : '';
+$new_name = isset($data['name']) ? sanitizeInput($data['name']) : null;
+$new_mobile = isset($data['mobile']) ? sanitizeInput($data['mobile']) : null;
 
 try {
+    // 0. Update Profile if provided
+    if ($new_name || $new_mobile) {
+        $updateFields = [];
+        $params = [];
+        if ($new_name) {
+            $updateFields[] = "name = ?";
+            $params[] = $new_name;
+        }
+        if ($new_mobile) {
+            $updateFields[] = "mobile = ?";
+            $params[] = $new_mobile;
+        }
+        $params[] = $teacher_id;
+        $pdo->prepare("UPDATE users SET " . implode(", ", $updateFields) . " WHERE user_id = ?")->execute($params);
+    }
     // 1. Ensure schema supports division_name
     try {
         $pdo->query("SELECT division_name FROM teacher_classes LIMIT 1");

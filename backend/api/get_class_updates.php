@@ -1,43 +1,48 @@
 <?php
 /**
- * Get Class Updates API (Student View)
+ * Get Class Updates API (Student)
+ * Returns announcements, PDFs, and photos shared by the teacher.
  */
-
-require_once 'cors_middleware.php';
 require_once '../config/db.php';
+require_once 'cors_middleware.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    sendResponse('error', 'Only GET requests are allowed', null, 405);
-}
+$user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
+$class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 
-$school_name = isset($_GET['school_name']) ? sanitizeInput($_GET['school_name']) : '';
-$class_id = isset($_GET['class_id']) ? filter_var($_GET['class_id'], FILTER_VALIDATE_INT) : 0;
-
-if (empty($school_name) || $class_id <= 0) {
-    sendResponse('error', 'School name and Class ID are required', null, 400);
+if ($user_id <= 0 || $class_id <= 0) {
+    sendResponse('error', 'User ID and Class ID are required.', null, 400);
 }
 
 try {
+    // Fetch updates for this class
+    // We filter by class_id. Optional: filter by school_name if multiple schools use the same class_id.
     $stmt = $pdo->prepare("
-        SELECT cu.update_id, cu.update_type, cu.title, cu.message, cu.payload, cu.created_at, t.name as teacher_name
+        SELECT 
+            cu.id,
+            cu.teacher_id,
+            u.name as teacher_name,
+            cu.update_type,
+            cu.title,
+            cu.message,
+            cu.payload,
+            cu.created_at
         FROM class_updates cu
-        JOIN users t ON cu.teacher_id = t.user_id AND t.user_type = 'teacher'
-        WHERE cu.school_name = ? AND cu.class_id = ?
+        JOIN users u ON cu.teacher_id = u.user_id
+        WHERE cu.class_id = ?
         ORDER BY cu.created_at DESC
         LIMIT 50
     ");
-    $stmt->execute([$school_name, $class_id]);
+    $stmt->execute([$class_id]);
     $updates = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Decode JSON payloads
+    // Parse JSON payload
     foreach ($updates as &$update) {
-        if (!empty($update['payload'])) {
+        if ($update['payload']) {
             $update['payload'] = json_decode($update['payload'], true);
         }
     }
-    unset($update);
 
-    sendResponse('success', 'Updates fetched successfully', $updates, 200);
+    sendResponse('success', 'Updates retrieved successfully', $updates, 200);
 
 } catch (PDOException $e) {
     sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);

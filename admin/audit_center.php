@@ -412,6 +412,8 @@ $subjects = $subjects_query->fetchAll();
         </div>
     </div>
 
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>
         let currentType = 'mcq';
         let activeItem = null;
@@ -455,6 +457,12 @@ $subjects = $subjects_query->fetchAll();
                 
                 if (result.status === 'success' && result.data.length > 0) {
                     renderAuditList(result.data);
+                    // Re-render math formulas
+                    if (window.MathJax) {
+                        setTimeout(() => {
+                            MathJax.typesetPromise();
+                        }, 100);
+                    }
                 } else {
                     auditList.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><h3>All caught up!</h3><p>No items found for this filter.</p></div>';
                 }

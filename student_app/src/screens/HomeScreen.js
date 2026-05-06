@@ -21,7 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSubjects } from '../api/subjects';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { BASE_URL } from '../api/config';
+import api, { BASE_URL } from '../api/config';
 import { dataCache } from '../utils/dataCache';
 import { SmartCacheService } from '../services/SmartCacheService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -62,7 +62,7 @@ const SkeletonItem = () => {
 // unmount/remount it on every re-render (was a major perf issue).
 const HomeListHeader = React.memo(({ 
     userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate,
-    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress 
+    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam 
 }) => {
     const getCloudIcon = () => {
         if (isSyncing)       return { name: 'cloud-sync',     color: '#fff' };
@@ -138,6 +138,35 @@ const HomeListHeader = React.memo(({
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {activeLiveExam && (
+                <TouchableOpacity 
+                    style={styles.fullWidthCard} 
+                    onPress={() => navigation.navigate('MCQViewer', { 
+                        chapterId: activeLiveExam.chapter_id, 
+                        isLiveExam: true, 
+                        durationMinutes: activeLiveExam.duration_minutes 
+                    })}
+                >
+                    <LinearGradient colors={['#EF4444', '#B91C1C']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
+                        <View style={styles.bannerContent}>
+                            <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                    <View style={[styles.pulseDot, { backgroundColor: '#fff' }]} />
+                                    <Text style={[styles.bannerTitle, { fontSize: rs(18), marginLeft: 8 }]}>LIVE EXAM NOW!</Text>
+                                </View>
+                                <Text style={styles.bannerSubtitle}>{activeLiveExam.title}</Text>
+                                <Text style={[styles.bannerSubtitle, { fontWeight: 'bold', marginTop: 4 }]}>
+                                    Time left: {Math.floor(activeLiveExam.remaining_seconds / 60)} mins
+                                </Text>
+                            </View>
+                            <View style={[styles.bannerIconContainer, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+                                <Text style={styles.bannerIcon}>⚡</Text>
+                            </View>
+                        </View>
+                    </LinearGradient>
+                </TouchableOpacity>
+            )}
 
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('dailyBoosters')}</Text>
             <View style={styles.gridContainer}>
@@ -237,9 +266,30 @@ const HomeScreen = ({ user, navigation, route }) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isFullySynced, setIsFullySynced] = useState(false);
     const [hasUpdate, setHasUpdate] = useState(false);
-    const [pendingServerVersion, setPendingServerVersion] = useState(null);
+    const [activeLiveExam, setActiveLiveExam] = useState(null);
     const glowAnim = useRef(new Animated.Value(0)).current;
     const syncRotAnim = useRef(new Animated.Value(0)).current;
+
+    // Live Exam Polling
+    useEffect(() => {
+        if (!classId) return;
+        const checkExam = async () => {
+            try {
+                const response = await api.get(`/student/check_live_exam.php?class_id=${classId}`);
+                if (response.data && response.data.status === 'success' && response.data.data) {
+                    setActiveLiveExam(response.data.data);
+                } else {
+                    setActiveLiveExam(null);
+                }
+            } catch (error) {
+                console.log('Error checking live exam:', error);
+            }
+        };
+
+        checkExam(); // Check immediately
+        const interval = setInterval(checkExam, 15000); // Poll every 15 seconds
+        return () => clearInterval(interval);
+    }, [classId]);
 
 
 
@@ -501,8 +551,9 @@ const HomeScreen = ({ user, navigation, route }) => {
             navigation={navigation}
             onSyncPress={handleSyncPress}
             onProfilePress={handleProfilePress}
+            activeLiveExam={activeLiveExam}
         />
-    ), [userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress]);
+    ), [userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam]);
 
     return (
         <View style={styles.container}>
@@ -691,6 +742,11 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         borderWidth: 1.5,
         borderColor: '#fff',
+    },
+    pulseDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
     }
 });
 

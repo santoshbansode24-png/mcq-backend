@@ -26,6 +26,9 @@ echo.
 echo - Mental Math Hub...
 curl -s https://api.veeruapp.in/backend/api/update_schema_maths.php
 echo.
+echo - Teacher Portal Fix...
+curl -s https://api.veeruapp.in/api/fix_teacher_schema.php
+echo.
 
 echo ✅ Done! Check Railway dashboard for logs.
 echo ========================================

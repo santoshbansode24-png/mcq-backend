@@ -190,22 +190,28 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                     setStudyData(prev => {
                         const updated = { ...prev };
                         
-                        // Merge MCQs with Deduplication
-                        const existingMcqs = updated.mcqs || [];
-                        const newMcqs = newData.mcqs || [];
-                        
-                        const uniqueNewMcqs = newMcqs.filter(n => 
-                            !existingMcqs.some(e => (e.q || e.question) === (n.q || n.question))
-                        );
-                        updated.mcqs = [...existingMcqs, ...uniqueNewMcqs];
+                        // Optimized Deduplication (O(N) using Set)
+                        const existingMcqQuestions = new Set((updated.mcqs || []).map(m => (m.q || m.question).trim().toLowerCase()));
+                        const newMcqs = (newData.mcqs || []).filter(n => {
+                            const qText = (n.q || n.question).trim().toLowerCase();
+                            if (!existingMcqQuestions.has(qText)) {
+                                existingMcqQuestions.add(qText);
+                                return true;
+                            }
+                            return false;
+                        });
+                        updated.mcqs = [...(updated.mcqs || []), ...newMcqs];
 
-                        // Merge Flashcards with Deduplication
-                        const existingCards = updated.flashcards || [];
-                        const newCards = newData.flashcards || [];
-                        const uniqueNewCards = newCards.filter(n => 
-                            !existingCards.some(e => (e.q || e.question) === (n.q || n.question))
-                        );
-                        updated.flashcards = [...existingCards, ...uniqueNewCards];
+                        const existingCardQuestions = new Set((updated.flashcards || []).map(f => (f.q || f.question).trim().toLowerCase()));
+                        const newCards = (newData.flashcards || []).filter(n => {
+                            const qText = (n.q || n.question).trim().toLowerCase();
+                            if (!existingCardQuestions.has(qText)) {
+                                existingCardQuestions.add(qText);
+                                return true;
+                            }
+                            return false;
+                        });
+                        updated.flashcards = [...(updated.flashcards || []), ...newCards];
 
                         // Merge Notes (handle object structure)
                         if (newData.notes) {
@@ -213,16 +219,23 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                             
                             const newNotesObj = Array.isArray(newData.notes) ? { definitions: newData.notes } : newData.notes;
                             
-                            updated.notes.definitions = [...(updated.notes.definitions || []), ...(newNotesObj.definitions || [])];
-                            updated.notes.key_facts = [...(updated.notes.key_facts || []), ...(newNotesObj.key_facts || [])];
-                            updated.notes.core_concepts = [...(updated.notes.core_concepts || []), ...(newNotesObj.core_concepts || [])];
+                            // Deduplicate notes too
+                            const mergeNotes = (existing, incoming) => {
+                                const seen = new Set(existing.map(s => s.trim().toLowerCase()));
+                                return [...existing, ...incoming.filter(i => !seen.has(i.trim().toLowerCase()))];
+                            };
+
+                            updated.notes.definitions = mergeNotes(updated.notes.definitions || [], newNotesObj.definitions || []);
+                            updated.notes.key_facts = mergeNotes(updated.notes.key_facts || [], newNotesObj.key_facts || []);
+                            updated.notes.core_concepts = mergeNotes(updated.notes.core_concepts || [], newNotesObj.core_concepts || []);
                         }
 
                         // Save to AsyncStorage
                         AsyncStorage.setItem(getCacheKey(), JSON.stringify(updated));
                         return updated;
                     });
-                } else if (res.status === 'error') {
+                }
+ else if (res.status === 'error') {
                     source.close();
                     setGeneratingMore(false);
                     Alert.alert("Engine Error", res.message);

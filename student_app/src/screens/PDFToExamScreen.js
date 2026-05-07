@@ -414,24 +414,24 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
     // --- Rendering ---
 
-    const renderJobItem = React.useCallback(({ item }) => {
+    const renderJobItem = ({ item }) => {
         const isReady = item.status === 'completed';
         const isFailed = item.status === 'failed';
         const isUploading = item.status === 'uploading';
         
-        let statusColor = '#3b82f6'; // Processing
+        let statusColor = '#3b82f6';
         let sText = 'Analyzing... ' + (item.progress || '0') + '%';
         let iconName = 'file-document';
 
         if (isUploading) {
-            statusColor = '#8b5cf6'; // Purple Uploading
+            statusColor = '#8b5cf6';
             sText = 'Uploading to Secure Vault...';
             iconName = 'cloud-upload';
         } else if (isReady) {
-            statusColor = '#10b981'; // Green Ready
+            statusColor = '#10b981';
             sText = 'Ready to Study';
         } else if (isFailed) {
-            statusColor = '#f43f5e'; // Red Failed
+            statusColor = '#f43f5e';
             sText = item.error_message || 'Analysis Failed';
             iconName = 'file-document-remove';
         }
@@ -460,7 +460,6 @@ const PDFToExamScreen = ({ user, navigation }) => {
                         <Text style={styles.retryHint}>Tap to retry analysis</Text>
                     )}
                 </View>
-                {/* 3 Dots Options Button - Hide while uploading */}
                 {!isUploading && (
                     <TouchableOpacity style={styles.optionsBtn} onPress={() => handleJobOptions(item)}>
                         <MaterialCommunityIcons name="dots-vertical" size={24} color="#64748b" />
@@ -468,7 +467,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 )}
             </TouchableOpacity>
         );
-    }, [navigation]);
+    };
 
     return (
         <View style={styles.container}>

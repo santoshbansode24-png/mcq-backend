@@ -1,9 +1,9 @@
 <?php
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
 require_once '../config/db.php';
 
 $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
-// parent_id = 0 means root folders
 $parent_id = isset($_GET['parent_id']) ? ($_GET['parent_id'] === 'root' ? 0 : intval($_GET['parent_id'])) : 0;
 
 if (!$user_id) {
@@ -12,17 +12,32 @@ if (!$user_id) {
 }
 
 try {
-    // 1. Fetch Folders matching parent_id
-    $sql = "SELECT folder_id, name, created_at FROM pdf_study_folders WHERE user_id = ? AND (parent_id = ? OR (? = 0 AND parent_id IS NULL)) ORDER BY name ASC";
+    // 1. Fetch folders
+    $sql = "SELECT folder_id, name, created_at FROM pdf_study_folders 
+            WHERE user_id = ? AND (parent_id = ? OR (? = 0 AND parent_id IS NULL)) 
+            ORDER BY name ASC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$user_id, $parent_id, $parent_id]);
     $folders = $stmt->fetchAll();
-    
-    // 2. Count jobs recursive? No, just jobs in THIS folder
+
+    // 2. OPTIMIZED: Get all job counts in ONE query (eliminates N+1 problem)
+    $folderIds = array_column($folders, 'folder_id');
+    $jobCounts = [];
+    if (!empty($folderIds)) {
+        $placeholders = implode(',', array_fill(0, count($folderIds), '?'));
+        $countStmt = $pdo->prepare(
+            "SELECT folder_id, COUNT(*) as cnt FROM pdf_study_jobs 
+             WHERE user_id = ? AND folder_id IN ($placeholders) GROUP BY folder_id"
+        );
+        $countStmt->execute(array_merge([$user_id], $folderIds));
+        foreach ($countStmt->fetchAll() as $row) {
+            $jobCounts[$row['folder_id']] = (int)$row['cnt'];
+        }
+    }
+
+    // 3. Map counts back to folders
     foreach ($folders as &$folder) {
-        $countStmt = $pdo->prepare("SELECT COUNT(*) FROM pdf_study_jobs WHERE folder_id = ? AND user_id = ?");
-        $countStmt->execute([$folder['folder_id'], $user_id]);
-        $folder['job_count'] = (int)$countStmt->fetchColumn();
+        $folder['job_count'] = $jobCounts[$folder['folder_id']] ?? 0;
     }
     
     echo json_encode(['status' => 'success', 'data' => $folders]);

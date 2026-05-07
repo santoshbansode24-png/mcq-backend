@@ -100,27 +100,8 @@ try {
         $savedPath = sys_get_temp_dir() . '/' . $safeName;
     }
 
-    // --- 6. ADD MISSING COLUMNS (Improved Compatibility) ---
-    // MySQL 5.7 / Standard 8.0 doesn't support IF NOT EXISTS for ADD COLUMN.
-    // We check if the column exists manually to prevent crashes.
-    $checkCol = $pdo->query("SHOW COLUMNS FROM pdf_study_jobs LIKE 'pdf_base64'");
-    if (!$checkCol->fetch()) {
-        try {
-            $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN pdf_base64 LONGTEXT DEFAULT NULL AFTER file_path");
-            $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN folder_id INT DEFAULT NULL AFTER user_id");
-            $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN study_content LONGTEXT DEFAULT NULL AFTER pdf_base64");
-            $pdo->exec("ALTER TABLE pdf_study_jobs ADD INDEX (folder_id)");
-        } catch (Exception $migEx) {}
-    }
-    
-    $checkDiff = $pdo->query("SHOW COLUMNS FROM pdf_study_jobs LIKE 'difficulty'");
-    if (!$checkDiff->fetch()) {
-        try {
-            $pdo->exec("ALTER TABLE pdf_study_jobs ADD COLUMN difficulty VARCHAR(20) DEFAULT 'mix' AFTER pdf_base64");
-        } catch (Exception $migEx) {}
-    }
 
-    // --- 6.5 CHECK DATABASE PACKET SIZE (Pre-flight) ---
+    // --- 6. PACKET SIZE PRE-FLIGHT CHECK ---
     // MySQL session packet limit may be restricted by the global setting
     $packetStmt  = $pdo->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
     $packetVar   = $packetStmt->fetch();

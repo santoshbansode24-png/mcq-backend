@@ -98,17 +98,21 @@ curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
     static $buffer = '';
     $buffer .= $data;
     
-    // Gemini stream returns a JSON array of objects. We need to parse each object.
-    // However, it's easier to just look for the text parts in the raw stream for SSE.
-    // But since it's a JSON array, we can try to parse chunks.
-    
-    // Simplified: Find all "text": "..." patterns
-    if (preg_match_all('/"text":\s*"((?:[^"\\\\]|\\\\.)*)"/', $data, $matches)) {
-        foreach ($matches[1] as $text) {
-            // Unescape the JSON string
-            $text = json_decode('"' . $text . '"');
+    // Look for "text": "..." content using a more robust approach that handles buffer splits
+    // We look for everything between "text": " and the next closing "
+    // This is a common pattern in Gemini's streaming JSON
+    while (preg_match('/"text":\s*"((?:[^"\\\\]|\\\\.)*)"/', $buffer, $match, PREG_OFFSET_CAPTURE)) {
+        $text = $match[1][0];
+        $matchEnd = $match[0][1] + strlen($match[0][0]);
+        
+        // Unescape the JSON string
+        $text = json_decode('"' . $text . '"');
+        if ($text !== null) {
             sendChunk(['status' => 'success', 'chunk' => $text]);
         }
+        
+        // Remove the processed part from buffer
+        $buffer = substr($buffer, $matchEnd);
     }
     
     return strlen($data);

@@ -7,6 +7,7 @@ header("Content-Type: text/event-stream");
 header("Cache-Control: no-cache");
 header("Connection: keep-alive");
 header("X-Accel-Buffering: no");
+header("Access-Control-Allow-Origin: *");
 
 require_once '../config/db.php';
 require_once '../config/ai_config.php';
@@ -20,16 +21,20 @@ function sendProgress($msg, $progress = null) {
 
 try {
     $job_id = isset($_GET['job_id']) ? intval($_GET['job_id']) : 0;
+    $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
     $segment_index = isset($_GET['segment_index']) ? intval($_GET['segment_index']) : 1;
-    $language = $_GET['language'] ?? 'English';
+    $language = in_array($_GET['language'] ?? '', ['English', 'Hindi', 'Marathi']) ? $_GET['language'] : 'English';
 
     if (!$job_id) throw new Exception("Job ID is required.");
+    if (!$user_id) throw new Exception("User ID is required.");
+    // Safety: Cap segment to prevent runaway generation
+    if ($segment_index > 20) throw new Exception("Maximum scan depth (20 sections) reached.");
 
     sendProgress("Locating document in Vault...", 10);
 
-    // Fetch Job Details
-    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ?");
-    $stmt->execute([$job_id]);
+    // Fetch Job Details — validates ownership in the same query
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
+    $stmt->execute([$job_id, $user_id]);
     $job = $stmt->fetch();
 
     if (!$job) throw new Exception("Job not found.");
@@ -85,32 +90,53 @@ DO NOT repeat information from previous segments.";
 
     sendProgress("Analyzing Section $segment_index with Gemini...", 50);
 
-    // Call Gemini
+    // Call Gemini with the segmented prompt
     $aiResponse = callGeminiPDF($systemPrompt . "\n\n" . $userPrompt, $pdfBase64, [
         'temperature' => 0.3,
         'maxOutputTokens' => 8192
     ]);
+    unset($pdfBase64); // Free memory immediately after use
 
-    sendProgress("Polishing extracted artifacts...", 80);
+    sendProgress("Polishing extracted artifacts...", 85);
 
-    // Parse JSON
+    // Robust JSON parse with repair logic (same as pdf_worker_ai.php)
+    $aiResponse = trim($aiResponse);
+    $aiResponse = preg_replace('/^```json|```$/m', '', $aiResponse);
     $jsonStart = strpos($aiResponse, '{');
     $jsonEnd = strrpos($aiResponse, '}');
-    if ($jsonStart !== false && $jsonEnd !== false) {
-        $cleanJson = substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
-        $data = json_decode($cleanJson, true);
 
-        if ($data) {
-            // Success! Return the content
-            echo "data: " . json_encode(['status' => 'success', 'data' => $data]) . "\n\n";
-        } else {
-            throw new Exception("AI returned invalid data format.");
+    if ($jsonStart === false) throw new Exception("AI failed to generate a structured response.");
+
+    $cleanJson = ($jsonEnd !== false)
+        ? substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1)
+        : substr($aiResponse, $jsonStart);
+
+    $data = json_decode($cleanJson, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        // Surgical repair for truncated JSON
+        $repaired = rtrim($cleanJson, ", \n\r\t");
+        $quotesCount = preg_match_all('/(?>\\"(?:[^"\\\\]|\\\\.)*\\"|"(?:[^"\\\\]|\\\\.)*")/', $repaired);
+        if (substr_count($repaired, '"') % 2 !== 0) $repaired .= '"';
+        $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
+        $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');
+        for ($i = 0; $i < $openBrackets; $i++) $repaired .= ']';
+        for ($i = 0; $i < $openBraces;   $i++) $repaired .= '}';
+        $data = json_decode($repaired, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception("AI response could not be parsed. Please try again.");
         }
+    }
+
+    if ($data) {
+        echo "data: " . json_encode(['status' => 'success', 'data' => $data]) . "\n\n";
+        ob_flush(); flush();
     } else {
-        throw new Exception("AI failed to generate a structured response.");
+        throw new Exception("AI returned an empty data structure.");
     }
 
     echo "data: [DONE]\n\n";
+    ob_flush(); flush();
 
 } catch (Exception $e) {
     echo "data: " . json_encode(['status' => 'error', 'message' => $e->getMessage()]) . "\n\n";

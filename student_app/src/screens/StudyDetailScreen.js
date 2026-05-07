@@ -171,7 +171,7 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         const nextSegment = segmentIndex + 1;
         
         try {
-            const url = `${API_URL}/ai_pdf_engine.php?job_id=${job.job_id}&segment_index=${nextSegment}&language=English`;
+            const url = `${API_URL}/ai_pdf_engine.php?job_id=${job.job_id}&user_id=${user?.user_id || 0}&segment_index=${nextSegment}&language=English`;
             const source = new EventSource(url);
 
             source.onmessage = (event) => {
@@ -234,8 +234,7 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         AsyncStorage.setItem(getCacheKey(), JSON.stringify(updated));
                         return updated;
                     });
-                }
- else if (res.status === 'error') {
+                } else if (res.status === 'error') {
                     source.close();
                     setGeneratingMore(false);
                     Alert.alert("Engine Error", res.message);
@@ -251,33 +250,6 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         } catch (e) {
             setGeneratingMore(false);
             Alert.alert("Error", "Something went wrong while generating more content.");
-        }
-    };
-        if (!studyData) return;
-        
-        if (mode === 'quiz') {
-            const allMcqs = (studyData.mcqs || []).map((m, i) => ({
-                mcq_id: i,
-                question: m.q || m.Question || '',
-                option_a: m.o?.[0] || m?.options?.[0] || '',
-                option_b: m.o?.[1] || m?.options?.[1] || '',
-                option_c: m.o?.[2] || m?.options?.[2] || '',
-                option_d: m.o?.[3] || m?.options?.[3] || '',
-                correct_answer: ['a', 'b', 'c', 'd'][m.a] || 'a',
-                explanation: m.e || m.Explanation || ''
-            }));
-            const subset = allMcqs.slice(setIndex * 10, (setIndex + 1) * 10);
-            navigation.navigate('MyExamTest', { questions: subset, subjectName: `${job.file_name}`, isAI: true });
-        } else {
-            const allCards = (studyData.flashcards || []).map((f, i) => ({
-                flashcard_id: i,
-                question_front: f.front || f.f || f.q || f.question || '',
-                answer_back: f.back || f.b || f.a || f.answer || '',
-                subject: 'AI Vault',
-                topic: job.file_name
-            }));
-            const subset = allCards.slice(setIndex * 10, (setIndex + 1) * 10);
-            navigation.navigate('Flashcards', { flashcardsData: subset, chapterId: `ai_${job.job_id}`, chapterName: `${job.file_name}`, isAI: true });
         }
     };
 

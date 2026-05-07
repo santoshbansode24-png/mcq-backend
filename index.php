@@ -1,29 +1,69 @@
 <?php
-// Force redeploy v2.3.1
-// Print current directory Listing
-$files = scandir(__DIR__);
-echo "<h1>File Structure Debug</h1>";
-echo "<pre>";
-print_r($files);
-echo "</pre>";
+/**
+ * Veeru App - Main Entry Point
+ */
 
-// Recursive scan to find where 'login.php' is hiding
-function find_login($dir) {
-    if(!is_dir($dir)) return;
-    $scan = scandir($dir);
-    foreach($scan as $file) {
-        if($file == '.' || $file == '..') continue;
-        if($file == 'login.php') echo "<h2>FOUND IT: $dir/$file</h2>";
-        if(is_dir("$dir/$file")) find_login("$dir/$file");
-    }
+// Redirect /teacher to the teacher portal subdirectory if not already there
+$request_uri = $_SERVER['REQUEST_URI'];
+if (strpos($request_uri, '/teacher') === 0 && !file_exists(__DIR__ . $request_uri . 'index.html')) {
+    // If it's a request to /teacher but not hitting the file, it might be a routing issue
 }
-echo "Searching for login.php...<br>";
-find_login(__DIR__);
 
-// Print ENV vars
-echo "<h1>Environment Variables</h1>";
-echo "<pre>";
-print_r(getenv());
-print_r($_ENV);
-echo "</pre>";
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veeru - Educational Platform</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #064E3B 0%, #059669 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 90%;
+        }
+        h1 { font-size: 3rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.05em; }
+        p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2rem; }
+        .btn {
+            display: inline-block;
+            background: white;
+            color: #059669;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            background: #f0fdf4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Veeru</h1>
+        <p>Empowering teachers and students with smart AI-driven educational tools.</p>
+        <a href="/teacher/" class="btn">Go to Teacher Portal</a>
+    </div>
+</body>
+</html>

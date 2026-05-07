@@ -17,6 +17,9 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
     const [loading, setLoading] = useState(true);
     const [studyData, setStudyData] = useState(null);
     const [syncMsg, setSyncMsg] = useState('Checking local storage...');
+    const [generatingMore, setGeneratingMore] = useState(false);
+    const [segmentIndex, setSegmentIndex] = useState(1);
+    const [engineProgress, setEngineProgress] = useState('');
     
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -160,7 +163,83 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         };
     };
 
-    const startStudy = (mode, setIndex = 0) => {
+    const generateMore = async () => {
+        if (generatingMore) return;
+        setGeneratingMore(true);
+        setEngineProgress('Initializing Engine...');
+
+        const nextSegment = segmentIndex + 1;
+        
+        try {
+            const url = `${API_URL}/ai_pdf_engine.php?job_id=${job.job_id}&segment_index=${nextSegment}&language=English`;
+            const source = new EventSource(url);
+
+            source.onmessage = (event) => {
+                if (event.data === '[DONE]') {
+                    source.close();
+                    setGeneratingMore(false);
+                    setSegmentIndex(nextSegment);
+                    return;
+                }
+
+                const res = JSON.parse(event.data);
+                if (res.status === 'progress') {
+                    setEngineProgress(res.message);
+                } else if (res.status === 'success') {
+                    const newData = res.data;
+                    setStudyData(prev => {
+                        const updated = { ...prev };
+                        
+                        // Merge MCQs with Deduplication
+                        const existingMcqs = updated.mcqs || [];
+                        const newMcqs = newData.mcqs || [];
+                        
+                        const uniqueNewMcqs = newMcqs.filter(n => 
+                            !existingMcqs.some(e => (e.q || e.question) === (n.q || n.question))
+                        );
+                        updated.mcqs = [...existingMcqs, ...uniqueNewMcqs];
+
+                        // Merge Flashcards with Deduplication
+                        const existingCards = updated.flashcards || [];
+                        const newCards = newData.flashcards || [];
+                        const uniqueNewCards = newCards.filter(n => 
+                            !existingCards.some(e => (e.q || e.question) === (n.q || n.question))
+                        );
+                        updated.flashcards = [...existingCards, ...uniqueNewCards];
+
+                        // Merge Notes (handle object structure)
+                        if (newData.notes) {
+                            if (typeof updated.notes !== 'object') updated.notes = { definitions: [], key_facts: [], core_concepts: [] };
+                            
+                            const newNotesObj = Array.isArray(newData.notes) ? { definitions: newData.notes } : newData.notes;
+                            
+                            updated.notes.definitions = [...(updated.notes.definitions || []), ...(newNotesObj.definitions || [])];
+                            updated.notes.key_facts = [...(updated.notes.key_facts || []), ...(newNotesObj.key_facts || [])];
+                            updated.notes.core_concepts = [...(updated.notes.core_concepts || []), ...(newNotesObj.core_concepts || [])];
+                        }
+
+                        // Save to AsyncStorage
+                        AsyncStorage.setItem(getCacheKey(), JSON.stringify(updated));
+                        return updated;
+                    });
+                } else if (res.status === 'error') {
+                    source.close();
+                    setGeneratingMore(false);
+                    Alert.alert("Engine Error", res.message);
+                }
+            };
+
+            source.onerror = (err) => {
+                source.close();
+                setGeneratingMore(false);
+                Alert.alert("Network Error", "Failed to connect to Content Engine.");
+            };
+
+        } catch (e) {
+            setGeneratingMore(false);
+            Alert.alert("Error", "Something went wrong while generating more content.");
+        }
+    };
         if (!studyData) return;
         
         if (mode === 'quiz') {
@@ -218,6 +297,35 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                 </TouchableOpacity>
             );
         });
+    };
+
+    const startStudy = (mode, setIndex = 0) => {
+        if (!studyData) return;
+        
+        if (mode === 'quiz') {
+            const allMcqs = (studyData.mcqs || []).map((m, i) => ({
+                mcq_id: i,
+                question: m.q || m.Question || '',
+                option_a: m.o?.[0] || m?.options?.[0] || '',
+                option_b: m.o?.[1] || m?.options?.[1] || '',
+                option_c: m.o?.[2] || m?.options?.[2] || '',
+                option_d: m.o?.[3] || m?.options?.[3] || '',
+                correct_answer: ['a', 'b', 'c', 'd'][m.a] || 'a',
+                explanation: m.e || m.Explanation || ''
+            }));
+            const subset = allMcqs.slice(setIndex * 10, (setIndex + 1) * 10);
+            navigation.navigate('MyExamTest', { questions: subset, subjectName: `${job.file_name}`, isAI: true });
+        } else {
+            const allCards = (studyData.flashcards || []).map((f, i) => ({
+                flashcard_id: i,
+                question_front: f.front || f.f || f.q || f.question || '',
+                answer_back: f.back || f.b || f.a || f.answer || '',
+                subject: 'AI Vault',
+                topic: job.file_name
+            }));
+            const subset = allCards.slice(setIndex * 10, (setIndex + 1) * 10);
+            navigation.navigate('Flashcards', { flashcardsData: subset, chapterId: `ai_${job.job_id}`, chapterName: `${job.file_name}`, isAI: true });
+        }
     };
 
     return (
@@ -337,6 +445,29 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         </View>
                     )}
 
+                    {/* GENERATE MORE BUTTON */}
+                    <View style={styles.engineContainer}>
+                        {generatingMore ? (
+                            <View style={styles.engineLoading}>
+                                <ActivityIndicator size="small" color="#38bdf8" />
+                                <Text style={styles.engineLoadingText}>{engineProgress}</Text>
+                            </View>
+                        ) : (
+                            <TouchableOpacity style={styles.engineBtn} onPress={generateMore}>
+                                <LinearGradient colors={['#38bdf820', '#1e293b']} style={styles.engineGradient}>
+                                    <MaterialCommunityIcons name="auto-fix" size={20} color="#38bdf8" />
+                                    <Text style={styles.engineBtnText}>Scan Next Section</Text>
+                                    <View style={styles.segmentBadge}>
+                                        <Text style={styles.segmentText}>Part {segmentIndex + 1}</Text>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
+                        <Text style={styles.engineHint}>
+                            Exhaustive extraction: Read deeper into the PDF for more facts.
+                        </Text>
+                    </View>
+
                 </Animated.ScrollView>
             )}
         </LinearGradient>
@@ -396,7 +527,16 @@ const styles = StyleSheet.create({
     },
     setBadgeText: { color: 'white', fontWeight: '900', fontSize: 16 },
     setRowTitle: { color: '#e2e8f0', fontSize: 16, fontWeight: '700' },
-    setRowSub: { color: '#64748b', fontSize: 12, marginTop: 3 }
+    setRowSub: { color: '#64748b', fontSize: 12, marginTop: 3 },
+    engineContainer: { marginTop: 40, alignItems: 'center' },
+    engineBtn: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#38bdf840', width: '100%' },
+    engineGradient: { flexDirection: 'row', alignItems: 'center', padding: 18, justifyContent: 'center' },
+    engineBtnText: { color: '#38bdf8', fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
+    engineLoading: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b80', padding: 18, borderRadius: 20, width: '100%', justifyContent: 'center' },
+    engineLoadingText: { color: '#38bdf8', fontSize: 14, fontWeight: '600', marginLeft: 12 },
+    engineHint: { color: '#475569', fontSize: 12, marginTop: 12, textAlign: 'center' },
+    segmentBadge: { backgroundColor: '#38bdf8', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginLeft: 10 },
+    segmentText: { color: '#0f172a', fontSize: 10, fontWeight: 'bold' }
 });
 
 export default StudyDetailScreen;

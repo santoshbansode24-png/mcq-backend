@@ -27,7 +27,8 @@
         flex: 1;
       }
     </style>
-  <link rel="icon" href="favicon.ico" /></head>
+  <meta name="theme-color" content="#10B981">
+<link rel="icon" href="favicon.ico" /></head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -41,7 +42,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.workerRegistration = navigator.serviceWorker.register('service-worker.js').then(function(registration) {
+          navigator.serviceWorker.register('service-worker.js').then(function(registration) {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
           }, function(err) {
             console.log('ServiceWorker registration failed: ', err);
@@ -49,6 +50,6 @@
         });
       }
     </script>
-  <script src="_expo/static/js/web/index-21caf60e596e2cd11f46bc5043c9b216.js" defer></script>
+  <script src="_expo/static/js/web/index-f7e9116cebce5bfebbc477b8338ce6c8.js" defer></script>
 </body>
 </html>

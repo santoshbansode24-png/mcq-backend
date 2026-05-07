@@ -47,12 +47,18 @@ try {
 
     sendProgress("Preparing Section Marker: Part $segment_index...", 25);
 
+    // Optimized: Calculate approximate page range to give AI a focus area
+    $pagesPerSegment = 5;
+    $startPage = (($segment_index - 1) * $pagesPerSegment) + 1;
+    $endPage = $startPage + $pagesPerSegment - 1;
+    $rangeHint = "FOCUS RANGE: Approximately pages $startPage to $endPage.";
+
     // VEERU LENS CONTENT ENGINE PROMPT
     $systemPrompt = "You are the 'Veeru Lens Content Engine.' Your task is to perform an exhaustive, line-by-line extraction of educational content (MCQs, Flashcards, and Notes) from a PDF.
 
 Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
-2. Context Awareness: You are currently processing SECTION MARKER: Part $segment_index. Only process the text within this specific relative section to ensure maximum depth.
+2. Context Awareness: You are currently processing SECTION MARKER: Part $segment_index. $rangeHint Only process the text within this specific relative section to ensure maximum depth.
 3. Avoid Duplication: Do not repeat information or questions from previous sections.
 
 Output Format (Strict JSON):

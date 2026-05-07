@@ -116,7 +116,6 @@ DO NOT repeat information from previous segments.";
     if (json_last_error() !== JSON_ERROR_NONE) {
         // Surgical repair for truncated JSON
         $repaired = rtrim($cleanJson, ", \n\r\t");
-        $quotesCount = preg_match_all('/(?>\\"(?:[^"\\\\]|\\\\.)*\\"|"(?:[^"\\\\]|\\\\.)*")/', $repaired);
         if (substr_count($repaired, '"') % 2 !== 0) $repaired .= '"';
         $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
         $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');

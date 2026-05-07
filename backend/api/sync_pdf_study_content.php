@@ -28,9 +28,9 @@ try {
         $row = $stmt->fetch();
 
         if (!$row) {
-            // Check if it's still processing in the jobs table
-            $checkJob = $pdo->prepare("SELECT status FROM pdf_study_jobs WHERE job_id = ?");
-            $checkJob->execute([$job_id]);
+            // Check if it's still processing — enforce user ownership here too
+            $checkJob = $pdo->prepare("SELECT status FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
+            $checkJob->execute([$job_id, $user_id]);
             $jobStatus = $checkJob->fetch();
 
             $msg = ($jobStatus && $jobStatus['status'] === 'processing')
@@ -72,12 +72,14 @@ try {
             }
         }
 
-        // B. Clear the database of heavy JSON content to save SQL storage
-        // NOTE: We keep the record in pdf_study_jobs so the user sees the "History"
-        // but we delete the heavy JSON from pdf_study_content.
+        // B. Clear the heavy JSON from pdf_study_content
         $pdo->prepare("DELETE FROM pdf_study_content WHERE job_id = ?")->execute([$job_id]);
 
-        // C. Update Job Status to reflect cleanup
+        // C. Clear the pdf_base64 blob from pdf_study_jobs (major storage saving — PDFs are 10-20MB as base64)
+        $pdo->prepare("UPDATE pdf_study_jobs SET pdf_base64 = NULL, file_path = '' WHERE job_id = ? AND user_id = ?")
+            ->execute([$job_id, $user_id]);
+
+        // D. Update Job Status to reflect cleanup
         $update = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100 WHERE job_id = ?");
         $update->execute([$job_id]);
 

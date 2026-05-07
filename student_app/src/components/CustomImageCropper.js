@@ -49,7 +49,7 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                 actions.push({ resize: { width: w } });
             }
 
-            const result = await ImageManipulator.manipulateAsync(uri, actions, { compress: 1, format: ImageManipulator.SaveFormat.JPEG });
+            const result = await ImageManipulator.manipulateAsync(uri, actions, { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG });
             actualDimensionsRef.current = { w: result.width, h: result.height };
             setWorkingUri(result.uri);
         } catch (e) {
@@ -297,7 +297,12 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                         <Ionicons name="close" size={26} color="#fff" />
                         <Text style={styles.headerText}>Cancel</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Crop Image</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                        <TouchableOpacity onPress={() => onImageLayout({ nativeEvent: { layout: layout } })} style={styles.headerBtn}>
+                            <Ionicons name="refresh" size={20} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Crop Question</Text>
+                    </View>
                     <TouchableOpacity onPress={handleCrop} style={styles.headerBtn} disabled={processing}>
                         {processing
                             ? <ActivityIndicator color="#00e5ff" />
@@ -335,15 +340,22 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
                                 style={[styles.cropBox, { left: cropBox.x, top: cropBox.y, width: cropBox.width, height: cropBox.height }]}
                                 {...dragResponder.panHandlers}
                             >
-                                {/* Rule-of-thirds grid */}
                                 <View style={styles.gridV1} /><View style={styles.gridV2} />
                                 <View style={styles.gridH1} /><View style={styles.gridH2} />
 
-                                {/* Corner handles */}
-                                <View style={[styles.corner, styles.tl]} {...tlR.panHandlers} />
-                                <View style={[styles.corner, styles.tr]} {...trR.panHandlers} />
-                                <View style={[styles.corner, styles.bl]} {...blR.panHandlers} />
-                                <View style={[styles.corner, styles.br]} {...brR.panHandlers} />
+                                {/* Corner handles with larger touch targets */}
+                                <View style={[styles.cornerTouchTarget, styles.tl]} {...tlR.panHandlers}>
+                                    <View style={styles.cornerHandle} />
+                                </View>
+                                <View style={[styles.cornerTouchTarget, styles.tr]} {...trR.panHandlers}>
+                                    <View style={styles.cornerHandle} />
+                                </View>
+                                <View style={[styles.cornerTouchTarget, styles.bl]} {...blR.panHandlers}>
+                                    <View style={styles.cornerHandle} />
+                                </View>
+                                <View style={[styles.cornerTouchTarget, styles.br]} {...brR.panHandlers}>
+                                    <View style={styles.cornerHandle} />
+                                </View>
                             </View>
                             </>
                         )}
@@ -388,13 +400,12 @@ const styles = StyleSheet.create({
     gridV2: { position: 'absolute', left: '66.6%', width: 1, top: 0, bottom: 0, backgroundColor: 'rgba(255,215,0,0.35)' },
     gridH1: { position: 'absolute', top: '33.3%', height: 1, left: 0, right: 0, backgroundColor: 'rgba(255,215,0,0.35)' },
     gridH2: { position: 'absolute', top: '66.6%', height: 1, left: 0, right: 0, backgroundColor: 'rgba(255,215,0,0.35)' },
-    // Corner handles
-    corner: {
-        position: 'absolute',
-        width: CORNER, height: CORNER,
+    // Corner handles (Visible part)
+    cornerHandle: {
+        width: 24,
+        height: 24,
         backgroundColor: '#FFD700',
-        borderRadius: CORNER / 2,
-        zIndex: 30,
+        borderRadius: 12,
         borderWidth: 2,
         borderColor: '#fff',
         shadowColor: '#000',
@@ -403,10 +414,19 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 5,
     },
-    tl: { top: -CORNER / 3, left: -CORNER / 3 },
-    tr: { top: -CORNER / 3, right: -CORNER / 3 },
-    bl: { bottom: -CORNER / 3, left: -CORNER / 3 },
-    br: { bottom: -CORNER / 3, right: -CORNER / 3 },
+    // Larger touch target for easier dragging
+    cornerTouchTarget: {
+        position: 'absolute',
+        width: 48,
+        height: 48,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 40,
+    },
+    tl: { top: -24, left: -24 },
+    tr: { top: -24, right: -24 },
+    bl: { bottom: -24, left: -24 },
+    br: { bottom: -24, right: -24 },
     footer: { paddingVertical: 22, backgroundColor: '#111', alignItems: 'center' },
     footerText: { color: '#FFD700', fontSize: 14, fontWeight: '600' },
 });

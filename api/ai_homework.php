@@ -1,71 +1,108 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Content-Type: text/event-stream");
+header("Cache-Control: no-cache");
+header("Connection: keep-alive");
+header("X-Accel-Buffering: no"); // Disable Nginx buffering
 
 require_once '../config/ai_config.php';
 
-// Check if image file is uploaded
-if (!isset($_FILES['image'])) {
-    echo json_encode(['status' => 'error', 'message' => 'No image uploaded.']);
+// Helper to send SSE chunks
+function sendChunk($data) {
+    echo "data: " . json_encode($data) . "\n\n";
+    ob_flush();
+    flush();
+}
+
+// Check if image file is uploaded OR user text is provided
+$file = $_FILES['image'] ?? null;
+$userText = $_POST['user_text'] ?? "";
+$language = $_POST['language'] ?? "English";
+
+if (!$file && empty($userText)) {
+    sendChunk(['status' => 'error', 'message' => 'Please provide an image or text.']);
     exit;
 }
 
-$file = $_FILES['image'];
-$prompt = $_POST['prompt'] ?? "Solve this homework problem step-by-step. Explain the concepts clearly.";
+$prompt = "You are Veeru, a brilliant and friendly AI tutor. Solve this homework problem step-by-step. 
+Provide a clear, detailed explanation of the logic and concepts involved so the student can learn, not just copy.
+If there are multiple ways to solve it, mention the simplest one first.
+Answer in $language.
+Use Markdown for formatting (bold, lists, etc.).";
 
-// Read image data and convert to base64
-$imageData = file_get_contents($file['tmp_name']);
-$base64Image = base64_encode($imageData);
-$mimeType = $file['type'];
+if (!empty($userText)) {
+    $prompt .= "\nAdditional User Context: " . $userText;
+}
 
-// Using gemini-2.0-flash which supports multimodal/vision tasks
-$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . GEMINI_API_KEY;
+// Convert image to base64 if provided
+$inlineData = null;
+if ($file) {
+    $imageData = file_get_contents($file['tmp_name']);
+    $base64Image = base64_encode($imageData);
+    $mimeType = $file['type'];
+    $inlineData = [
+        'mime_type' => $mimeType,
+        'data' => $base64Image
+    ];
+}
+
+$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=" . GEMINI_API_KEY;
 
 $payload = [
     'contents' => [
         [
             'parts' => [
-                ['text' => $prompt],
-                [
-                    'inline_data' => [
-                        'mime_type' => $mimeType,
-                        'data' => $base64Image
-                    ]
-                ]
+                ['text' => $prompt]
             ]
         ]
+    ],
+    'generationConfig' => [
+        'temperature' => 0.4,
+        'topP' => 1,
+        'topK' => 32,
+        'maxOutputTokens' => 2048,
     ]
 ];
 
+if ($inlineData) {
+    $payload['contents'][0]['parts'][] = ['inline_data' => $inlineData];
+}
+
 $ch = curl_init($apiUrl);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, false); // We handle output manually
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json'
-]);
-// SSL FIX for XAMPP/Localhost
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+// Callback to handle streaming from Gemini and forward to client
+curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
+    static $buffer = '';
+    $buffer .= $data;
+    
+    // Gemini stream returns a JSON array of objects. We need to parse each object.
+    // However, it's easier to just look for the text parts in the raw stream for SSE.
+    // But since it's a JSON array, we can try to parse chunks.
+    
+    // Simplified: Find all "text": "..." patterns
+    if (preg_match_all('/"text":\s*"((?:[^"\\\\]|\\\\.)*)"/', $data, $matches)) {
+        foreach ($matches[1] as $text) {
+            // Unescape the JSON string
+            $text = json_decode('"' . $text . '"');
+            sendChunk(['status' => 'success', 'chunk' => $text]);
+        }
+    }
+    
+    return strlen($data);
+});
+
+curl_exec($ch);
 
 if (curl_errno($ch)) {
-    echo json_encode(['status' => 'error', 'message' => 'Curl error: ' . curl_error($ch)]);
+    sendChunk(['status' => 'error', 'message' => 'AI Connection Failed: ' . curl_error($ch)]);
 } else {
-    $decodedResponse = json_decode($response, true);
-    
-    if ($httpCode === 200 && isset($decodedResponse['candidates'][0]['content']['parts'][0]['text'])) {
-        $aiReply = $decodedResponse['candidates'][0]['content']['parts'][0]['text'];
-        echo json_encode(['status' => 'success', 'reply' => $aiReply]);
-    } else {
-        error_log("Gemini Vision Error: " . $response);
-        echo json_encode(['status' => 'error', 'message' => 'Failed to analyze image.', 'debug' => $decodedResponse]);
-    }
+    echo "data: [DONE]\n\n";
 }
 
 curl_close($ch);

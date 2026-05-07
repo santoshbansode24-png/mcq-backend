@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, 
-    Alert, ScrollView, Animated, Dimensions 
+    Alert, Animated 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { streamFetch } from '../api/streaming';
 import { API_URL } from '../api/config';
-
-const { width } = Dimensions.get('window');
 
 const StudyDetailScreen = ({ route, navigation, user }) => {
     const job = route.params?.job;
@@ -169,88 +168,70 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         setEngineProgress('Initializing Engine...');
 
         const nextSegment = segmentIndex + 1;
-        
-        try {
-            const url = `${API_URL}/ai_pdf_engine.php?job_id=${job.job_id}&user_id=${user?.user_id || 0}&segment_index=${nextSegment}&language=English`;
-            const source = new EventSource(url);
+        const url = `${API_URL}/ai_pdf_engine.php?job_id=${job.job_id}&user_id=${user?.user_id || 0}&segment_index=${nextSegment}&language=English`;
 
-            source.onmessage = (event) => {
-                if (event.data === '[DONE]') {
-                    source.close();
-                    setGeneratingMore(false);
-                    setSegmentIndex(nextSegment);
-                    return;
-                }
-
-                const res = JSON.parse(event.data);
-                if (res.status === 'progress') {
-                    setEngineProgress(res.message);
-                } else if (res.status === 'success') {
-                    const newData = res.data;
+        streamFetch(
+            url,
+            { method: 'GET' },
+            // onChunk: handles progress + success events
+            (chunk) => {
+                if (chunk.status === 'progress') {
+                    setEngineProgress(chunk.message || 'Processing...');
+                } else if (chunk.status === 'success') {
+                    const newData = chunk.data;
                     setStudyData(prev => {
                         const updated = { ...prev };
-                        
-                        // Optimized Deduplication (O(N) using Set)
-                        const existingMcqQuestions = new Set((updated.mcqs || []).map(m => (m.q || m.question).trim().toLowerCase()));
+
+                        // O(N) deduplication with Set
+                        const existingMcqSet = new Set((updated.mcqs || []).map(m => (m.q || m.question || '').trim().toLowerCase()));
                         const newMcqs = (newData.mcqs || []).filter(n => {
-                            const qText = (n.q || n.question).trim().toLowerCase();
-                            if (!existingMcqQuestions.has(qText)) {
-                                existingMcqQuestions.add(qText);
-                                return true;
-                            }
+                            const key = (n.q || n.question || '').trim().toLowerCase();
+                            if (key && !existingMcqSet.has(key)) { existingMcqSet.add(key); return true; }
                             return false;
                         });
                         updated.mcqs = [...(updated.mcqs || []), ...newMcqs];
 
-                        const existingCardQuestions = new Set((updated.flashcards || []).map(f => (f.q || f.question).trim().toLowerCase()));
+                        const existingCardSet = new Set((updated.flashcards || []).map(f => (f.q || f.question || '').trim().toLowerCase()));
                         const newCards = (newData.flashcards || []).filter(n => {
-                            const qText = (n.q || n.question).trim().toLowerCase();
-                            if (!existingCardQuestions.has(qText)) {
-                                existingCardQuestions.add(qText);
-                                return true;
-                            }
+                            const key = (n.q || n.question || '').trim().toLowerCase();
+                            if (key && !existingCardSet.has(key)) { existingCardSet.add(key); return true; }
                             return false;
                         });
                         updated.flashcards = [...(updated.flashcards || []), ...newCards];
 
-                        // Merge Notes (handle object structure)
+                        // Merge Notes with deduplication
                         if (newData.notes) {
-                            if (typeof updated.notes !== 'object') updated.notes = { definitions: [], key_facts: [], core_concepts: [] };
-                            
-                            const newNotesObj = Array.isArray(newData.notes) ? { definitions: newData.notes } : newData.notes;
-                            
-                            // Deduplicate notes too
+                            if (!updated.notes || typeof updated.notes !== 'object') {
+                                updated.notes = { definitions: [], key_facts: [], core_concepts: [] };
+                            }
+                            const newNotesObj = Array.isArray(newData.notes)
+                                ? { definitions: newData.notes }
+                                : newData.notes;
                             const mergeNotes = (existing, incoming) => {
                                 const seen = new Set(existing.map(s => s.trim().toLowerCase()));
-                                return [...existing, ...incoming.filter(i => !seen.has(i.trim().toLowerCase()))];
+                                return [...existing, ...incoming.filter(i => i && !seen.has(i.trim().toLowerCase()))];
                             };
-
-                            updated.notes.definitions = mergeNotes(updated.notes.definitions || [], newNotesObj.definitions || []);
-                            updated.notes.key_facts = mergeNotes(updated.notes.key_facts || [], newNotesObj.key_facts || []);
-                            updated.notes.core_concepts = mergeNotes(updated.notes.core_concepts || [], newNotesObj.core_concepts || []);
+                            updated.notes.definitions  = mergeNotes(updated.notes.definitions  || [], newNotesObj.definitions  || []);
+                            updated.notes.key_facts    = mergeNotes(updated.notes.key_facts    || [], newNotesObj.key_facts    || []);
+                            updated.notes.core_concepts= mergeNotes(updated.notes.core_concepts|| [], newNotesObj.core_concepts|| []);
                         }
 
-                        // Save to AsyncStorage
                         AsyncStorage.setItem(getCacheKey(), JSON.stringify(updated));
                         return updated;
                     });
-                } else if (res.status === 'error') {
-                    source.close();
-                    setGeneratingMore(false);
-                    Alert.alert("Engine Error", res.message);
                 }
-            };
-
-            source.onerror = (err) => {
-                source.close();
+            },
+            // onDone
+            () => {
                 setGeneratingMore(false);
-                Alert.alert("Network Error", "Failed to connect to Content Engine.");
-            };
-
-        } catch (e) {
-            setGeneratingMore(false);
-            Alert.alert("Error", "Something went wrong while generating more content.");
-        }
+                setSegmentIndex(nextSegment);
+            },
+            // onError
+            (err) => {
+                setGeneratingMore(false);
+                Alert.alert('Engine Error', err?.message || 'Failed to generate more content.');
+            }
+        );
     };
 
     const renderSets = (mode, colors) => {

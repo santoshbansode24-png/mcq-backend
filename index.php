@@ -3,10 +3,11 @@
  * Veeru App - Main Entry Point
  */
 
-// Redirect /teacher to the teacher portal subdirectory if not already there
+// Redirect /teacher to the teacher portal subdirectory
 $request_uri = $_SERVER['REQUEST_URI'];
-if (strpos($request_uri, '/teacher') === 0 && !file_exists(__DIR__ . $request_uri . 'index.html')) {
-    // If it's a request to /teacher but not hitting the file, it might be a routing issue
+if ($request_uri == '/teacher' || $request_uri == '/teacher/') {
+    header("Location: /teacher/index.php");
+    exit();
 }
 
 ?>

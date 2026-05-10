@@ -159,9 +159,11 @@ const RegisterScreen = ({ navigation, route }) => {
         setClasses(classData);
       } else {
         setClasses([]);
+        Alert.alert("Error", response?.message || "Failed to load classes");
       }
     } catch (error) {
       console.error("Failed to load classes", error);
+      Alert.alert("Connection Error", "Could not load classes. Please check your internet connection and try again.");
       setClasses([]);
     } finally {
       setLoadingClasses(false);

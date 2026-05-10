@@ -435,8 +435,13 @@ const HomeScreen = ({ user, navigation, route }) => {
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await dataCache.remove(`subjects_${classId}`);
-        await loadSubjects(true);
+        if (classId) {
+            await dataCache.remove(`subjects_${classId}`);
+            await loadSubjects(true);
+        } else {
+            setRefreshing(false);
+            Alert.alert('Welcome!', 'Please go to your Profile and select your Class first.');
+        }
     }, [classId]);
 
     const getImageUrl = (path) => {

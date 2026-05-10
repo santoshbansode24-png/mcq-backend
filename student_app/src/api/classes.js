@@ -29,7 +29,7 @@ export const fetchClasses = async (board = null, forceRefresh = false) => {
         console.log(`[Classes] Fetching from ${API_URL}/get_classes.php${board ? `?board=${board}` : ''}`);
         const response = await axios.get(`${API_URL}/get_classes.php`, {
             params: board ? { board } : {},
-            timeout: 5000
+            timeout: 15000 // Increased from 5s to 15s to allow for Railway cold-starts and slow mobile data
         });
 
         if (response.data && response.data.status === 'success') {

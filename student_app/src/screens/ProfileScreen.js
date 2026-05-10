@@ -80,6 +80,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
     const loadClasses = async (board, forceRefresh = false) => {
         try {
+            setFetchingClasses(true);
             // Use the optimized API which handles caching
             const response = await fetchClasses(board, forceRefresh);
 
@@ -88,12 +89,14 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                 setClasses(classData);
             } else {
                 setClasses([]);
-                if (forceRefresh) Alert.alert("Error", response?.message || "Failed to load classes");
+                Alert.alert("Error", response?.message || "Failed to load classes");
             }
         } catch (error) {
             console.error("Failed to load classes:", error);
-            if (forceRefresh) Alert.alert("Connection Error", `Could not load classes.\n${error.message}`);
+            Alert.alert("Connection Error", `Could not load classes. Please try again.\n${error.message}`);
             setClasses([]);
+        } finally {
+            setFetchingClasses(false);
         }
     };
 
@@ -397,6 +400,13 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                             <View style={{ height: 50, justifyContent: 'center', alignItems: 'center' }}>
                                 <ActivityIndicator size="small" color={theme.primary} />
                             </View>
+                        ) : classes.length === 0 ? (
+                            <TouchableOpacity 
+                                style={{ height: 50, justifyContent: 'center', alignItems: 'center' }} 
+                                onPress={() => loadClasses(currentBoard, true)}
+                            >
+                                <Text style={{ color: theme.primary, fontWeight: 'bold' }}>Tap to Retry Loading Classes</Text>
+                            </TouchableOpacity>
                         ) : (
                             <FlatList
                                 data={classes}

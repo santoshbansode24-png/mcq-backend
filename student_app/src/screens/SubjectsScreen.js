@@ -70,12 +70,14 @@ const SubjectsScreen = ({ user, navigation }) => {
         try {
             const response = await fetchSubjects(classId, forceRefresh);
             if (response.status === 'success') {
-                setSubjects(response.data);
-            } else if (response.message !== 'No subjects found for this class') {
-                Alert.alert('Error', response.message);
+                setSubjects(response.data || []);
+            } else if (Array.isArray(response)) {
+                setSubjects(response);
+            } else if (response.message !== 'No subjects found for this class' && response.message !== 'No class selected') {
+                Alert.alert('Error', response.message || 'Failed to load subjects');
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to load subjects');
+            Alert.alert('Error', 'Failed to load subjects. Please check your network connection.');
         } finally {
             setLoading(false);
             setRefreshing(false);

@@ -111,10 +111,13 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
         try {
             const classId = user?.class_id || 10;
             const response = await fetchSubjects(classId);
-            if (response.status === 'success') {
-                setSubjects(response.data);
+            if (response && (response.status === 'success' || Array.isArray(response))) {
+                setSubjects(response.data || response);
+            } else if (response?.message !== 'No class selected' && response?.message !== 'No subjects found for this class') {
+                Alert.alert('Error', response?.message || 'Failed to load subjects');
             }
         } catch (error) {
+            Alert.alert('Connection Error', 'Failed to load subjects. Please check your network connection.');
             console.error("Failed to load subjects", error);
         } finally {
             setLoading(false);

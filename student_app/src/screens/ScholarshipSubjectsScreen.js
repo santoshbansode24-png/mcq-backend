@@ -100,8 +100,8 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
 
             // Then revalidate from server
             const response = await fetchSubjects(scholarshipClassId, forceRefresh);
-            if (response.status === 'success') {
-                const allData = response.data;
+            if (response && (response.status === 'success' || Array.isArray(response))) {
+                const allData = response.data || response;
 
                 // Separate "Mock Tests" from regular subjects
                 const mocks = allData.filter(s => s.subject_name.includes("Mock Test") || s.subject_name.includes("Previous Paper"));
@@ -109,6 +109,8 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
 
                 setSubjects(regular);
                 setMockTests(mocks);
+            } else if (response?.message !== 'No class selected' && response?.message !== 'No subjects found for this class') {
+                Alert.alert('Error', response?.message || 'Failed to load subjects');
             }
         } catch (error) {
             console.error(error);

@@ -124,13 +124,14 @@ const MyExamScreen = ({ navigation, route, user }) => {
         if (!refreshing) setLoading(true);
         try {
             const response = await fetchSubjects(classId);
-            if (response.status === 'success') {
-                setSubjects(response.data);
-            } else {
-                Alert.alert('Error', response.message);
+            if (response && (response.status === 'success' || Array.isArray(response))) {
+                const subjectData = response.data || response;
+                setSubjects(subjectData);
+            } else if (response?.message !== 'No class selected' && response?.message !== 'No subjects found for this class') {
+                Alert.alert('Error', response?.message || 'Failed to load subjects');
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to load subjects');
+            Alert.alert('Connection Error', 'Failed to load subjects. Please check your network connection.');
         } finally {
             setLoading(false);
             setRefreshing(false);

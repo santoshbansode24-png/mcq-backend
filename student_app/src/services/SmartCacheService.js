@@ -119,19 +119,19 @@ export const SmartCacheService = {
 
             // Initialize Queue
             const fullQueue = [];
-            for (const subject of subjects) {
-                try {
-                    const chapterRes = await SmartCacheService.retry(() => fetchChapters(subject.subject_id, true));
-                    const isChapterSuccess = chapterRes && (chapterRes.status === 'success' || Array.isArray(chapterRes.data) || Array.isArray(chapterRes));
-                    
-                    if (isChapterSuccess) {
-                        const chapters = Array.isArray(chapterRes) ? chapterRes : (chapterRes.data || []);
-                        chapters.forEach(ch => fullQueue.push(ch.chapter_id));
-                    }
-                } catch (e) {
-                    console.warn(`[SmartCache] Failed to fetch chapters for subject ${subject.subject_id}`);
-                }
-            }
+            const chapterPromises = subjects.map(subject => 
+                SmartCacheService.retry(() => fetchChapters(subject.subject_id, true))
+                    .then(chapterRes => {
+                        const isChapterSuccess = chapterRes && (chapterRes.status === 'success' || Array.isArray(chapterRes.data) || Array.isArray(chapterRes));
+                        if (isChapterSuccess) {
+                            const chapters = Array.isArray(chapterRes) ? chapterRes : (chapterRes.data || []);
+                            chapters.forEach(ch => fullQueue.push(ch.chapter_id));
+                        }
+                    })
+                    .catch(e => console.warn(`[SmartCache] Failed to fetch chapters for subject ${subject.subject_id}`))
+            );
+
+            await Promise.all(chapterPromises);
 
             // Save queue to storage so we can resume if app closes
             await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(fullQueue));

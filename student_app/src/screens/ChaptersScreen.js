@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
@@ -37,15 +37,19 @@ const ChaptersScreen = ({ navigation, route, user }) => {
 
 
     // ... inside ChaptersScreen
+    const lastLoadTime = useRef(0);
+
     useFocusEffect(
         useCallback(() => {
             if (subject?.subject_id && user?.user_id) {
-                // Pass false to not show full loading spinner on auto-refetch if we have data
-                // Or true if we want to ensure fresh data. 
-                // Let's rely on standard load logic.
-                loadChaptersWithProgress();
+                const now = Date.now();
+                // Only auto-reload if chapters are empty OR more than 60 seconds passed
+                if (chapters.length === 0 || now - lastLoadTime.current > 60000) {
+                    loadChaptersWithProgress();
+                    lastLoadTime.current = now;
+                }
             }
-        }, [subject, user])
+        }, [subject, user, chapters.length])
     );
 
     const loadChaptersWithProgress = async (isRefreshing = false) => {

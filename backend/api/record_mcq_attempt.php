@@ -63,28 +63,10 @@ try {
     
     $attempt_id = $pdo->lastInsertId();
     
-    // Get updated progress for this chapter
-    $progressStmt = $pdo->prepare("
-        SELECT 
-            (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ?) as total_mcqs,
-            (SELECT COUNT(DISTINCT mcq_id) FROM mcq_attempts WHERE user_id = ? AND chapter_id = ?) as solved_mcqs
-    ");
-    $progressStmt->execute([$chapter_id, $user_id, $chapter_id]);
-    $progress = $progressStmt->fetch();
-    
-    $total = intval($progress['total_mcqs']);
-    $solved = intval($progress['solved_mcqs']);
-    $percentage = $total > 0 ? round(($solved / $total) * 100, 1) : 0;
-    
     // Success response
     sendResponse('success', 'MCQ attempt recorded successfully', [
         'attempt_id' => $attempt_id,
-        'is_correct' => $is_correct,
-        'chapter_progress' => [
-            'total_mcqs' => $total,
-            'solved_mcqs' => $solved,
-            'completion_percentage' => $percentage
-        ]
+        'is_correct' => $is_correct
     ], 201);
     
 } catch (PDOException $e) {

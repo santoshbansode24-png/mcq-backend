@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { fetchLeaderboard } from '../api/analytics';
 import { BASE_URL } from '../api/config';
+import { dataCache } from '../utils/dataCache';
 
 const LeaderboardScreen = ({ navigation, user }) => {
     const { theme } = useTheme();
@@ -11,24 +12,45 @@ const LeaderboardScreen = ({ navigation, user }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
+    const lastLoadTime = useRef(0);
+
     useFocusEffect(
         useCallback(() => {
-            if (user?.class_id) {
+            const now = Date.now();
+            // Cache check: only reload if 60 seconds passed
+            if (leaderboardData.length === 0 || now - lastLoadTime.current > 60000) {
                 loadLeaderboard();
+                lastLoadTime.current = now;
             }
-        }, [user])
+        }, [user, leaderboardData.length])
     );
 
-    const onRefresh = useCallback(() => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        loadLeaderboard().then(() => setRefreshing(false));
-    }, []);
+        await dataCache.remove(`leaderboard_${user.class_id}`);
+        await loadLeaderboard(true);
+        setRefreshing(false);
+    }, [user.class_id]);
 
-    const loadLeaderboard = async () => {
+    const loadLeaderboard = async (forceRefresh = false) => {
+        if (!user?.class_id) return;
+
+        // Try cache first
+        if (!forceRefresh) {
+            try {
+                const cached = await dataCache.get(`leaderboard_${user.class_id}`, 'leaderboard');
+                if (cached) {
+                    setLeaderboardData(cached);
+                    setLoading(false);
+                }
+            } catch (e) {}
+        }
+
         try {
             const response = await fetchLeaderboard(user.class_id);
             if (response.status === 'success') {
                 setLeaderboardData(response.data);
+                await dataCache.set(`leaderboard_${user.class_id}`, response.data, 'leaderboard');
             }
         } catch (error) {
             console.error('Failed to load leaderboard', error);

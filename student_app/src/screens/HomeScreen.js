@@ -386,16 +386,23 @@ const HomeScreen = ({ user, navigation, route }) => {
         }
     };
 
+    const lastLoadTime = useRef(0);
+
     useFocusEffect(
         useCallback(() => {
             const task = InteractionManager.runAfterInteractions(() => {
                 if (classId) {
-                    loadSubjects();
+                    const now = Date.now();
+                    // Only auto-reload if subjects are empty OR more than 60 seconds passed
+                    if (subjects.length === 0 || now - lastLoadTime.current > 60000) {
+                        loadSubjects();
+                        lastLoadTime.current = now;
+                    }
                     checkVersion();
                 }
             });
             return () => task.cancel();
-        }, [classId])
+        }, [classId, subjects.length])
     );
 
     const loadSubjects = async (forceRefresh = false) => {

@@ -5,7 +5,13 @@ try {
     echo "Checking indexes...\n";
 
     // multiple indexes check
-    $indexes = ['videos' => 'chapter_id', 'notes' => 'chapter_id', 'mcqs' => 'chapter_id'];
+    $indexes = [
+        'videos' => 'chapter_id', 
+        'notes' => 'chapter_id', 
+        'mcqs' => 'chapter_id',
+        'subjects' => 'class_id',
+        'chapters' => 'subject_id'
+    ];
 
     foreach ($indexes as $table => $column) {
         $stmt = $pdo->prepare("SHOW INDEX FROM $table WHERE Column_name = ?");

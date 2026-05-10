@@ -22,17 +22,17 @@ const ClassSelectionScreen = ({ navigation, route }) => {
             setDebugLog(prev => prev + `\nResponse: ${JSON.stringify(response).substring(0, 100)}...`);
             console.log("Class API Response:", JSON.stringify(response));
 
-            if (response.status === 'success') {
-                // Alert.alert("Debug", `Fetched ${response.data.length} classes`);
-                setClasses(response.data);
-                setDebugLog(prev => prev + `\nSuccess! Items: ${response.data.length}`);
+            if (response && (response.status === 'success' || Array.isArray(response))) {
+                const classData = response.data || response;
+                setClasses(classData);
+                setDebugLog(prev => prev + `\nSuccess! Items: ${classData.length}`);
             } else {
-                Alert.alert('Error', response.message);
-                setDebugLog(prev => prev + `\nAPI Error: ${response.message}`);
+                Alert.alert('Error', response?.message || 'Failed to load classes');
+                setDebugLog(prev => prev + `\nAPI Error: ${response?.message}`);
             }
         } catch (error) {
             const errString = error.message || 'Unknown Error';
-            Alert.alert('Error', errString);
+            Alert.alert('Connection Error', 'Could not load classes. Please check your network.');
             console.error('Class Load Error:', error);
             setDebugLog(prev => prev + `\nCATCH Error: ${errString}`);
         } finally {

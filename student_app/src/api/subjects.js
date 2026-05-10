@@ -3,6 +3,11 @@ import { API_URL } from './config';
 import { dataCache } from '../utils/dataCache';
 
 export const fetchSubjects = async (classId, forceRefresh = false) => {
+    if (!classId) {
+        // console.warn('[API] fetchSubjects called without a classId');
+        return { status: 'success', data: [], message: 'No class selected' };
+    }
+
     const cacheKey = `subjects_${classId}`;
 
     // Try cache first (unless force refresh)

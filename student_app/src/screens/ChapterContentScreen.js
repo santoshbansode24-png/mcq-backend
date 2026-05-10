@@ -344,8 +344,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
     }, []);
 
-
-    const finishTask = async () => {
+    const finishTask = useCallback(async () => {
         setIsTaskActive(false);
         try {
             // Get User ID from Storage
@@ -391,7 +390,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
         } catch (e) {
             console.error('[Timer] Error finishing task:', e);
         }
-    };
+    }, [activeTask, API_URL]);
 
     const formatTimer = (seconds) => {
         const m = Math.floor(seconds / 60);
@@ -423,17 +422,21 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
     }, [activeTab]);
 
-    const preFetchAll = async () => {
+    const preFetchAll = useCallback(async () => {
         if (!chapter?.chapter_id) return;
-        console.log("[ChapterContent] Starting background pre-fetch...");
+        
+        // Defer background fetching until after the UI has settled
+        InteractionManager.runAfterInteractions(async () => {
+            console.log("[ChapterContent] Starting background pre-fetch...");
+            const tabsToFetch = ['MCQs', 'Notes', 'Videos', 'Flashcards', 'QuickRevision'].filter(t => t !== activeTab);
 
-        const tabsToFetch = ['MCQs', 'Notes', 'Videos', 'Flashcards', 'QuickRevision'].filter(t => t !== activeTab);
-
-        // Fetch sequentially in background to avoid overwhelming the bridge
-        for (const tab of tabsToFetch) {
-            loadTabInBackground(tab);
-        }
-    };
+            // Fetch with small delays to keep bridge clear
+            for (const tab of tabsToFetch) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await loadTabInBackground(tab);
+            }
+        });
+    }, [chapter?.chapter_id, activeTab]);
 
     const loadTabInBackground = async (tab) => {
         try {
@@ -601,11 +604,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
         } catch (e) { console.log('Status Load Error', e); }
     };
 
-    const onRefresh = () => {
+    const onRefresh = useCallback(() => {
         loadContent(true);
-    };
+    }, [loadContent]);
 
-    const generateAIQuiz = async () => {
+    const generateAIQuiz = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.post(`${API_URL}/ai_generate_quiz.php`, {
@@ -626,7 +629,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [chapter.chapter_id, API_URL]);
 
     // Helper to shuffle array
     const shuffleArray = (array) => {
@@ -1272,10 +1275,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 renderItem={activeTab === 'Notes' ? renderNoteItem : renderVideoItem}
                 keyExtractor={(item, index) => (item.note_id || item.video_id || `item-${index}`).toString()}
                 contentContainerStyle={[styles.listContainer, contentContainerPadding]}
-                initialNumToRender={6}
+                initialNumToRender={8}
                 maxToRenderPerBatch={10}
                 windowSize={5}
                 removeClippedSubviews={Platform.OS === 'android'}
+                updateCellsBatchingPeriod={50}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 ListHeaderComponent={null}

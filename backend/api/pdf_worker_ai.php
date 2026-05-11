@@ -17,30 +17,37 @@ if ($workerKey !== WORKER_SECRET) {
     exit;
 }
 
-// --- Job Selection ---
+// --- Job Selection with Atomic Claiming ---
 $forceJobId = isset($_GET['force_job_id']) ? intval($_GET['force_job_id']) : 0;
+$claimToken = bin2hex(random_bytes(8)); // Unique token for this worker instance
 
 if ($forceJobId > 0) {
-    // Process a specific job (used for manual retries)
-    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
-    $stmt->execute([$forceJobId]);
+    // Force a specific job
+    $stmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10, claim_token = ? WHERE job_id = ?");
+    $stmt->execute([$claimToken, $forceJobId]);
+    
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? AND claim_token = ? LIMIT 1");
+    $stmt->execute([$forceJobId, $claimToken]);
 } else {
-    // Pick next pending job (FIFO)
-    $stmt = $pdo->query("SELECT * FROM pdf_study_jobs WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1");
+    // Atomically claim the NEXT pending job
+    $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10, claim_token = ? 
+                   WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1")
+        ->execute([$claimToken]);
+    
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'processing' AND claim_token = ? LIMIT 1");
+    $stmt->execute([$claimToken]);
 }
 $jobs = $stmt->fetchAll();
 
 if (empty($jobs)) {
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'idle', 'message' => 'No pending jobs.']);
+    echo json_encode(['status' => 'idle', 'message' => 'No pending jobs or claim failed.']);
     exit;
 }
 
 foreach ($jobs as $job) {
     try {
-        // Mark as processing immediately
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?")
-            ->execute([$job['job_id']]);
+        // Status is already marked as 'processing' during claim
 
         // --- 1. PDF RETRIEVAL LOGIC (Railway-Proof) ---
         // We prioritize the DB base64 for ephemeral environments, 

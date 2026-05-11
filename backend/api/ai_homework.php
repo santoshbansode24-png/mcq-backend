@@ -154,8 +154,9 @@ try {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $isLocal = ($_SERVER['HTTP_HOST'] === 'localhost');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal); 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
         curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 
         $fullReply = "";

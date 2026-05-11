@@ -26,6 +26,8 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filteredJobs, setFilteredJobs] = useState([]);
 
     // Modal State
     const [renameModalVisible, setRenameModalVisible] = useState(false);
@@ -124,6 +126,20 @@ const PDFToExamScreen = ({ user, navigation }) => {
             setRefreshing(false);
         }
     };
+
+    // Optimization: Filter jobs locally when search query changes
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setFilteredJobs(jobs);
+        } else {
+            const query = searchQuery.toLowerCase();
+            const filtered = jobs.filter(j => 
+                (j.file_name || '').toLowerCase().includes(query) || 
+                (j.status || '').toLowerCase().includes(query)
+            );
+            setFilteredJobs(filtered);
+        }
+    }, [searchQuery, jobs]);
 
     const handleUpload = async () => {
         try {
@@ -474,7 +490,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
             <StatusBar barStyle="light-content" backgroundColor="#0B1121" />
             <SafeAreaView style={styles.safeArea}>
                 <FlatList
-                    data={jobs}
+                    data={filteredJobs}
                     keyExtractor={(item) => item.job_id.toString()}
                     renderItem={renderJobItem}
                     contentContainerStyle={styles.scrollContent}
@@ -492,12 +508,22 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     <Text style={styles.headerSubtitle}>My Documents</Text>
                                 </View>
                                 <View style={styles.headerIcons}>
-                                    <TouchableOpacity style={styles.iconBtn}>
-                                        <MaterialCommunityIcons name="account-circle-outline" size={26} color="#e2e8f0" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.iconBtn}>
-                                        <MaterialCommunityIcons name="bell-outline" size={24} color="#e2e8f0" />
-                                    </TouchableOpacity>
+                                    {/* Search Bar Implementation */}
+                                    <View style={styles.searchContainer}>
+                                        <MaterialCommunityIcons name="magnify" size={20} color="#94a3b8" style={styles.searchIcon} />
+                                        <TextInput 
+                                            style={styles.searchInput}
+                                            placeholder="Search Vault..."
+                                            placeholderTextColor="#64748b"
+                                            value={searchQuery}
+                                            onChangeText={setSearchQuery}
+                                        />
+                                        {searchQuery !== '' && (
+                                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                                <MaterialCommunityIcons name="close-circle" size={18} color="#94a3b8" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
                                 </View>
                             </View>
 
@@ -729,7 +755,20 @@ const styles = StyleSheet.create({
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
     headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
     headerSubtitle: { fontSize: 13, color: '#94a3b8', marginTop: 2, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
-    headerIcons: { flexDirection: 'row', alignItems: 'center' },
+    headerIcons: { flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 20 },
+    searchContainer: { 
+        flex: 1, 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: 'rgba(255,255,255,0.05)', 
+        borderRadius: 12, 
+        paddingHorizontal: 12,
+        height: 40,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)'
+    },
+    searchIcon: { marginRight: 8 },
+    searchInput: { flex: 1, color: '#fff', fontSize: 14, fontWeight: '500', padding: 0 },
     iconBtn: { marginLeft: 15, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
 
     bannerContainer: { padding: 28, borderRadius: 24, alignItems: 'center', marginBottom: 24, elevation: 8, shadowColor: '#db2777', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },

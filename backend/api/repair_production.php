@@ -36,7 +36,7 @@ try {
     $requiredCols = [
         'folder_id'      => "ALTER TABLE pdf_study_jobs ADD COLUMN folder_id INT DEFAULT NULL AFTER user_id",
         'pdf_base64'     => "ALTER TABLE pdf_study_jobs ADD COLUMN pdf_base64 LONGTEXT DEFAULT NULL AFTER file_path",
-        'study_content'  => "ALTER TABLE pdf_study_jobs ADD COLUMN study_content LONGTEXT DEFAULT NULL AFTER pdf_base64",
+        'claim_token'    => "ALTER TABLE pdf_study_jobs ADD COLUMN claim_token VARCHAR(64) DEFAULT NULL AFTER status",
         'processed_pages'=> "ALTER TABLE pdf_study_jobs ADD COLUMN processed_pages INT DEFAULT 0 AFTER progress",
         'total_pages'    => "ALTER TABLE pdf_study_jobs ADD COLUMN total_pages INT DEFAULT 0 AFTER processed_pages",
         'error_message'  => "ALTER TABLE pdf_study_jobs ADD COLUMN error_message TEXT DEFAULT NULL AFTER total_pages",
@@ -67,6 +67,17 @@ try {
         INDEX (`user_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     echo "   [ok] Table verified.\n";
+
+    // 2.2 Add Index for claim_token if missing
+    echo "\n2.2 Checking pdf_study_jobs indexes...\n";
+    $checkIndex = $pdo->query("SHOW INDEX FROM pdf_study_jobs WHERE Column_name = 'claim_token'");
+    if (!$checkIndex->fetch()) {
+        echo "   [+] Adding index for claim_token... ";
+        $pdo->exec("ALTER TABLE pdf_study_jobs ADD INDEX (claim_token)");
+        echo "Done.\n";
+    } else {
+        echo "   [ok] claim_token index exists.\n";
+    }
 
     // 2.5 Ensure content_progress table exists (Fixes 500 error on Railway)
     echo "\n2.5 Checking content_progress table...\n";

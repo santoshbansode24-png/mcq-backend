@@ -50,8 +50,10 @@ if (!function_exists('callGeminiAPI')) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            // SSL Security: Enable verification in production (Railway), disable only on localhost if needed
+            $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || $_SERVER['HTTP_HOST'] === 'localhost');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -109,7 +111,9 @@ if (!function_exists('callGeminiPDF')) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 min
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $isLocal = ($_SERVER['HTTP_HOST'] === 'localhost');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

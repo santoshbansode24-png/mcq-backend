@@ -62,25 +62,23 @@ const SkeletonItem = () => {
 // unmount/remount it on every re-render (was a major perf issue).
 // --- Optimized Sub-Components ---
 const HomeGreeting = React.memo(({ userName, t, theme, isSyncing, isFullySynced, hasUpdate }) => (
-    <View style={styles.header}>
-        <View style={{ flex: 1, marginRight: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t('welcome')},</Text>
-                {isSyncing && (
-                    <View style={styles.syncIndicator}>
-                        <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
-                        <Text style={styles.syncText}>Syncing...</Text>
-                    </View>
-                )}
-                {!isSyncing && isFullySynced && !hasUpdate && (
-                    <View style={styles.syncIndicator}>
-                        <MaterialCommunityIcons name="check-circle" size={12} color="#10b981" />
-                        <Text style={[styles.syncText, { color: '#10b981' }]}>Offline Ready</Text>
-                    </View>
-                )}
-            </View>
-            <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
+    <View style={{ flex: 1, marginRight: 12, justifyContent: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 2 }}>
+            <Text style={[styles.greeting, { color: theme.textSecondary, marginBottom: 0 }]}>{t('welcome')},</Text>
+            {isSyncing && (
+                <View style={styles.syncIndicator}>
+                    <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                    <Text style={styles.syncText}>Syncing...</Text>
+                </View>
+            )}
+            {!isSyncing && isFullySynced && !hasUpdate && (
+                <View style={styles.syncIndicator}>
+                    <MaterialCommunityIcons name="check-circle" size={12} color="#10b981" />
+                    <Text style={[styles.syncText, { color: '#10b981' }]}>Offline Ready</Text>
+                </View>
+            )}
         </View>
+        <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{userName} 👋</Text>
     </View>
 ));
 

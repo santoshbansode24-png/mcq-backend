@@ -166,6 +166,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         }
                     }
                 }
+            ]
         );
     };
 

@@ -162,14 +162,46 @@ CREATE TABLE IF NOT EXISTS app_content_updates (
 -- Seed defaults
 INSERT IGNORE INTO app_content_updates (board_type) VALUES ('CBSE'), ('Marathi Medium'), ('Semi English'), ('ICSE');
 
+-- ----------------------------------------------------------------------------
+-- MCQs Sync Logic: Update ONLY the specific board that changed
+-- ----------------------------------------------------------------------------
 DELIMITER $$
--- MCQs
-CREATE TRIGGER after_mcq_ins AFTER INSERT ON mcqs FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
-CREATE TRIGGER after_mcq_upd AFTER UPDATE ON mcqs FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
-CREATE TRIGGER after_mcq_del AFTER DELETE ON mcqs FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+CREATE TRIGGER after_mcq_ins AFTER INSERT ON mcqs FOR EACH ROW 
+BEGIN 
+    UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP 
+    WHERE board_type = (SELECT c.board_type FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id WHERE ch.chapter_id = NEW.chapter_id);
+END$$
 
--- Notes
-CREATE TRIGGER after_note_ins AFTER INSERT ON notes FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
-CREATE TRIGGER after_note_upd AFTER UPDATE ON notes FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
-CREATE TRIGGER after_note_del AFTER DELETE ON notes FOR EACH ROW BEGIN UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP; END$$
+CREATE TRIGGER after_mcq_upd AFTER UPDATE ON mcqs FOR EACH ROW 
+BEGIN 
+    UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP 
+    WHERE board_type = (SELECT c.board_type FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id WHERE ch.chapter_id = NEW.chapter_id);
+END$$
+
+CREATE TRIGGER after_mcq_del AFTER DELETE ON mcqs FOR EACH ROW 
+BEGIN 
+    UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP 
+    WHERE board_type = (SELECT c.board_type FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id WHERE ch.chapter_id = OLD.chapter_id);
+END$$
+
+-- ----------------------------------------------------------------------------
+-- Notes Sync Logic: Update ONLY the specific board that changed
+-- ----------------------------------------------------------------------------
+CREATE TRIGGER after_note_ins AFTER INSERT ON notes FOR EACH ROW 
+BEGIN 
+    UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP 
+    WHERE board_type = (SELECT c.board_type FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id WHERE ch.chapter_id = NEW.chapter_id);
+END$$
+
+CREATE TRIGGER after_note_upd AFTER UPDATE ON notes FOR EACH ROW 
+BEGIN 
+    UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP 
+    WHERE board_type = (SELECT c.board_type FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id WHERE ch.chapter_id = NEW.chapter_id);
+END$$
+
+CREATE TRIGGER after_note_del AFTER DELETE ON notes FOR EACH ROW 
+BEGIN 
+    UPDATE app_content_updates SET last_update = CURRENT_TIMESTAMP 
+    WHERE board_type = (SELECT c.board_type FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id JOIN classes c ON s.class_id = c.class_id WHERE ch.chapter_id = OLD.chapter_id);
+END$$
 DELIMITER ;

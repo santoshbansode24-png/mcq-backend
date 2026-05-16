@@ -581,7 +581,7 @@ const HomeScreen = ({ user, navigation, route }) => {
             <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
             <LinearGradient colors={isDarkMode ? ['#0f172a', '#1e1b4b'] : ['#f0f9ff', '#e0f2fe']} style={styles.background} />
 
-            <SafeAreaView style={styles.safeArea}>
+            <View style={styles.contentWrapper}>
                 <FlatList
                     data={subjects}
                     keyExtractor={(item) => item.subject_id.toString()}
@@ -603,7 +603,7 @@ const HomeScreen = ({ user, navigation, route }) => {
                     )}
                     ListFooterComponent={<View style={{ height: 40 }} />}
                 />
-            </SafeAreaView>
+            </View>
 
             {loading && subjects.length === 0 && !refreshing && (
                 <View style={[styles.scrollPadding, { marginTop: -20 }]}>
@@ -616,28 +616,55 @@ const HomeScreen = ({ user, navigation, route }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    safeArea: { flex: 1 },
-    background: { ...StyleSheet.absoluteFillObject },
-    scrollPadding: { paddingHorizontal: rs(20), paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+    contentWrapper: { flex: 1 },
+    scrollPadding: { paddingHorizontal: rs(24), paddingTop: rs(10) },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: rsv(20), marginTop: 0 },
-    greeting: { fontSize: rs(16), fontWeight: '500', marginBottom: rs(4), fontFamily: 'NotoSans-Regular' },
-    userName: { fontSize: rs(28), fontWeight: '800', fontFamily: 'NotoSans-Bold' },
+    greeting: { fontSize: rs(14), fontWeight: '600', color: '#64748b', marginBottom: rs(2), fontFamily: 'NotoSans-Regular', letterSpacing: 0.5 },
+    userName: { fontSize: rs(30), fontWeight: '900', color: '#1e293b', fontFamily: 'NotoSans-Bold', letterSpacing: -0.5 },
     avatarContainer: { borderWidth: 2, borderRadius: rs(30), padding: rs(2) },
     avatar: { width: rs(50), height: rs(50), borderRadius: rs(25) },
     avatarPlaceholder: { width: rs(50), height: rs(50), borderRadius: rs(25), justifyContent: 'center', alignItems: 'center' },
     avatarText: { fontSize: rs(22), fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold' },
     sectionTitle: { fontSize: rs(20), fontWeight: '700', marginBottom: rsv(15), fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
-    gridContainer: { marginBottom: rsv(25) },
-    gridItem: { flex: 1, height: rsv(120), borderRadius: rs(24), overflow: 'hidden', elevation: 4, shadowOpacity: 0.2, shadowRadius: 5 },
-    gridGradient: { flex: 1, padding: rs(15), justifyContent: 'center', alignItems: 'center' },
-    gridIcon: { fontSize: rs(32), marginBottom: rs(8) },
+    gridContainer: { marginBottom: rsv(25), paddingHorizontal: 2 },
+    gridItem: { 
+        flex: 1, 
+        height: rsv(125), 
+        borderRadius: rs(28), 
+        overflow: 'hidden', 
+        elevation: 8, 
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15, 
+        shadowRadius: 12 
+    },
+    gridGradient: { flex: 1, padding: rs(18), justifyContent: 'center', alignItems: 'center' },
+    gridIcon: { fontSize: rs(36), marginBottom: rs(8) },
     gridTitle: { fontSize: rs(12), fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold', textTransform: 'uppercase', textAlign: 'center' },
-    fullWidthCard: { marginBottom: rsv(25), borderRadius: rs(24), overflow: 'hidden', elevation: 4 },
-    bannerGradient: { padding: rs(20) },
+    fullWidthCard: { 
+        marginBottom: rsv(20), 
+        borderRadius: rs(28), 
+        overflow: 'hidden', 
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 15,
+    },
+    bannerGradient: { padding: rs(22) },
     bannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    bannerTitle: { fontSize: rs(16), fontWeight: 'bold', color: 'white', fontFamily: 'NotoSans-Bold', textTransform: 'uppercase' },
-    bannerSubtitle: { fontSize: rs(12), color: 'white', opacity: 0.9, fontFamily: 'NotoSans-Regular' },
-    bannerIconContainer: { width: rs(44), height: rs(44), backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: rs(12), justifyContent: 'center', alignItems: 'center' },
+    bannerTitle: { fontSize: rs(18), fontWeight: '900', color: 'white', fontFamily: 'NotoSans-Bold', letterSpacing: 0.5 },
+    bannerSubtitle: { fontSize: rs(12), color: 'white', opacity: 0.85, fontFamily: 'NotoSans-Regular', marginTop: 2 },
+    bannerIconContainer: { 
+        width: rs(48), 
+        height: rs(48), 
+        backgroundColor: 'rgba(255,255,255,0.25)', 
+        borderRadius: rs(16), 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+    },
     subjectWrapper: { marginBottom: rsv(15) },
     subjectCardGlossy: {
         flexDirection: 'row',

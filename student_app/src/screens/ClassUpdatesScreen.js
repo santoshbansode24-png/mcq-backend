@@ -1,183 +1,338 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    View, Text, StyleSheet, FlatList, TouchableOpacity,
-    ActivityIndicator, RefreshControl, Image, Linking, StatusBar
+import { 
+    View, Text, StyleSheet, SectionList, ActivityIndicator, 
+    TouchableOpacity, Linking, Image, TextInput, Alert,
+    RefreshControl 
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
-import { API_URL } from '../api/config';
+import { BASE_URL } from '../api/config';
 
-// Helper for relative time
-const formatTimeAgo = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-    
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return Math.floor(seconds) + " seconds ago";
-};
-
-const ClassUpdatesScreen = ({ navigation, user }) => {
+const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const { theme, isDarkMode } = useTheme();
-    const [updates, setUpdates] = useState([]);
+    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+    const [joinCode, setJoinCode] = useState('');
+    const [joining, setJoining] = useState(false);
+    const [showJoinForm, setShowJoinForm] = useState(!user?.class_id);
 
-    const fetchUpdates = useCallback(async () => {
-        if (!user?.school_name || !user?.class_id) {
+    useEffect(() => {
+        if (user?.class_id) {
+            loadNotifications();
+        } else {
+            setLoading(false);
+        }
+    }, [user?.class_id]);
+
+    const loadNotifications = async () => {
+        if (!user?.class_id) {
             setLoading(false);
             return;
         }
+        setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/get_class_updates.php`, {
-                params: {
-                    school_name: user.school_name,
-                    class_id: user.class_id
-                }
-            });
-            if (res.data.status === 'success') {
-                setUpdates(res.data.data);
+            const response = await fetchNotifications(user.class_id);
+            if (response.status === 'success') {
+                setNotifications(response.data);
             }
         } catch (error) {
-            console.error("Failed to fetch class updates", error);
+            console.error('Failed to load notifications', error);
         } finally {
             setLoading(false);
-            setRefreshing(false);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        fetchUpdates();
-    }, [fetchUpdates]);
-
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchUpdates();
-    };
-
-    const handleAction = (item) => {
-        if (item.update_type === 'pdf') {
-            if (item.payload?.url) {
-                Linking.openURL(item.payload.url);
-            }
-        } else if (item.update_type === 'exam') {
-            if (item.payload?.chapter_ids) {
-                // Instantly generate test based on teacher's payload
-                navigation.navigate('MyExamTest', {
-                    questions: item.payload.questions || [], 
-                    totalQuestions: item.payload.questions?.length || 0,
-                    subjectName: "Teacher Exam",
-                    update_id: item.update_id
-                });
-            }
-        } else if (item.update_type === 'worksheet') {
-            if (item.payload?.url) {
-                 Linking.openURL(item.payload.url);
-            }
         }
     };
 
-    const renderItem = ({ item }) => {
-        let iconName = "notifications";
-        let iconColor = "#6366f1";
-        let bgColor = isDarkMode ? "#1e293b" : "#ffffff";
+    const handleJoinClass = async () => {
+        if (joinCode.length < 4) {
+            Alert.alert("Invalid Code", "Please enter a valid 6-digit class code.");
+            return;
+        }
 
-        if (item.update_type === 'homework') { iconName = "book"; iconColor = "#f59e0b"; }
-        if (item.update_type === 'exam') { iconName = "document-text"; iconColor = "#ef4444"; }
-        if (item.update_type === 'worksheet') { iconName = "print"; iconColor = "#10b981"; }
-        if (item.update_type === 'photo') { iconName = "image"; iconColor = "#8b5cf6"; }
-        if (item.update_type === 'pdf') { iconName = "document-attach"; iconColor = "#06b6d4"; }
+        setJoining(true);
+        try {
+            const formData = new FormData();
+            formData.append('user_id', user.user_id);
+            formData.append('class_code', joinCode);
+
+            const response = await fetch(`${BASE_URL}/api/join_class.php`, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                Alert.alert("Success 🎉", result.message);
+                setShowJoinForm(false);
+                
+                // CRITICAL FIX: Update global user state so other screens see the class
+                if (onUserUpdate) {
+                    onUserUpdate({ 
+                        class_id: result.class_id,
+                        class_name: result.class_name
+                    });
+                }
+                
+                // Local refresh is handled by useEffect [user.class_id]
+            } else {
+                Alert.alert("Error", result.message);
+            }
+        } catch (error) {
+            Alert.alert("Network Error", "Could not connect to server.");
+        } finally {
+            setJoining(false);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const groupNotifications = (data) => {
+        const groups = [];
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const todayStr = today.toDateString();
+        const yesterdayStr = yesterday.toDateString();
+
+        const sections = {
+            'Today': [],
+            'Yesterday': [],
+            'Earlier': []
+        };
+
+        data.forEach(item => {
+            const itemDate = new Date(item.created_at);
+            const itemDateStr = itemDate.toDateString();
+
+            if (itemDateStr === todayStr) {
+                sections['Today'].push(item);
+            } else if (itemDateStr === yesterdayStr) {
+                sections['Yesterday'].push(item);
+            } else {
+                sections['Earlier'].push(item);
+            }
+        });
+
+        if (sections['Today'].length > 0) groups.push({ title: 'Today', data: sections['Today'] });
+        if (sections['Yesterday'].length > 0) groups.push({ title: 'Yesterday', data: sections['Yesterday'] });
+        if (sections['Earlier'].length > 0) groups.push({ title: 'Earlier', data: sections['Earlier'] });
+
+        return groups;
+    };
+
+    const groupedData = groupNotifications(notifications);
+
+    const renderItem = useCallback(({ item }) => {
+        const hasFile = item.payload && (item.payload.file_url || item.payload.url);
+        const isPdf = item.update_type === 'pdf';
+        const isPhoto = item.update_type === 'photo';
+        const isExam = item.update_type === 'live_exam';
+        const isHomework = item.update_type === 'homework';
+        const isWorksheet = item.update_type === 'worksheet';
+
+        const openAttachment = () => {
+            if (hasFile) {
+                const fileUrl = item.payload.file_url || item.payload.url;
+                const url = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}/${fileUrl}`;
+                Linking.openURL(url);
+            }
+        };
 
         return (
-            <View style={[styles.card, { backgroundColor: bgColor, borderColor: isDarkMode ? '#334155' : '#e2e8f0' }]}>
+            <View style={[styles.card, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
                 <View style={styles.cardHeader}>
-                    <View style={styles.headerLeft}>
-                        <View style={[styles.iconBox, { backgroundColor: iconColor + '20' }]}>
-                            <Ionicons name={iconName} size={20} color={iconColor} />
-                        </View>
-                        <View style={styles.headerTitles}>
-                            <Text style={[styles.teacherName, { color: isDarkMode ? '#f8fafc' : '#0f172a' }]}>{item.teacher_name}</Text>
-                            <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
-                        </View>
+                    <View style={[styles.iconContainer, { 
+                        backgroundColor: isPdf ? '#FEE2E2' : 
+                                        isPhoto ? '#ECFDF5' : 
+                                        isExam ? '#FEF3C7' : 
+                                        isHomework ? '#E0F2FE' : 
+                                        isWorksheet ? '#F5F3FF' : '#EEF2FF' 
+                    }]}>
+                        <MaterialCommunityIcons 
+                            name={
+                                isPdf ? "file-pdf-box" : 
+                                isPhoto ? "image" : 
+                                isExam ? "timer-outline" : 
+                                isHomework ? "home-edit-outline" : 
+                                isWorksheet ? "file-document-edit-outline" : "bell-outline"
+                            } 
+                            size={22} 
+                            color={
+                                isPdf ? "#EF4444" : 
+                                isPhoto ? "#10B981" : 
+                                isExam ? "#D97706" : 
+                                isHomework ? "#0EA5E9" : 
+                                isWorksheet ? "#8B5CF6" : "#6366F1"
+                            }
+                        />
                     </View>
-                    <View style={[styles.badge, { backgroundColor: iconColor + '15' }]}>
-                        <Text style={[styles.badgeText, { color: iconColor }]}>{item.update_type.toUpperCase()}</Text>
+                    <View style={styles.titleContainer}>
+                        <View style={styles.typeRow}>
+                            <Text style={[styles.typeTag, { 
+                                color: isExam ? '#D97706' : isHomework ? '#0EA5E9' : '#94a3b8' 
+                            }]}>
+                                {item.update_type?.toUpperCase() || 'ANNOUNCEMENT'}
+                            </Text>
+                            <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+                        </View>
+                        <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{item.title}</Text>
                     </View>
                 </View>
 
-                <Text style={[styles.title, { color: isDarkMode ? '#ffffff' : '#1e293b' }]}>{item.title}</Text>
-                {item.message ? (
-                    <Text style={[styles.message, { color: isDarkMode ? '#cbd5e1' : '#475569' }]}>{item.message}</Text>
-                ) : null}
+                <View style={styles.cardBody}>
+                    <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
+                    
+                    {isExam && (
+                        <TouchableOpacity 
+                            style={[styles.actionButton, { backgroundColor: '#D97706' }]} 
+                            onPress={() => Alert.alert("Live Exam", "Connecting to exam portal...")}
+                        >
+                            <MaterialCommunityIcons name="play-circle" size={20} color="white" />
+                            <Text style={styles.actionButtonText}>Start Live Exam</Text>
+                        </TouchableOpacity>
+                    )}
 
-                {item.update_type === 'photo' && item.payload?.url && (
-                    <Image source={{ uri: item.payload.url }} style={styles.photo} resizeMode="cover" />
-                )}
+                    {isHomework && (
+                        <TouchableOpacity 
+                            style={[styles.actionButton, { backgroundColor: '#0EA5E9' }]} 
+                            onPress={() => Alert.alert("Homework", "Opening homework details...")}
+                        >
+                            <MaterialCommunityIcons name="clipboard-text" size={20} color="white" />
+                            <Text style={styles.actionButtonText}>View Homework</Text>
+                        </TouchableOpacity>
+                    )}
 
-                {['exam', 'worksheet', 'pdf'].includes(item.update_type) && (
-                    <TouchableOpacity style={styles.actionButton} onPress={() => handleAction(item)}>
-                        <LinearGradient colors={[iconColor, iconColor + 'dd']} style={styles.actionGradient}>
-                            <Text style={styles.actionText}>
-                                {item.update_type === 'exam' ? 'Start Exam' : 
-                                 item.update_type === 'worksheet' ? 'Download Worksheet' : 'View PDF'}
+                    {hasFile && (
+                        <TouchableOpacity 
+                            style={[styles.attachmentButton, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]} 
+                            onPress={openAttachment}
+                        >
+                            <MaterialCommunityIcons 
+                                name={isPdf ? "file-pdf-box" : isWorksheet ? "file-document-outline" : "image"} 
+                                size={20} 
+                                color={isPdf ? "#EF4444" : isWorksheet ? "#8B5CF6" : "#10B981"} 
+                            />
+                            <Text style={[styles.attachmentText, { color: isPdf ? "#EF4444" : isWorksheet ? "#8B5CF6" : "#10B981" }]}>
+                                {isPdf ? 'Download PDF' : isWorksheet ? 'Open Worksheet' : 'View Attachment'}
                             </Text>
-                            <Ionicons name="arrow-forward" size={16} color="white" />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
-            </View>
-        );
-    };
+                        </TouchableOpacity>
+                    )}
 
-    if (!user?.school_name || !user?.class_id) {
-        return (
-            <View style={[styles.center, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
-                <Ionicons name="school-outline" size={60} color="#94a3b8" />
-                <Text style={[styles.noSchoolText, { color: isDarkMode ? '#f8fafc' : '#0f172a' }]}>School Not Linked</Text>
-                <Text style={styles.noSchoolSub}>Please update your profile with your school name to see teacher updates.</Text>
+                    <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                        <MaterialCommunityIcons name="account-tie" size={14} color="#64748b" />
+                        <Text style={[styles.teacher, { color: '#64748b' }]}>{item.teacher_name}</Text>
+                    </View>
+                </View>
             </View>
         );
-    }
+    }, [theme, isDarkMode]);
 
     return (
         <View style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
-            <LinearGradient colors={['#4f46e5', '#6366f1']} style={styles.header}>
-                <SafeAreaView edges={['top']} style={styles.safeArea}>
-                    <View style={styles.headerContent}>
-                        <Ionicons name="school" size={28} color="white" style={styles.headerIcon} />
-                        <View>
-                            <Text style={styles.headerTitle}>Class Updates</Text>
-                            <Text style={styles.headerSubtitle}>{user.school_name}</Text>
+            <View style={styles.header}>
+                <View style={{ flex: 1 }}>
+                    <Text style={[styles.headerSubtitle, { color: theme.primary }]}>SCHOOL UPDATES</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Class</Text>
+                </View>
+                {!showJoinForm && (
+                    <TouchableOpacity 
+                        style={[styles.joinBtnSmall, { borderColor: theme.primary + '40' }]} 
+                        onPress={() => setShowJoinForm(true)}
+                    >
+                        <MaterialCommunityIcons name="plus-circle-outline" size={18} color={theme.primary} />
+                        <Text style={[styles.joinBtnSmallText, { color: theme.primary }]}>Join</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {showJoinForm && (
+                <View style={[styles.joinCard, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
+                    <View style={styles.joinHeader}>
+                        <MaterialCommunityIcons name="school-outline" size={24} color={theme.primary} />
+                        <Text style={[styles.joinTitle, { color: theme.text }]}>Join Your Class</Text>
+                    </View>
+                    <Text style={[styles.joinSub, { color: theme.textSecondary }]}>
+                        Enter the 6-digit code provided by your teacher to see class updates and assignments.
+                    </Text>
+                    
+                    <View style={styles.inputWrapper}>
+                        <MaterialCommunityIcons name="key-variant" size={20} color="#94a3b8" style={styles.inputIcon} />
+                        <View style={{ flex: 1 }}>
+                            <TextInput 
+                                style={[styles.input, { color: theme.text }]}
+                                placeholder="Enter 6-Digit Code"
+                                placeholderTextColor="#64748b"
+                                value={joinCode}
+                                onChangeText={setJoinCode}
+                                keyboardType="number-pad"
+                                maxLength={6}
+                            />
                         </View>
                     </View>
-                </SafeAreaView>
-            </LinearGradient>
+
+                    <View style={styles.joinActions}>
+                        {user?.class_id && (
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowJoinForm(false)}>
+                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity 
+                            style={[styles.joinBtn, { backgroundColor: theme.primary }]} 
+                            onPress={handleJoinClass}
+                            disabled={joining}
+                        >
+                            {joining ? (
+                                <ActivityIndicator color="white" size="small" />
+                            ) : (
+                                <Text style={styles.joinBtnText}>Connect to Class</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
 
             {loading ? (
-                <ActivityIndicator size="large" color="#6366f1" style={{ marginTop: 50 }} />
+                <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color={theme.primary} />
+                    <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Fetching class updates...</Text>
+                </View>
             ) : (
-                <FlatList
-                    data={updates}
-                    keyExtractor={item => String(item.update_id)}
+                <SectionList
+                    sections={groupedData}
                     renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6366f1']} />}
-                    ListEmptyComponent={
-                        <View style={styles.emptyBox}>
-                            <Text style={[styles.emptyText, { color: isDarkMode ? '#94a3b8' : '#64748b' }]}>No updates from your teachers yet.</Text>
+                    renderSectionHeader={({ section: { title } }) => (
+                        <View style={[styles.sectionHeader, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
+                            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>{title}</Text>
+                            <View style={[styles.sectionLine, { backgroundColor: isDarkMode ? '#334155' : '#e2e8f0' }]} />
                         </View>
+                    )}
+                    keyExtractor={item => item.notification_id?.toString() || Math.random().toString()}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                    stickySectionHeadersEnabled={false}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <View style={[styles.emptyIconCircle, { backgroundColor: theme.primary + '10' }]}>
+                                <MaterialCommunityIcons name="bell-off-outline" size={60} color={theme.primary} />
+                            </View>
+                            <Text style={[styles.emptyText, { color: theme.text }]}>No Updates Yet</Text>
+                            <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
+                                When your teacher sends homework, exams, or worksheets, they will appear here.
+                            </Text>
+                            <TouchableOpacity 
+                                style={[styles.refreshBtn, { backgroundColor: theme.primary }]}
+                                onPress={loadNotifications}
+                            >
+                                <Text style={styles.refreshBtnText}>Check for Updates</Text>
+                            </TouchableOpacity>
+                        </View>
+                    }
+                    refreshControl={
+                        <RefreshControl refreshing={loading} onRefresh={loadNotifications} tintColor={theme.primary} />
                     }
                 />
             )}
@@ -187,32 +342,275 @@ const ClassUpdatesScreen = ({ navigation, user }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { paddingBottom: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, elevation: 5 },
-    safeArea: { backgroundColor: 'transparent' },
-    headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10 },
-    headerIcon: { marginRight: 15 },
-    headerTitle: { fontSize: 22, fontFamily: 'NotoSans-Bold', color: 'white' },
-    headerSubtitle: { fontSize: 13, fontFamily: 'NotoSans-Regular', color: 'rgba(255,255,255,0.8)' },
-    listContent: { padding: 16, paddingBottom: 100 },
-    card: { borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-    headerLeft: { flexDirection: 'row', alignItems: 'center' },
-    iconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    teacherName: { fontSize: 15, fontFamily: 'NotoSans-Bold' },
-    timeText: { fontSize: 12, fontFamily: 'NotoSans-Regular', color: '#94a3b8', marginTop: 2 },
-    badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    badgeText: { fontSize: 10, fontFamily: 'NotoSans-Bold' },
-    title: { fontSize: 17, fontFamily: 'NotoSans-Bold', marginBottom: 6 },
-    message: { fontSize: 14, fontFamily: 'NotoSans-Regular', lineHeight: 20, marginBottom: 12 },
-    photo: { width: '100%', height: 200, borderRadius: 12, marginBottom: 12, backgroundColor: '#f1f5f9' },
-    actionButton: { borderRadius: 12, overflow: 'hidden', marginTop: 5 },
-    actionGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-    actionText: { color: 'white', fontFamily: 'NotoSans-Bold', fontSize: 15 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    noSchoolText: { fontSize: 20, fontFamily: 'NotoSans-Bold', marginTop: 16, marginBottom: 8 },
-    noSchoolSub: { fontSize: 14, fontFamily: 'NotoSans-Regular', color: '#64748b', textAlign: 'center', paddingHorizontal: 20 },
-    emptyBox: { alignItems: 'center', marginTop: 60 },
-    emptyText: { fontSize: 15, fontFamily: 'NotoSans-Regular' }
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 50,
+        paddingBottom: 20,
+    },
+    headerTitle: {
+        fontSize: 28,
+        fontFamily: 'NotoSans-Bold',
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    listContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 100,
+    },
+    card: {
+        borderRadius: 24,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    titleContainer: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        lineHeight: 22,
+    },
+    date: {
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    cardBody: {
+        marginTop: 4,
+    },
+    message: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    attachmentButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 16,
+        marginBottom: 12,
+    },
+    attachmentText: {
+        marginLeft: 8,
+        fontSize: 13,
+        fontWeight: 'bold',
+    },
+    teacherBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 4
+    },
+    teacher: {
+        fontSize: 11,
+        fontFamily: 'NotoSans-Bold',
+    },
+    typeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    typeTag: {
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        borderRadius: 14,
+        marginBottom: 12,
+        gap: 8,
+    },
+    actionButtonText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        gap: 12,
+    },
+    sectionTitle: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+    },
+    sectionLine: {
+        flex: 1,
+        height: 1,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 40,
+    },
+    emptyIconCircle: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    emptySub: {
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginTop: 8,
+        marginBottom: 30,
+        fontFamily: 'NotoSans-Regular',
+    },
+    emptyText: {
+        fontSize: 20,
+        fontFamily: 'NotoSans-Bold',
+    },
+    refreshBtn: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    refreshBtnText: {
+        color: 'white',
+        fontSize: 14,
+        fontFamily: 'NotoSans-Bold',
+    },
+    joinCard: {
+        margin: 20,
+        padding: 20,
+        borderRadius: 24,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    joinHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 10
+    },
+    joinTitle: {
+        fontSize: 20,
+        fontFamily: 'NotoSans-Bold',
+    },
+    joinSub: {
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 20,
+        fontFamily: 'NotoSans-Regular',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(148,163,184,0.1)',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        marginBottom: 20,
+        height: 56,
+        borderWidth: 1,
+        borderColor: 'rgba(148,163,184,0.2)',
+    },
+    inputIcon: {
+        marginRight: 12,
+    },
+    input: {
+        fontSize: 18,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 2,
+        flex: 1
+    },
+    joinActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    joinBtn: {
+        flex: 1,
+        height: 50,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    joinBtnText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    cancelBtn: {
+        paddingHorizontal: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    cancelBtnText: {
+        color: '#64748b',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    joinBtnSmall: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        gap: 4
+    },
+    joinBtnSmallText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    }
 });
 
 export default ClassUpdatesScreen;

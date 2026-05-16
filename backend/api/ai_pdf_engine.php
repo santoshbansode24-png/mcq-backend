@@ -39,32 +39,32 @@ try {
 
     if (!$job) throw new Exception("Job not found.");
 
-    // PDF Retrieval (DB or Disk)
+    // PDF Retrieval (DB, Disk, or Master Knowledge Text)
     $pdfBase64 = $job['pdf_base64'];
+    $extractedText = $job['extracted_text'] ?? '';
+
     if (empty($pdfBase64)) {
         $filePath = $job['file_path'];
-        if (file_exists($filePath)) {
+        if (!empty($filePath) && file_exists($filePath)) {
             $pdfBase64 = base64_encode(file_get_contents($filePath));
-        } else {
-            throw new Exception("PDF data source missing.");
+        } elseif (empty($extractedText)) {
+            throw new Exception("Document source missing. Please re-upload the PDF.");
         }
     }
 
     sendProgress("Preparing Section Marker: Part $segment_index...", 25);
 
-    // Optimized: Calculate approximate page range to give AI a focus area
-    $pagesPerSegment = 5;
-    $startPage = (($segment_index - 1) * $pagesPerSegment) + 1;
-    $endPage = $startPage + $pagesPerSegment - 1;
-    $rangeHint = "FOCUS RANGE: Approximately pages $startPage to $endPage.";
+    // COST OPTIMIZATION: Divide text into 5 segments (20% each)
+    $partStr = "Part $segment_index of 5";
+    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " 20% segment of the text.";
 
     // VEERU LENS CONTENT ENGINE PROMPT
-    $systemPrompt = "You are the 'Veeru Lens Content Engine.' Your task is to perform an exhaustive, line-by-line extraction of educational content (MCQs, Flashcards, and Notes) from a PDF.
+    $systemPrompt = "You are the 'Veeru Lens Content Engine.' Your task is to perform an exhaustive, line-by-line extraction of educational content (MCQs, Flashcards, and Notes) from a specific portion of the provided text.
 
 Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
-2. Context Awareness: You are currently processing SECTION MARKER: Part $segment_index. $rangeHint Only process the text within this specific relative section to ensure maximum depth.
-3. Avoid Duplication: Do not repeat information or questions from previous sections.
+2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 20% slice to ensure maximum depth.
+3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 20%.
 
 Output Format (Strict JSON):
 {
@@ -82,19 +82,37 @@ Constraints:
 - If content is technical/mathematical, show step-by-step logic in the notes.
 - Answer in $language.";
 
-    $userPrompt = "I have already generated content for the previous parts. Now, read the NEXT relative segment of the attached PDF (Section Marker: Part $segment_index).
-Generate 15-20 NEW MCQs that were not in the previous batches.
-Continue the Notes from where you left off.
-Create Flashcards for any new definitions found in this specific segment.
-DO NOT repeat information from previous segments.";
+    $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
+Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 20% segment.
+DO NOT generate content from earlier or later parts of the text to avoid duplication.";
 
     sendProgress("Analyzing Section $segment_index with Gemini...", 50);
 
-    // Call Gemini with the segmented prompt
-    $aiResponse = callGeminiPDF($systemPrompt . "\n\n" . $userPrompt, $pdfBase64, [
-        'temperature' => 0.3,
-        'maxOutputTokens' => 8192
-    ]);
+    // Call Gemini with the segmented prompt (File vs Text fallback)
+    if (!empty($pdfBase64)) {
+        $aiResponse = callGeminiPDF($systemPrompt . "\n\n" . $userPrompt, $pdfBase64, [
+            'temperature' => 0.3,
+            'maxOutputTokens' => 8192
+        ]);
+    } else {
+        // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
+        // Instead of sending 100,000 words, we only send the relevant 20% chunk.
+        $totalLen = mb_strlen($extractedText);
+        $chunkSize = ceil($totalLen / 5);
+        
+        // Calculate start position with a 500-character overlap for context
+        $start = ($segment_index - 1) * $chunkSize;
+        if ($start > 500) $start -= 500; 
+        
+        // Extract only the relevant portion
+        $slicedText = mb_substr($extractedText, $start, $chunkSize + 1000);
+
+        $textPrompt = "### MASTER KNOWLEDGE SOURCE (SEGMENT $segment_index) ###\n" . $slicedText . "\n\n### TASK ###\n" . $systemPrompt . "\n\n" . $userPrompt;
+        $aiResponse = callGeminiAPI($textPrompt, [
+            'temperature' => 0.3,
+            'maxOutputTokens' => 8192
+        ]);
+    }
     unset($pdfBase64); // Free memory immediately after use
 
     sendProgress("Polishing extracted artifacts...", 85);

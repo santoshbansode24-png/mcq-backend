@@ -369,7 +369,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         { key: 'Home', icon: 'home', label: t('home') },
         { key: 'Subjects', icon: 'book', label: t('subject') },
         { key: 'AI', icon: 'sparkles', label: t('aiTools') },
-        { key: 'ClassUpdates', icon: 'school', label: 'Updates' },
+        { key: 'ClassUpdates', icon: 'school', label: 'Class' },
     ];
 
     return (

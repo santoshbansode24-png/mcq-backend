@@ -31,6 +31,20 @@ if (isset($_GET['delete'])) {
     $verify->execute([$id, $selected_board, $selected_board, $selected_board]);
     
     if ($verify->fetch()) {
+        // 1. GARBAGE COLLECTION: Delete physical PDF files belonging to this user
+        $stmt_files = $pdo->prepare("SELECT file_path FROM pdf_study_jobs WHERE user_id = ? AND file_path IS NOT NULL AND file_path != ''");
+        $stmt_files->execute([$id]);
+        while ($fileRow = $stmt_files->fetch()) {
+            $filePath = $fileRow['file_path'];
+            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+                $filePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
+            }
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+
+        // 2. Delete the user (database cascade should handle related rows)
         $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ? AND user_type != 'admin'");
         $stmt->execute([$id]);
     }

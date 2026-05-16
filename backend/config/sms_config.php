@@ -31,7 +31,7 @@ if (!defined('TWILIO_WHATSAPP_NUMBER')) {
 // Legacy MSG91 (kept for reference, not used)
 // -----------------------------------------------
 if (!defined('MSG91_AUTH_KEY')) {
-    define('MSG91_AUTH_KEY', '494908AexhxcvQwe1M6994be64P1');
+    define('MSG91_AUTH_KEY', getenv('MSG91_AUTH_KEY') ?: '');
 }
 
 if (!defined('MSG91_SENDER_ID')) {

@@ -119,17 +119,30 @@ const HomeworkSolverScreen = ({ navigation }) => {
             formData.append('prompt', "Please answer the question. If it's a grammar or language question, explain the rule. If it's a math/science question, provide the steps.");
             if (userId) formData.append('user_id', userId);
 
+            let buffer = '';
+            let lastUpdate = Date.now();
+
             await streamFetch(
                 PROXY_URL,
                 {
                     method: 'POST',
                     body: formData,
+                    headers: {
+                        'X-Veeru-AI-Auth': 'Veeru_Audio_Shield_2026_Secure'
+                    }
                 },
                 (chunk) => {
                     if (chunk.status === 'success' && chunk.chunk) {
-                        setSolution(prev => prev + chunk.chunk);
-                        // Auto-scroll to bottom (Optimization: disabled animation for smoother rapid streaming)
-                        scrollRef.current?.scrollToEnd({ animated: false });
+                        buffer += chunk.chunk;
+                        
+                        // Only update UI every 80ms or if chunk is large
+                        const now = Date.now();
+                        if (now - lastUpdate > 80 || chunk.chunk.length > 50) {
+                            setSolution(prev => prev + buffer);
+                            buffer = '';
+                            lastUpdate = now;
+                            scrollRef.current?.scrollToEnd({ animated: false });
+                        }
                     } else if (chunk.status === 'error') {
                         setLoading(false);
                         const errorMsg = chunk.message || 'The AI is currently handling too many requests. Please try again in a few minutes.';
@@ -137,8 +150,13 @@ const HomeworkSolverScreen = ({ navigation }) => {
                     }
                 },
                 () => {
+                    // Flush final buffer
+                    if (buffer) {
+                        setSolution(prev => prev + buffer);
+                    }
                     setLoading(false);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    scrollRef.current?.scrollToEnd({ animated: true });
                 },
                 (error) => {
                     setLoading(false);

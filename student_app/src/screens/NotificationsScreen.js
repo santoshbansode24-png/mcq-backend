@@ -5,16 +5,10 @@ import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
 import { BASE_URL } from '../api/config';
 
-const NotificationsScreen = ({ navigation, user }) => {
+const NotificationsScreen = ({ user, navigation }) => {
     const { theme, isDarkMode } = useTheme();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (user?.class_id) {
-            loadNotifications();
-        }
-    }, [user]);
 
     const loadNotifications = async () => {
         setLoading(true);
@@ -30,28 +24,37 @@ const NotificationsScreen = ({ navigation, user }) => {
         }
     };
 
+    useEffect(() => {
+        if (user?.class_id) {
+            loadNotifications();
+        } else {
+            setLoading(false);
+        }
+    }, [user]);
+
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     const renderItem = useCallback(({ item }) => {
-        const hasFile = item.payload && item.payload.file_url;
+        const hasFile = item.payload && (item.payload.file_url || item.payload.url);
         const isPdf = item.update_type === 'pdf';
         const isPhoto = item.update_type === 'photo';
 
         const openAttachment = () => {
             if (hasFile) {
-                const url = `${BASE_URL}/${item.payload.file_url}`;
-                Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+                const fileUrl = item.payload.file_url || item.payload.url;
+                const url = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}/${fileUrl}`;
+                Linking.openURL(url);
             }
         };
 
         return (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
                 <View style={styles.cardHeader}>
                     <View style={[styles.iconContainer, { backgroundColor: isPdf ? '#FEE2E2' : isPhoto ? '#ECFDF5' : '#EEF2FF' }]}>
-                        <Text style={styles.iconText}>{isPdf ? '📄' : isPhoto ? '🖼️' : '📢'}</Text>
+                        <MaterialCommunityIcons name={isPdf ? "file-pdf-box" : isPhoto ? "image" : "bell-outline"} size={22} color={isPdf ? "#EF4444" : isPhoto ? "#10B981" : "#6366F1"} />
                     </View>
                     <View style={styles.titleContainer}>
                         <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{item.title}</Text>
@@ -62,7 +65,7 @@ const NotificationsScreen = ({ navigation, user }) => {
                     <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
                     
                     {hasFile && (
-                        <TouchableOpacity style={styles.attachmentButton} onPress={openAttachment}>
+                        <TouchableOpacity style={[styles.attachmentButton, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]} onPress={openAttachment}>
                             <MaterialCommunityIcons 
                                 name={isPdf ? "file-pdf-box" : "image"} 
                                 size={20} 
@@ -74,8 +77,8 @@ const NotificationsScreen = ({ navigation, user }) => {
                         </TouchableOpacity>
                     )}
 
-                    <View style={styles.teacherBadge}>
-                        <Text style={styles.teacher}>Sent by: {item.teacher_name}</Text>
+                    <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                        <Text style={[styles.teacher, { color: '#64748b' }]}>Sent by: {item.teacher_name}</Text>
                     </View>
                 </View>
             </View>
@@ -85,8 +88,8 @@ const NotificationsScreen = ({ navigation, user }) => {
     return (
         <View style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <View style={styles.backButtonInner}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <View style={[styles.backButton, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
                         <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
                     </View>
                 </TouchableOpacity>
@@ -130,132 +133,105 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 16,
+        paddingTop: 50,
+        paddingBottom: 20,
     },
     backButton: {
-        marginRight: 16,
-    },
-    backButtonInner: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(100,116,139,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
+        marginRight: 15,
+        elevation: 2,
     },
     backButtonText: {
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: 'bold',
-        fontFamily: 'NotoSans-Bold',
-    },
-    headerSubtitle: {
-        fontSize: 10,
-        fontWeight: '800',
-        fontFamily: 'NotoSans-Bold',
-        letterSpacing: 1,
-        marginBottom: 2,
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: '800',
         fontFamily: 'NotoSans-Bold',
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        letterSpacing: 1,
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 100,
     },
     listContent: {
-        padding: 20,
-        paddingBottom: 100,
+        paddingHorizontal: 20,
+        paddingBottom: 40,
     },
     card: {
-        backgroundColor: 'white',
         borderRadius: 20,
-        marginBottom: 16,
         padding: 16,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
+        marginBottom: 16,
+        elevation: 2,
     },
     cardHeader: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
-        paddingBottom: 12,
         marginBottom: 12,
     },
     iconContainer: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         borderRadius: 12,
-        backgroundColor: '#eef2ff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
-    iconText: {
-        fontSize: 20,
-    },
     titleContainer: {
         flex: 1,
+        justifyContent: 'center',
     },
     title: {
         fontSize: 16,
         fontFamily: 'NotoSans-Bold',
-        marginBottom: 4,
     },
     date: {
         fontSize: 11,
         color: '#94a3b8',
-        fontFamily: 'NotoSans-Regular',
+        marginTop: 2,
     },
     cardBody: {
-        paddingLeft: 52,
+        marginTop: 4,
     },
     message: {
         fontSize: 14,
-        lineHeight: 22,
         fontFamily: 'NotoSans-Regular',
+        lineHeight: 20,
         marginBottom: 12,
-    },
-    teacherBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: '#eff6ff',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    teacher: {
-        fontSize: 11,
-        color: '#3b82f6',
-        fontFamily: 'NotoSans-Bold',
-    },
-    emptyText: {
-        fontSize: 16,
-        fontFamily: 'NotoSans-Bold',
     },
     attachmentButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8fafc',
         padding: 10,
         borderRadius: 12,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
     },
     attachmentText: {
         marginLeft: 8,
         fontSize: 13,
         fontWeight: 'bold',
+    },
+    teacherBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    teacher: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+    },
+    emptyText: {
+        fontSize: 16,
+        marginTop: 10,
     }
 });
 

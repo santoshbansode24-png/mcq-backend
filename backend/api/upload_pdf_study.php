@@ -156,6 +156,12 @@ try {
     $errMsg = $e->getMessage();
     error_log("[Veeru] PDF Upload Error: " . $errMsg);
 
+    // 10. GARBAGE COLLECTION: Prevent "Ghost Files" if the DB insert failed.
+    if (empty($job_id) && !empty($savedPath) && file_exists($savedPath)) {
+        @unlink($savedPath);
+        error_log("[Veeru] Cleaned up orphaned physical file after DB failure.");
+    }
+
     if (!empty($job_id)) {
         try {
             $pdo->prepare("UPDATE pdf_study_jobs SET status='failed', error_message=? WHERE job_id=?")

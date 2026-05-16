@@ -376,8 +376,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         <View style={styles.container}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
-            <SafeAreaView style={styles.safeAreaTop} edges={['top']}>
-                <View style={[styles.content, { paddingBottom: 60 + insets.bottom }]}>
+            <SafeAreaView style={[styles.safeAreaTop, { backgroundColor: isDarkMode ? '#0f172a' : '#f0f9ff' }]} edges={['top']}>
+                <View style={[styles.content, { paddingBottom: 80 + insets.bottom }]}>
                     {renderContent()}
                 </View>
             </SafeAreaView>
@@ -412,8 +412,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    safeAreaTop: { flex: 1 },
-    content: { flex: 1, paddingBottom: Platform.OS === 'ios' ? 85 : 65 },
+    safeAreaTop: { flex: 1, paddingTop: Platform.OS === 'android' ? 10 : 0 },
+    content: { flex: 1 },
     bottomNavContainer: {
         position: 'absolute', bottom: 0, left: 0, right: 0,
         borderTopWidth: 1, elevation: 10,

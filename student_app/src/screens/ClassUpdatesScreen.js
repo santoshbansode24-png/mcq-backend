@@ -345,8 +345,8 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 50,
+        paddingHorizontal: 24,
+        paddingTop: 20,
         paddingBottom: 20,
     },
     headerTitle: {
@@ -364,8 +364,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 100,
+        paddingHorizontal: 24,
+        paddingBottom: 120,
     },
     card: {
         borderRadius: 24,

@@ -64,6 +64,29 @@ try {
     
     $examId = $pdo->lastInsertId();
     
+    // 5. NOTIFICATION: Post to class_updates so students see it in their timeline
+    try {
+        // Fetch teacher name and school
+        $tStmt = $pdo->prepare("SELECT name, school_name FROM users WHERE user_id = ?");
+        $tStmt->execute([$input['teacher_id']]);
+        $teacher = $tStmt->fetch(PDO::FETCH_ASSOC);
+
+        $notifStmt = $pdo->prepare("
+            INSERT INTO class_updates (teacher_id, school_name, class_id, update_type, title, message, payload)
+            VALUES (?, ?, ?, 'live_exam', ?, ?, ?)
+        ");
+        $notifStmt->execute([
+            $input['teacher_id'],
+            $teacher['school_name'] ?? 'School',
+            $input['class_id'],
+            "🔴 LIVE EXAM STARTED: " . $input['title'],
+            "Your teacher has started a live exam. Click to join immediately! Duration: " . $input['duration_minutes'] . " mins.",
+            json_encode(['exam_id' => $examId, 'duration' => $input['duration_minutes']])
+        ]);
+    } catch (PDOException $notifEx) {
+        error_log("Failed to post exam notification: " . $notifEx->getMessage());
+    }
+
     sendResponse('success', 'Live Exam started successfully!', ['exam_id' => $examId], 200);
 } catch (PDOException $e) {
     error_log("Error creating live exam: " . $e->getMessage());

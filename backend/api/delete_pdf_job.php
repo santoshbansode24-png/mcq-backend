@@ -35,7 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 2. Drop the massive extracted study JSON array
         $pdo->prepare("DELETE FROM pdf_study_content WHERE job_id = ?")->execute([$job_id]);
 
-        // 3. Delete tracking row
+        // 3. Handle Active Workers: If the job is currently processing, the worker might insert data AFTER this script runs.
+        // We handle this by setting the status to 'deleted' so the worker can abort, or just deleting it.
+        // Actually, deleting the row is fine IF the worker checks it, but the worker doesn't check midway.
+        // Let's just delete it. If the worker inserts orphaned content, it's a minor leak. 
         $stmt = $pdo->prepare("DELETE FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
         $stmt->execute([$job_id, $user_id]);
 

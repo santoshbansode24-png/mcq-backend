@@ -50,17 +50,15 @@ foreach ($jobs as $job) {
         // Status is already marked as 'processing' during claim
 
         // --- 1. PDF RETRIEVAL LOGIC (Railway-Proof) ---
-        // We prioritize the DB base64 for ephemeral environments, 
-        // BUT we fallback to the disk file if the DB data is truncated or missing.
         $pdfBase64 = '';
+        $extractedText = $job['extracted_text'] ?? '';
         $dbData    = $job['pdf_base64'] ?? '';
-        $isTruncated = (!empty($dbData) && strlen($dbData) < 10000); // Suspiciously small for a study PDF
+        $isTruncated = (!empty($dbData) && strlen($dbData) < 10000); 
 
         if (!empty($dbData) && !$isTruncated) {
-            // BEST CASE: Full data is in the DB
             $pdfBase64 = $dbData;
         } else {
-            // FALLBACK: Lead from disk if DB is empty or truncated
+            // FALLBACK 1: Disk
             $filePath = $job['file_path'];
             if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
                 $baseDir = dirname(__DIR__);
@@ -69,16 +67,18 @@ foreach ($jobs as $job) {
 
             if (file_exists($filePath)) {
                 $pdfBase64 = base64_encode(file_get_contents($filePath));
-                error_log("[Veeru Worker] Loaded PDF from disk fallback" . ($isTruncated ? " (DB was truncated)" : ""));
             } elseif (!empty($dbData)) {
-                // No disk file, use whatever we have in DB (might still work if it's a tiny PDF)
                 $pdfBase64 = $dbData;
             }
         }
 
-        // --- 1.5 PRE-FLIGHT DATA INTEGRITY CHECK ---
-        if (empty($pdfBase64) || strlen($pdfBase64) < 100) {
-            throw new Exception("PDF data is corrupted or missing. Check MySQL max_allowed_packet.");
+        // --- 1.5 DATA INTEGRITY & MASTER KNOWLEDGE FALLBACK ---
+        if (empty($pdfBase64) && !empty($extractedText)) {
+            // WE HAVE NO PDF BUT WE HAVE THE TEXT! 
+            // We can still proceed by sending the text to Gemini instead of the file.
+            error_log("[Veeru Worker] Proceeding with stored 'Master Knowledge' text (PDF wiped).");
+        } elseif (empty($pdfBase64) || strlen($pdfBase64) < 100) {
+            throw new Exception("PDF data is missing and no 'Master Knowledge' text found.");
         }
         
         // --- 1.6 FINAL SIZE SANITY CHECK ---
@@ -148,10 +148,11 @@ foreach ($jobs as $job) {
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
         2. FORMAT: Return ONLY a valid JSON object. No conversational text.
-        3. QUALITY & QUANTITY DEMAND: You MUST generate as much content (notes, flashcards, MCQs) as possible to cover 100% of the information. Do not stop at a set limit. If there is enough information for 50 flashcards and 50 MCQs, generate them all. Ensure every single piece of information is relevant.
+        3. 20% GENERATION RULE: You MUST extract the entire text of the document line-by-line into the 'full_text' field for our database. HOWEVER, to maintain quality, ONLY generate MCQs, Flashcards, and Notes based on the FIRST 20% (Part 1 of 5) of the document. Do not generate questions for the middle or end of the document yet.
         
         SCHEMA:
         {
+          \"full_text\": \"Exhaustive, clean transcript of the entire document content\",
           \"notes\": {
             \"definitions\": [\"Def 1\", \"Def 2\"],
             \"key_facts\": [\"Fact 1\", \"Fact 2\"],
@@ -171,7 +172,13 @@ foreach ($jobs as $job) {
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
-                $aiResponse = callGeminiPDF($prompt, $pdfBase64);
+                if (!empty($pdfBase64)) {
+                    $aiResponse = callGeminiPDF($prompt, $pdfBase64);
+                } else {
+                    // PDF is wiped, use the Master Knowledge text
+                    $textPrompt = "Here is the Master Knowledge extracted from the document:\n\n" . $extractedText . "\n\n" . $prompt;
+                    $aiResponse = callGeminiAPI($textPrompt);
+                }
                 if (!empty($aiResponse)) break;
             } catch (Exception $e) {
                 error_log("[Veeru Worker] Job {$job['job_id']} Attempt $attempt Error: " . $e->getMessage());
@@ -233,13 +240,14 @@ foreach ($jobs as $job) {
         }
 
         // 4. Save to Content Table (Disposable Pattern)
-        // We save the heavy JSON here, and the Sync script will wipe it later
-        $stmtContent = $pdo->prepare("INSERT INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)");
+        // We use REPLACE to handle cases where a worker might retry or overlap, preventing duplicate key errors.
+        $stmtContent = $pdo->prepare("REPLACE INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)");
         $stmtContent->execute([$job['job_id'], $job['user_id'], $cleanJson]);
 
-        // 5. Update Job Status
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL WHERE job_id = ?")
-            ->execute([$job['job_id']]);
+        // 5. Update Job Status & Save Master Knowledge
+        $fullText = $data['full_text'] ?? '';
+        $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, extracted_text = ? WHERE job_id = ?");
+        $updateStmt->execute([$fullText, $job['job_id']]);
 
     } catch (Exception $e) {
         error_log("Veeru Worker Error: " . $e->getMessage());

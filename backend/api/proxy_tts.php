@@ -6,10 +6,26 @@ header("Access-Control-Allow-Methods: POST, GET");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 // Handle Preflight OPTIONS request
+// Handle Preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
+// --- SECURITY SHIELD ---
+define('AUDIO_SHIELD_TOKEN', 'Veeru_Audio_Shield_2026_Secure');
+$headers = getallheaders();
+$providedToken = $headers['X-Veeru-Audio-Auth'] ?? ($headers['x-veeru-audio-auth'] ?? '');
+
+if ($providedToken !== AUDIO_SHIELD_TOKEN) {
+    http_response_code(403);
+    echo json_encode([
+        'status' => 'error', 
+        'error' => 'Unauthorized access. Secure connection required to prevent budget leaks.'
+    ]);
+    exit();
+}
+// --- END SECURITY SHIELD ---
 
 // 1. Load Keys
 if (file_exists('../config/secrets.php')) {

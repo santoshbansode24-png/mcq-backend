@@ -5,25 +5,41 @@
  */
 
 // 1. Define API Key (Prevent re-definition errors)
+// 1. Define API Key (Prioritize Server Environment Variables)
 if (!defined('GEMINI_API_KEY')) {
-    // 1. Try loading from secrets.php (local dev - ignored by Git)
-    if (file_exists(__DIR__ . '/secrets.php')) {
-        require_once __DIR__ . '/secrets.php';
+    // A. Check for Railway / Server Environment Variable (BEST PRACTICE)
+    $envKey = getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? ($_SERVER['GEMINI_API_KEY'] ?? ''));
+    
+    if ($envKey) {
+        define('GEMINI_API_KEY', trim($envKey));
+    } else {
+        // B. Fallback to local secrets.php (ONLY for local XAMPP dev)
+        if (file_exists(__DIR__ . '/secrets.php')) {
+            require_once __DIR__ . '/secrets.php';
+        }
+        
+        // Final Safety: Define as empty if still not found to prevent PHP Fatal Errors
+        if (!defined('GEMINI_API_KEY')) {
+            define('GEMINI_API_KEY', '');
+        }
     }
+}
 
-    // 2. Try Railway / server environment variable
-    if (!defined('GEMINI_API_KEY')) {
-        $envKey = getenv('GEMINI_API_KEY');
-        if (!$envKey) $envKey = $_ENV['GEMINI_API_KEY'] ?? '';
-        if (!$envKey) $envKey = $_SERVER['GEMINI_API_KEY'] ?? '';
-        // DO NOT remove this - define a safe empty string fallback to prevent fatal PHP errors
-        define('GEMINI_API_KEY', trim($envKey ?: ''));
+// 1.1. Define Google API Key (for TTS and other GCP services)
+if (!defined('GOOGLE_API_KEY')) {
+    $gEnvKey = getenv('GOOGLE_API_KEY') ?: ($_ENV['GOOGLE_API_KEY'] ?? ($_SERVER['GOOGLE_API_KEY'] ?? ''));
+    if ($gEnvKey) {
+        define('GOOGLE_API_KEY', trim($gEnvKey));
+    } elseif (defined('LOCAL_GOOGLE_API_KEY')) {
+        define('GOOGLE_API_KEY', LOCAL_GOOGLE_API_KEY);
+    } else {
+        define('GOOGLE_API_KEY', '');
     }
 }
 
 // 2. Define API URL - Using gemini-1.5-flash for stability and full access
 if (!defined('GEMINI_API_URL')) {
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
 }
 
 /**

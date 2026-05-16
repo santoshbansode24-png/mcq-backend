@@ -26,6 +26,7 @@ export const playGoogleTTS = async (text, languageCode = 'en-IN', speed = 0.75) 
             body: JSON.stringify(payload),
             headers: {
                 'Content-Type': 'application/json',
+                'X-Veeru-Audio-Auth': 'Veeru_Audio_Shield_2026_Secure'
             }
         });
 

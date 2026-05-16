@@ -23,6 +23,17 @@ if (!defined('GEMINI_API_KEY') || empty(GEMINI_API_KEY)) {
     exit;
 }
 
+// --- SECURITY SHIELD ---
+define('AI_SHIELD_TOKEN', 'Veeru_Audio_Shield_2026_Secure');
+$headers = getallheaders();
+$providedToken = $headers['X-Veeru-AI-Auth'] ?? ($headers['x-veeru-ai-auth'] ?? '');
+
+if ($providedToken !== AI_SHIELD_TOKEN) {
+    echo "data: " . json_encode(['status' => 'error', 'message' => 'Unauthorized access. Secure connection required.']) . "\n\n";
+    exit();
+}
+// --- END SECURITY SHIELD ---
+
 // Check if there is neither an image nor text prompt
 $hasImage = isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK;
 $hasText = isset($_POST['user_text']) && !empty(trim($_POST['user_text']));

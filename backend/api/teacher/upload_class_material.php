@@ -66,11 +66,10 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
         $payload['file_url'] = 'uploads/class_materials/' . $newFileName;
         $payload['file_name'] = $fileName;
         
-        // Auto-correct update_type if needed
-        if ($fileExtension === 'pdf') {
-            $update_type = 'pdf';
-        } else {
-            $update_type = 'photo';
+        // Auto-correct update_type ONLY if it's currently 'announcement' or generic.
+        // If teacher specifically sent 'homework' or 'worksheet', KEEP it.
+        if ($update_type === 'announcement' || $update_type === 'material') {
+            $update_type = ($fileExtension === 'pdf') ? 'pdf' : 'photo';
         }
     } else {
         sendResponse('error', 'Error moving the uploaded file.', null, 500);

@@ -40,10 +40,10 @@ const CustomImageCropper = ({ visible, imageUri, onCropComplete, onCancel }) => 
             // This guarantees the visual layout exactly matches the pixel array.
             actions.push({ rotate: 0 });
 
-            // Optimize memory by downscaling huge images before cropping (Max 2048px)
-            if (w > 2048 || h > 2048) {
-                if (w > h) actions.push({ resize: { width: 2048 } });
-                else actions.push({ resize: { height: 2048 } });
+            // Optimize memory by downscaling huge images before cropping (Max 1280px)
+            if (w > 1280 || h > 1280) {
+                if (w > h) actions.push({ resize: { width: 1280 } });
+                else actions.push({ resize: { height: 1280 } });
             } else {
                 // FORCE a resize even if small to guarantee EXIF is stripped and baked on all Android devices
                 actions.push({ resize: { width: w } });

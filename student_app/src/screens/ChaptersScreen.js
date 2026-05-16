@@ -20,6 +20,7 @@ import { useTheme } from '../context/ThemeContext';
 import { fonts } from '../styles/typography';
 import { SmartCacheService } from '../services/SmartCacheService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { rs, rsv } from '../utils/responsive';
 
 // Neon Accent Colors for Chapters
 const CHAPTER_ACCENTS = ['#00F5FF', '#BF00FF', '#39FF14', '#FF007F', '#FFF01F', '#FF4D00'];
@@ -204,15 +205,21 @@ const ChaptersScreen = ({ navigation, route, user }) => {
         );
     };
 
-    const renderChapterItem = useCallback(({ item, index }) => {
-        const accentColor = CHAPTER_ACCENTS[index % CHAPTER_ACCENTS.length];
-        const progress = progressData[item.chapter_id] || { status: 'not_started' };
+    // Memoized Chapter Item for better performance
+    const ChapterItem = React.memo(({ item, index, progress, theme, accentColor, isDarkMode, navigation }) => {
         const isCompleted = progress.status === 'completed';
 
         return (
             <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.chapterCard, { backgroundColor: theme.card, borderLeftColor: accentColor, shadowColor: theme.shadow }]}
+                style={[
+                    styles.chapterCard, 
+                    { 
+                        backgroundColor: theme.card, 
+                        borderLeftColor: accentColor, 
+                        shadowColor: theme.shadow 
+                    }
+                ]}
                 onPress={() => navigation.navigate('ChapterContent', { chapter: item })}
             >
                 <View style={[styles.numberCircle, { backgroundColor: accentColor + '15' }]}>
@@ -225,7 +232,6 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                         {isCompleted && <Text style={styles.goldStar}>⭐</Text>}
                     </View>
 
-                    {/* Motivational Message for Completed Chapters */}
                     {isCompleted && (
                         <View style={[styles.motivationBox, { backgroundColor: isDarkMode ? '#065f46' : '#dcfce7' }]}>
                             <Text style={[styles.motivationText, { color: isDarkMode ? '#d1fae5' : '#166534' }]}>🎉 Chapter Mastered!</Text>
@@ -236,7 +242,19 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                 <Text style={[styles.chevron, { color: theme.textSecondary }]}>›</Text>
             </TouchableOpacity>
         );
-    }, [navigation, progressData, isDarkMode, theme]);
+    });
+
+    const renderChapterItem = useCallback(({ item, index }) => (
+        <ChapterItem 
+            item={item} 
+            index={index} 
+            progress={progressData[item.chapter_id] || { status: 'not_started' }}
+            theme={theme}
+            accentColor={CHAPTER_ACCENTS[index % CHAPTER_ACCENTS.length]}
+            isDarkMode={isDarkMode}
+            navigation={navigation}
+        />
+    ), [navigation, progressData, isDarkMode, theme]);
 
     return (
         <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
@@ -279,7 +297,11 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                         ListHeaderComponent={null}
                         initialNumToRender={10}
                         maxToRenderPerBatch={10}
+                        windowSize={10}
                         removeClippedSubviews={true}
+                        getItemLayout={(data, index) => (
+                            { length: rs(80), offset: rs(80) * index, index }
+                        )}
                         refreshing={refreshing}
                         onRefresh={onRefresh}
                         ListEmptyComponent={
@@ -297,7 +319,6 @@ const ChaptersScreen = ({ navigation, route, user }) => {
 const styles = StyleSheet.create({
     mainWrapper: {
         flex: 1,
-        // backgroundColor handled by theme
     },
     container: {
         flex: 1,
@@ -305,80 +326,72 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        // backgroundColor handled by theme
+        paddingHorizontal: rs(20),
+        paddingVertical: rs(12),
         borderBottomWidth: 1,
-        // borderBottomColor handled by theme
     },
     backBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f1f5f9',
+        width: rs(44),
+        height: rs(44),
+        borderRadius: rs(22),
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: rs(12),
     },
     backIcon: {
-        fontSize: 24,
+        fontSize: rs(26),
         fontWeight: 'bold',
-        fontFamily: 'NotoSans-Bold',
     },
     refreshBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f1f5f9',
+        width: rs(44),
+        height: rs(44),
+        borderRadius: rs(22),
         justifyContent: 'center',
         alignItems: 'center',
-        marginLeft: 8,
+        marginLeft: rs(8),
     },
     headerTextContainer: {
         flex: 1,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: rs(22),
         fontWeight: 'bold',
-        color: '#0f172a',
-        fontFamily: 'NotoSans-Bold',
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        fontSize: 14,
-        color: '#64748b',
-        fontFamily: 'NotoSans-Regular',
+        fontSize: rs(14),
+        marginTop: 2,
     },
     listContainer: {
-        paddingHorizontal: 20,
-        paddingBottom: 100, // Increased to clear bottom tabs
-        paddingTop: 10,
+        paddingHorizontal: rs(20),
+        paddingBottom: rs(120),
+        paddingTop: rs(15),
     },
     chapterCard: {
         flexDirection: 'row',
-        // backgroundColor handled by theme
-        borderRadius: 14,
-        padding: 16, // Increased padding
-        marginBottom: 12, // Increased margin
-        borderLeftWidth: 4,
-        elevation: 2,
+        borderRadius: rs(20),
+        padding: rs(18),
+        marginBottom: rs(14),
+        borderLeftWidth: 5,
+        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        alignItems: 'center', // Center vertically
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        alignItems: 'center',
+        height: rs(80),
     },
     numberCircle: {
-        width: 38, // Increased size
-        height: 38, // Increased size
-        borderRadius: 19,
+        width: rs(44),
+        height: rs(44),
+        borderRadius: rs(14),
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: rs(16),
     },
     chapterNumber: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        fontFamily: 'NotoSans-Bold',
+        fontSize: rs(20),
+        fontWeight: '900',
     },
     chapterInfo: {
         flex: 1,
@@ -388,34 +401,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     chapterName: {
-        fontSize: 15, // Increased font size
-        // color handled by theme
+        fontSize: rs(17),
         flex: 1,
-        fontFamily: 'NotoSans-Bold',
+        fontWeight: '800',
         textTransform: 'uppercase',
+        letterSpacing: -0.3,
     },
     goldStar: {
-        fontSize: 16, // Reduced from 20
-        marginLeft: 6,
+        fontSize: rs(18),
+        marginLeft: rs(8),
     },
     motivationBox: {
-        // backgroundColor handled by theme inline
-        padding: 4, // Reduced from 8
-        borderRadius: 4,
-        marginTop: 4, // Reduced from 8
+        paddingVertical: 2,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        marginTop: 4,
         alignSelf: 'flex-start'
     },
     motivationText: {
-        fontSize: 10,
-        fontWeight: '600',
-        textAlign: 'center',
-        fontFamily: 'NotoSans-Bold',
+        fontSize: rs(11),
+        fontWeight: '700',
     },
     chevron: {
-        fontSize: 20, // Reduced from 28
-        // color handled by theme inline
+        fontSize: rs(28),
         alignSelf: 'center',
-        marginLeft: 4,
+        marginLeft: rs(8),
+        opacity: 0.3,
     },
     loaderContainer: {
         flex: 1,
@@ -423,19 +434,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loaderText: {
-        marginTop: 12,
-        fontSize: 14,
-        color: '#64748b',
-        fontFamily: 'NotoSans-Bold',
+        marginTop: rs(12),
+        fontSize: rs(14),
+        fontWeight: '700',
     },
     emptyContainer: {
-        padding: 40,
+        padding: rs(40),
         alignItems: 'center',
     },
     emptyText: {
-        fontSize: 14,
-        color: '#64748b',
-        fontFamily: 'NotoSans-Regular',
+        fontSize: rs(14),
     },
 });
 

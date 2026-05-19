@@ -260,7 +260,7 @@ const ChaptersScreen = ({ navigation, route, user }) => {
         <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
 
-            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+            <View style={styles.container}>
                 <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
                         <Text style={[styles.backIcon, { color: theme.text }]}>←</Text>
@@ -299,9 +299,6 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                         maxToRenderPerBatch={10}
                         windowSize={10}
                         removeClippedSubviews={true}
-                        getItemLayout={(data, index) => (
-                            { length: rs(80), offset: rs(80) * index, index }
-                        )}
                         refreshing={refreshing}
                         onRefresh={onRefresh}
                         ListEmptyComponent={
@@ -311,7 +308,7 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                         }
                     />
                 )}
-            </SafeAreaView>
+            </View>
         </View>
     );
 };
@@ -365,32 +362,33 @@ const styles = StyleSheet.create({
     listContainer: {
         paddingHorizontal: rs(20),
         paddingBottom: rs(120),
-        paddingTop: rs(15),
+        paddingTop: rs(10),
     },
     chapterCard: {
         flexDirection: 'row',
-        borderRadius: rs(20),
-        padding: rs(18),
-        marginBottom: rs(14),
-        borderLeftWidth: 5,
-        elevation: 4,
+        borderRadius: rs(14),
+        paddingHorizontal: rs(14),
+        paddingVertical: rs(10),
+        marginBottom: rs(10),
+        borderLeftWidth: 4,
+        elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
         alignItems: 'center',
-        height: rs(80),
+        minHeight: rs(58),
     },
     numberCircle: {
-        width: rs(44),
-        height: rs(44),
-        borderRadius: rs(14),
+        width: rs(34),
+        height: rs(34),
+        borderRadius: rs(8),
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: rs(16),
+        marginRight: rs(12),
     },
     chapterNumber: {
-        fontSize: rs(20),
+        fontSize: rs(15),
         fontWeight: '900',
     },
     chapterInfo: {
@@ -401,31 +399,31 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     chapterName: {
-        fontSize: rs(17),
+        fontSize: rs(13.5),
         flex: 1,
-        fontWeight: '800',
+        fontWeight: '700',
         textTransform: 'uppercase',
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
     },
     goldStar: {
-        fontSize: rs(18),
+        fontSize: rs(14),
         marginLeft: rs(8),
     },
     motivationBox: {
-        paddingVertical: 2,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        marginTop: 4,
+        paddingVertical: 1,
+        paddingHorizontal: 6,
+        borderRadius: 4,
+        marginTop: 2,
         alignSelf: 'flex-start'
     },
     motivationText: {
-        fontSize: rs(11),
+        fontSize: rs(10),
         fontWeight: '700',
     },
     chevron: {
-        fontSize: rs(28),
+        fontSize: rs(20),
         alignSelf: 'center',
-        marginLeft: rs(8),
+        marginLeft: rs(6),
         opacity: 0.3,
     },
     loaderContainer: {

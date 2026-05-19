@@ -135,7 +135,7 @@ const SubjectsScreen = ({ user, navigation }) => {
                 backgroundColor="transparent"
                 translucent={true}
             />
-            <SafeAreaView style={styles.safeArea}>
+            <View style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={[styles.headerTitle, { color: theme.text }]}>My Subjects</Text>
                     {user?.class_name && (
@@ -144,7 +144,7 @@ const SubjectsScreen = ({ user, navigation }) => {
                         </View>
                     )}
                 </View>
-
+ 
                 {loading ? (
                     <View style={styles.center}>
                         <ActivityIndicator size="large" color="#4F46E5" />
@@ -173,7 +173,7 @@ const SubjectsScreen = ({ user, navigation }) => {
                         }
                     />
                 )}
-            </SafeAreaView>
+            </View>
         </View>
     );
 };

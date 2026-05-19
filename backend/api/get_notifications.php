@@ -17,6 +17,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT 
             cu.id as notification_id,
+            cu.teacher_id,
             cu.title,
             cu.message,
             cu.update_type,

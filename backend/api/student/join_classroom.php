@@ -18,12 +18,26 @@ $student_id = intval($data['student_id']);
 $class_code = strtoupper(sanitizeInput($data['class_code']));
 
 try {
-    // 1. Ensure assigned_teacher_id and division_name exist in users table
+    // 1. Ensure assigned_teacher_id exists in users table
     try {
-        $pdo->query("SELECT assigned_teacher_id, division_name FROM users LIMIT 1");
+        $pdo->query("SELECT assigned_teacher_id FROM users LIMIT 1");
     } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE users ADD COLUMN assigned_teacher_id INT DEFAULT NULL");
-        $pdo->exec("ALTER TABLE users ADD COLUMN division_name VARCHAR(50) DEFAULT NULL");
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN assigned_teacher_id INT DEFAULT NULL");
+        } catch (PDOException $ex) {
+            // Silently ignore if it already exists
+        }
+    }
+
+    // 2. Ensure division_name exists in users table
+    try {
+        $pdo->query("SELECT division_name FROM users LIMIT 1");
+    } catch (PDOException $e) {
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN division_name VARCHAR(50) DEFAULT NULL");
+        } catch (PDOException $ex) {
+            // Silently ignore if it already exists
+        }
     }
 
     // 2. Look up the class_code in teacher_classes

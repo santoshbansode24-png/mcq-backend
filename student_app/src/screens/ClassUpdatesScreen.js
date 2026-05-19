@@ -7,7 +7,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
-import { BASE_URL } from '../api/config';
+import axios from 'axios';
+import { BASE_URL, API_URL } from '../api/config';
 
 const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const { theme, isDarkMode } = useTheme();
@@ -51,17 +52,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
         setJoining(true);
         try {
-            const response = await fetch(`${BASE_URL}/api/student/join_classroom.php`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    student_id: user.user_id,
-                    class_code: joinCode
-                })
+            const response = await axios.post(`${API_URL}/student/join_classroom.php`, {
+                student_id: user.user_id,
+                class_code: joinCode
             });
-            const result = await response.json();
+            const result = response.data;
 
             if (result.status === 'success') {
                 Alert.alert("Success 🎉", result.message);
@@ -138,6 +133,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const isExam = item.update_type === 'live_exam';
         const isHomework = item.update_type === 'homework';
         const isWorksheet = item.update_type === 'worksheet';
+        const isLiveClass = item.update_type === 'live_class';
 
         const openAttachment = () => {
             if (hasFile) {
@@ -155,7 +151,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                         isPhoto ? '#ECFDF5' : 
                                         isExam ? '#FEF3C7' : 
                                         isHomework ? '#E0F2FE' : 
-                                        isWorksheet ? '#F5F3FF' : '#EEF2FF' 
+                                        isWorksheet ? '#F5F3FF' : 
+                                        isLiveClass ? '#FFE4E6' : '#EEF2FF' 
                     }]}>
                         <MaterialCommunityIcons 
                             name={
@@ -163,7 +160,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 isPhoto ? "image" : 
                                 isExam ? "timer-outline" : 
                                 isHomework ? "home-edit-outline" : 
-                                isWorksheet ? "file-document-edit-outline" : "bell-outline"
+                                isWorksheet ? "file-document-edit-outline" : 
+                                isLiveClass ? "youtube-tv" : "bell-outline"
                             } 
                             size={22} 
                             color={
@@ -171,16 +169,17 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 isPhoto ? "#10B981" : 
                                 isExam ? "#D97706" : 
                                 isHomework ? "#0EA5E9" : 
-                                isWorksheet ? "#8B5CF6" : "#6366F1"
+                                isWorksheet ? "#8B5CF6" : 
+                                isLiveClass ? "#E11D48" : "#6366F1"
                             }
                         />
                     </View>
                     <View style={styles.titleContainer}>
                         <View style={styles.typeRow}>
                             <Text style={[styles.typeTag, { 
-                                color: isExam ? '#D97706' : isHomework ? '#0EA5E9' : '#94a3b8' 
+                                color: isExam ? '#D97706' : isHomework ? '#0EA5E9' : isLiveClass ? '#E11D48' : '#94a3b8' 
                             }]}>
-                                {item.update_type?.toUpperCase() || 'ANNOUNCEMENT'}
+                                {isLiveClass ? '🔴 LIVE CLASS' : (item.update_type?.toUpperCase() || 'ANNOUNCEMENT')}
                             </Text>
                             <Text style={styles.date}>{formatDate(item.created_at)}</Text>
                         </View>
@@ -191,6 +190,22 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 <View style={styles.cardBody}>
                     <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
                     
+                    {isLiveClass && (
+                        <TouchableOpacity 
+                            style={[styles.actionButton, { backgroundColor: '#E11D48' }]} 
+                            onPress={() => {
+                                navigation.navigate('LiveClass', { 
+                                    classUpdate: item,
+                                    userId: user?.user_id || user?.id
+                                });
+                            }}
+                        >
+                            <MaterialCommunityIcons name="youtube-tv" size={20} color="white" />
+                            <Text style={styles.actionButtonText}>Join Live Class</Text>
+                        </TouchableOpacity>
+                    )}
+
+
                     {isExam && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#D97706' }]} 
@@ -210,6 +225,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             <Text style={styles.actionButtonText}>View Homework</Text>
                         </TouchableOpacity>
                     )}
+
 
                     {hasFile && (
                         <TouchableOpacity 

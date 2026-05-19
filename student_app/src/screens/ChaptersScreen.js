@@ -284,7 +284,7 @@ const ChaptersScreen = ({ navigation, route, user }) => {
 
                 {loading ? (
                     <View style={styles.loaderContainer}>
-                        <ActivityIndicator size="large" color="#00F5FF" />
+                        <ActivityIndicator size="large" color={theme.primary} />
                         <Text style={[styles.loaderText, { color: theme.textSecondary }]}>Loading Chapters...</Text>
                     </View>
                 ) : (

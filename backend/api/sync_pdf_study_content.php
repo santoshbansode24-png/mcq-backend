@@ -76,7 +76,8 @@ try {
         $pdo->prepare("DELETE FROM pdf_study_content WHERE job_id = ?")->execute([$job_id]);
 
         // C. Clear the pdf_base64 blob from pdf_study_jobs (major storage saving — PDFs are 10-20MB as base64)
-        $pdo->prepare("UPDATE pdf_study_jobs SET pdf_base64 = NULL, file_path = '' WHERE job_id = ? AND user_id = ?")
+        // FIX: Only delete the base64 if the AI successfully extracted a valid length master text, otherwise "Scan Next Section" will fail with "PDF data source missing."
+        $pdo->prepare("UPDATE pdf_study_jobs SET pdf_base64 = NULL, file_path = '' WHERE job_id = ? AND user_id = ? AND extracted_text IS NOT NULL AND CHAR_LENGTH(extracted_text) > 100")
             ->execute([$job_id, $user_id]);
 
         // D. Update Job Status to reflect cleanup

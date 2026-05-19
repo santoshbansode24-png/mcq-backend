@@ -48,23 +48,23 @@ try {
         if (!empty($filePath) && file_exists($filePath)) {
             $pdfBase64 = base64_encode(file_get_contents($filePath));
         } elseif (empty($extractedText)) {
-            throw new Exception("Document source missing. Please re-upload the PDF.");
+            throw new Exception("PDF data source missing.");
         }
     }
 
     sendProgress("Preparing Section Marker: Part $segment_index...", 25);
 
-    // COST OPTIMIZATION: Divide text into 5 segments (20% each)
-    $partStr = "Part $segment_index of 5";
-    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " 20% segment of the text.";
+    // COST OPTIMIZATION: Divide text into 10 segments (10% each)
+    $partStr = "Part $segment_index of 10";
+    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " 10% segment of the text.";
 
     // VEERU LENS CONTENT ENGINE PROMPT
     $systemPrompt = "You are the 'Veeru Lens Content Engine.' Your task is to perform an exhaustive, line-by-line extraction of educational content (MCQs, Flashcards, and Notes) from a specific portion of the provided text.
 
 Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
-2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 20% slice to ensure maximum depth.
-3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 20%.
+2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 10% slice to ensure maximum depth.
+3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 10%.
 
 Output Format (Strict JSON):
 {
@@ -74,8 +74,13 @@ Output Format (Strict JSON):
   ],
   \"flashcards\": [
     {\"q\": \"Question?\", \"a\": \"Answer\"}
-  ]
-}
+  ]";
+
+    if (!empty($pdfBase64)) {
+        $systemPrompt .= ",\n  \"full_text\": \"Exhaustive transcript of the ENTIRE document (Required since master text is missing)\"";
+    }
+
+    $systemPrompt .= "\n}
 
 Constraints:
 - Maintain a 'Line-by-Line' reading logic.
@@ -83,7 +88,7 @@ Constraints:
 - Answer in $language.";
 
     $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
-Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 20% segment.
+Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 10% segment.
 DO NOT generate content from earlier or later parts of the text to avoid duplication.";
 
     sendProgress("Analyzing Section $segment_index with Gemini...", 50);
@@ -96,9 +101,10 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
         ]);
     } else {
         // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
-        // Instead of sending 100,000 words, we only send the relevant 20% chunk.
+        // Instead of sending 100,000 words, we only send the relevant chunk.
         $totalLen = mb_strlen($extractedText);
-        $chunkSize = ceil($totalLen / 5);
+        $totalSegments = 10; // Let's support 10 deep scans by default
+        $chunkSize = ceil($totalLen / $totalSegments);
         
         // Calculate start position with a 500-character overlap for context
         $start = ($segment_index - 1) * $chunkSize;
@@ -146,6 +152,13 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
     }
 
     if ($data) {
+        // COST & SPEED OPTIMIZATION: If we used the heavy PDF base64 and successfully retrieved full_text, 
+        // save it permanently so the NEXT scan can use the fast/cheap text slicing method!
+        if (isset($data['full_text']) && mb_strlen($data['full_text']) > 100) {
+            $updateText = $pdo->prepare("UPDATE pdf_study_jobs SET extracted_text = ? WHERE job_id = ?");
+            $updateText->execute([$data['full_text'], $job_id]);
+        }
+
         echo "data: " . json_encode(['status' => 'success', 'data' => $data]) . "\n\n";
         ob_flush(); flush();
     } else {

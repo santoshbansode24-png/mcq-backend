@@ -180,13 +180,13 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
 
         setJoiningClass(true);
         try {
-            const response = await axios.post(`${API_URL}/join_class_by_code.php`, {
-                user_id: user.user_id,
+            const response = await axios.post(`${API_URL}/student/join_classroom.php`, {
+                student_id: user.user_id,
                 class_code: classCodeInput.trim().toUpperCase()
             });
 
             if (response.data.status === 'success') {
-                const { school_name, class_id, class_name } = response.data.data;
+                const { school_name, class_id, class_name, division_name } = response.data.data;
                 
                 // Update local state
                 setCurrentClassId(class_id);
@@ -199,12 +199,20 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                     parsedUser.class_id = class_id;
                     parsedUser.class_name = class_name;
                     parsedUser.school_name = school_name;
+                    parsedUser.division_name = division_name;
+                    parsedUser.subscription_status = 'active';
                     await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
                 }
                 
                 // Update parent context
                 if (onUserUpdate) {
-                    onUserUpdate({ class_id, class_name, school_name });
+                    onUserUpdate({ 
+                        class_id, 
+                        class_name, 
+                        school_name, 
+                        division_name, 
+                        subscription_status: 'active' 
+                    });
                 }
 
                 Alert.alert('Success', response.data.message);

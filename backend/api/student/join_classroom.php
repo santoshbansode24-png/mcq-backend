@@ -74,7 +74,8 @@ try {
         'school_name' => $classroom['school_name'] ?? 'Your School',
         'teacher_name' => $classroom['teacher_name'],
         'class_name' => $classroom['class_name'],
-        'division_name' => $classroom['division_name']
+        'division_name' => $classroom['division_name'],
+        'class_id' => $classroom['class_id']
     ]);
 
 } catch (PDOException $e) {

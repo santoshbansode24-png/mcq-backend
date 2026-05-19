@@ -64,6 +64,18 @@ try {
     }
     
 } catch (PDOException $e) {   
+    // Inject CORS headers to prevent clients blocking error response
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Max-Age: 86400');
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Allow-Private-Network: true");
+
     // Return unified JSON error if connection fails
     header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
@@ -74,6 +86,18 @@ try {
  * Helper function to send JSON response
  */
 function sendResponse($status, $message, $data = null, $httpCode = 200) {
+    // Inject CORS headers to prevent clients blocking error/success responses
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Max-Age: 86400');
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Allow-Private-Network: true");
+
     http_response_code($httpCode);
     header("Content-Type: application/json; charset=UTF-8");
     echo json_encode([

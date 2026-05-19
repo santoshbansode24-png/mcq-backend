@@ -21,7 +21,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSubjects } from '../api/subjects';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import api, { BASE_URL } from '../api/config';
+import axios from 'axios';
+import api, { BASE_URL, API_URL } from '../api/config';
 import { dataCache } from '../utils/dataCache';
 import { SmartCacheService } from '../services/SmartCacheService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -284,7 +285,7 @@ const HomeScreen = ({ user, navigation, route }) => {
         if (!classId) return;
         const checkExam = async () => {
             try {
-                const response = await api.get(`/student/check_live_exam.php?class_id=${classId}`);
+                const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}`);
                 if (response.data && response.data.status === 'success' && response.data.data) {
                     setActiveLiveExam(response.data.data);
                 } else {

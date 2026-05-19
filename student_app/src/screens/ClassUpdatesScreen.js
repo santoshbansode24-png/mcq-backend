@@ -51,13 +51,15 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
         setJoining(true);
         try {
-            const formData = new FormData();
-            formData.append('user_id', user.user_id);
-            formData.append('class_code', joinCode);
-
-            const response = await fetch(`${BASE_URL}/api/join_class.php`, {
+            const response = await fetch(`${BASE_URL}/api/student/join_classroom.php`, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: user.user_id,
+                    class_code: joinCode
+                })
             });
             const result = await response.json();
 
@@ -65,20 +67,23 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 Alert.alert("Success 🎉", result.message);
                 setShowJoinForm(false);
                 
-                // CRITICAL FIX: Update global user state so other screens see the class
-                if (onUserUpdate) {
-                    onUserUpdate({ 
-                        class_id: result.class_id,
-                        class_name: result.class_name
-                    });
+                // CRITICAL FIX: Safe update callback execution to isolate UI state errors
+                try {
+                    if (onUserUpdate && result.data) {
+                        onUserUpdate({ 
+                            class_id: result.data.class_id,
+                            class_name: result.data.class_name
+                        });
+                    }
+                } catch (stateErr) {
+                    console.error("Failed to propagate user class update state:", stateErr);
                 }
-                
-                // Local refresh is handled by useEffect [user.class_id]
             } else {
-                Alert.alert("Error", result.message);
+                Alert.alert("Error", result.message || "Failed to join class.");
             }
         } catch (error) {
-            Alert.alert("Network Error", "Could not connect to server.");
+            console.error("Join Class Error:", error);
+            Alert.alert("Connection Error", "Could not connect to server. Please check your internet connection.");
         } finally {
             setJoining(false);
         }
@@ -267,8 +272,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 placeholder="Enter 6-Digit Code"
                                 placeholderTextColor="#64748b"
                                 value={joinCode}
-                                onChangeText={setJoinCode}
-                                keyboardType="number-pad"
+                                onChangeText={(text) => setJoinCode(text.toUpperCase())}
+                                autoCapitalize="characters"
                                 maxLength={6}
                             />
                         </View>

@@ -246,8 +246,29 @@ foreach ($jobs as $job) {
 
         // 5. Update Job Status & Save Master Knowledge
         $fullText = $data['full_text'] ?? '';
-        $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, extracted_text = ? WHERE job_id = ?");
-        $updateStmt->execute([$fullText, $job['job_id']]);
+        
+        if (mb_strlen($fullText) > 100) {
+            // Extraction was successful. Safe to wipe heavy PDF data to save space.
+            $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, extracted_text = ?, pdf_base64 = NULL WHERE job_id = ?");
+            $updateStmt->execute([$fullText, $job['job_id']]);
+
+            // 6. Cost Optimization: Delete the physical PDF file to save server space
+            $fileToDelete = $job['file_path'];
+            if (!empty($fileToDelete)) {
+                if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $fileToDelete)) {
+                    $baseDir = dirname(__DIR__);
+                    $fileToDelete = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $fileToDelete;
+                }
+                if (file_exists($fileToDelete)) {
+                    unlink($fileToDelete);
+                    error_log("[Veeru Worker] Deleted physical PDF file to save space: " . basename($fileToDelete));
+                }
+            }
+        } else {
+            // Extraction failed to grab full text. DO NOT wipe PDF data so we can try again or fallback.
+            $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, extracted_text = ? WHERE job_id = ?");
+            $updateStmt->execute([$fullText, $job['job_id']]);
+        }
 
     } catch (Exception $e) {
         error_log("Veeru Worker Error: " . $e->getMessage());

@@ -45,6 +45,11 @@ try {
 
     if (empty($pdfBase64)) {
         $filePath = $job['file_path'];
+        if (!empty($filePath) && !preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+            $baseDir = dirname(__DIR__);
+            $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
+        }
+
         if (!empty($filePath) && file_exists($filePath)) {
             $pdfBase64 = base64_encode(file_get_contents($filePath));
         } elseif (empty($extractedText)) {
@@ -93,77 +98,101 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
 
     sendProgress("Analyzing Section $segment_index with Gemini...", 50);
 
-    // Call Gemini with the segmented prompt (File vs Text fallback)
-    if (!empty($pdfBase64)) {
-        $aiResponse = callGeminiPDF($systemPrompt . "\n\n" . $userPrompt, $pdfBase64, [
-            'temperature' => 0.3,
-            'maxOutputTokens' => 8192
-        ]);
-    } else {
-        // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
-        // Instead of sending 100,000 words, we only send the relevant chunk.
-        $totalLen = mb_strlen($extractedText);
-        $totalSegments = 10; // Let's support 10 deep scans by default
-        $chunkSize = ceil($totalLen / $totalSegments);
-        
-        // Calculate start position with a 500-character overlap for context
-        $start = ($segment_index - 1) * $chunkSize;
-        if ($start > 500) $start -= 500; 
-        
-        // Extract only the relevant portion
-        $slicedText = mb_substr($extractedText, $start, $chunkSize + 1000);
+    $data = null;
+    $maxRetries = 3;
+    $lastError = "";
 
-        $textPrompt = "### MASTER KNOWLEDGE SOURCE (SEGMENT $segment_index) ###\n" . $slicedText . "\n\n### TASK ###\n" . $systemPrompt . "\n\n" . $userPrompt;
-        $aiResponse = callGeminiAPI($textPrompt, [
-            'temperature' => 0.3,
-            'maxOutputTokens' => 8192
-        ]);
+    for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+        try {
+            // Call Gemini with the segmented prompt (File vs Text fallback)
+            if (!empty($pdfBase64)) {
+                $aiResponse = callGeminiPDF($systemPrompt . "\n\n" . $userPrompt, $pdfBase64, [
+                    'temperature' => 0.3,
+                    'maxOutputTokens' => 8192
+                ]);
+            } else {
+                // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
+                // Instead of sending 100,000 words, we only send the relevant chunk.
+                $totalLen = mb_strlen($extractedText);
+                $totalSegments = 10; // Let's support 10 deep scans by default
+                $chunkSize = ceil($totalLen / $totalSegments);
+                
+                // Calculate start position with a 500-character overlap for context
+                $start = ($segment_index - 1) * $chunkSize;
+                if ($start > 500) $start -= 500; 
+                
+                // Extract only the relevant portion
+                $slicedText = mb_substr($extractedText, $start, $chunkSize + 1000);
+
+                $textPrompt = "### MASTER KNOWLEDGE SOURCE (SEGMENT $segment_index) ###\n" . $slicedText . "\n\n### TASK ###\n" . $systemPrompt . "\n\n" . $userPrompt;
+                $aiResponse = callGeminiAPI($textPrompt, [
+                    'temperature' => 0.3,
+                    'maxOutputTokens' => 8192
+                ]);
+            }
+
+            if ($attempt === 1) {
+                sendProgress("Polishing extracted artifacts...", 85);
+            }
+
+            // Robust JSON parse with repair logic (same as pdf_worker_ai.php)
+            $aiResponse = trim($aiResponse);
+            $aiResponse = preg_replace('/^```json|```$/m', '', $aiResponse);
+            $jsonStart = strpos($aiResponse, '{');
+            $jsonEnd = strrpos($aiResponse, '}');
+
+            if ($jsonStart === false) throw new Exception("AI failed to generate a structured response.");
+
+            $cleanJson = ($jsonEnd !== false)
+                ? substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1)
+                : substr($aiResponse, $jsonStart);
+
+            $parsed = json_decode($cleanJson, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Surgical repair for truncated JSON
+                $repaired = rtrim($cleanJson, ", \n\r\t");
+                if (substr_count($repaired, '"') % 2 !== 0) $repaired .= '"';
+                $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
+                $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');
+                for ($i = 0; $i < $openBrackets; $i++) $repaired .= ']';
+                for ($i = 0; $i < $openBraces;   $i++) $repaired .= '}';
+                $parsed = json_decode($repaired, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception("AI response could not be parsed. Please try again.");
+                }
+            }
+
+            if ($parsed) {
+                $data = $parsed;
+                break; // Success! Exit loop.
+            } else {
+                throw new Exception("AI returned an empty data structure.");
+            }
+        } catch (Exception $e) {
+            $lastError = $e->getMessage();
+            if ($attempt < $maxRetries) {
+                sendProgress("AI busy or failed, retrying (Attempt " . ($attempt + 1) . "/$maxRetries)...", 85);
+                sleep(2);
+            }
+        }
     }
+
     unset($pdfBase64); // Free memory immediately after use
 
-    sendProgress("Polishing extracted artifacts...", 85);
-
-    // Robust JSON parse with repair logic (same as pdf_worker_ai.php)
-    $aiResponse = trim($aiResponse);
-    $aiResponse = preg_replace('/^```json|```$/m', '', $aiResponse);
-    $jsonStart = strpos($aiResponse, '{');
-    $jsonEnd = strrpos($aiResponse, '}');
-
-    if ($jsonStart === false) throw new Exception("AI failed to generate a structured response.");
-
-    $cleanJson = ($jsonEnd !== false)
-        ? substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1)
-        : substr($aiResponse, $jsonStart);
-
-    $data = json_decode($cleanJson, true);
-
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        // Surgical repair for truncated JSON
-        $repaired = rtrim($cleanJson, ", \n\r\t");
-        if (substr_count($repaired, '"') % 2 !== 0) $repaired .= '"';
-        $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
-        $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');
-        for ($i = 0; $i < $openBrackets; $i++) $repaired .= ']';
-        for ($i = 0; $i < $openBraces;   $i++) $repaired .= '}';
-        $data = json_decode($repaired, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("AI response could not be parsed. Please try again.");
-        }
+    if (!$data) {
+        throw new Exception("Operation failed after $maxRetries attempts. Last error: $lastError");
     }
 
-    if ($data) {
-        // COST & SPEED OPTIMIZATION: If we used the heavy PDF base64 and successfully retrieved full_text, 
-        // save it permanently so the NEXT scan can use the fast/cheap text slicing method!
-        if (isset($data['full_text']) && mb_strlen($data['full_text']) > 100) {
-            $updateText = $pdo->prepare("UPDATE pdf_study_jobs SET extracted_text = ? WHERE job_id = ?");
-            $updateText->execute([$data['full_text'], $job_id]);
-        }
+    // COST & SPEED OPTIMIZATION: If we used the heavy PDF base64 and successfully retrieved full_text, 
+    // save it permanently so the NEXT scan can use the fast/cheap text slicing method!
+    if (isset($data['full_text']) && mb_strlen($data['full_text']) > 100) {
+        $updateText = $pdo->prepare("UPDATE pdf_study_jobs SET extracted_text = ? WHERE job_id = ?");
+        $updateText->execute([$data['full_text'], $job_id]);
+    }
 
-        echo "data: " . json_encode(['status' => 'success', 'data' => $data]) . "\n\n";
+    echo "data: " . json_encode(['status' => 'success', 'data' => $data]) . "\n\n";
         ob_flush(); flush();
-    } else {
-        throw new Exception("AI returned an empty data structure.");
-    }
 
     echo "data: [DONE]\n\n";
     ob_flush(); flush();

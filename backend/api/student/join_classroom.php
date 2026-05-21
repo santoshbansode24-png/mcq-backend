@@ -18,78 +18,60 @@ $student_id = intval($data['student_id']);
 $class_code = strtoupper(sanitizeInput($data['class_code']));
 
 try {
-    // 1. Ensure assigned_teacher_id exists in users table
-    try {
-        $pdo->query("SELECT assigned_teacher_id FROM users LIMIT 1");
-    } catch (PDOException $e) {
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN assigned_teacher_id INT DEFAULT NULL");
-        } catch (PDOException $ex) {
-            // Silently ignore if it already exists
-        }
-    }
-
-    // 2. Ensure division_name exists in users table
-    try {
-        $pdo->query("SELECT division_name FROM users LIMIT 1");
-    } catch (PDOException $e) {
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN division_name VARCHAR(50) DEFAULT NULL");
-        } catch (PDOException $ex) {
-            // Silently ignore if it already exists
-        }
-    }
-
-    // 2. Look up the class_code in teacher_classes
+    // 1. Look up the class_code in classrooms table
     $stmt = $pdo->prepare("
-        SELECT tc.teacher_id, tc.class_id, tc.division_name, c.class_name, u.school_name, u.name as teacher_name
-        FROM teacher_classes tc
-        JOIN classes c ON tc.class_id = c.class_id
-        JOIN users u ON tc.teacher_id = u.user_id
-        WHERE tc.class_code = ?
+        SELECT c.class_id, c.teacher_id, c.class_name, c.board, c.medium, c.class_level, u.school_name, u.name as teacher_name
+        FROM classrooms c
+        JOIN users u ON c.teacher_id = u.user_id
+        WHERE c.class_code = ?
     ");
     $stmt->execute([$class_code]);
     $classroom = $stmt->fetch();
 
     if (!$classroom) {
-        sendResponse('error', 'Invalid School ID / Class Code. Please check and try again.', null, 404);
+        sendResponse('error', 'Invalid Class Code. Please check and try again.', null, 404);
     }
 
-    // 3. Update the Student's profile
-    // Note: This overrides their previous class/school settings with the official ones from the code.
+    $class_id = $classroom['class_id'];
+    $teacher_id = $classroom['teacher_id'];
+
+    // 2. Insert into student_class_mapping (This explicitly binds the student to this exact teacher's classroom)
+    try {
+        $mapStmt = $pdo->prepare("INSERT INTO student_class_mapping (student_id, class_id) VALUES (?, ?)");
+        $mapStmt->execute([$student_id, $class_id]);
+    } catch (PDOException $e) {
+        // 1062 = Duplicate entry, meaning student already joined this classroom. We can just ignore and proceed.
+        if ($e->getCode() != '23000' && strpos($e->getMessage(), 'Duplicate entry') === false) {
+            throw $e;
+        }
+    }
+
+    // 3. Optional: Sync user's global profile with the classroom's board and medium so they get the right content
     $updateStmt = $pdo->prepare("
         UPDATE users 
-        SET class_id = ?, 
-            assigned_teacher_id = ?, 
-            division_name = ?, 
+        SET assigned_teacher_id = ?, 
             school_name = ?,
+            board = ?,
+            medium = ?,
+            class_level = ?,
             subscription_status = 'active'
         WHERE user_id = ? AND user_type = 'student'
     ");
     
     $updateStmt->execute([
-        $classroom['class_id'],
-        $classroom['teacher_id'],
-        $classroom['division_name'],
+        $teacher_id,
         $classroom['school_name'],
+        $classroom['board'],
+        $classroom['medium'],
+        $classroom['class_level'],
         $student_id
     ]);
-
-    if ($updateStmt->rowCount() === 0) {
-        // Double check if student exists
-        $check = $pdo->prepare("SELECT user_id FROM users WHERE user_id = ?");
-        $check->execute([$student_id]);
-        if (!$check->fetch()) {
-            sendResponse('error', 'Student account not found.', null, 404);
-        }
-    }
 
     sendResponse('success', 'Successfully joined the classroom!', [
         'school_name' => $classroom['school_name'] ?? 'Your School',
         'teacher_name' => $classroom['teacher_name'],
         'class_name' => $classroom['class_name'],
-        'division_name' => $classroom['division_name'],
-        'class_id' => $classroom['class_id']
+        'classroom_id' => $class_id
     ]);
 
 } catch (PDOException $e) {

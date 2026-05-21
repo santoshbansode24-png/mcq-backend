@@ -1192,28 +1192,30 @@ const ChapterContentScreen = ({ navigation, route }) => {
             }
 
             return (
-                <ScrollView
+                <FlatList
+                    data={revisionDataItems}
+                    keyExtractor={(item, index) => `rev-${item.q || index}`}
                     contentContainerStyle={[styles.listContainer, contentContainerPadding]}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                >
-                    <View style={styles.sectionHeaderRow}>
-                        <View>
-                            <Text style={[styles.quizTitle, { color: theme.text }]}>Quick Revision</Text>
-                            <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Key points for {chapter.chapter_name}</Text>
+                    ListHeaderComponent={() => (
+                        <View style={styles.sectionHeaderRow}>
+                            <View>
+                                <Text style={[styles.quizTitle, { color: theme.text }]}>Quick Revision</Text>
+                                <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Key points for {chapter.chapter_name}</Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => setVoiceModalVisible(true)}
+                                style={styles.voiceButton}
+                            >
+                                <Text style={styles.voiceIcon}>🗣️</Text>
+                                <Text style={styles.voiceText}>VOICE</Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            onPress={() => setVoiceModalVisible(true)}
-                            style={styles.voiceButton}
-                        >
-                            <Text style={styles.voiceIcon}>🗣️</Text>
-                            <Text style={styles.voiceText}>VOICE</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {revisionDataItems.map((item, index) => {
+                    )}
+                    renderItem={({ item, index }) => {
                         const bgColor = revisionColors[index % revisionColors.length];
                         return (
-                            <View key={`rev-${item.q || index}`} style={[styles.card, { backgroundColor: bgColor }, playingIndex === index && { borderColor: '#4f46e5', borderWidth: 2 }]}>
+                            <View style={[styles.card, { backgroundColor: bgColor }, playingIndex === index && { borderColor: '#4f46e5', borderWidth: 2 }]}>
                                 <View style={{ flexDirection: 'row', marginBottom: 8, alignItems: 'center' }}>
                                     <View style={[styles.iconContainer, { width: 30, height: 30, borderRadius: 15, backgroundColor: 'white' }]}>
                                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#4f46e5' }}>{index + 1}</Text>
@@ -1249,8 +1251,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                 )}
                             </View>
                         );
-                    })}
-                </ScrollView>
+                    }}
+                />
             );
         }
 

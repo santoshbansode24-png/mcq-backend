@@ -4,7 +4,8 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    ScrollView,
+    TouchableOpacity,
+    SectionList,
     Alert,
     ActivityIndicator,
     Switch,
@@ -425,148 +426,150 @@ const AIPdfWorksheetScreen = ({ navigation, user }) => {
                 </SafeAreaView>
             </LinearGradient>
 
-            <ScrollView 
+            <SectionList
                 contentContainerStyle={styles.content}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                {/* Step 1: Folders */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>1. Select Folders</Text>
-                    {loadingFolders ? (
-                        <ActivityIndicator size="large" color="#C026D3" />
-                    ) : (
-                        <View style={styles.grid}>
-                            {folders.map((folder, index) => {
-                                const isSelected = selectedFolders.find(s => s.folder_id === folder.folder_id);
-                                const gradients = [
-                                    ['#FF6B6B', '#FFD93D'], ['#4ECDC4', '#44A8FF'], ['#A8E6CF', '#56CCF2'], 
-                                    ['#FF8C42', '#FF3E96'], ['#667EEA', '#764BA2'], ['#F093FB', '#F5576C']
-                                ];
-                                const colors = gradients[index % gradients.length];
+                sections={selectedFolders.length > 0 ? pdfsList : []}
+                keyExtractor={(item) => item.job_id.toString()}
+                renderItem={({ item }) => {
+                    const isSelected = selectedPdfs.includes(item.job_id);
+                    return (
+                        <TouchableOpacity
+                            style={[styles.chapterItem, isSelected && styles.chapterItemSelected]}
+                            onPress={() => togglePdf(item.job_id)}
+                        >
+                            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                                {isSelected && <Ionicons name="checkmark" size={16} color="white" />}
+                            </View>
+                            <Text style={[styles.chapterText, isSelected && { color: '#C026D3', fontWeight: 'bold' }]} numberOfLines={2}>
+                                {item.file_name}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                }}
+                renderSectionHeader={({ section: { folderName } }) => (
+                    <Text style={styles.groupTitle}>{folderName}</Text>
+                )}
+                stickySectionHeadersEnabled={false}
+                ListHeaderComponent={() => (
+                    <View>
+                        {/* Step 1: Folders */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionHeader}>1. Select Folders</Text>
+                            {loadingFolders ? (
+                                <ActivityIndicator size="large" color="#C026D3" />
+                            ) : (
+                                <View style={styles.grid}>
+                                    {folders.map((folder, index) => {
+                                        const isSelected = selectedFolders.find(s => s.folder_id === folder.folder_id);
+                                        const gradients = [
+                                            ['#FF6B6B', '#FFD93D'], ['#4ECDC4', '#44A8FF'], ['#A8E6CF', '#56CCF2'], 
+                                            ['#FF8C42', '#FF3E96'], ['#667EEA', '#764BA2'], ['#F093FB', '#F5576C']
+                                        ];
+                                        const colors = gradients[index % gradients.length];
 
-                                return (
-                                    <TouchableOpacity
-                                        key={folder.folder_id}
-                                        style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
-                                        onPress={() => toggleFolder(folder)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <LinearGradient
-                                            colors={isSelected ? ['#A855F7', '#C026D3'] : colors}
-                                            style={styles.subjectGradient}
-                                        >
-                                            <Text style={styles.subjectInitial}>{folder.folder_name.charAt(0)}</Text>
-                                            <Text style={styles.subjectName}>{folder.folder_name}</Text>
-                                            {isSelected && <Text style={styles.checkBadge}>✓</Text>}
-                                        </LinearGradient>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                            {folders.length === 0 && !loadingFolders && (
-                                <Text style={{color: '#94a3b8'}}>Your Knowledge Vault is empty.</Text>
+                                        return (
+                                            <TouchableOpacity
+                                                key={folder.folder_id}
+                                                style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
+                                                onPress={() => toggleFolder(folder)}
+                                                activeOpacity={0.8}
+                                            >
+                                                <LinearGradient
+                                                    colors={isSelected ? ['#A855F7', '#C026D3'] : colors}
+                                                    style={styles.subjectGradient}
+                                                >
+                                                    <Text style={styles.subjectInitial}>{folder.folder_name.charAt(0)}</Text>
+                                                    <Text style={styles.subjectName}>{folder.folder_name}</Text>
+                                                    {isSelected && <Text style={styles.checkBadge}>✓</Text>}
+                                                </LinearGradient>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                    {folders.length === 0 && !loadingFolders && (
+                                        <Text style={{color: '#94a3b8'}}>Your Knowledge Vault is empty.</Text>
+                                    )}
+                                </View>
                             )}
                         </View>
-                    )}
-                </View>
 
-                {/* Step 2: PDFs */}
-                {selectedFolders.length > 0 && (
-                    <View style={styles.section}>
-                        <View style={styles.rowBetween}>
-                            <Text style={styles.sectionHeader}>2. Select Documents</Text>
-                            <TouchableOpacity onPress={selectAllPdfs}>
-                                <Text style={styles.linkText}>Select All / None</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {loadingPdfs ? (
-                            <ActivityIndicator size="large" color="#C026D3" />
-                        ) : (
-                            <View>
-                                {pdfsList.map((group) => (
-                                    <View key={group.folderId} style={{ marginBottom: 15 }}>
-                                        <Text style={styles.groupTitle}>{group.folderName}</Text>
-                                        {group.data.map(pdf => {
-                                            const isSelected = selectedPdfs.includes(pdf.job_id);
-                                            return (
-                                                <TouchableOpacity
-                                                    key={pdf.job_id}
-                                                    style={[styles.chapterItem, isSelected && styles.chapterItemSelected]}
-                                                    onPress={() => togglePdf(pdf.job_id)}
-                                                >
-                                                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                                                        {isSelected && <Ionicons name="checkmark" size={16} color="white" />}
-                                                    </View>
-                                                    <Text style={[styles.chapterText, isSelected && { color: '#C026D3', fontWeight: 'bold' }]} numberOfLines={2}>
-                                                        {pdf.file_name}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </View>
-                                ))}
-                                {pdfsList.length === 0 && !loadingPdfs && (
-                                    <Text style={{color: '#94a3b8'}}>No processed documents found in the selected folder(s).</Text>
+                        {/* Step 2 Header */}
+                        {selectedFolders.length > 0 && (
+                            <View style={[styles.section, { marginBottom: 0 }]}>
+                                <View style={styles.rowBetween}>
+                                    <Text style={styles.sectionHeader}>2. Select Documents</Text>
+                                    <TouchableOpacity onPress={selectAllPdfs}>
+                                        <Text style={styles.linkText}>Select All / None</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                {loadingPdfs && (
+                                    <ActivityIndicator size="large" color="#C026D3" />
                                 )}
                             </View>
                         )}
                     </View>
                 )}
+                ListFooterComponent={() => (
+                    <View>
+                        {/* Step 3: Config */}
+                        {selectedPdfs.length > 0 && (
+                            <View style={[styles.section, { marginTop: 20 }]}>
+                                <Text style={styles.sectionHeader}>3. Customize Paper</Text>
 
-                {/* Step 3: Config */}
-                {selectedPdfs.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>3. Customize Paper</Text>
+                                <View style={styles.card}>
+                                    <Text style={styles.label}>Select Total Marks: {totalMarks}</Text>
+                                    <View style={styles.markButtonsContainer}>
+                                        {[25, 40, 50, 80, 100].map((mark) => (
+                                            <TouchableOpacity
+                                                key={mark}
+                                                style={[styles.markButton, totalMarks === mark && styles.markButtonSelected]}
+                                                onPress={() => setTotalMarks(mark)}
+                                            >
+                                                <Text style={[styles.markButtonText, totalMarks === mark && styles.markButtonTextSelected]}>
+                                                    {mark}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
 
-                        <View style={styles.card}>
-                            <Text style={styles.label}>Select Total Marks: {totalMarks}</Text>
-                            <View style={styles.markButtonsContainer}>
-                                {[25, 40, 50, 80, 100].map((mark) => (
-                                    <TouchableOpacity
-                                        key={mark}
-                                        style={[styles.markButton, totalMarks === mark && styles.markButtonSelected]}
-                                        onPress={() => setTotalMarks(mark)}
-                                    >
-                                        <Text style={[styles.markButtonText, totalMarks === mark && styles.markButtonTextSelected]}>
-                                            {mark}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
+                                <View style={styles.card}>
+                                    <View style={styles.switchRow}>
+                                        <Text style={styles.switchLabel}>Include MCQs (1 Mark)</Text>
+                                        <Switch value={includeMCQs} onValueChange={setIncludeMCQs} trackColor={{ true: '#C026D3' }} />
+                                    </View>
+                                    <View style={styles.switchRow}>
+                                        <Text style={styles.switchLabel}>Short Answers (2 Marks)</Text>
+                                        <Switch value={includeFlashcards} onValueChange={setIncludeFlashcards} trackColor={{ true: '#C026D3' }} />
+                                    </View>
+                                    <View style={styles.switchRow}>
+                                        <Text style={styles.switchLabel}>Long / Deep Questions (5 Marks)</Text>
+                                        <Switch value={includeAnalysis} onValueChange={setIncludeAnalysis} trackColor={{ true: '#C026D3' }} />
+                                    </View>
+                                </View>
 
-                        <View style={styles.card}>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Include MCQs (1 Mark)</Text>
-                                <Switch value={includeMCQs} onValueChange={setIncludeMCQs} trackColor={{ true: '#C026D3' }} />
+                                <TouchableOpacity
+                                    style={styles.generateBtn}
+                                    onPress={generateWorksheet}
+                                    disabled={generating}
+                                >
+                                    <LinearGradient colors={['#2563eb', '#3b82f6']} style={styles.btnGradient}>
+                                        {generating ? <ActivityIndicator color="white" /> : (
+                                            <>
+                                                <Ionicons name="print" size={24} color="white" style={{ marginRight: 10 }} />
+                                                <Text style={styles.btnText}>Generate PDF</Text>
+                                            </>
+                                        )}
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </View>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Short Answers (2 Marks)</Text>
-                                <Switch value={includeFlashcards} onValueChange={setIncludeFlashcards} trackColor={{ true: '#C026D3' }} />
-                            </View>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Long / Deep Questions (5 Marks)</Text>
-                                <Switch value={includeAnalysis} onValueChange={setIncludeAnalysis} trackColor={{ true: '#C026D3' }} />
-                            </View>
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.generateBtn}
-                            onPress={generateWorksheet}
-                            disabled={generating}
-                        >
-                            <LinearGradient colors={['#2563eb', '#3b82f6']} style={styles.btnGradient}>
-                                {generating ? <ActivityIndicator color="white" /> : (
-                                    <>
-                                        <Ionicons name="print" size={24} color="white" style={{ marginRight: 10 }} />
-                                        <Text style={styles.btnText}>Generate PDF</Text>
-                                    </>
-                                )}
-                            </LinearGradient>
-                        </TouchableOpacity>
+                        )}
+                        
+                        {pdfsList.length === 0 && !loadingPdfs && selectedFolders.length > 0 && (
+                            <Text style={{color: '#94a3b8'}}>No processed documents found in the selected folder(s).</Text>
+                        )}
                     </View>
                 )}
-            </ScrollView>
+            />
         </View>
     );
 };

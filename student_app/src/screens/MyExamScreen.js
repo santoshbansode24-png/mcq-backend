@@ -5,7 +5,7 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    ScrollView,
+    SectionList,
     TextInput,
     ActivityIndicator,
     Alert,
@@ -265,121 +265,130 @@ const MyExamScreen = ({ navigation, route, user }) => {
                 </SafeAreaView>
             </LinearGradient>
 
-            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-                {/* Subject Selection */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>1. Select Subjects</Text>
-                    {loading ? (
-                        <ActivityIndicator size="large" color="#0072ff" style={styles.loader} />
-                    ) : (
-                        <View style={styles.subjectGrid}>
-                            {subjects.map((subject, index) => {
-                                const isSelected = selectedSubjects.some(s => s.subject_id === subject.subject_id);
-                                return (
-                                    <SubjectCard 
-                                        key={subject.subject_id} 
-                                        subject={subject} 
-                                        index={index} 
-                                        isSelected={isSelected} 
-                                        onPress={toggleSubject} 
-                                    />
-                                );
-                            })}
+            <SectionList
+                style={styles.container}
+                contentContainerStyle={styles.scrollContent}
+                sections={selectedSubjects.length > 0 ? chapters : []}
+                keyExtractor={(item) => item.chapter_id.toString()}
+                renderItem={({ item }) => {
+                    const isSelected = selectedChapters.includes(item.chapter_id);
+                    return (
+                        <ChapterItem 
+                            chapter={item} 
+                            isSelected={isSelected} 
+                            onPress={toggleChapter} 
+                        />
+                    );
+                }}
+                renderSectionHeader={({ section: { subjectName } }) => (
+                    <View style={styles.groupContainer}>
+                        <Text style={styles.groupHeader}>{subjectName}</Text>
+                    </View>
+                )}
+                stickySectionHeadersEnabled={false}
+                ListHeaderComponent={() => (
+                    <View>
+                        {/* Subject Selection */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>1. Select Subjects</Text>
+                            {loading ? (
+                                <ActivityIndicator size="large" color="#0072ff" style={styles.loader} />
+                            ) : (
+                                <View style={styles.subjectGrid}>
+                                    {subjects.map((subject, index) => {
+                                        const isSelected = selectedSubjects.some(s => s.subject_id === subject.subject_id);
+                                        return (
+                                            <SubjectCard 
+                                                key={subject.subject_id} 
+                                                subject={subject} 
+                                                index={index} 
+                                                isSelected={isSelected} 
+                                                onPress={toggleSubject} 
+                                            />
+                                        );
+                                    })}
+                                </View>
+                            )}
                         </View>
-                    )}
-                </View>
 
-                {/* Chapter Selection */}
-                {selectedSubjects.length > 0 && (
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>2. Select Chapters</Text>
-                            <TouchableOpacity onPress={selectAllChapters} style={styles.selectAllButton}>
-                                <Text style={styles.selectAllText}>
-                                    Select All / Deselect All
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                        {loadingChapters ? (
-                            <ActivityIndicator size="large" color="#0072ff" style={styles.loader} />
-                        ) : (
-                            <View style={styles.chapterList}>
-                                {chapters.map((group) => (
-                                    <View key={group.subjectId} style={styles.groupContainer}>
-                                        <Text style={styles.groupHeader}>{group.subjectName}</Text>
-                                        {group.data.map((chapter) => {
-                                            const isSelected = selectedChapters.includes(chapter.chapter_id);
-                                            return (
-                                                <ChapterItem 
-                                                    key={chapter.chapter_id} 
-                                                    chapter={chapter} 
-                                                    isSelected={isSelected} 
-                                                    onPress={toggleChapter} 
-                                                />
-                                            );
-                                        })}
-                                    </View>
-                                ))}
-                                {chapters.length === 0 && !loadingChapters && (
-                                    <Text style={styles.noDataText}>No chapters found for selected subjects.</Text>
+                        {/* Chapter Selection Header */}
+                        {selectedSubjects.length > 0 && (
+                            <View style={[styles.section, { marginBottom: 0 }]}>
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>2. Select Chapters</Text>
+                                    <TouchableOpacity onPress={selectAllChapters} style={styles.selectAllButton}>
+                                        <Text style={styles.selectAllText}>
+                                            Select All / Deselect All
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                                {loadingChapters && (
+                                    <ActivityIndicator size="large" color="#0072ff" style={styles.loader} />
                                 )}
                             </View>
                         )}
                     </View>
                 )}
+                ListFooterComponent={() => (
+                    <View>
+                        {/* Question Limit */}
+                        {selectedChapters.length > 0 && (
+                            <View style={[styles.section, { marginTop: 20 }]}>
+                                <Text style={styles.sectionTitle}>3. Number of Questions</Text>
+                                <View style={styles.limitContainer}>
+                                    {['10', '25', '50', '100'].map((num) => (
+                                        <TouchableOpacity
+                                            key={num}
+                                            style={[styles.limitButton, questionLimit === num && styles.limitButtonSelected]}
+                                            onPress={() => setQuestionLimit(num)}
+                                        >
+                                            <Text style={[
+                                                styles.limitButtonText,
+                                                questionLimit === num && styles.limitButtonTextSelected
+                                            ]}>{num}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <TextInput
+                                    style={styles.customInput}
+                                    placeholder="Or enter custom number (1-100)"
+                                    placeholderTextColor="#94a3b8"
+                                    keyboardType="number-pad"
+                                    value={questionLimit}
+                                    onChangeText={setQuestionLimit}
+                                    maxLength={3}
+                                />
+                            </View>
+                        )}
 
-                {/* Question Limit */}
-                {selectedChapters.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>3. Number of Questions</Text>
-                        <View style={styles.limitContainer}>
-                            {['10', '25', '50', '100'].map((num) => (
-                                <TouchableOpacity
-                                    key={num}
-                                    style={[styles.limitButton, questionLimit === num && styles.limitButtonSelected]}
-                                    onPress={() => setQuestionLimit(num)}
-                                >
-                                    <Text style={[
-                                        styles.limitButtonText,
-                                        questionLimit === num && styles.limitButtonTextSelected
-                                    ]}>{num}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                        <TextInput
-                            style={styles.customInput}
-                            placeholder="Or enter custom number (1-100)"
-                            placeholderTextColor="#94a3b8"
-                            keyboardType="number-pad"
-                            value={questionLimit}
-                            onChangeText={setQuestionLimit}
-                            maxLength={3}
-                        />
+                        {/* Start Button */}
+                        {selectedChapters.length > 0 && (
+                            <TouchableOpacity
+                                style={styles.startButton}
+                                onPress={startTest}
+                                disabled={loading}
+                            >
+                                <LinearGradient colors={['#00c6ff', '#0072ff']} style={styles.startButtonGradient}>
+                                    {loading ? (
+                                        <ActivityIndicator color="white" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.startButtonText}>Start Test</Text>
+                                            <Text style={styles.startButtonSubtext}>
+                                                {selectedChapters.length} chapter{selectedChapters.length > 1 ? 's' : ''} • {questionLimit} questions
+                                            </Text>
+                                        </>
+                                    )}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
+
+                        {chapters.length === 0 && !loadingChapters && selectedSubjects.length > 0 && (
+                            <Text style={styles.noDataText}>No chapters found for selected subjects.</Text>
+                        )}
                     </View>
                 )}
-
-                {/* Start Button */}
-                {selectedChapters.length > 0 && (
-                    <TouchableOpacity
-                        style={styles.startButton}
-                        onPress={startTest}
-                        disabled={loading}
-                    >
-                        <LinearGradient colors={['#00c6ff', '#0072ff']} style={styles.startButtonGradient}>
-                            {loading ? (
-                                <ActivityIndicator color="white" />
-                            ) : (
-                                <>
-                                    <Text style={styles.startButtonText}>Start Test</Text>
-                                    <Text style={styles.startButtonSubtext}>
-                                        {selectedChapters.length} chapter{selectedChapters.length > 1 ? 's' : ''} • {questionLimit} questions
-                                    </Text>
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
-            </ScrollView>
+            />
         </View>
     );
 };

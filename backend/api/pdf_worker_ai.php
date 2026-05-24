@@ -72,38 +72,52 @@ foreach ($jobs as $job) {
             }
         }
 
+        if (empty($extractedText) && !empty($pdfBase64)) {
+            // STEP 1: Text Extraction Phase
+            $textExtractionPrompt = "You are an OCR expert. Extract the ENTIRE text from this document exactly as it is written. Do not summarize or generate questions. \n\nReturn ONLY a valid JSON object: {\"full_text\": \"...\"}";
+            
+            try {
+                $textResponse = callGeminiPDF($textExtractionPrompt, $pdfBase64);
+                $textResponse = trim(preg_replace('/^```json|```$/m', '', $textResponse));
+                $jsonStart = strpos($textResponse, '{');
+                $jsonEnd = strrpos($textResponse, '}');
+                if ($jsonStart !== false) {
+                    $textResponse = substr($textResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
+                }
+                
+                $textData = json_decode($textResponse, true);
+                if (isset($textData['full_text'])) {
+                    $extractedText = $textData['full_text'];
+                }
+            } catch (Exception $e) {
+                error_log("Worker PDF Text Extraction Failed: " . $e->getMessage());
+                // Fallback to whatever extracted_text was already there (from Smalot or other parser)
+            }
+        }
+
         // --- 1.5 DATA INTEGRITY & MASTER KNOWLEDGE FALLBACK ---
-        if (empty($pdfBase64) && !empty($extractedText)) {
-            // WE HAVE NO PDF BUT WE HAVE THE TEXT! 
-            // We can still proceed by sending the text to Gemini instead of the file.
-            error_log("[Veeru Worker] Proceeding with stored 'Master Knowledge' text (PDF wiped).");
-        } elseif (empty($pdfBase64) || strlen($pdfBase64) < 100) {
-            throw new Exception("PDF data is missing and no 'Master Knowledge' text found.");
+        if (empty($extractedText)) {
+            throw new Exception("Failed to extract any text from the PDF. The file might be an empty image or corrupted.");
         }
+
+        // STEP 2: Chunking Logic
+        $words = explode(' ', $extractedText);
+        $totalWords = count($words);
+        $totalChunks = ($totalWords > 20000) ? 10 : 5;
+        $chunkSize = max(1, ceil($totalWords / $totalChunks));
+        $chunks = array_chunk($words, $chunkSize);
         
-        // --- 1.6 FINAL SIZE SANITY CHECK ---
-        $base64Len = strlen($pdfBase64);
-        error_log("[Veeru Worker] Job {$job['job_id']}: Final PDF base64 length = $base64Len bytes.");
-        if ($base64Len < 10000 && $base64Len > 0) {
-            // We allow it if it's truly a tiny PDF, but we log the warning
-            error_log("[Veeru Worker] Warning: PDF data is very small ({$base64Len} bytes).");
-        }
+        $currentChunkIndex = 0; // Processing Section 1
+        $targetChunkText = implode(' ', $chunks[$currentChunkIndex] ?? []);
 
-        $difficulty = $job['difficulty'] ?? 'mix';
-        $difficultyStr = "";
-        if ($difficulty === 'easy') {
-            $difficultyStr = "DIFFICULTY LEVEL: EASY\n- Use very simple, easy-to-understand language.\n- Focus on direct definitions, basic concepts, and surface-level facts.\n- For MCQs, create slightly easier distractors (though still not completely obvious throwaways).";
-        } elseif ($difficulty === 'moderate') {
-            $difficultyStr = "DIFFICULTY LEVEL: MODERATE\n- Use standard high-school or introductory-college academic language.\n- Test mid-level understanding and standard curriculum facts.";
-        } elseif ($difficulty === 'hard') {
-            $difficultyStr = "DIFFICULTY LEVEL: HARD\n- Use advanced framing, deep conceptual analysis, and test intricate details.\n- Focus on complex mechanisms, abstract concepts, and 'Why' frameworks.\n- For MCQs, use extremely challenging and highly plausible distractors that require deep analytical thought.";
-        } else {
-            $difficultyStr = "DIFFICULTY LEVEL: MIX (Default)\n- Balance the generated content difficulty. Aim for 30% easy foundational questions, 40% moderate standard questions, and 30% hard analytical questions across both Flashcards and MCQs.";
-        }
+        // Update Job with Chunk Data before generation
+        $pdo->prepare("UPDATE pdf_study_jobs SET extracted_text = ?, total_chunks = ?, last_processed_chunk = 0, pdf_base64 = NULL WHERE job_id = ?")
+            ->execute([$extractedText, $totalChunks, $job['job_id']]);
 
+        // STEP 3: Generate Content for Chunk 0
         $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
         
-        Objective: Analyze the provided PDF page text. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards.
+        Objective: Analyze Section 1 of $totalChunks of this document text. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards.
         
         SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL (QUESTION & ANSWER FORMAT)
         - Your ABSOLUTE priority is to create flashcards in a clear 'question' and 'answer' format.
@@ -119,12 +133,7 @@ foreach ($jobs as $job) {
         - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer Sentence or Phrase\"}.
         - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn.
         - QUALITY AND EXHAUSTIVE EXTRACTION: Do not generate 'filler' questions, but do NOT miss a single important fact. Generate a flashcard for EVERY SINGLE piece of information, concept, definition, and fact present in the text to ensure 100% coverage.        
-        - GOLD STANDARD EXAMPLES (FOLLOW THIS QUALITY LEVEL):
-          1. [BAD]: \"Co-operation\" -> \"Working together.\"
-          2. [GOOD]: \"What is the primary economic objective of a Co-operative society?\" -> \"To protect and promote the common economic interests of its members through mutual help.\"
-          3. [BAD]: \"Farmers\" -> \"People who farm.\"
-          4. [GOOD]: \"________ are the primary beneficiaries of the rural co-operative credit system in India.\" -> \"Small and marginal farmers\"
-          5. [GOOD]: \"How does a co-operative society ensure democratic control among its members?\" -> \"By following the principle of 'one member, one vote' regardless of shareholding.\"
+        
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
         - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
         - {$difficultyStr}
@@ -147,38 +156,33 @@ foreach ($jobs as $job) {
         
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
-        2. FORMAT: Return ONLY a valid JSON object. No conversational text.
-        3. 20% GENERATION RULE: You MUST extract the entire text of the document line-by-line into the 'full_text' field for our database. HOWEVER, to maintain quality, ONLY generate MCQs, Flashcards, and Notes based on the FIRST 20% (Part 1 of 5) of the document. Do not generate questions for the middle or end of the document yet.
+        2. FORMAT: Return ONLY a valid JSON object. No markdown.
         
         SCHEMA:
         {
-          \"full_text\": \"Exhaustive, clean transcript of the entire document content\",
+          \"mcqs\": [
+            {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}
+          ],
+          \"flashcards\": [
+            {\"question\": \"Question text or Fill-in-the-blank\", \"answer\": \"Answer text\"}
+          ],
           \"notes\": {
             \"definitions\": [\"Def 1\", \"Def 2\"],
             \"key_facts\": [\"Fact 1\", \"Fact 2\"],
             \"core_concepts\": [\"Concept 1\", \"Concept 2\"]
-          },
-          \"flashcards\": [
-            {\"question\": \"Question text or Fill-in-the-blank\", \"answer\": \"Answer text\"}
-          ],
-          \"mcqs\": [
-            {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}
-          ]
-        }";
+          }
+        }
+        
+        TEXT TO PROCESS (Section 1 of $totalChunks):
+        " . $targetChunkText;
 
-        // 2. Call Gemini API with Retry Logic
+        // 2. Call Gemini API with Retry Logic (Text only, since PDF was already parsed)
         $aiResponse = "";
         $maxRetries = 3;
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
-                if (!empty($pdfBase64)) {
-                    $aiResponse = callGeminiPDF($prompt, $pdfBase64);
-                } else {
-                    // PDF is wiped, use the Master Knowledge text
-                    $textPrompt = "Here is the Master Knowledge extracted from the document:\n\n" . $extractedText . "\n\n" . $prompt;
-                    $aiResponse = callGeminiAPI($textPrompt);
-                }
+                $aiResponse = callGeminiAPI($prompt);
                 if (!empty($aiResponse)) break;
             } catch (Exception $e) {
                 error_log("[Veeru Worker] Job {$job['job_id']} Attempt $attempt Error: " . $e->getMessage());
@@ -244,30 +248,22 @@ foreach ($jobs as $job) {
         $stmtContent = $pdo->prepare("REPLACE INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)");
         $stmtContent->execute([$job['job_id'], $job['user_id'], $cleanJson]);
 
-        // 5. Update Job Status & Save Master Knowledge
-        $fullText = $data['full_text'] ?? '';
-        
-        if (mb_strlen($fullText) > 100) {
-            // Extraction was successful. Safe to wipe heavy PDF data to save space.
-            $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, extracted_text = ?, pdf_base64 = NULL WHERE job_id = ?");
-            $updateStmt->execute([$fullText, $job['job_id']]);
+        // 5. Update Job Status
+        // Since we already saved extracted_text in Step 2, we just mark as completed.
+        $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, last_processed_chunk = 1 WHERE job_id = ?");
+        $updateStmt->execute([$job['job_id']]);
 
-            // 6. Cost Optimization: Delete the physical PDF file to save server space
-            $fileToDelete = $job['file_path'];
-            if (!empty($fileToDelete)) {
-                if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $fileToDelete)) {
-                    $baseDir = dirname(__DIR__);
-                    $fileToDelete = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $fileToDelete;
-                }
-                if (file_exists($fileToDelete)) {
-                    unlink($fileToDelete);
-                    error_log("[Veeru Worker] Deleted physical PDF file to save space: " . basename($fileToDelete));
-                }
+        // 6. Cost Optimization: Delete the physical PDF file to save server space
+        $fileToDelete = $job['file_path'];
+        if (!empty($fileToDelete)) {
+            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $fileToDelete)) {
+                $baseDir = dirname(__DIR__);
+                $fileToDelete = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $fileToDelete;
             }
-        } else {
-            // Extraction failed to grab full text. DO NOT wipe PDF data so we can try again or fallback.
-            $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'completed', progress = 100, error_message = NULL, extracted_text = ? WHERE job_id = ?");
-            $updateStmt->execute([$fullText, $job['job_id']]);
+            if (file_exists($fileToDelete)) {
+                unlink($fileToDelete);
+                error_log("[Veeru Worker] Deleted physical PDF file to save space: " . basename($fileToDelete));
+            }
         }
 
     } catch (Exception $e) {

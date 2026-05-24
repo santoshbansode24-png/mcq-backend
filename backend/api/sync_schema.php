@@ -84,6 +84,8 @@ $sql_chunks = [
         `progress` INT DEFAULT 0,
         `total_pages` INT DEFAULT 0,
         `processed_pages` INT DEFAULT 0,
+        `last_processed_chunk` INT DEFAULT 0,
+        `total_chunks` INT DEFAULT 1,
         `error_message` TEXT,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -123,7 +125,9 @@ $repairs = [
         "folder_id" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `folder_id` INT DEFAULT NULL AFTER `user_id`",
         "pdf_base64" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `pdf_base64` LONGTEXT DEFAULT NULL AFTER `file_path`",
         "study_content" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `study_content` LONGTEXT DEFAULT NULL AFTER `pdf_base64`",
-        "error_message" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `error_message` TEXT AFTER `processed_pages`"
+        "error_message" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `error_message` TEXT AFTER `processed_pages`",
+        "last_processed_chunk" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `last_processed_chunk` INT DEFAULT 0 AFTER `processed_pages`",
+        "total_chunks" => "ALTER TABLE `pdf_study_jobs` ADD COLUMN `total_chunks` INT DEFAULT 1 AFTER `last_processed_chunk`"
     ]
 ];
 

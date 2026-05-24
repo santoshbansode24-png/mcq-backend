@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>Veeru Teacher Portal</title>
     <!-- PWA Setup -->
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#10B981" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
@@ -28,7 +28,7 @@
       }
     </style>
   <meta name="theme-color" content="#10B981">
-<link rel="icon" href="/favicon.ico" /></head>
+<link rel="icon" href="favicon.ico" /></head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -42,14 +42,41 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+          navigator.serviceWorker.register('service-worker.js').then(function(registration) {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            
+            // Periodically check for service worker updates on the server
+            setInterval(() => {
+              registration.update();
+            }, 60000); // Check every 60 seconds
+
+            // Check for updates on load
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New update fully installed. Ask the worker to take over immediately.
+                  console.log('New update available. Activating new version...');
+                  newWorker.postMessage('skipWaiting');
+                }
+              });
+            });
           }, function(err) {
             console.log('ServiceWorker registration failed: ', err);
           });
         });
+
+        // Trigger reload when the new service worker officially takes control
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            console.log('New service worker active. Reloading page...');
+            window.location.reload();
+          }
+        });
       }
     </script>
-  <script src="/_expo/static/js/web/index-3f09e9fa73aa367d9fca59d2c61cdfa0.js" defer></script>
+  <script src="_expo/static/js/web/index-69c0782055512301c2fe55d3671b2617.js" defer></script>
 </body>
 </html>

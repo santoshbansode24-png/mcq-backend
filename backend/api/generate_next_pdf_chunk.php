@@ -107,19 +107,45 @@ try {
     $aiResponse = callGeminiAPI($prompt);
     
     // 5. Clean JSON
-    $aiResponse = trim(preg_replace('/^```json|```$/m', '', $aiResponse));
+    $aiResponse = trim(preg_replace('/^```(?:json)?|```$/mi', '', $aiResponse));
     $jsonStart = strpos($aiResponse, '{');
     $jsonEnd = strrpos($aiResponse, '}');
     
     if ($jsonStart !== false && $jsonEnd !== false) {
         $cleanJson = substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
+    } elseif ($jsonStart !== false) {
+        // Truncated at end
+        $cleanJson = substr($aiResponse, $jsonStart);
     } else {
-        $cleanJson = $aiResponse;
+        throw new Exception("AI response did not contain valid JSON structure.");
     }
 
     $newData = json_decode($cleanJson, true);
-    if (!$newData) {
-        throw new Exception("AI failed to return valid JSON for the next chunk.");
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        // SURGICAL REPAIR for truncated JSON
+        $repaired = $cleanJson;
+        
+        // Remove trailing incomplete property/value markers
+        $repaired = rtrim($repaired, ", \n\r\t");
+        
+        // If it ends inside a string, close the string
+        $quotesCount = preg_match_all('/(?<!\\\\)"/', $repaired);
+        if ($quotesCount % 2 != 0) {
+            $repaired .= '"';
+        }
+
+        // Close open brackets and braces
+        $openBraces   = substr_count($repaired, '{') - substr_count($repaired, '}');
+        $openBrackets = substr_count($repaired, '[') - substr_count($repaired, ']');
+        
+        for ($i = 0; $i < $openBrackets; $i++) $repaired .= ']';
+        for ($i = 0; $i < $openBraces;   $i++) $repaired .= '}';
+
+        $newData = json_decode($repaired, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception("AI failed to return valid JSON and repair failed.");
+        }
     }
 
     // 6. Merge with Existing Content

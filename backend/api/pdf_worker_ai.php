@@ -74,24 +74,19 @@ foreach ($jobs as $job) {
 
         if (empty($extractedText) && !empty($pdfBase64)) {
             // STEP 1: Text Extraction Phase
-            $textExtractionPrompt = "You are an OCR expert. Extract the ENTIRE text from this document exactly as it is written. Do not summarize or generate questions. \n\nReturn ONLY a valid JSON object: {\"full_text\": \"...\"}";
+            $textExtractionPrompt = "You are an OCR expert. Extract the ENTIRE text from this document exactly as it is written. Do not summarize or generate questions. Output ONLY the raw extracted text in plain text format. Do not use JSON or any formatting.";
             
             try {
                 $textResponse = callGeminiPDF($textExtractionPrompt, $pdfBase64);
-                $textResponse = trim(preg_replace('/^```json|```$/m', '', $textResponse));
-                $jsonStart = strpos($textResponse, '{');
-                $jsonEnd = strrpos($textResponse, '}');
-                if ($jsonStart !== false) {
-                    $textResponse = substr($textResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
-                }
+                // Gemini sometimes wraps plain text in markdown block
+                $textResponse = trim(preg_replace('/^```(?:text)?|```$/mi', '', $textResponse));
                 
-                $textData = json_decode($textResponse, true);
-                if (isset($textData['full_text'])) {
-                    $extractedText = $textData['full_text'];
+                if (!empty($textResponse) && strlen($textResponse) > 50) {
+                    $extractedText = $textResponse;
                 }
             } catch (Exception $e) {
                 error_log("Worker PDF Text Extraction Failed: " . $e->getMessage());
-                // Fallback to whatever extracted_text was already there (from Smalot or other parser)
+                // Fallback to whatever extracted_text was already there
             }
         }
 
@@ -100,10 +95,23 @@ foreach ($jobs as $job) {
             throw new Exception("Failed to extract any text from the PDF. The file might be an empty image or corrupted.");
         }
 
-        // STEP 2: Chunking Logic
+        // STEP 2: Chunking Logic (Optimized)
         $words = explode(' ', $extractedText);
         $totalWords = count($words);
-        $totalChunks = ($totalWords > 20000) ? 10 : 5;
+        
+        // Dynamic chunking to prevent 1-page PDFs from being split into 5 useless pieces
+        if ($totalWords < 800) {
+            $totalChunks = 1;
+        } elseif ($totalWords < 3000) {
+            $totalChunks = 2;
+        } elseif ($totalWords < 10000) {
+            $totalChunks = 4;
+        } elseif ($totalWords < 20000) {
+            $totalChunks = 6;
+        } else {
+            $totalChunks = 10;
+        }
+        
         $chunkSize = max(1, ceil($totalWords / $totalChunks));
         $chunks = array_chunk($words, $chunkSize);
         

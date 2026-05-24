@@ -44,8 +44,22 @@ if (empty($clean_ids)) {
 $placeholders = implode(',', array_fill(0, count($clean_ids), '?'));
 
 try {
-    // 1. Fetch random questions from the selected chapters
-    // Note: ORDER BY RAND() can be slow on huge tables but fine for typical MCQ banks
+    // 1. Fetch only IDs from the selected chapters (Very Fast)
+    $idSql = "SELECT mcq_id FROM mcqs WHERE chapter_id IN ($placeholders)";
+    $idStmt = $pdo->prepare($idSql);
+    $idStmt->execute($clean_ids);
+    $allIds = $idStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($allIds)) {
+        sendResponse('error', 'No questions found for the selected chapters', null, 404);
+    }
+
+    // 2. Shuffle the IDs in PHP and pick the amount we need (Zero DB Load)
+    shuffle($allIds);
+    $selectedIds = array_slice($allIds, 0, $limit);
+
+    // 3. Fetch the full questions for ONLY the randomly selected IDs
+    $idPlaceholders = implode(',', array_fill(0, count($selectedIds), '?'));
     $sql = "
         SELECT 
             mcq_id,
@@ -58,21 +72,18 @@ try {
             correct_answer,
             explanation
         FROM mcqs
-        WHERE chapter_id IN ($placeholders)
-        ORDER BY RAND()
-        LIMIT ?
+        WHERE mcq_id IN ($idPlaceholders)
     ";
 
     $stmt = $pdo->prepare($sql);
-    
-    // Bind params: first all IDs, then the limit
-    $params = array_merge($clean_ids, [$limit]);
-    $stmt->execute($params);
-    
+    $stmt->execute($selectedIds);
     $mcqs = $stmt->fetchAll();
+    
+    // Shuffle the final output array so they aren't ordered by ID
+    shuffle($mcqs);
 
     if (empty($mcqs)) {
-        sendResponse('error', 'No questions found for the selected chapters', null, 404);
+        sendResponse('error', 'Failed to retrieve selected questions', null, 500);
     }
     
     // Decode HTML entities and sanitize

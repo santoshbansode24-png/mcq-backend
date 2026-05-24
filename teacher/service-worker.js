@@ -1,4 +1,4 @@
-const CACHE_NAME = 'veeru-teacher-pwa-cache-v1';
+const CACHE_NAME = 'veeru-teacher-pwa-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -14,35 +14,70 @@ self.addEventListener('install', event => {
       .then(cache => {
         return cache.addAll(urlsToCache);
       })
+      .then(() => self.skipWaiting()) // Force activation of the new worker immediately
   );
 });
 
 // Fetch Event
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Network-First for HTML/Navigation to ensure they always get the latest layout instantly
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           return response;
-        }
-        return fetch(event.request);
-      })
+        })
+        .catch(() => caches.match(event.request) || caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate strategy for secondary static assets (JS, CSS, Images)
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      const fetchPromise = fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Silent catch for offline fallback
+        });
+
+      return cachedResponse || fetchPromise;
+    })
   );
 });
 
 // Activate Event
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          if (cacheName !== CACHE_NAME) {
+            console.log('ServiceWorker: deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Claim control of all open pages immediately
   );
+});
+
+// Listen for skipWaiting messages from client
+self.addEventListener('message', event => {
+  if (event.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });

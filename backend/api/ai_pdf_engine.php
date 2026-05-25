@@ -53,7 +53,7 @@ try {
         if (!empty($filePath) && file_exists($filePath)) {
             $pdfBase64 = base64_encode(file_get_contents($filePath));
         } elseif (empty($extractedText)) {
-            throw new Exception("PDF data source missing.");
+            throw new Exception("PDF data source missing. [Debug: path=" . (!empty($filePath) ? $filePath : 'empty') . ", b64=" . strlen($pdfBase64) . ", text=" . strlen($job['extracted_text'] ?? '') . "]");
         }
     }
 
@@ -184,12 +184,7 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
         throw new Exception("Operation failed after $maxRetries attempts. Last error: $lastError");
     }
 
-    // COST & SPEED OPTIMIZATION: If we used the heavy PDF base64 and successfully retrieved full_text, 
-    // save it permanently so the NEXT scan can use the fast/cheap text slicing method!
-    if (isset($data['full_text']) && mb_strlen($data['full_text']) > 100) {
-        $updateText = $pdo->prepare("UPDATE pdf_study_jobs SET extracted_text = ? WHERE job_id = ?");
-        $updateText->execute([$data['full_text'], $job_id]);
-    }
+    // removed bad text overwrite logic
 
     echo "data: " . json_encode(['status' => 'success', 'data' => $data]) . "\n\n";
         ob_flush(); flush();

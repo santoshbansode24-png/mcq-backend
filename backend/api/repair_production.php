@@ -36,10 +36,14 @@ try {
     $requiredCols = [
         'folder_id'      => "ALTER TABLE pdf_study_jobs ADD COLUMN folder_id INT DEFAULT NULL AFTER user_id",
         'pdf_base64'     => "ALTER TABLE pdf_study_jobs ADD COLUMN pdf_base64 LONGTEXT DEFAULT NULL AFTER file_path",
+        'extracted_text' => "ALTER TABLE pdf_study_jobs ADD COLUMN extracted_text LONGTEXT DEFAULT NULL AFTER pdf_base64",
         'claim_token'    => "ALTER TABLE pdf_study_jobs ADD COLUMN claim_token VARCHAR(64) DEFAULT NULL AFTER status",
         'processed_pages'=> "ALTER TABLE pdf_study_jobs ADD COLUMN processed_pages INT DEFAULT 0 AFTER progress",
         'total_pages'    => "ALTER TABLE pdf_study_jobs ADD COLUMN total_pages INT DEFAULT 0 AFTER processed_pages",
         'error_message'  => "ALTER TABLE pdf_study_jobs ADD COLUMN error_message TEXT DEFAULT NULL AFTER total_pages",
+        'difficulty'     => "ALTER TABLE pdf_study_jobs ADD COLUMN difficulty VARCHAR(32) DEFAULT 'mix' AFTER error_message",
+        'total_chunks'   => "ALTER TABLE pdf_study_jobs ADD COLUMN total_chunks INT DEFAULT 1 AFTER difficulty",
+        'last_processed_chunk' => "ALTER TABLE pdf_study_jobs ADD COLUMN last_processed_chunk INT DEFAULT 0 AFTER total_chunks",
         'updated_at'     => "ALTER TABLE pdf_study_jobs ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     ];
 

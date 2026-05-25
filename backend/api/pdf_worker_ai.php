@@ -221,6 +221,9 @@ foreach ($jobs as $job) {
             throw new Exception("AI response did not contain valid JSON structure.");
         }
 
+        // Fix Control Character Errors (Unescaped newlines/tabs inside strings)
+        $cleanJson = str_replace(["\r", "\n", "\t"], " ", $cleanJson);
+
         $data = json_decode($cleanJson, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {

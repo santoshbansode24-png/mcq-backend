@@ -147,6 +147,9 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
                 ? substr($aiResponse, $jsonStart, $jsonEnd - $jsonStart + 1)
                 : substr($aiResponse, $jsonStart);
 
+            // Fix Control Character Errors (Unescaped newlines/tabs inside strings)
+            $cleanJson = str_replace(["\r", "\n", "\t"], " ", $cleanJson);
+
             $parsed = json_decode($cleanJson, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {

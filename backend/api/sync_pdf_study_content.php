@@ -54,11 +54,14 @@ try {
          */
 
         // A. Find the physical PDF file to delete
-        $stmt = $pdo->prepare("SELECT file_path FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("SELECT file_path, extracted_text FROM pdf_study_jobs WHERE job_id = ? AND user_id = ?");
         $stmt->execute([$job_id, $user_id]);
         $job = $stmt->fetch();
 
-        if ($job && !empty($job['file_path'])) {
+        // FIX: Only delete the physical file if the AI successfully extracted a valid length master text
+        $hasMasterText = ($job && !empty($job['extracted_text']) && strlen($job['extracted_text']) > 100);
+
+        if ($hasMasterText && $job && !empty($job['file_path'])) {
             $filePath = $job['file_path'];
             // Smart Absolute Path check (supports local XAMPP & Railway)
             if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {

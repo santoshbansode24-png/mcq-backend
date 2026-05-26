@@ -38,6 +38,14 @@ try {
     $job = $stmt->fetch();
 
     if (!$job) throw new Exception("Job not found.");
+    
+    if ($job['status'] === 'pending' || $job['status'] === 'processing') {
+        throw new Exception("PDF is still being analyzed. Please wait before using Veeru Lens.");
+    }
+    
+    if ($job['status'] === 'failed') {
+        throw new Exception("PDF analysis failed. Please re-upload the document.");
+    }
 
     // PDF Retrieval (DB, Disk, or Master Knowledge Text)
     $pdfBase64 = $job['pdf_base64'];
@@ -53,7 +61,7 @@ try {
         if (!empty($filePath) && file_exists($filePath)) {
             $pdfBase64 = base64_encode(file_get_contents($filePath));
         } elseif (empty($extractedText)) {
-            throw new Exception("PDF data source missing. [Debug: path=" . (!empty($filePath) ? $filePath : 'empty') . ", b64=" . strlen($pdfBase64) . ", text=" . strlen($job['extracted_text'] ?? '') . "]");
+            throw new Exception("This study pack was processed on an older version or text extraction failed. Please delete this study pack and re-upload the PDF to scan deeper sections!");
         }
     }
 
@@ -90,7 +98,7 @@ Output Format (Strict JSON):
 Constraints:
 - Maintain a 'Line-by-Line' reading logic.
 - If content is technical/mathematical, show step-by-step logic in the notes.
-- Answer in $language.";
+- STRICT NATIVE LANGUAGE MATCH: If the source text is in Marathi, you MUST answer/generate in Marathi. If the source text is in Hindi, answer/generate in Hindi. Otherwise, answer in $language.";
 
     $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
 Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 10% segment.
@@ -114,7 +122,7 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
                 // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
                 // Instead of sending 100,000 words, we only send the relevant chunk.
                 $totalLen = mb_strlen($extractedText);
-                $totalSegments = 10; // Let's support 10 deep scans by default
+                $totalSegments = isset($job['total_chunks']) && intval($job['total_chunks']) > 0 ? intval($job['total_chunks']) : 10;
                 $chunkSize = ceil($totalLen / $totalSegments);
                 
                 // Calculate start position with a 500-character overlap for context

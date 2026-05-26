@@ -12,7 +12,8 @@ if (php_sapi_name() !== 'cli' && !isset($_GET['force'])) {
 
 $uploadDirs = [
     '../../uploads/class_materials/',
-    '../../uploads/notes/'
+    '../../uploads/notes/',
+    '../../uploads/pdf_study/'
 ];
 
 $deletedCount = 0;
@@ -34,8 +35,10 @@ foreach ($uploadDirs as $dir) {
             SELECT id FROM class_updates WHERE payload LIKE ?
             UNION
             SELECT note_id FROM notes WHERE file_path = ?
+            UNION
+            SELECT job_id FROM pdf_study_jobs WHERE file_path LIKE ?
         ");
-        $stmt->execute(['%'.$file.'%', $relativeDBPath]);
+        $stmt->execute(['%'.$file.'%', $relativeDBPath, '%'.$file]);
         
         if (!$stmt->fetch()) {
             // File not in DB - it's an orphan!

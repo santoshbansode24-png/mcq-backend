@@ -37,9 +37,9 @@ if (!defined('GOOGLE_API_KEY')) {
     }
 }
 
-// 2. Define API URL - Using gemini-1.5-flash for stability and full access
+// 2. Define API URL - Using gemini-2.0-flash for stability and full access
 if (!defined('GEMINI_API_URL')) {
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
 }
 
 /**
@@ -66,8 +66,8 @@ if (!function_exists('callGeminiAPI')) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-            // SSL Security: Enable verification in production (Railway), disable only on localhost if needed
-            $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || $_SERVER['HTTP_HOST'] === 'localhost');
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || in_array($host, ['localhost', '127.0.0.1', '::1']) || strpos($host, 'localhost:') === 0 || strpos($host, '127.0.0.1:') === 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
             
@@ -127,7 +127,8 @@ if (!function_exists('callGeminiPDF')) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 min
-            $isLocal = ($_SERVER['HTTP_HOST'] === 'localhost');
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || in_array($host, ['localhost', '127.0.0.1', '::1']) || strpos($host, 'localhost:') === 0 || strpos($host, '127.0.0.1:') === 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
             

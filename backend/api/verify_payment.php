@@ -40,8 +40,7 @@ try {
     }
 
     // 2. Signature Valid -> Update Database
-    $db = new Database();
-    $conn = $db->getConnection();
+    $conn = $pdo;
 
     // A. Update Transaction Status
     $stmt = $conn->prepare("UPDATE transactions SET payment_id = ?, status = 'success' WHERE order_id = ?");

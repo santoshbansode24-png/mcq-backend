@@ -38,8 +38,7 @@ try {
     $orderId = $razorpayOrder['id'];
 
     // 4. Save to Database (Status: Created)
-    $db = new Database();
-    $conn = $db->getConnection();
+    $conn = $pdo;
     
     $stmt = $conn->prepare("INSERT INTO transactions (user_id, order_id, amount, status) VALUES (?, ?, ?, 'created')");
     $stmt->execute([$userId, $orderId, $amount]);

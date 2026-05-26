@@ -5,8 +5,7 @@ header("Content-Type: application/json; charset=UTF-8");
 require_once '../config/db.php';
 
 try {
-    $db = new Database();
-    $conn = $db->getConnection();
+    $conn = $pdo;
 
     // Check if column exists
     $check = $conn->query("SHOW COLUMNS FROM `users` LIKE 'subscription_status'");

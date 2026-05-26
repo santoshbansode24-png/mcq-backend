@@ -25,11 +25,10 @@ $class_code = strtoupper(sanitizeInput($input['class_code']));
 try {
     // 1. Find the class and teacher based on the code
     $stmt = $pdo->prepare("
-        SELECT tc.teacher_id, tc.class_id, u.school_name, c.class_name
-        FROM teacher_classes tc
-        JOIN users u ON tc.teacher_id = u.user_id AND u.user_type = 'teacher'
-        JOIN classes c ON tc.class_id = c.class_id
-        WHERE tc.class_code = ?
+        SELECT c.teacher_id, c.class_id, c.class_name, u.school_name
+        FROM classrooms c
+        LEFT JOIN users u ON c.teacher_id = u.user_id AND u.user_type = 'teacher'
+        WHERE c.class_code = ?
     ");
     $stmt->execute([$class_code]);
     $classInfo = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -37,8 +36,17 @@ try {
     if (!$classInfo) {
         sendResponse('error', 'Invalid Class Code. Please check and try again.', null, 404);
     }
+    
+    // Check if mapping exists
+    $checkMap = $pdo->prepare("SELECT mapping_id FROM student_class_mapping WHERE student_id = ? AND class_id = ?");
+    $checkMap->execute([$user_id, $classInfo['class_id']]);
+    
+    if (!$checkMap->fetch()) {
+        $insertMap = $pdo->prepare("INSERT INTO student_class_mapping (student_id, class_id) VALUES (?, ?)");
+        $insertMap->execute([$user_id, $classInfo['class_id']]);
+    }
 
-    // 2. Update the student's record
+    // 2. Update the student's record (legacy fallback fields)
     $updateStmt = $pdo->prepare("
         UPDATE users 
         SET school_name = ?, class_id = ?
@@ -46,15 +54,11 @@ try {
     ");
     $updated = $updateStmt->execute([$classInfo['school_name'], $classInfo['class_id'], $user_id]);
 
-    if ($updateStmt->rowCount() > 0 || $updated) {
-        sendResponse('success', 'Successfully joined Class ' . $classInfo['class_name'] . ' at ' . $classInfo['school_name'], [
-            'school_name' => $classInfo['school_name'],
-            'class_id' => $classInfo['class_id'],
-            'class_name' => $classInfo['class_name']
-        ], 200);
-    } else {
-        sendResponse('error', 'Failed to update student profile. Ensure you are logged in as a student.', null, 400);
-    }
+    sendResponse('success', 'Successfully joined Class ' . $classInfo['class_name'] . ' at ' . $classInfo['school_name'], [
+        'school_name' => $classInfo['school_name'],
+        'class_id' => $classInfo['class_id'],
+        'class_name' => $classInfo['class_name']
+    ], 200);
 
 } catch (PDOException $e) {
     sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);

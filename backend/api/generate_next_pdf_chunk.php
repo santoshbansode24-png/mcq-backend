@@ -104,7 +104,10 @@ try {
     TEXT TO PROCESS (Section $currentSectionNum of $totalChunks):
     " . $targetChunkText;
 
-    $aiResponse = callGeminiAPI($prompt);
+    $aiResponse = callGeminiAPI($prompt, [
+        'temperature' => 0.3,
+        'maxOutputTokens' => 8192
+    ]);
     
     // 5. Clean JSON
     $aiResponse = trim(preg_replace('/^```(?:json)?|```$/mi', '', $aiResponse));

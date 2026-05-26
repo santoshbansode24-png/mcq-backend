@@ -190,7 +190,10 @@ foreach ($jobs as $job) {
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
-                $aiResponse = callGeminiAPI($prompt);
+                $aiResponse = callGeminiAPI($prompt, [
+                    'temperature' => 0.3,
+                    'maxOutputTokens' => 8192
+                ]);
                 if (!empty($aiResponse)) break;
             } catch (Exception $e) {
                 error_log("[Veeru Worker] Job {$job['job_id']} Attempt $attempt Error: " . $e->getMessage());

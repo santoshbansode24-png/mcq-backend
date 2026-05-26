@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    TouchableOpacity,
     SectionList,
     Alert,
     ActivityIndicator,

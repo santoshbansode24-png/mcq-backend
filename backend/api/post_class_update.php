@@ -28,7 +28,7 @@ $message = isset($input['message']) ? sanitizeInput($input['message']) : null;
 $payload = isset($input['payload']) ? json_encode($input['payload']) : null; // Can be JSON object for Exam/Worksheet configs
 
 // Verify the teacher has access to this class
-$authStmt = $pdo->prepare("SELECT teacher_id FROM teacher_classes WHERE teacher_id = ? AND class_id = ?");
+$authStmt = $pdo->prepare("SELECT teacher_id FROM classrooms WHERE teacher_id = ? AND class_id = ?");
 $authStmt->execute([$teacher_id, $class_id]);
 if (!$authStmt->fetch()) {
     sendResponse('error', 'Unauthorized: You are not assigned to this class.', null, 403);

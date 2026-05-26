@@ -102,7 +102,7 @@ try {
     }
     
     // 4. Query YouTube Search API for Active Live Video in Channel
-    $search_url = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=" . urlencode($channel_id) . "&eventType=live&type=video&key=" . urlencode(GOOGLE_CLIENT_ID);
+    $search_url = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=" . urlencode($channel_id) . "&eventType=live&type=video";
     
     // We pass the auth bearer header to authorize the search
     $ch = curl_init($search_url);

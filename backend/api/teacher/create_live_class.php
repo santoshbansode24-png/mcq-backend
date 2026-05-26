@@ -55,7 +55,7 @@ try {
     $school_name = $teacher['school_name'];
     
     // 2. Verify class exists
-    $classStmt = $pdo->prepare("SELECT class_id FROM classes WHERE class_id = ?");
+    $classStmt = $pdo->prepare("SELECT class_id FROM classrooms WHERE class_id = ?");
     $classStmt->execute([$class_id]);
     if (!$classStmt->fetch()) {
         sendResponse('error', 'Invalid class ID', null, 400);

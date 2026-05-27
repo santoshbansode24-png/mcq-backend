@@ -52,10 +52,11 @@ try {
         }
     }
     
-    echo "\n⚠️ RECENT FAILURES:\n";
-    $fails = $pdo->query("SELECT job_id, file_name, error_message, updated_at FROM pdf_study_jobs WHERE status = 'failed' ORDER BY updated_at DESC LIMIT 5")->fetchAll();
-    foreach ($fails as $fail) {
-        echo "- Job #{$fail['job_id']} ({$fail['file_name']}): {$fail['error_message']} [{$fail['updated_at']}]\n";
+    echo "\n📊 RECENT JOBS:\n";
+    $recentJobs = $pdo->query("SELECT job_id, user_id, file_name, status, progress, error_message, updated_at FROM pdf_study_jobs ORDER BY job_id DESC LIMIT 10")->fetchAll();
+    foreach ($recentJobs as $job) {
+        $errStr = $job['error_message'] ? " - Error: " . $job['error_message'] : "";
+        echo "- Job #{$job['job_id']} (User: {$job['user_id']}): {$job['file_name']} [Status: " . strtoupper($job['status']) . ", Progress: {$job['progress']}%] {$errStr} [{$job['updated_at']}]\n";
     }
 } catch (Exception $e) {
     echo "- Job check failed: " . $e->getMessage() . "\n";

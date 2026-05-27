@@ -63,7 +63,7 @@ if ($file) {
     ];
 }
 
-$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=" . GEMINI_API_KEY;
+$apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=" . GEMINI_API_KEY;
 
 $payload = [
     'contents' => [

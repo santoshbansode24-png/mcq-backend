@@ -67,7 +67,7 @@ echo "🤖 AI CONNECTIVITY:\n";
 echo "- API Key: " . (defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? "✅ Configured (" . substr(GEMINI_API_KEY, 0, 8) . "...)" : "❌ MISSING") . "\n";
 
 try {
-    // Quick test with gemini-2.0-flash
+    // Quick test with gemini-2.5-flash
     $payload = [
         'contents' => [['parts' => [['text' => 'Ping']]]],
         'generationConfig' => ['maxOutputTokens' => 5]
@@ -85,10 +85,10 @@ try {
     curl_close($ch);
     
     if ($code === 200) {
-        echo "- Ping Gemini (2.0 Flash): ✅ SUCCESS\n";
+        echo "- Ping Gemini (2.5 Flash): ✅ SUCCESS\n";
     } else {
         $err = json_decode($res, true);
-        echo "- Ping Gemini (2.0 Flash): ❌ FAILED (Code $code). Error: " . ($err['error']['message'] ?? substr($res, 0, 100)) . "\n";
+        echo "- Ping Gemini (2.5 Flash): ❌ FAILED (Code $code). Error: " . ($err['error']['message'] ?? substr($res, 0, 100)) . "\n";
     }
 } catch (Exception $e) {
     echo "- AI Connectivity check failed: " . $e->getMessage() . "\n";

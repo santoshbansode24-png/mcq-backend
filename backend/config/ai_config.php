@@ -37,9 +37,9 @@ if (!defined('GOOGLE_API_KEY')) {
     }
 }
 
-// 2. Define API URL - Using gemini-2.0-flash for stability and full access
+// 2. Define API URL - Using gemini-2.5-flash for stability and full access
 if (!defined('GEMINI_API_URL')) {
-    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+    define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
 }
 
 /**

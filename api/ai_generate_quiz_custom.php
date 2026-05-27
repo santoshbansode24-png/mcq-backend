@@ -164,8 +164,8 @@ try {
         }
     }
 
-    // 5. Call Gemini API - using gemini-2.0-flash (confirmed available model)
-    $modelsToTry = ['gemini-2.0-flash'];
+    // 5. Call Gemini API - using gemini-2.5-flash (confirmed available model)
+    $modelsToTry = ['gemini-2.5-flash'];
     $finalReply = null;
     $lastError = "";
 
@@ -175,7 +175,7 @@ try {
             "generationConfig" => ["temperature" => 0.4, "maxOutputTokens" => 8192]
         ];
 
-        // Use the model specific URL (v1beta for gemini-2.0-flash)
+        // Use the model specific URL (v1beta for gemini-2.5-flash)
         $url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=" . GEMINI_API_KEY;
 
         $ch = curl_init($url);

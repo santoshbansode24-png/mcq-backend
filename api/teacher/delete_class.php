@@ -12,8 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    $teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : 0;
-    $class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : 0;
+    $data = json_decode(file_get_contents("php://input"), true);
+    $teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : (isset($data['teacher_id']) ? intval($data['teacher_id']) : 0);
+    $class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : (isset($data['class_id']) ? intval($data['class_id']) : 0);
 
     if ($teacher_id <= 0 || $class_id <= 0) {
         sendResponse('error', 'Invalid teacher_id or class_id', null, 400);

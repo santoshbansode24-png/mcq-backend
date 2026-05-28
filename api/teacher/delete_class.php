@@ -20,31 +20,35 @@ try {
         sendResponse('error', 'Invalid teacher_id or class_id', null, 400);
     }
 
-    // Verify teacher owns the class
-    $stmt = $pdo->prepare("SELECT * FROM teacher_classes WHERE teacher_id = ? AND class_id = ?");
+    // Verify teacher owns the classroom
+    $stmt = $pdo->prepare("SELECT class_code FROM classrooms WHERE teacher_id = ? AND class_id = ?");
     $stmt->execute([$teacher_id, $class_id]);
-    if (!$stmt->fetch()) {
+    $classroom = $stmt->fetch();
+    
+    if (!$classroom) {
         sendResponse('error', 'Class not found or unauthorized', null, 403);
     }
-
-    // Start transaction to safely delete related data if necessary, though ON DELETE CASCADE should handle this if foreign keys are set up.
-    // For now, we delete from teacher_classes, and possibly classes.
-    // Wait, the `classes` table has the class_code. `teacher_classes` links it.
-    // We should delete the class from `classes` table which will cascade, or delete manually.
     
+    $class_code = $classroom['class_code'];
+
     $pdo->beginTransaction();
 
-    // 1. Unassign students from this class (optional, or just let them be orphaned but we should probably set their class_id to NULL)
-    $updateStudents = $pdo->prepare("UPDATE users SET class_id = NULL WHERE class_id = ? AND user_type = 'student'");
-    $updateStudents->execute([$class_id]);
+    // 1. Unassign students (delete mappings)
+    $delMapping = $pdo->prepare("DELETE FROM student_class_mapping WHERE class_id = ?");
+    $delMapping->execute([$class_id]);
 
-    // 2. Delete teacher_classes link
-    $delTeacherClass = $pdo->prepare("DELETE FROM teacher_classes WHERE class_id = ? AND teacher_id = ?");
-    $delTeacherClass->execute([$class_id, $teacher_id]);
+    // 2. Delete teacher_classes link via class_code
+    $delTeacherClass = $pdo->prepare("DELETE FROM teacher_classes WHERE class_code = ? AND teacher_id = ?");
+    $delTeacherClass->execute([$class_code, $teacher_id]);
 
-    // 3. Delete the class itself
-    $delClass = $pdo->prepare("DELETE FROM classes WHERE class_id = ?");
-    $delClass->execute([$class_id]);
+    // 3. Delete the classroom itself
+    $delClassroom = $pdo->prepare("DELETE FROM classrooms WHERE class_id = ?");
+    $delClassroom->execute([$class_id]);
+
+    // 4. Delete associated live exams, homework, notifications
+    $pdo->prepare("DELETE FROM live_exams WHERE class_id = ?")->execute([$class_id]);
+    $pdo->prepare("DELETE FROM class_updates WHERE class_id = ?")->execute([$class_id]);
+    $pdo->prepare("DELETE FROM notifications WHERE class_id = ?")->execute([$class_id]);
 
     $pdo->commit();
     

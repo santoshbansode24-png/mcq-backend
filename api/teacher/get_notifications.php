@@ -34,9 +34,9 @@ try {
             n.message,
             n.created_at,
             c.class_name,
-            (SELECT COUNT(*) FROM users WHERE class_id = n.class_id AND user_type = 'student') as students_count
+            (SELECT COUNT(*) FROM student_class_mapping WHERE class_id = n.class_id) as students_count
         FROM notifications n
-        INNER JOIN classes c ON n.class_id = c.class_id
+        INNER JOIN classrooms c ON n.class_id = c.class_id
         WHERE n.teacher_id = ?
         ORDER BY n.created_at DESC
     ");

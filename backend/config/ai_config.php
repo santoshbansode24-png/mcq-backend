@@ -48,12 +48,16 @@ if (!defined('GEMINI_API_URL')) {
  */
 if (!function_exists('callGeminiAPI')) {
     function callGeminiAPI($prompt, $options = []) {
+        $genConfig = [
+            'temperature' => $options['temperature'] ?? 0.7,
+            'maxOutputTokens' => $options['maxOutputTokens'] ?? 1024
+        ];
+        if (isset($options['responseMimeType'])) {
+            $genConfig['responseMimeType'] = $options['responseMimeType'];
+        }
         $payload = [
             'contents' => [['parts' => [['text' => $prompt]]]],
-            'generationConfig' => [
-                'temperature' => $options['temperature'] ?? 0.7,
-                'maxOutputTokens' => $options['maxOutputTokens'] ?? 1024
-            ]
+            'generationConfig' => $genConfig
         ];
         
         $maxRetries = 3;

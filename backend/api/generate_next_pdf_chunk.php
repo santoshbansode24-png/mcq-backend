@@ -90,7 +90,8 @@ try {
     - QUALITY AND EXHAUSTIVE EXTRACTION: Do not generate 'filler' questions, but do NOT miss a single important fact. Generate a flashcard for EVERY SINGLE piece of information, concept, definition, and fact present in the text to ensure 100% coverage.        
     
     SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
-    - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
+    - 1:1 BALANCE RATIO: Maintain a strict 1:1 balance between MCQs and Flashcards. For every concept or fact you convert into a Flashcard, you must also generate a corresponding high-quality MCQ. They must be generated at the exact same level of abundance.
+    - All three categories (mcqs, flashcards, and notes) are strictly mandatory and MUST be fully populated. Do not leave notes or any other section empty.
     - $difficultyStr
     
     SECTION 3: HIGH-VOLUME MCQ GENERATION & QUALITY STANDARDS
@@ -133,7 +134,8 @@ try {
 
     $aiResponse = callGeminiAPI($prompt, [
         'temperature' => 0.3,
-        'maxOutputTokens' => 8192
+        'maxOutputTokens' => 8192,
+        'responseMimeType' => 'application/json'
     ]);
     
     // 5. Clean JSON

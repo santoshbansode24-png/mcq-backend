@@ -78,7 +78,8 @@ Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
 2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 20% slice to ensure maximum depth.
 3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 20%.
-4. HIGH-VOLUME GENERATION: You MUST generate as many relevant MCQs and Flashcards as possible from the provided text. Do not stop at just 1 or 2. Extract every single testable concept, fact, date, formula, and definition.
+4. HIGH-VOLUME MANDATORY GENERATION: You MUST generate as many relevant MCQs, Flashcards, and Smart Notes as possible from the provided text. All three categories (mcqs, flashcards, and notes) are strictly mandatory and MUST be fully populated. Do not leave notes or any other section empty.
+5. 1:1 BALANCE RATIO: Maintain a strict 1:1 balance between MCQs and Flashcards. For every concept or fact you convert into a Flashcard, you must also generate a corresponding high-quality MCQ. They must be generated at the exact same level of abundance.
 
 SECTION 1: FLASHCARDS (QUESTION & ANSWER FORMAT)
 - Create flashcards in a clear 'question' and 'answer' format.
@@ -158,7 +159,8 @@ Constraints:
                 $textPrompt = "### MASTER KNOWLEDGE SOURCE (SEGMENT $segment_index) ###\n" . $slicedText . "\n\n### TASK ###\n" . $systemPrompt . "\n\n" . $userPrompt;
                 $aiResponse = callGeminiAPI($textPrompt, [
                     'temperature' => 0.3,
-                    'maxOutputTokens' => 8192
+                    'maxOutputTokens' => 8192,
+                    'responseMimeType' => 'application/json'
                 ]);
             }
 

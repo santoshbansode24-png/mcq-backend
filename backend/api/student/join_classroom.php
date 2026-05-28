@@ -91,21 +91,17 @@ try {
     // 3. Optional: Sync user's global profile with the classroom's board and medium so they get the right content
     $updateStmt = $pdo->prepare("
         UPDATE users 
-        SET assigned_teacher_id = ?, 
+        SET class_id = ?, 
             school_name = ?,
-            board = ?,
-            medium = ?,
-            class_level = ?,
+            board_type = ?,
             subscription_status = 'active'
         WHERE user_id = ? AND user_type = 'student'
     ");
     
     $updateStmt->execute([
-        $teacher_id,
+        $classroom['class_level'],
         $classroom['school_name'],
         $classroom['board'],
-        $classroom['medium'],
-        $classroom['class_level'],
         $student_id
     ]);
 

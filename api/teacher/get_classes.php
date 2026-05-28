@@ -36,8 +36,8 @@ try {
             tc.teacher_id, 
             tc.class_code, 
             c.class_name, 
-            COALESCE(u.board_type, 'State Board') as board, 
-            'Marathi' as medium, 
+            COALESCE(u.board, 'State Board') as board, 
+            COALESCE(u.medium, 'Marathi') as medium, 
             c.class_id as class_level
         FROM teacher_classes tc
         JOIN classes c ON tc.class_id = c.class_id

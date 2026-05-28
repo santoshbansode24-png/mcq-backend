@@ -29,6 +29,48 @@ try {
     $classroom = $stmt->fetch();
 
     if (!$classroom) {
+        // Try fallback search in teacher_classes table (auto-heals/migrates codes)
+        $stmt_tc = $pdo->prepare("
+            SELECT tc.class_id as generic_class_id, tc.teacher_id, c.class_name, u.board_type as board, u.medium, u.school_name, u.name as teacher_name
+            FROM teacher_classes tc
+            JOIN users u ON tc.teacher_id = u.user_id
+            JOIN classes c ON tc.class_id = c.class_id
+            WHERE tc.class_code = ?
+        ");
+        $stmt_tc->execute([$class_code]);
+        $fallback = $stmt_tc->fetch();
+        
+        if ($fallback) {
+            $class_level = (int) filter_var($fallback['class_name'], FILTER_SANITIZE_NUMBER_INT);
+            if ($class_level === 0) $class_level = $fallback['generic_class_id'];
+            
+            $stmt_ins = $pdo->prepare("
+                INSERT INTO classrooms (teacher_id, class_code, class_name, board, medium, class_level) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            
+            $board_val = (strpos(strtoupper($fallback['board'] ?? ''), 'STATE') !== false) ? 'State Board' : 'CBSE';
+            $medium_val = $fallback['medium'] ?? 'Marathi';
+            if (!in_array($medium_val, ['Marathi', 'Semi-English', 'English'])) {
+                $medium_val = 'Marathi';
+            }
+            
+            $stmt_ins->execute([
+                $fallback['teacher_id'],
+                $class_code,
+                $fallback['class_name'],
+                $board_val,
+                $medium_val,
+                $class_level
+            ]);
+            
+            // Re-fetch
+            $stmt->execute([$class_code]);
+            $classroom = $stmt->fetch();
+        }
+    }
+
+    if (!$classroom) {
         sendResponse('error', 'Invalid Class Code. Please check and try again.', null, 404);
     }
 

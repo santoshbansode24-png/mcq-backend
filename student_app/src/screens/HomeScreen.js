@@ -285,19 +285,19 @@ const HomeScreen = ({ user, navigation, route }) => {
         if (!classId) return;
         const checkExam = async () => {
             try {
-                const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}`);
+                const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}`, { timeout: 8000 });
                 if (response.data && response.data.status === 'success' && response.data.data) {
                     setActiveLiveExam(response.data.data);
                 } else {
                     setActiveLiveExam(null);
                 }
             } catch (error) {
-                console.log('Error checking live exam:', error);
+                console.log('Error checking live exam:', error.message);
             }
         };
 
         checkExam(); // Check immediately
-        const interval = setInterval(checkExam, 15000); // Poll every 15 seconds
+        const interval = setInterval(checkExam, 60000); // Poll every 60 seconds (1 minute) is highly optimized
         return () => clearInterval(interval);
     }, [classId]);
 
@@ -397,18 +397,24 @@ const HomeScreen = ({ user, navigation, route }) => {
     };
 
     const lastLoadTime = useRef(0);
+    const lastVersionCheckTime = useRef(0);
 
     useFocusEffect(
         useCallback(() => {
             const task = InteractionManager.runAfterInteractions(() => {
                 if (classId) {
                     const now = Date.now();
-                    // Only auto-reload if subjects are empty OR more than 60 seconds passed
-                    if (subjects.length === 0 || now - lastLoadTime.current > 60000) {
+                    // Only auto-reload if subjects are empty OR more than 120 seconds passed to prevent constant DB loading
+                    if (subjects.length === 0 || now - lastLoadTime.current > 120000) {
                         loadSubjects();
                         lastLoadTime.current = now;
                     }
-                    checkVersion();
+                    
+                    // Throttle version checks to once every 5 minutes (300,000 ms) instead of on every screen focus
+                    if (now - lastVersionCheckTime.current > 300000) {
+                        checkVersion();
+                        lastVersionCheckTime.current = now;
+                    }
                 }
             });
             return () => task.cancel();
@@ -416,34 +422,31 @@ const HomeScreen = ({ user, navigation, route }) => {
     );
 
     const loadSubjects = async (forceRefresh = false) => {
-        // STALE-WHILE-REVALIDATE: Try to show cache immediately
-        if (!forceRefresh) {
-            try {
-                const cached = await dataCache.get(`subjects_${classId}`, 'subjects');
-                if (cached && Array.isArray(cached.data)) {
-                    setSubjects(cached.data);
-                } else if (cached && Array.isArray(cached)) {
-                    setSubjects(cached);
-                }
-            } catch (e) {
-                console.log('[Home] Cache load error', e);
-            }
+        // Only show loading spinner if we don't have any subjects rendered yet
+        if (subjects.length === 0) {
+            setLoading(true);
         }
-
-        if (!forceRefresh && subjects.length === 0) setLoading(true);
 
         try {
             const response = await fetchSubjects(classId, forceRefresh);
-            if (response.status === 'success') {
-                setSubjects(response.data);
-            } else if (Array.isArray(response)) {
-                setSubjects(response);
-            } else {
-                // Only alert if we don't have ANY data (even stale)
-                if (subjects.length === 0) Alert.alert('Error', response.message || 'Failed to load subjects');
+            let subjectData = [];
+            
+            if (response) {
+                if (response.status === 'success' && Array.isArray(response.data)) {
+                    subjectData = response.data;
+                } else if (Array.isArray(response)) {
+                    subjectData = response;
+                } else if (Array.isArray(response.data)) {
+                    subjectData = response.data;
+                }
             }
+
+            setSubjects(subjectData);
         } catch (error) {
-            if (subjects.length === 0) Alert.alert('Error', 'Failed to load subjects');
+            console.log('[Home] Failed to load subjects:', error);
+            if (subjects.length === 0) {
+                Alert.alert('Connection Error', 'Could not load subjects. Please check your internet connection.');
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);

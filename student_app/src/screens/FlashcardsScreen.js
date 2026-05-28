@@ -81,8 +81,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
     const [cards, setCards] = useState([]);
     const [shuffledGradients, setShuffledGradients] = useState(CARD_GRADIENTS); // Store shuffled gradients
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isFlipped, setIsFlipped] = useState(false);
-    const isFlippedRef = useRef(false); // Ref to track valid state inside PanResponder closure
+    const isFlippedRef = useRef(false); // Ref to track flip state without triggering heavy React renders during animation
     const [error, setError] = useState(null);
     const flipSoundRef = useRef(null);
 
@@ -170,10 +169,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
     }, [isTaskActive, navigation]);
 
 
-    // Update ref when state changes
-    useEffect(() => {
-        isFlippedRef.current = isFlipped;
-    }, [isFlipped]);
+
 
     // Animation Values
     // Standard Flip Animation
@@ -255,7 +251,8 @@ const FlashcardsScreen = ({ navigation, route }) => {
     };
 
     const flipCard = () => {
-        playFlipSound(); // Play sound on flip
+        // Play sound asynchronously without blocking the UI thread
+        setTimeout(() => playFlipSound(), 0);
 
         // Use ref to check current state
         if (isFlippedRef.current) {
@@ -273,21 +270,33 @@ const FlashcardsScreen = ({ navigation, route }) => {
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
         }
-        // Update both
-        setIsFlipped(!isFlippedRef.current);
+        // Direct ref update completely bypasses React's rendering pipeline on flip!
+        isFlippedRef.current = !isFlippedRef.current;
     };
 
     const nextCard = () => {
         if (currentIndex < cards.length - 1) {
-            resetFlip();
-            setTimeout(() => setCurrentIndex(prev => prev + 1), 300);
+            if (isFlippedRef.current) {
+                resetFlip();
+                // Wait for flip-back animation to finish before updating index
+                setTimeout(() => setCurrentIndex(prev => prev + 1), 250);
+            } else {
+                // Instant update if the card is already facing front!
+                setCurrentIndex(prev => prev + 1);
+            }
         }
     };
 
     const prevCard = () => {
         if (currentIndex > 0) {
-            resetFlip();
-            setTimeout(() => setCurrentIndex(prev => prev - 1), 300);
+            if (isFlippedRef.current) {
+                resetFlip();
+                // Wait for flip-back animation to finish before updating index
+                setTimeout(() => setCurrentIndex(prev => prev - 1), 250);
+            } else {
+                // Instant update if the card is already facing front!
+                setCurrentIndex(prev => prev - 1);
+            }
         }
     };
 
@@ -298,7 +307,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
                 duration: 250,
                 useNativeDriver: Platform.OS !== 'web',
             }).start();
-            setIsFlipped(false);
+            isFlippedRef.current = false;
         }
     };
 

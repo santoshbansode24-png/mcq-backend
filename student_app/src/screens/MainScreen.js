@@ -172,16 +172,23 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     }, [historyStack, isHistoryLoaded]);
 
     useEffect(() => {
+        let timer;
         const triggerSync = () => {
             if (userState?.class_id) {
                 const isPriority = route.params?.isNewSelection === true;
-                // Defer heavy sync until after initial animations settle
-                InteractionManager.runAfterInteractions(() => {
-                    SmartCacheService.syncAllForClass(userState.class_id, isPriority);
-                });
+                // Defer heavy background sync by 4 seconds. 
+                // This completely prevents UI stutter during critical app startup and navigation settling.
+                timer = setTimeout(() => {
+                    InteractionManager.runAfterInteractions(() => {
+                        SmartCacheService.syncAllForClass(userState.class_id, isPriority);
+                    });
+                }, 4000);
             }
         };
         triggerSync();
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
     }, [userState?.class_id, route.params?.isNewSelection]);
 
     // SELF-HEALING: Load user data if it's missing (happens on app restart)

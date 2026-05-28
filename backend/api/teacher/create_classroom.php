@@ -80,6 +80,14 @@ try {
     $stmt->execute([$teacher_id, $class_code, $full_class_name, $board, $medium, $class_level]);
     $new_classroom_id = $pdo->lastInsertId();
 
+    // 5. Also insert into teacher_classes for compatibility
+    try {
+        $stmt_tc = $pdo->prepare("INSERT INTO teacher_classes (teacher_id, class_id, class_code, division_name) VALUES (?, ?, ?, ?)");
+        $stmt_tc->execute([$teacher_id, $input_class_id, $class_code, $division_name]);
+    } catch (PDOException $e) {
+        error_log("Teacher Classes Sync Insert Error: " . $e->getMessage());
+    }
+
     sendResponse('success', 'Classroom created successfully!', [
         'class_code' => $class_code,
         'school_name' => $school_name,

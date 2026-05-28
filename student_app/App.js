@@ -22,6 +22,7 @@ import VideoPlayerScreen from './src/screens/VideoPlayerScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import SubscriptionScreen from './src/screens/SubscriptionScreen';
 import LiveClassScreen from './src/screens/LiveClassScreen';
+import ChatScreen from './src/screens/ChatScreen';
 
 
 // Server Config
@@ -194,6 +195,7 @@ export default function App() {
               <Stack.Screen name="Subscription" component={SubscriptionScreen} />
               <Stack.Screen name="LiveClass" component={LiveClassScreen} />
               <Stack.Screen name="ChapterContent" component={require('./src/screens/ChapterContentScreen').default} />
+              <Stack.Screen name="Chat" component={ChatScreen} />
 
             </Stack.Navigator>
           </NavigationContainer>

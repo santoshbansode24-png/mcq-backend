@@ -265,13 +265,22 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Class</Text>
                 </View>
                 {!showJoinForm && (
-                    <TouchableOpacity 
-                        style={[styles.joinBtnSmall, { borderColor: theme.primary + '40' }]} 
-                        onPress={() => setShowJoinForm(true)}
-                    >
-                        <MaterialCommunityIcons name="plus-circle-outline" size={18} color={theme.primary} />
-                        <Text style={[styles.joinBtnSmallText, { color: theme.primary }]}>Join</Text>
-                    </TouchableOpacity>
+                    <View style={styles.headerButtons}>
+                        <TouchableOpacity 
+                            style={[styles.chatBtnSmall, { backgroundColor: theme.primary }]} 
+                            onPress={() => navigation.navigate('Chat', { classCode: user.class_code, userId: user.user_id })}
+                        >
+                            <MaterialCommunityIcons name="chat" size={18} color="#FFF" />
+                            <Text style={styles.chatBtnSmallText}>Chat</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.joinBtnSmall, { borderColor: theme.primary + '40' }]} 
+                            onPress={() => setShowJoinForm(true)}
+                        >
+                            <MaterialCommunityIcons name="plus-circle-outline" size={18} color={theme.primary} />
+                            <Text style={[styles.joinBtnSmallText, { color: theme.primary }]}>Join</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
@@ -636,6 +645,29 @@ const styles = StyleSheet.create({
     joinBtnSmallText: {
         fontSize: 12,
         fontWeight: 'bold',
+    },
+    headerButtons: {
+        flexDirection: 'row',
+        gap: 8,
+        alignItems: 'center',
+    },
+    chatBtnSmall: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        gap: 6,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    chatBtnSmallText: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#FFF',
     }
 });
 

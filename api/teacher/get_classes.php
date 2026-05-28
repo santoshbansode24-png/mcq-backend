@@ -29,6 +29,24 @@ if (!empty($missing)) {
 $teacher_id = (int)$input['teacher_id'];
 
 try {
+    // Auto-migrate any teacher_classes to classrooms if missing
+    $migrateStmt = $pdo->prepare("
+        INSERT INTO classrooms (teacher_id, class_code, class_name, board, medium, class_level)
+        SELECT 
+            tc.teacher_id, 
+            tc.class_code, 
+            c.class_name, 
+            COALESCE(u.board_type, 'State Board') as board, 
+            'Marathi' as medium, 
+            c.class_id as class_level
+        FROM teacher_classes tc
+        JOIN classes c ON tc.class_id = c.class_id
+        JOIN users u ON tc.teacher_id = u.user_id
+        WHERE tc.class_code IS NOT NULL 
+          AND tc.class_code NOT IN (SELECT class_code FROM classrooms)
+    ");
+    $migrateStmt->execute();
+
     // Get assigned classes with student count for this specific teacher
     $stmt = $pdo->prepare("
         SELECT 

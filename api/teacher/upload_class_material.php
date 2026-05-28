@@ -24,11 +24,13 @@ try {
     }
 
     // Verify teacher exists
-    $teacherStmt = $pdo->prepare("SELECT user_id FROM users WHERE user_id = ? AND user_type = 'teacher'");
+    $teacherStmt = $pdo->prepare("SELECT user_id, school_name FROM users WHERE user_id = ? AND user_type = 'teacher'");
     $teacherStmt->execute([$teacher_id]);
-    if (!$teacherStmt->fetch()) {
+    $teacher = $teacherStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$teacher) {
         sendResponse('error', 'Invalid teacher ID', null, 403);
     }
+    $school_name = $teacher['school_name'] ?? '';
     
     // Verify class exists
     $classStmt = $pdo->prepare("SELECT class_id FROM classes WHERE class_id = ?");
@@ -68,12 +70,13 @@ try {
     }
 
     // Insert into class_updates
+    $payload = $attachment_url ? json_encode(['attachment_url' => $attachment_url]) : json_encode([]);
     $stmt = $pdo->prepare("
-        INSERT INTO class_updates (class_id, teacher_id, title, message, attachment_url, update_type, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO class_updates (class_id, teacher_id, school_name, title, message, payload, update_type, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
     ");
     
-    $stmt->execute([$class_id, $teacher_id, $title, $message, $attachment_url, $update_type]);
+    $stmt->execute([$class_id, $teacher_id, $school_name, $title, $message, $payload, $update_type]);
     
     sendResponse('success', 'Material uploaded successfully', ['id' => $pdo->lastInsertId()], 201);
     

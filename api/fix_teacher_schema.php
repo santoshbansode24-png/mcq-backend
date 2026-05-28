@@ -63,6 +63,9 @@ try {
     $pdo->exec($sql_exams);
     echo "<p style='color: green'>✅ Table 'live_exams' ensured.</p>";
 
+    // Add missing column to live_exams if it doesn't exist
+    addColumn($pdo, 'live_exams', 'selected_question_ids', 'LONGTEXT DEFAULT NULL');
+
     // 4. Create class_updates table
     $sql_updates = "CREATE TABLE IF NOT EXISTS class_updates (
         id INT AUTO_INCREMENT PRIMARY KEY,

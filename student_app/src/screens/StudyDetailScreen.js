@@ -200,20 +200,29 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         updated.flashcards = [...(updated.flashcards || []), ...newCards];
 
                         // Merge Notes with deduplication
-                        if (newData.notes) {
-                            if (!updated.notes || typeof updated.notes !== 'object') {
+                        const incomingNotes = newData.notes || newData.Notes || newData.smart_notes || newData.SmartNotes;
+                        if (incomingNotes) {
+                            if (!updated.notes || typeof updated.notes !== 'object' || Array.isArray(updated.notes)) {
                                 updated.notes = { definitions: [], key_facts: [], core_concepts: [] };
                             }
-                            const newNotesObj = Array.isArray(newData.notes)
-                                ? { definitions: newData.notes }
-                                : newData.notes;
+                            const newNotesObj = Array.isArray(incomingNotes)
+                                ? { definitions: incomingNotes }
+                                : incomingNotes;
                             const mergeNotes = (existing, incoming) => {
-                                const seen = new Set(existing.map(s => s.trim().toLowerCase()));
-                                return [...existing, ...incoming.filter(i => i && !seen.has(i.trim().toLowerCase()))];
+                                const safeExisting = Array.isArray(existing) ? existing : [];
+                                const safeIncoming = Array.isArray(incoming) ? incoming : [];
+                                const seen = new Set(safeExisting.map(s => (typeof s === 'string' ? s : JSON.stringify(s)).trim().toLowerCase()));
+                                return [...safeExisting, ...safeIncoming.filter(i => {
+                                    if (!i) return false;
+                                    const val = (typeof i === 'string' ? i : JSON.stringify(i)).trim().toLowerCase();
+                                    if (seen.has(val)) return false;
+                                    seen.add(val);
+                                    return true;
+                                })];
                             };
-                            updated.notes.definitions  = mergeNotes(updated.notes.definitions  || [], newNotesObj.definitions  || []);
-                            updated.notes.key_facts    = mergeNotes(updated.notes.key_facts    || [], newNotesObj.key_facts    || []);
-                            updated.notes.core_concepts= mergeNotes(updated.notes.core_concepts|| [], newNotesObj.core_concepts|| []);
+                            updated.notes.definitions  = mergeNotes(updated.notes.definitions  || [], newNotesObj.definitions  || newNotesObj.Definitions || []);
+                            updated.notes.key_facts    = mergeNotes(updated.notes.key_facts    || [], newNotesObj.key_facts    || newNotesObj.keyFacts || newNotesObj.Key_facts || []);
+                            updated.notes.core_concepts= mergeNotes(updated.notes.core_concepts|| [], newNotesObj.core_concepts|| newNotesObj.coreConcepts || newNotesObj.Core_concepts || []);
                         }
 
                         AsyncStorage.setItem(getCacheKey(), JSON.stringify(updated));

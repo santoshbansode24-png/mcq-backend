@@ -97,6 +97,7 @@ SECTION 3: SMART NOTES
    - definitions: Only core terminology and its meaning.
    - key_facts: Essential dates, numbers, formulas, or unarguable static truths.
    - core_concepts: Short explanations of 'how' or 'why' things work.
+- CRITICAL: You MUST include the \"notes\" object in your JSON output. Do NOT skip this section.
 
 Output Format (Strict JSON):
 {

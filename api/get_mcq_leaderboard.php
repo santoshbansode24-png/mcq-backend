@@ -40,7 +40,13 @@ try {
     }
 
     echo json_encode(['status' => 'success', 'data' => $leaderboard]);
-} catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    http_response_code(200); // Force 200 so axios can read it
+    echo json_encode([
+        'status' => 'error', 
+        'message' => 'Fatal Error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
 }
 ?>

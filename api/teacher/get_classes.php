@@ -43,7 +43,7 @@ try {
         JOIN classes c ON tc.class_id = c.class_id
         JOIN users u ON tc.teacher_id = u.user_id
         WHERE tc.class_code IS NOT NULL 
-          AND tc.class_code COLLATE utf8mb4_unicode_ci NOT IN (SELECT class_code COLLATE utf8mb4_unicode_ci FROM classrooms)
+          AND CONVERT(tc.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci NOT IN (SELECT CONVERT(class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci FROM classrooms)
     ");
     $migrateStmt->execute();
 
@@ -56,7 +56,7 @@ try {
             tc.class_code,
             (SELECT COUNT(*) FROM student_class_mapping scm WHERE scm.class_id = cr.class_id) as student_count
         FROM teacher_classes tc
-        JOIN classrooms cr ON tc.class_code COLLATE utf8mb4_unicode_ci = cr.class_code COLLATE utf8mb4_unicode_ci
+        JOIN classrooms cr ON CONVERT(tc.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(cr.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci
         WHERE tc.teacher_id = ?
         ORDER BY cr.class_name ASC
     ");

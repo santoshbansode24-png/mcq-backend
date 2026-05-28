@@ -1,0 +1,44 @@
+<?php
+require_once '../../config/db.php';
+require_once '../cors_middleware.php';
+
+$student_id = isset($_GET['student_id']) ? (int)$_GET['student_id'] : 0;
+
+if ($student_id === 0) {
+    echo json_encode(['status' => 'error', 'message' => 'student_id required']);
+    exit;
+}
+
+try {
+    $query = "
+        SELECT 
+            c.class_id, 
+            c.class_name, 
+            c.class_code, 
+            c.board, 
+            c.medium, 
+            u.name as teacher_name
+        FROM student_class_mapping scm
+        JOIN classrooms c ON scm.class_id = c.class_id
+        JOIN users u ON c.teacher_id = u.user_id
+        WHERE scm.student_id = ?
+        ORDER BY scm.joined_at DESC
+    ";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$student_id]);
+    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode([
+        'status' => 'success',
+        'data' => $classes
+    ]);
+
+} catch (PDOException $e) {
+    echo json_encode([
+        'status' => 'error', 
+        'message' => 'Database error', 
+        'details' => $e->getMessage()
+    ]);
+}
+?>

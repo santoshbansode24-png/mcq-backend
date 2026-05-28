@@ -18,22 +18,51 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [joining, setJoining] = useState(false);
     const [showJoinForm, setShowJoinForm] = useState(!user?.class_id);
 
+    const [joinedClasses, setJoinedClasses] = useState([]);
+    const [selectedClassId, setSelectedClassId] = useState('all');
+
     useEffect(() => {
-        if (user?.class_id) {
-            loadNotifications();
+        if (user?.user_id) {
+            loadJoinedClasses();
         } else {
             setLoading(false);
         }
-    }, [user?.class_id]);
+    }, [user?.user_id]);
 
-    const loadNotifications = async () => {
-        if (!user?.class_id) {
+    const loadJoinedClasses = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/student/get_joined_classes.php?student_id=${user.user_id}`);
+            if (response.data && response.data.status === 'success') {
+                const classes = response.data.data;
+                setJoinedClasses(classes);
+                if (classes.length > 0) {
+                    loadNotifications(classes, selectedClassId);
+                } else {
+                    setNotifications([]);
+                    setLoading(false);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load joined classes', error);
+            setLoading(false);
+        }
+    };
+
+    const loadNotifications = async (classesList = joinedClasses, currentSelectedId = selectedClassId) => {
+        if (!classesList || classesList.length === 0) {
+            setNotifications([]);
             setLoading(false);
             return;
         }
+
         setLoading(true);
         try {
-            const response = await fetchNotifications(user.class_id);
+            let fetchIdParam = currentSelectedId;
+            if (currentSelectedId === 'all') {
+                fetchIdParam = classesList.map(c => c.class_id).join(',');
+            }
+
+            const response = await fetchNotifications(fetchIdParam);
             if (response.status === 'success') {
                 setNotifications(response.data);
             }
@@ -42,6 +71,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSelectClass = (cId) => {
+        setSelectedClassId(cId);
+        loadNotifications(joinedClasses, cId);
     };
 
     const handleJoinClass = async () => {
@@ -62,7 +96,10 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 Alert.alert("Success 🎉", result.message);
                 setShowJoinForm(false);
                 
-                // CRITICAL FIX: Safe update callback execution to isolate UI state errors
+                // Refresh the joined classes list to include the newly joined class
+                await loadJoinedClasses();
+                
+                // Keep the backward compatibility callback if MainScreen relies on user.class_id
                 try {
                     if (onUserUpdate && result.data) {
                         onUserUpdate({ 
@@ -266,13 +303,21 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 </View>
                 {!showJoinForm && (
                     <View style={styles.headerButtons}>
-                        <TouchableOpacity 
-                            style={[styles.chatBtnSmall, { backgroundColor: theme.primary }]} 
-                            onPress={() => navigation.navigate('Chat', { classCode: user.class_code, userId: user.user_id })}
-                        >
-                            <MaterialCommunityIcons name="chat" size={18} color="#FFF" />
-                            <Text style={styles.chatBtnSmallText}>Chat</Text>
-                        </TouchableOpacity>
+                        {joinedClasses.length > 0 && (
+                            <TouchableOpacity 
+                                style={[styles.chatBtnSmall, { backgroundColor: theme.primary }]} 
+                                onPress={() => {
+                                    if (selectedClassId === 'all') {
+                                        Alert.alert("Select a Class", "Please select a specific subject from the chips below to chat with its teacher.");
+                                        return;
+                                    }
+                                    navigation.navigate('Chat', { userId: user.user_id, classId: selectedClassId });
+                                }}
+                            >
+                                <MaterialCommunityIcons name="chat" size={18} color="#FFF" />
+                                <Text style={styles.chatBtnSmallText}>Chat</Text>
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity 
                             style={[styles.joinBtnSmall, { borderColor: theme.primary + '40' }]} 
                             onPress={() => setShowJoinForm(true)}
@@ -283,6 +328,40 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     </View>
                 )}
             </View>
+
+            {joinedClasses.length > 0 && !showJoinForm && (
+                <View style={styles.chipScrollWrapper}>
+                    <SectionList
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.chipContainer}
+                        sections={[{ data: [{ id: 'all', name: 'All Subjects' }, ...joinedClasses.map(c => ({ id: c.class_id, name: `${c.class_name} - ${c.teacher_name}` }))] }]}
+                        keyExtractor={item => item.id.toString()}
+                        renderItem={({ item }) => {
+                            const isSelected = selectedClassId === item.id;
+                            return (
+                                <TouchableOpacity 
+                                    style={[
+                                        styles.chip, 
+                                        { 
+                                            backgroundColor: isSelected ? theme.primary : (isDarkMode ? '#1e293b' : '#fff'),
+                                            borderColor: isSelected ? theme.primary : (isDarkMode ? '#334155' : '#e2e8f0')
+                                        }
+                                    ]}
+                                    onPress={() => handleSelectClass(item.id)}
+                                >
+                                    <Text style={[
+                                        styles.chipText, 
+                                        { color: isSelected ? '#fff' : (isDarkMode ? '#94a3b8' : '#64748b') }
+                                    ]}>
+                                        {item.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        }}
+                    />
+                </View>
+            )}
 
             {showJoinForm && (
                 <View style={[styles.joinCard, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
@@ -382,7 +461,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         paddingTop: 20,
-        paddingBottom: 20,
+        paddingBottom: 10,
+    },
+    chipScrollWrapper: {
+        marginBottom: 10,
+        paddingLeft: 24,
+    },
+    chipContainer: {
+        paddingRight: 48,
+        gap: 8,
+    },
+    chip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginRight: 8,
+    },
+    chipText: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Bold',
     },
     headerTitle: {
         fontSize: 28,

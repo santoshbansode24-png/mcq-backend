@@ -10,7 +10,7 @@ import axios from 'axios';
 import config from '../api/config';
 
 export default function ChatScreen({ route, navigation }) {
-    const { userId } = route.params || {};
+    const { userId, classId } = route.params || {};
     const { theme, isDarkMode } = useTheme();
     
     const [messages, setMessages] = useState([]);
@@ -22,17 +22,17 @@ export default function ChatScreen({ route, navigation }) {
     const flatListRef = useRef(null);
 
     useEffect(() => {
-        if (!userId) {
+        if (!userId || !classId) {
             setLoading(false);
             return;
         }
         loadData();
-    }, [userId]);
+    }, [userId, classId]);
 
     const loadData = async () => {
         try {
-            // 1. Fetch Teacher ID and Class Code for this student
-            const tRes = await axios.get(`${config.ROOT_URL}/api/chat/init_student_chat.php?student_id=${userId}`);
+            // 1. Fetch Teacher ID and Class Code for this specific class
+            const tRes = await axios.get(`${config.ROOT_URL}/api/chat/get_teacher_for_class_id.php?class_id=${classId}`);
             let teacherData = null;
             let currentClassCode = null;
             if (tRes.data && tRes.data.status === 'success') {

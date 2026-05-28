@@ -32,15 +32,15 @@ try {
     // Get assigned classes with student count for this specific teacher
     $stmt = $pdo->prepare("
         SELECT 
-            c.class_id,
-            c.class_name,
+            cr.class_id,
+            cr.class_name,
             tc.division_name,
             tc.class_code,
-            (SELECT COUNT(*) FROM users u WHERE u.class_id = c.class_id AND u.user_type = 'student') as student_count
+            (SELECT COUNT(*) FROM student_class_mapping scm WHERE scm.class_id = cr.class_id) as student_count
         FROM teacher_classes tc
-        JOIN classes c ON tc.class_id = c.class_id
+        JOIN classrooms cr ON tc.class_code = cr.class_code
         WHERE tc.teacher_id = ?
-        ORDER BY c.class_name ASC
+        ORDER BY cr.class_name ASC
     ");
     
     $stmt->execute([$teacher_id]);

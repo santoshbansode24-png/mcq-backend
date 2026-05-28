@@ -32,16 +32,18 @@ try {
     // Get all students in the class from the users table
     $stmt = $pdo->prepare("
         SELECT 
-            user_id as id,
-            name,
-            email,
-            mobile,
-            school_name,
-            division_name,
-            created_at
-        FROM users
-        WHERE class_id = ? AND user_type = 'student'
-        ORDER BY name ASC
+            u.user_id as id,
+            u.name,
+            u.email,
+            u.mobile,
+            u.school_name,
+            c.class_name as division_name,
+            scm.joined_at as created_at
+        FROM users u
+        JOIN student_class_mapping scm ON u.user_id = scm.student_id
+        JOIN classrooms c ON scm.class_id = c.class_id
+        WHERE scm.class_id = ? AND u.user_type = 'student'
+        ORDER BY u.name ASC
     ");
     
     $stmt->execute([$class_id]);

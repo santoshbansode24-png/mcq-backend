@@ -113,7 +113,7 @@ try {
         'school_name' => $classroom['school_name'] ?? 'Your School',
         'teacher_name' => $classroom['teacher_name'],
         'class_name' => $classroom['class_name'],
-        'classroom_id' => $class_id
+        'class_id' => $class_id
     ]);
 
 } catch (PDOException $e) {

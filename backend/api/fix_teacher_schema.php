@@ -26,6 +26,16 @@ try {
     $pdo->exec($sql);
     echo "<p style='color: green'>✅ Table 'teacher_classes' ensured with class_code and division_name columns.</p>";
 
+    // 1.5 Add board, medium, class_level to classrooms table if missing
+    try {
+        $pdo->exec("ALTER TABLE classrooms ADD COLUMN board VARCHAR(50) DEFAULT 'CBSE'");
+        $pdo->exec("ALTER TABLE classrooms ADD COLUMN medium VARCHAR(50) DEFAULT 'English'");
+        $pdo->exec("ALTER TABLE classrooms ADD COLUMN class_level INT DEFAULT 0");
+        echo "<p style='color: green'>✅ Added board, medium, class_level to classrooms.</p>";
+    } catch (PDOException $e) {
+        echo "<p style='color: orange'>⚠️ Classrooms column check: " . $e->getMessage() . "</p>";
+    }
+
     // 2. Add school_name to users table
     try {
         $pdo->exec("ALTER TABLE users ADD COLUMN school_name VARCHAR(255) DEFAULT NULL");

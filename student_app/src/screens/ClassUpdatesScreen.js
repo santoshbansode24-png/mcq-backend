@@ -78,7 +78,12 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             }
         } catch (error) {
             console.error("Join Class Error:", error);
-            Alert.alert("Connection Error", "Could not connect to server. Please check your internet connection.");
+            
+            if (error.response && error.response.data) {
+                Alert.alert("Error", error.response.data.message || "Failed to join class. Please try again.");
+            } else {
+                Alert.alert("Connection Error", "Could not connect to server. Please check your internet connection.");
+            }
         } finally {
             setJoining(false);
         }

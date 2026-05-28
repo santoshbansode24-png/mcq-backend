@@ -78,16 +78,38 @@ Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
 2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 10% slice to ensure maximum depth.
 3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 10%.
+4. HIGH-VOLUME GENERATION: You MUST generate as many relevant MCQs and Flashcards as possible from the provided text. Do not stop at just 1 or 2. Extract every single testable concept, fact, date, formula, and definition.
+
+SECTION 1: FLASHCARDS (QUESTION & ANSWER FORMAT)
+- Create flashcards in a clear 'question' and 'answer' format.
+- Every flashcard question MUST be a complete, grammatically correct sentence.
+- Format: {\"q\": \"Full Question Sentence?\", \"a\": \"Full Answer Sentence or Phrase\"}.
+- Quality & Exhaustive Extraction: Generate a flashcard for every single piece of information, concept, definition, and fact present in the text to ensure 100% coverage.
+
+SECTION 2: MULTIPLE CHOICE QUESTIONS
+- Extract testable concepts into MCQs. Ensure distractors are plausible.
+- Format: {\"q\": \"Question?\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}
+- Maximize MCQ Count: Exhaustive coverage is your primary goal.
+
+SECTION 3: SMART NOTES
+- Extract short, highly scannable bullet points across three explicit categories:
+   - definitions: Only core terminology and its meaning.
+   - key_facts: Essential dates, numbers, formulas, or unarguable static truths.
+   - core_concepts: Short explanations of 'how' or 'why' things work.
 
 Output Format (Strict JSON):
 {
-  \"notes\": [\"Bulleted explanation 1\", \"Bulleted explanation 2\"],
   \"mcqs\": [
     {\"q\": \"Question?\", \"o\": [\"Opt A\", \"Opt B\", \"Opt C\", \"Opt D\"], \"a\": 0, \"e\": \"Explanation\"}
   ],
   \"flashcards\": [
     {\"q\": \"Question?\", \"a\": \"Answer\"}
-  ]";
+  ],
+  \"notes\": {
+    \"definitions\": [\"Def 1\", \"Def 2\"],
+    \"key_facts\": [\"Fact 1\", \"Fact 2\"],
+    \"core_concepts\": [\"Concept 1\", \"Concept 2\"]
+  }";
 
     if (!empty($pdfBase64)) {
         $systemPrompt .= ",\n  \"full_text\": \"Exhaustive transcript of the ENTIRE document (Required since master text is missing)\"";
@@ -101,8 +123,9 @@ Constraints:
 - STRICT NATIVE LANGUAGE MATCH: If the source text is in Marathi, you MUST answer/generate in Marathi. If the source text is in Hindi, answer/generate in Hindi. Otherwise, answer in $language.";
 
     $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
-Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 10% segment.
-DO NOT generate content from earlier or later parts of the text to avoid duplication.";
+    Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 10% segment.
+    Maximize MCQ and flashcard count. Generate a card/question for EVERY SINGLE fact or concept. Do not stop after just one.
+    DO NOT generate content from earlier or later parts of the text to avoid duplication.";
 
     sendProgress("Analyzing Section $segment_index with Gemini...", 50);
 
@@ -145,7 +168,7 @@ DO NOT generate content from earlier or later parts of the text to avoid duplica
 
             // Robust JSON parse with repair logic (same as pdf_worker_ai.php)
             $aiResponse = trim($aiResponse);
-            $aiResponse = preg_replace('/^```json|```$/m', '', $aiResponse);
+            $aiResponse = preg_replace('/^```(?:json)?|```$/mi', '', $aiResponse);
             $jsonStart = strpos($aiResponse, '{');
             $jsonEnd = strrpos($aiResponse, '}');
 

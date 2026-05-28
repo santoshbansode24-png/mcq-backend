@@ -70,34 +70,61 @@ try {
     elseif ($difficulty === 'hard') $difficultyStr = "DIFFICULTY LEVEL: HARD";
 
     // 4. Send Chunk to Gemini API
-    $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator.
-    Objective: Analyze Section $currentSectionNum of $totalChunks of this document. Convert factual data into MCQs, Deep-Scan Flashcards, and Smart Notes.
-
-    SECTION 1: FLASHCARDS
-    - Extract definitions, dates, and facts. Create clear Question-Answer pairs.
+    $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
+        
+    Objective: Analyze Section $currentSectionNum of $totalChunks of this document. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards, and Smart Notes.
     
-    SECTION 2: MULTIPLE CHOICE QUESTIONS
-    - Extract testable concepts into MCQs. Ensure distractors are plausible.
+    SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL (QUESTION & ANSWER FORMAT)
+    - Your ABSOLUTE priority is to create flashcards in a clear 'question' and 'answer' format.
+    - NO SINGLE WORD QUESTIONS: Never use a single word as a question. Every flashcard question MUST be a complete, grammatically correct sentence.
+    - STRICT DISTRIBUTION RATIO: You MUST maintain the following distribution in your output:
+       1. 35% VERY SHORT ANSWER TYPE (Full questions requiring a precise 1-3 word answer).
+       2. 35% SHORT ANSWER TYPE (Full questions needing a clear explanatory sentence).
+       3. 30% FILL IN THE BLANKS (A complete sentence using ________ for the missing concept).
+    - Coverage rules: 
+       1. Extract all Definitions: Technical terms must have a definition card.
+       2. Static Data: Capture dates, names, formulas, and specific figures.
+       3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
+    - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer Sentence or Phrase\"}.
+    - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn.
+    - QUALITY AND EXHAUSTIVE EXTRACTION: Do not generate 'filler' questions, but do NOT miss a single important fact. Generate a flashcard for EVERY SINGLE piece of information, concept, definition, and fact present in the text to ensure 100% coverage.        
+    
+    SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
+    - For every section of text you parse, aim for a balanced generation of MCQs and Flashcards. Do not stop generating Flashcards after just a few.
     - $difficultyStr
     
-    SECTION 3: SMART NOTES
-    - Extract short bullet points across definitions, key_facts, and core_concepts.
-
+    SECTION 3: HIGH-VOLUME MCQ GENERATION & QUALITY STANDARDS
+    - MAXIMIZE MCQ COUNT: You MUST generate as many relevant MCQs as possible from the provided text. Do not stop at just 5 or 10. Extract every single testable concept, fact, date, formula, and definition into a separate MCQ. Exhaustive coverage is your primary goal here.
+    - Stem Length: Ensure question stems are meaningful and concise; avoid 'fluff' or irrelevant info.
+    - Option Uniformity: All 4 options MUST be of roughly equal length. Never make the correct answer significantly longer than distractors.
+    - Plausible Distractors: Distractors must be closely related to the topic and appear technically correct to non-experts. Avoid 'funny' or obviously wrong options.
+    - Academic Language: Use plain, easy-to-understand language. Avoid unnecessarily complex jargon or 'tricky' phrasing.
+    - Grammatical Matching: All options must match the stem's grammar perfectly to avoid giving away the answer via grammatical clues.
+    - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY distractors are incorrect.
+    
+    SECTION 4: SMART NOTES
+    - Extract short, highly scannable bullet points across three explicit categories:
+       1. definitions: Only core terminology and its meaning.
+       2. key_facts: Essential dates, numbers, formulas, or unarguable static truths.
+       3. core_concepts: Short explanations of 'how' or 'why' things work.
+    - EXHAUSTIVE EXTRACTION: Do not limit to 3-5 points. Generate as many bullet points as needed to capture 100% of the vital information in the text. Do not miss a single concept or fact.
+    
     CRITICAL RULES:
-    1. Output strictly in JSON. No markdown wrappers.
+    1. STRICT NATIVE LANGUAGE MATCH: If the source text is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the source text is Hindi, output MUST be Hindi. If the source text is English, output MUST be English.
+    2. FORMAT: Return ONLY a valid JSON object. No markdown wrappers.
     
     SCHEMA:
     {
       \"mcqs\": [
-        {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation\"}
+        {\"q\": \"Question\", \"o\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"a\": 0, \"e\": \"Explanation why answer is correct\"}
       ],
       \"flashcards\": [
-        {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer\"}
+        {\"question\": \"Question text or Fill-in-the-blank\", \"answer\": \"Answer text\"}
       ],
       \"notes\": {
-        \"definitions\": [\"Def 1\"],
-        \"key_facts\": [\"Fact 1\"],
-        \"core_concepts\": [\"Concept 1\"]
+        \"definitions\": [\"Def 1\", \"Def 2\"],
+        \"key_facts\": [\"Fact 1\", \"Fact 2\"],
+        \"core_concepts\": [\"Concept 1\", \"Concept 2\"]
       }
     }
     
@@ -122,6 +149,9 @@ try {
     } else {
         throw new Exception("AI response did not contain valid JSON structure.");
     }
+
+    // Fix Control Character Errors (Unescaped newlines/tabs inside strings)
+    $cleanJson = str_replace(["\r", "\n", "\t"], " ", $cleanJson);
 
     $newData = json_decode($cleanJson, true);
     

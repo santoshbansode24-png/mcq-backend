@@ -95,22 +95,10 @@ foreach ($jobs as $job) {
             throw new Exception("Failed to extract any text from the PDF. The file might be an empty image or corrupted.");
         }
 
-        // STEP 2: Chunking Logic (Optimized)
+        // STEP 2: Chunking Logic (Exactly 5 Chunks for 20% Segments)
         $words = explode(' ', $extractedText);
         $totalWords = count($words);
-        
-        // Dynamic chunking to prevent 1-page PDFs from being split into 5 useless pieces
-        if ($totalWords < 800) {
-            $totalChunks = 1;
-        } elseif ($totalWords < 3000) {
-            $totalChunks = 2;
-        } elseif ($totalWords < 10000) {
-            $totalChunks = 4;
-        } elseif ($totalWords < 20000) {
-            $totalChunks = 6;
-        } else {
-            $totalChunks = 10;
-        }
+        $totalChunks = 5;
         
         $chunkSize = max(1, ceil($totalWords / $totalChunks));
         $chunks = array_chunk($words, $chunkSize);

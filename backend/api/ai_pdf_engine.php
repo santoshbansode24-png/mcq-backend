@@ -67,17 +67,17 @@ try {
 
     sendProgress("Preparing Section Marker: Part $segment_index...", 25);
 
-    // COST OPTIMIZATION: Divide text into 10 segments (10% each)
-    $partStr = "Part $segment_index of 10";
-    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " 10% segment of the text.";
+    // COST OPTIMIZATION: Divide text into 5 segments (20% each)
+    $partStr = "Part $segment_index of 5";
+    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " 20% segment of the text.";
 
     // VEERU LENS CONTENT ENGINE PROMPT
     $systemPrompt = "You are the 'Veeru Lens Content Engine.' Your task is to perform an exhaustive, line-by-line extraction of educational content (MCQs, Flashcards, and Notes) from a specific portion of the provided text.
 
 Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
-2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 10% slice to ensure maximum depth.
-3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 10%.
+2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 20% slice to ensure maximum depth.
+3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 20%.
 4. HIGH-VOLUME GENERATION: You MUST generate as many relevant MCQs and Flashcards as possible from the provided text. Do not stop at just 1 or 2. Extract every single testable concept, fact, date, formula, and definition.
 
 SECTION 1: FLASHCARDS (QUESTION & ANSWER FORMAT)
@@ -123,7 +123,7 @@ Constraints:
 - STRICT NATIVE LANGUAGE MATCH: If the source text is in Marathi, you MUST answer/generate in Marathi. If the source text is in Hindi, answer/generate in Hindi. Otherwise, answer in $language.";
 
     $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
-    Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 10% segment.
+    Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 20% segment.
     Maximize MCQ and flashcard count. Generate a card/question for EVERY SINGLE fact or concept. Do not stop after just one.
     DO NOT generate content from earlier or later parts of the text to avoid duplication.";
 
@@ -145,7 +145,7 @@ Constraints:
                 // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
                 // Instead of sending 100,000 words, we only send the relevant chunk.
                 $totalLen = mb_strlen($extractedText);
-                $totalSegments = isset($job['total_chunks']) && intval($job['total_chunks']) > 0 ? intval($job['total_chunks']) : 10;
+                $totalSegments = isset($job['total_chunks']) && intval($job['total_chunks']) > 0 ? intval($job['total_chunks']) : 5;
                 $chunkSize = ceil($totalLen / $totalSegments);
                 
                 // Calculate start position with a 500-character overlap for context

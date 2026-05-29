@@ -43,7 +43,7 @@ try {
 
     // Handle file upload if present
     if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../../uploads/materials/';
+        $uploadDir = __DIR__ . '/../../uploads/materials/';
         
         // Create directory if it doesn't exist
         if (!is_dir($uploadDir)) {
@@ -65,7 +65,8 @@ try {
         if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
             $attachment_url = 'uploads/materials/' . $fileName;
         } else {
-            sendResponse('error', 'Failed to save uploaded file', null, 500);
+            $error = error_get_last();
+            sendResponse('error', 'Failed to save uploaded file: ' . ($error['message'] ?? 'Unknown error'), null, 500);
         }
     }
 
@@ -81,8 +82,10 @@ try {
     sendResponse('success', 'Material uploaded successfully', ['id' => $pdo->lastInsertId()], 201);
     
 } catch (PDOException $e) {
-    sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);
+    file_put_contents('../../debug_log.txt', "PDOException: " . $e->getMessage() . "\n", FILE_APPEND);
+    sendResponse('error', 'Database error occurred: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), null, 500);
 } catch (Throwable $e) {
-    sendResponse('error', 'Server error occurred', ['error' => $e->getMessage()], 500);
+    file_put_contents('../../debug_log.txt', "Throwable: " . $e->getMessage() . "\n", FILE_APPEND);
+    sendResponse('error', 'Server error occurred: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), null, 500);
 }
 ?>

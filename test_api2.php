@@ -1,6 +1,6 @@
 <?php
 $ch = curl_init(); 
-curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1/veeru/api/teacher/upload_class_material.php'); 
+curl_setopt($ch, CURLOPT_URL, 'http://10.252.83.239/veeru/api/teacher/upload_class_material.php'); 
 curl_setopt($ch, CURLOPT_POST, 1); 
 curl_setopt($ch, CURLOPT_POSTFIELDS, ['teacher_id'=>1, 'class_id'=>1, 'title'=>'t', 'update_type'=>'worksheet']); 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 

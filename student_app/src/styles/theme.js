@@ -5,70 +5,69 @@ export const lightTheme = {
     fontRegular: 'NotoSans-Regular',
     fontBold: 'NotoSans-Bold',
 
-
     // Main backgrounds with subtle gradients
-    background: '#F0F8FF', // Crisp Alice Blue
-    backgroundGradientStart: '#FFE5F1', // Soft Pink
-    backgroundGradientEnd: '#E0F4FF', // Soft Sky Blue
+    background: '#F8FAFC', // Crisp Slate 50
+    backgroundGradientStart: '#F1F5F9', // Slate 100
+    backgroundGradientEnd: '#E2E8F0', // Slate 200
 
     card: '#FFFFFF',
-    cardShadow: 'rgba(255, 107, 234, 0.15)', // Pink-tinted shadow
+    cardShadow: 'rgba(30, 41, 59, 0.08)', // Soft slate shadow
 
     // Text colors
-    text: '#1A0B2E', // Rich Deep Purple-Black
-    textSecondary: '#5F4B8B',
+    text: '#0F172A', // Slate 900
+    textSecondary: '#475569', // Slate 600
 
-    // Primary colors - Radiant Purple/Pink
-    primary: '#E94560', // Vibrant Hot Pink
-    primaryLight: '#FF6B9D', // Lighter Pink
-    primaryDark: '#C70039', // Deep Pink-Red
-    primaryGradientStart: '#FF6B9D',
-    primaryGradientEnd: '#C70039',
+    // Primary colors - Professional Blue
+    primary: '#2563EB', // Blue 600
+    primaryLight: '#3B82F6', // Blue 500
+    primaryDark: '#1D4ED8', // Blue 700
+    primaryGradientStart: '#3B82F6',
+    primaryGradientEnd: '#1E40AF', // Blue 800
 
     // Secondary accent
-    secondary: '#00D9FF', // Electric Cyan
-    secondaryLight: '#5DFDFF',
-    secondaryDark: '#00A8CC',
+    secondary: '#0EA5E9', // Sky Blue 500
+    secondaryLight: '#38BDF8',
+    secondaryDark: '#0369A1',
 
-    // Borders with glow effect
-    border: '#FFD6E8', // Soft Pink border
-    borderActive: '#FF6B9D', // Vibrant border on focus
+    // Borders
+    border: '#E2E8F0', // Slate 200
+    borderActive: '#2563EB', // Blue 600
 
-    // Tab bar - Radiant design
+    // Tab bar
     tabBar: '#FFFFFF',
-    tabBarGradientStart: '#FFF5F8',
-    tabBarGradientEnd: '#F0F8FF',
-    tabBarShadow: 'rgba(233, 69, 96, 0.2)',
+    tabBarGradientStart: '#FFFFFF',
+    tabBarGradientEnd: '#F8FAFC',
+    tabBarShadow: 'rgba(15, 23, 42, 0.05)',
 
-    tabIcon: '#A78BFA', // Soft Purple
-    tabIconActive: '#E94560', // Hot Pink when active
-    tabIconGlow: 'rgba(233, 69, 96, 0.3)', // Glow effect
+    tabIcon: '#94A3B8', // Slate 400
+    tabIconActive: '#2563EB', // Blue 600
+    tabIconGlow: 'rgba(37, 99, 235, 0.2)', // Soft blue glow
 
-    // Tab background - Radiant gradient tiles
-    tabTileInactive: 'rgba(167, 139, 250, 0.15)', // Soft purple tint
-    tabTileActive: 'linear-gradient(135deg, #FF6B9D 0%, #FEC84E 50%, #00D9FF 100%)', // Rainbow gradient
-    tabTileGlowStart: '#FF6B9D',
-    tabTileGlowEnd: '#FEC84E',
+    // Tab background
+    tabTileInactive: 'rgba(241, 245, 249, 1)',
+    tabTileActive: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+    tabTileGlowStart: '#3B82F6',
+    tabTileGlowEnd: '#1D4ED8',
 
-    // Status colors - Ultra vibrant
-    success: '#00F260', // Electric Green
-    successGradient: 'linear-gradient(135deg, #0575E6 0%, #00F260 100%)',
+    // Status colors
+    success: '#10B981', // Emerald 500
+    successGradient: 'linear-gradient(135deg, #34D399 0%, #059669 100%)',
 
-    error: '#FF0844', // Neon Red
-    errorGradient: 'linear-gradient(135deg, #FF0844 0%, #FFB199 100%)',
+    error: '#EF4444', // Red 500
+    errorGradient: 'linear-gradient(135deg, #F87171 0%, #DC2626 100%)',
 
-    warning: '#FFB800', // Vibrant Golden Yellow
-    warningGradient: 'linear-gradient(135deg, #FFB800 0%, #FF8A00 100%)',
+    warning: '#F59E0B', // Amber 500
+    warningGradient: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)',
 
-    info: '#00D9FF', // Electric Blue
-    infoGradient: 'linear-gradient(135deg, #667EEA 0%, #00D9FF 100%)',
+    info: '#0EA5E9', // Sky Blue 500
+    infoGradient: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
 
-    // Additional vibrant accents
-    accent1: '#FF6B9D', // Hot Pink
-    accent2: '#FEC84E', // Bright Yellow
-    accent3: '#00F5FF', // Cyan Flash
-    accent4: '#B24BF3', // Vivid Purple
-    accent5: '#00E5A0', // Mint Green
+    // Additional accents
+    accent1: '#3B82F6', // Blue 500
+    accent2: '#0EA5E9', // Sky Blue 500
+    accent3: '#8B5CF6', // Violet 500
+    accent4: '#10B981', // Emerald 500
+    accent5: '#F59E0B', // Amber 500
 };
 
 export const darkTheme = {
@@ -78,70 +77,69 @@ export const darkTheme = {
     fontRegular: 'NotoSans-Regular',
     fontBold: 'NotoSans-Bold',
 
+    // Main backgrounds - Deep Blue/Slate
+    background: '#0F172A', // Slate 900
+    backgroundGradientStart: '#0B1120', // Slate 950
+    backgroundGradientEnd: '#1E293B', // Slate 800
 
-    // Main backgrounds - Deep cosmic colors
-    background: '#0A0E27', // Deep Space Blue
-    backgroundGradientStart: '#1A1B3D', // Dark Purple
-    backgroundGradientEnd: '#0D1B2A', // Midnight Blue
-
-    card: '#1E1E3F', // Rich Dark Purple
-    cardShadow: 'rgba(255, 107, 234, 0.25)',
+    card: 'rgba(30, 41, 59, 0.7)', // Translucent Slate 800 for Glassmorphism
+    cardShadow: 'rgba(0, 0, 0, 0.5)',
 
     // Text colors
-    text: '#FFFFFF',
-    textSecondary: '#C5B3E6',
+    text: '#F8FAFC', // Slate 50
+    textSecondary: '#94A3B8', // Slate 400
 
-    // Primary colors - Neon Purple/Pink
-    primary: '#FF2E63', // Neon Pink
-    primaryLight: '#FF6B9D',
-    primaryDark: '#C70039',
-    primaryGradientStart: '#FF2E63',
-    primaryGradientEnd: '#FE6B8B',
+    // Primary colors - Deep Blue Glassmorphism
+    primary: '#1A237E', // Indigo 900
+    primaryLight: '#3F51B5', // Indigo 500
+    primaryDark: '#000051', // Dark Indigo
+    primaryGradientStart: '#1A237E',
+    primaryGradientEnd: '#000051',
 
     // Secondary accent
-    secondary: '#08FFC8', // Neon Cyan
-    secondaryLight: '#5DFDFF',
-    secondaryDark: '#00D9A3',
+    secondary: '#00BCD4', // Cyan
+    secondaryLight: '#00E5FF',
+    secondaryDark: '#008BA3',
 
-    // Borders with neon glow
-    border: '#3D3560', // Dark Purple border
-    borderActive: '#FF2E63', // Neon border on focus
+    // Borders
+    border: 'rgba(148, 163, 184, 0.1)', // Subtle light border for glass
+    borderActive: '#3F51B5', // Indigo 500
 
-    // Tab bar - Glowing neon design
-    tabBar: '#1A1B3F',
-    tabBarGradientStart: '#1E1E3F',
-    tabBarGradientEnd: '#2A2550',
-    tabBarShadow: 'rgba(255, 46, 99, 0.3)',
+    // Tab bar - Glassmorphism design
+    tabBar: 'rgba(15, 23, 42, 0.85)',
+    tabBarGradientStart: 'rgba(15, 23, 42, 0.9)',
+    tabBarGradientEnd: 'rgba(30, 41, 59, 0.9)',
+    tabBarShadow: 'rgba(0, 0, 0, 0.5)',
 
-    tabIcon: '#A78BFA', // Soft Purple
-    tabIconActive: '#FF2E63', // Neon Pink when active
-    tabIconGlow: 'rgba(255, 46, 99, 0.5)', // Strong glow effect
+    tabIcon: '#64748B', // Slate 500
+    tabIconActive: '#3F51B5', // Indigo 500
+    tabIconGlow: 'rgba(63, 81, 181, 0.4)', // Indigo glow
 
-    // Tab background - Radiant neon gradient tiles
-    tabTileInactive: 'rgba(167, 139, 250, 0.2)',
-    tabTileActive: 'linear-gradient(135deg, #FF2E63 0%, #FE6B8B 25%, #B24BF3 50%, #08FFC8 75%, #00F5FF 100%)', // Neon rainbow
-    tabTileGlowStart: '#FF2E63',
-    tabTileGlowEnd: '#08FFC8',
+    // Tab background - Glassmorphism tiles
+    tabTileInactive: 'rgba(30, 41, 59, 0.4)',
+    tabTileActive: 'linear-gradient(135deg, rgba(63, 81, 181, 0.8) 0%, rgba(26, 35, 126, 0.8) 100%)',
+    tabTileGlowStart: '#3F51B5',
+    tabTileGlowEnd: '#1A237E',
 
-    // Status colors - Neon vibrant
-    success: '#00F260', // Neon Green
-    successGradient: 'linear-gradient(135deg, #0575E6 0%, #00F260 100%)',
+    // Status colors
+    success: '#10B981', // Emerald 500
+    successGradient: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
 
-    error: '#FF2E63', // Neon Red
-    errorGradient: 'linear-gradient(135deg, #FF2E63 0%, #FE6B8B 100%)',
+    error: '#EF4444', // Red 500
+    errorGradient: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
 
-    warning: '#FFD93D', // Neon Yellow
-    warningGradient: 'linear-gradient(135deg, #FFD93D 0%, #FF8A00 100%)',
+    warning: '#F59E0B', // Amber 500
+    warningGradient: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
 
-    info: '#08FFC8', // Neon Cyan
-    infoGradient: 'linear-gradient(135deg, #6B73FF 0%, #08FFC8 100%)',
+    info: '#0EA5E9', // Sky Blue 500
+    infoGradient: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
 
-    // Additional neon accents
-    accent1: '#FF2E63', // Neon Pink
-    accent2: '#FFD93D', // Neon Yellow
-    accent3: '#08FFC8', // Neon Cyan
-    accent4: '#B24BF3', // Neon Purple
-    accent5: '#00F5FF', // Electric Blue
+    // Additional accents
+    accent1: '#3F51B5', // Indigo 500
+    accent2: '#00BCD4', // Cyan
+    accent3: '#10B981', // Emerald
+    accent4: '#8B5CF6', // Violet
+    accent5: '#F59E0B', // Amber
 };
 
 // Optional: Export gradient utilities

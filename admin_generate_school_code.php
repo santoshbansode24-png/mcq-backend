@@ -11,8 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $valid_until = $_POST['valid_until'] ?? '';
     
     if ($school_name && $valid_until) {
-        // Generate random 8-character code
-        $access_code = strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+        // Generate random 8-character code without ambiguous characters (0, O, 1, I)
+        $chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $access_code = '';
+        for ($i = 0; $i < 8; $i++) {
+            $access_code .= $chars[rand(0, strlen($chars) - 1)];
+        }
         
         try {
             $stmt = $pdo->prepare("INSERT INTO school_subscriptions (school_name, access_code, valid_until) VALUES (?, ?, ?)");

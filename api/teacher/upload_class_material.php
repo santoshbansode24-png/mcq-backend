@@ -50,16 +50,32 @@ try {
             mkdir($uploadDir, 0755, true);
         }
 
-        $fileInfo = pathinfo($_FILES['file']['name']);
-        $ext = strtolower($fileInfo['extension']);
-        $allowedExts = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
-        
-        if (!in_array($ext, $allowedExts)) {
-            sendResponse('error', 'Invalid file type. Allowed: PDF, DOC, JPG, PNG', null, 400);
+        // Validate file size (Max 50MB)
+        $max_size = 50 * 1024 * 1024;
+        if ($_FILES['file']['size'] > $max_size || $_FILES['file']['size'] == 0) {
+            sendResponse('error', 'File size exceeds the 50MB limit or is empty.', null, 400);
         }
 
-        // Generate unique filename
-        $fileName = 'material_' . time() . '_' . uniqid() . '.' . $ext;
+        // Strict MIME type validation using Fileinfo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $_FILES['file']['tmp_name']);
+        finfo_close($finfo);
+
+        $allowedMimeTypes = [
+            'application/pdf' => 'pdf',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png'
+        ];
+        
+        if (!array_key_exists($mimeType, $allowedMimeTypes)) {
+            sendResponse('error', 'Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG', null, 400);
+        }
+
+        // Generate unique filename securely
+        $trusted_ext = $allowedMimeTypes[$mimeType];
+        $fileName = 'material_' . bin2hex(random_bytes(16)) . '.' . $trusted_ext;
         $targetPath = $uploadDir . $fileName;
 
         if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {

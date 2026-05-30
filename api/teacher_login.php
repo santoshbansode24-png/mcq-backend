@@ -61,18 +61,21 @@ try {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
-    // Check School Subscription Status (if linked to a school)
+    // Check School Subscription Status
     $schoolStmt = $pdo->prepare("
-        SELECT valid_until, school_name 
-        FROM school_subscriptions 
-        JOIN users ON users.school_id = school_subscriptions.school_id 
-        WHERE users.user_id = ?
+        SELECT u.school_id, s.valid_until, s.school_name 
+        FROM users u
+        LEFT JOIN school_subscriptions s ON u.school_id = s.school_id 
+        WHERE u.user_id = ?
     ");
     $schoolStmt->execute([$user['user_id']]);
     $schoolSub = $schoolStmt->fetch();
 
-    if ($schoolSub) {
-        if (strtotime($schoolSub['valid_until']) < time()) {
+    if (!$schoolSub['school_id'] || empty($schoolSub['valid_until'])) {
+        sendResponse('error', "Your account is not linked to an active school subscription.", null, 403);
+    } else {
+        $expiry_timestamp = strtotime($schoolSub['valid_until'] . ' 23:59:59');
+        if ($expiry_timestamp < time()) {
             sendResponse('error', "Your school's subscription (" . $schoolSub['school_name'] . ") expired on " . $schoolSub['valid_until'] . ".", null, 403);
         }
     }

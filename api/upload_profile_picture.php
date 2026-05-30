@@ -19,10 +19,25 @@ if (!isset($_POST['user_id'])) {
 $userId = $_POST['user_id'];
 $file = $_FILES['profile_picture'];
 
-// Validate file type
-$allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-if (!in_array($file['type'], $allowedTypes)) {
-    sendResponse('error', 'Invalid file type. Only JPG, PNG, and GIF are allowed.', null, 400);
+// Validate file size (Max 5MB)
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+if ($file['size'] > MAX_FILE_SIZE || $file['size'] == 0) {
+    sendResponse('error', 'File size exceeds the 5MB limit or is empty.', null, 400);
+}
+
+// Strict MIME type validation using Fileinfo
+$finfo = finfo_open(FILEINFO_MIME_TYPE);
+$mimeType = finfo_file($finfo, $file['tmp_name']);
+finfo_close($finfo);
+
+$allowedMimeTypes = [
+    'image/jpeg' => 'jpg',
+    'image/png'  => 'png',
+    'image/gif'  => 'gif'
+];
+
+if (!array_key_exists($mimeType, $allowedMimeTypes)) {
+    sendResponse('error', 'Invalid file type. Only real JPG, PNG, and GIF images are allowed.', null, 400);
 }
 
 // Create uploads directory if it doesn't exist
@@ -31,9 +46,9 @@ if (!file_exists($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
-// Generate unique filename
-$extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-$filename = 'user_' . $userId . '_' . time() . '.' . $extension;
+// Generate unique filename securely
+$extension = $allowedMimeTypes[$mimeType]; // Use trusted extension based on MIME type
+$filename = 'user_' . $userId . '_' . bin2hex(random_bytes(16)) . '.' . $extension;
 $targetPath = $uploadDir . $filename;
 
 // Move uploaded file

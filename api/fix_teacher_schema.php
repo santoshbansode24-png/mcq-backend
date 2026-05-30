@@ -97,6 +97,9 @@ try {
     $pdo->exec($sql_notif);
     echo "<p style='color: green'>✅ Table 'notifications' ensured.</p>";
 
+    // Run performance optimizations
+    require_once 'optimize_db.php';
+
     echo "<p><strong>Fix complete! Please try logging in to the Teacher Portal again.</strong></p>";
 
 } catch (PDOException $e) {

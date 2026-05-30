@@ -5,7 +5,9 @@
         "razorpay/razorpay": "^2.9",
         "aws/aws-sdk-php": "^3.0",
         "ext-gd": "*",
-        "ext-zip": "*"
+        "ext-zip": "*",
+        "ext-pdo_mysql": "*",
+        "ext-bcmath": "*"
     },
     "config": {
         "platform": {

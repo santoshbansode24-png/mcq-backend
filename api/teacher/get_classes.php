@@ -29,23 +29,27 @@ if (!empty($missing)) {
 $teacher_id = (int)$input['teacher_id'];
 
 try {
-    // Auto-migrate any teacher_classes to classrooms if missing
-    $migrateStmt = $pdo->prepare("
-        INSERT INTO classrooms (teacher_id, class_code, class_name, board, medium, class_level)
-        SELECT 
-            tc.teacher_id, 
-            tc.class_code, 
-            c.class_name, 
-            COALESCE(u.board, 'State Board') as board, 
-            COALESCE(u.medium, 'Marathi') as medium, 
-            c.class_id as class_level
-        FROM teacher_classes tc
-        JOIN classes c ON tc.class_id = c.class_id
-        JOIN users u ON tc.teacher_id = u.user_id
-        WHERE tc.class_code IS NOT NULL 
-          AND CONVERT(tc.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci NOT IN (SELECT CONVERT(class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci FROM classrooms)
-    ");
-    $migrateStmt->execute();
+    try {
+        // Auto-migrate any teacher_classes to classrooms if missing
+        $migrateStmt = $pdo->prepare("
+            INSERT INTO classrooms (teacher_id, class_code, class_name, board, medium, class_level)
+            SELECT 
+                tc.teacher_id, 
+                tc.class_code, 
+                c.class_name, 
+                COALESCE(u.board, 'State Board') as board, 
+                COALESCE(u.medium, 'Marathi') as medium, 
+                c.class_id as class_level
+            FROM teacher_classes tc
+            JOIN classes c ON tc.class_id = c.class_id
+            JOIN users u ON tc.teacher_id = u.user_id
+            WHERE tc.class_code IS NOT NULL 
+              AND tc.class_code NOT IN (SELECT class_code FROM classrooms)
+        ");
+        $migrateStmt->execute();
+    } catch (PDOException $e) {
+        error_log("Migration Error: " . $e->getMessage());
+    }
 
     // Get assigned classes with student count for this specific teacher
     $stmt = $pdo->prepare("
@@ -56,7 +60,7 @@ try {
             tc.class_code,
             COUNT(scm.student_id) as student_count
         FROM teacher_classes tc
-        JOIN classrooms cr ON tc.class_code = cr.class_code
+        JOIN classrooms cr ON CONVERT(tc.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(cr.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci
         LEFT JOIN student_class_mapping scm ON scm.class_id = cr.class_id
         WHERE tc.teacher_id = ?
         GROUP BY cr.class_id, cr.class_name, tc.division_name, tc.class_code

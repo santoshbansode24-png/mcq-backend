@@ -32,7 +32,7 @@ try {
     if (!$teacherInfo) {
         sendResponse('error', 'Invalid teacher ID', null, 404);
     }
-    $school_name = $teacherInfo['school_name'];
+    $school_name = $teacherInfo['school_name'] ?? 'Unknown';
 } catch (PDOException $e) {
     sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
 }
@@ -99,7 +99,27 @@ try {
     
     sendResponse('success', 'Material uploaded successfully!', null, 200);
 } catch (PDOException $e) {
-    error_log("Error saving class update: " . $e->getMessage());
-    sendResponse('error', 'Failed to save update.', null, 500);
+    // If strict mode rejects 'worksheet', fallback to 'material' instead of altering table
+    if (strpos($e->getMessage(), 'update_type') !== false || strpos($e->getMessage(), 'ENUM') !== false || strpos($e->getMessage(), 'Data truncated') !== false) {
+        try {
+            $update_type = 'pdf'; // Fallback to 'pdf' instead of material
+            $stmt->execute([
+                $teacher_id,
+                $school_name,
+                $class_id,
+                $update_type,
+                $title,
+                $message,
+                $payloadJson
+            ]);
+            sendResponse('success', 'Material uploaded successfully!', null, 200);
+        } catch (PDOException $retryEx) {
+            error_log("Error saving class update after retry: " . $retryEx->getMessage());
+            sendResponse('error', 'Database error occurred: ' . $retryEx->getMessage(), ['error' => $retryEx->getMessage()], 500);
+        }
+    } else {
+        error_log("Error saving class update: " . $e->getMessage());
+        sendResponse('error', 'Database error occurred: ' . $e->getMessage(), ['error' => $e->getMessage()], 500);
+    }
 }
 ?>

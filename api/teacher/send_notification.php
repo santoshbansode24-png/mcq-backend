@@ -72,9 +72,15 @@ try {
     $notification_id = $pdo->lastInsertId();
     
     // Get count of students in this class
-    $countStmt = $pdo->prepare("SELECT COUNT(*) as student_count FROM student_class_mapping WHERE class_id = ?");
-    $countStmt->execute([$class_id]);
-    $count = $countStmt->fetch();
+    $student_count = 0;
+    try {
+        $countStmt = $pdo->prepare("SELECT COUNT(*) as student_count FROM student_class_mapping WHERE class_id = ?");
+        $countStmt->execute([$class_id]);
+        $count = $countStmt->fetch();
+        $student_count = $count['student_count'] ?? 0;
+    } catch (PDOException $e) {
+        // Table might not exist, ignore and leave count at 0
+    }
     
     // Prepare response
     $responseData = [
@@ -82,13 +88,13 @@ try {
         'teacher_id' => $teacher_id,
         'class_id' => $class_id,
         'title' => $title,
-        'students_notified' => $count['student_count']
+        'students_notified' => $student_count
     ];
     
     // Success response
     sendResponse('success', 'Notification sent successfully', $responseData, 201);
     
 } catch (PDOException $e) {
-    sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);
+    sendResponse('error', 'Database error occurred: ' . $e->getMessage(), ['error' => $e->getMessage()], 500);
 }
 ?>

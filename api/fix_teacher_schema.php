@@ -72,7 +72,7 @@ try {
         teacher_id INT NOT NULL,
         school_name VARCHAR(255) DEFAULT NULL,
         class_id INT NOT NULL,
-        update_type ENUM('announcement', 'homework', 'exam', 'material') DEFAULT 'announcement',
+        update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf') DEFAULT 'announcement',
         title VARCHAR(255) NOT NULL,
         message TEXT,
         payload JSON DEFAULT NULL,

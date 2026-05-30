@@ -6,5 +6,10 @@
         "aws/aws-sdk-php": "^3.0",
         "ext-gd": "*",
         "ext-zip": "*"
+    },
+    "config": {
+        "platform": {
+            "php": "8.2.27"
+        }
     }
 }

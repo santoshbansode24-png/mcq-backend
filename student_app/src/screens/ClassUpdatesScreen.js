@@ -266,13 +266,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             // If we successfully found and parsed the payload
             if (payloadData) {
                 displayMessage = payloadData.textMessage || 'New Worksheet Available';
-                
-                if (payloadData.type === 'worksheet_data' && payloadData.data) {
-                    const d = payloadData.data;
-                    htmlPayload = createHTML(d.mcqs, d.short, d.long, payloadData.subjectNames, d.totalMarks, d.schoolName, d.date);
-                } else if (payloadData.html) {
-                    htmlPayload = payloadData.html;
-                }
+                // HTML generation is deferred to generateAndOpenLocalPdf to optimize scroll performance
             } else if (item.message && item.message.includes('JSON_PAYLOAD:')) {
                 // If it looks like a payload but failed to parse (e.g. truncated DB row)
                 displayMessage = "New Worksheet Available";
@@ -293,15 +287,28 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         };
 
         const generateAndOpenLocalPdf = async () => {
-            if (!htmlPayload) return;
+            if (!payloadData && !htmlPayload) return;
             try {
+                let currentHtmlPayload = htmlPayload;
+                
+                if (!currentHtmlPayload && payloadData) {
+                    if (payloadData.type === 'worksheet_data' && payloadData.data) {
+                        const d = payloadData.data;
+                        currentHtmlPayload = createHTML(d.mcqs, d.short, d.long, payloadData.subjectNames, d.totalMarks, d.schoolName, d.date);
+                    } else if (payloadData.html) {
+                        currentHtmlPayload = payloadData.html;
+                    }
+                }
+                
+                if (!currentHtmlPayload) return;
+
                 const fileUri = `${FileSystem.cacheDirectory}worksheet_${item.notification_id || item.id}.pdf`;
                 const fileInfo = await FileSystem.getInfoAsync(fileUri);
                 let uriToOpen = fileUri;
 
                 // Only generate the PDF if it hasn't been generated yet
                 if (!fileInfo.exists) {
-                    const { uri } = await Print.printToFileAsync({ html: htmlPayload });
+                    const { uri } = await Print.printToFileAsync({ html: currentHtmlPayload });
                     await FileSystem.moveAsync({ from: uri, to: fileUri });
                 }
                 
@@ -328,7 +335,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 isPdf ? "file-pdf-box" : 
                                 isPhoto ? "image" : 
                                 isExam ? "timer-outline" : 
-                                (htmlPayload || isWorksheet) ? "file-document-edit-outline" :
+                                (payloadData || htmlPayload || isWorksheet) ? "file-document-edit-outline" :
                                 isHomework ? "home-edit-outline" : 
                                 isLiveClass ? "youtube-tv" : "bell-outline"
                             } 
@@ -337,7 +344,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 isPdf ? "#EF4444" : 
                                 isPhoto ? "#10B981" : 
                                 isExam ? "#D97706" : 
-                                (htmlPayload || isWorksheet) ? "#8B5CF6" :
+                                (payloadData || htmlPayload || isWorksheet) ? "#8B5CF6" :
                                 isHomework ? "#0EA5E9" : 
                                 isLiveClass ? "#E11D48" : "#6366F1"
                             }
@@ -346,9 +353,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     <View style={styles.titleContainer}>
                         <View style={styles.typeRow}>
                             <Text style={[styles.typeTag, { 
-                                color: isExam ? '#D97706' : (htmlPayload || isWorksheet) ? '#8B5CF6' : isHomework ? '#0EA5E9' : isLiveClass ? '#E11D48' : '#94a3b8' 
+                                color: isExam ? '#D97706' : (payloadData || htmlPayload || isWorksheet) ? '#8B5CF6' : isHomework ? '#0EA5E9' : isLiveClass ? '#E11D48' : '#94a3b8' 
                             }]}>
-                                {isLiveClass ? '🔴 LIVE CLASS' : ((htmlPayload ? 'WORKSHEET' : item.update_type?.toUpperCase()) || 'ANNOUNCEMENT')}
+                                {isLiveClass ? '🔴 LIVE CLASS' : (((payloadData || htmlPayload) ? 'WORKSHEET' : item.update_type?.toUpperCase()) || 'ANNOUNCEMENT')}
                             </Text>
                             <Text style={styles.date}>{formatDate(item.created_at)}</Text>
                         </View>
@@ -385,7 +392,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                         </TouchableOpacity>
                     )}
 
-                    {isHomework && !htmlPayload && (
+                    {isHomework && !payloadData && !htmlPayload && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#0EA5E9' }]} 
                             onPress={() => Alert.alert("Homework", "Opening homework details...")}
@@ -395,7 +402,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                         </TouchableOpacity>
                     )}
 
-                    {htmlPayload && (
+                    {(payloadData || htmlPayload) && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#8B5CF6' }]} 
                             onPress={generateAndOpenLocalPdf}

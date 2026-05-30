@@ -13,6 +13,9 @@ if (file_exists('../config/secrets.php')) {
     require_once '../config/secrets.php';
 }
 
+if (!defined('RAZORPAY_KEY_ID')) {
+    define('RAZORPAY_KEY_ID', getenv('RAZORPAY_KEY_ID') ?: '');
+}
 if (!defined('RAZORPAY_KEY_SECRET')) {
     define('RAZORPAY_KEY_SECRET', getenv('RAZORPAY_KEY_SECRET') ?: '');
 }

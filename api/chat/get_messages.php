@@ -22,9 +22,11 @@ try {
                 (m.sender_id = ? AND m.receiver_id = ?) 
                 OR 
                 (m.sender_id = ? AND m.receiver_id = ?)
+                OR 
+                (m.class_code = ? AND m.receiver_id IS NULL)
             )
         ";
-        $params = [$user_id, $with_user_id, $with_user_id, $user_id];
+        $params = [$user_id, $with_user_id, $with_user_id, $user_id, $class_code];
         
         if (!empty($class_code)) {
             $query .= " AND m.class_code = ?";

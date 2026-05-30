@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
     View, Text, StyleSheet, SectionList, ActivityIndicator, 
     TouchableOpacity, Linking, Image, TextInput, Alert,
-    RefreshControl, Platform 
+    RefreshControl, Platform, ScrollView
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
@@ -21,6 +21,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [joinCode, setJoinCode] = useState('');
     const [joining, setJoining] = useState(false);
     const [showJoinForm, setShowJoinForm] = useState(!user?.class_id);
+
+    const [activeTab, setActiveTab] = useState('Updates');
 
     const [joinedClasses, setJoinedClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('all');
@@ -135,7 +137,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
 
-    const groupNotifications = (data) => {
+    const groupNotifications = useCallback((data) => {
         const groups = [];
         const today = new Date();
         const yesterday = new Date();
@@ -168,7 +170,50 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         if (sections['Earlier'].length > 0) groups.push({ title: 'Earlier', data: sections['Earlier'] });
 
         return groups;
-    };
+    }, []);
+
+    const isEventActive = useCallback((item) => {
+        if (item.update_type !== 'live_class' && item.update_type !== 'live_exam') return false;
+        
+        let scheduledTimeStr = item.created_at;
+        try {
+            if (item.payload) {
+                const p = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+                if (p && p.scheduled_time) scheduledTimeStr = p.scheduled_time;
+            }
+        } catch(e) {}
+
+        // Replace space with 'T' for reliable iOS/Safari date parsing
+        if (scheduledTimeStr && typeof scheduledTimeStr === 'string') {
+            scheduledTimeStr = scheduledTimeStr.replace(' ', 'T');
+        }
+
+        const scheduledTime = new Date(scheduledTimeStr).getTime();
+        const now = new Date().getTime();
+        
+        // Active if scheduled for the future, or started less than 3 hours ago
+        return (scheduledTime + 10800000) > now;
+    }, []);
+
+    const activeSessions = useMemo(() => notifications.filter(isEventActive), [notifications, isEventActive]);
+    
+    const tabData = useMemo(() => notifications.filter(item => {
+        if (isEventActive(item)) return false; // Already shown in Active Sessions at top
+        
+        const isWksht = item.update_type === 'worksheet' || (item.message && item.message.includes('JSON_PAYLOAD:'));
+        const isLive = item.update_type === 'live_class' || item.update_type === 'live_exam';
+
+        if (activeTab === 'Worksheets') {
+             return isWksht;
+        } else if (activeTab === 'Recordings') {
+             return isLive;
+        } else {
+             // Updates tab
+             return !isWksht && !isLive;
+        }
+    }), [notifications, isEventActive, activeTab]);
+
+    const groupedData = useMemo(() => groupNotifications(tabData), [tabData, groupNotifications]);
 
     const createHTML = (mcqs, short, long, subjectTitle, currentMarks, schoolName, date) => {
         let mcqSection = "", shortSection = "", longSection = "";
@@ -229,8 +274,6 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         </html>
         `;
     };
-
-    const groupedData = groupNotifications(notifications);
 
     const renderItem = useCallback(({ item }) => {
         const hasFile = item.payload && (item.payload.file_url || item.payload.url);
@@ -436,7 +479,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 </View>
             </View>
         );
-    }, [theme, isDarkMode]);
+    }, [theme, isDarkMode, navigation, user]);
 
     return (
         <View style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
@@ -562,6 +605,65 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 <SectionList
                     sections={groupedData}
                     renderItem={renderItem}
+                    ListHeaderComponent={() => (
+                        <View style={{ marginBottom: 16 }}>
+                            {activeSessions.length > 0 && (
+                                <View style={{ marginBottom: 20 }}>
+                                    <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 10, paddingLeft: 24 }]}>ACTIVE SESSIONS</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 10 }}>
+                                        {activeSessions.map((session, index) => {
+                                            const isClass = session.update_type === 'live_class';
+                                            return (
+                                                <View key={session.notification_id || index} style={[styles.activeSessionCard, { backgroundColor: isClass ? '#FEF2F2' : '#FEF3C7', borderColor: isClass ? '#FECACA' : '#FDE68A', marginRight: 12 }]}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                                        <MaterialCommunityIcons name={isClass ? "youtube-tv" : "timer-outline"} size={20} color={isClass ? "#E11D48" : "#D97706"} />
+                                                        <Text style={{ marginLeft: 6, fontSize: 11, fontWeight: '900', color: isClass ? "#E11D48" : "#D97706" }}>
+                                                            {isClass ? "LIVE CLASS" : "LIVE EXAM"}
+                                                        </Text>
+                                                    </View>
+                                                    <Text style={{ fontSize: 15, fontFamily: 'NotoSans-Bold', color: '#1f2937', marginBottom: 4 }} numberOfLines={1}>
+                                                        {session.title}
+                                                    </Text>
+                                                    <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+                                                        {session.teacher_name}
+                                                    </Text>
+                                                    <TouchableOpacity 
+                                                        style={[styles.activeSessionBtn, { backgroundColor: isClass ? '#E11D48' : '#D97706' }]}
+                                                        onPress={() => {
+                                                            if (isClass) {
+                                                                navigation.navigate('LiveClass', { classUpdate: session, userId: user?.user_id || user?.id });
+                                                            } else {
+                                                                Alert.alert("Live Exam", "Connecting to exam portal...");
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>{isClass ? 'Join Now' : 'Start Exam'}</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            <View style={[styles.tabContainer, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
+                                {['Updates', 'Worksheets', 'Recordings'].map(tab => {
+                                    const isActive = activeTab === tab;
+                                    return (
+                                        <TouchableOpacity 
+                                            key={tab}
+                                            style={[styles.tabBtn, isActive && { backgroundColor: theme.primary }]}
+                                            onPress={() => setActiveTab(tab)}
+                                        >
+                                            <Text style={[styles.tabBtnText, isActive ? { color: '#fff' } : { color: theme.textSecondary }]}>
+                                                {tab}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    )}
                     renderSectionHeader={({ section: { title } }) => (
                         <View style={[styles.sectionHeader, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
                             <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>{title}</Text>
@@ -600,6 +702,40 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    tabContainer: {
+        flexDirection: 'row',
+        padding: 4,
+        borderRadius: 16,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+    },
+    tabBtn: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 12,
+    },
+    tabBtnText: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Bold',
+    },
+    activeSessionCard: {
+        width: 220,
+        padding: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    activeSessionBtn: {
+        paddingVertical: 8,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',

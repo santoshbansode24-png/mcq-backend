@@ -95,7 +95,9 @@ try {
 
     // Extract JSON_PAYLOAD from message if present to prevent truncation in TEXT column
     if (strpos($raw_message, 'JSON_PAYLOAD:') !== false) {
-        $jsonStart = strpos($raw_message, '{');
+        $payloadMarker = 'JSON_PAYLOAD:';
+        $markerPos = strpos($raw_message, $payloadMarker);
+        $jsonStart = strpos($raw_message, '{', $markerPos);
         if ($jsonStart !== false) {
             $jsonStr = substr($raw_message, $jsonStart);
             $parsedJson = json_decode($jsonStr, true);

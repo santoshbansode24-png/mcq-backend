@@ -37,10 +37,12 @@ try {
 
     // Alter transactions table (ignore error if column already exists)
     try {
+        $conn->exec("ALTER TABLE transactions ADD COLUMN plan_id INT DEFAULT NULL;");
+    } catch (Exception $e) {}
+
+    try {
         $conn->exec("ALTER TABLE transactions ADD COLUMN coupon_id INT DEFAULT NULL;");
-    } catch (Exception $e) {
-        // Column might already exist, ignore this error
-    }
+    } catch (Exception $e) {}
 
     echo json_encode(["status" => "success", "message" => "Coupon tables and schema migrated successfully on Railway."]);
 

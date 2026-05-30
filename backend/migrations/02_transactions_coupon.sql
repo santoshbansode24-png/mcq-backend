@@ -1,0 +1,1 @@
+ALTER TABLE transactions ADD COLUMN coupon_id INT DEFAULT NULL;

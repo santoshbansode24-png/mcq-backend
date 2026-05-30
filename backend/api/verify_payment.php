@@ -49,7 +49,7 @@ try {
     $conn = $pdo;
 
     // A. Verify the transaction and get plan_id
-    $txStmt = $conn->prepare("SELECT plan_id FROM transactions WHERE order_id = ? AND status = 'created'");
+    $txStmt = $conn->prepare("SELECT plan_id, coupon_id FROM transactions WHERE order_id = ? AND status = 'created'");
     $txStmt->execute([$razorpayOrderId]);
     $transaction = $txStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -58,6 +58,7 @@ try {
     }
     
     $planId = $transaction['plan_id'];
+    $couponId = $transaction['coupon_id'];
 
     // B. Fetch plan duration
     $planStmt = $conn->prepare("SELECT duration_days FROM subscriptions WHERE plan_id = ?");
@@ -81,6 +82,12 @@ try {
         WHERE user_id = ?
     ");
     $stmt2->execute([$durationDays, $durationDays, $userId]);
+    
+    // E. Mark Coupon as used if applicable
+    if (!empty($couponId)) {
+        $conn->prepare("INSERT INTO coupon_usage (coupon_id, user_id, order_id) VALUES (?, ?, ?)")->execute([$couponId, $userId, $razorpayOrderId]);
+        $conn->prepare("UPDATE coupons SET current_uses = current_uses + 1 WHERE coupon_id = ?")->execute([$couponId]);
+    }
 
     echo json_encode([
         "status" => "success",

@@ -61,6 +61,22 @@ try {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
+    // Check School Subscription Status (if linked to a school)
+    $schoolStmt = $pdo->prepare("
+        SELECT valid_until, school_name 
+        FROM school_subscriptions 
+        JOIN users ON users.school_id = school_subscriptions.school_id 
+        WHERE users.user_id = ?
+    ");
+    $schoolStmt->execute([$user['user_id']]);
+    $schoolSub = $schoolStmt->fetch();
+
+    if ($schoolSub) {
+        if (strtotime($schoolSub['valid_until']) < time()) {
+            sendResponse('error', "Your school's subscription (" . $schoolSub['school_name'] . ") expired on " . $schoolSub['valid_until'] . ".", null, 403);
+        }
+    }
+    
     // Remove password from response
     unset($user['password']);
     

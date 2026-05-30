@@ -16,20 +16,33 @@ try {
     $data = json_decode($inputJSON, true);
 
     $userId = $data['user_id'] ?? 0;
-    $amount = $data['amount'] ?? 99; // Default 99 INR
+    $planId = $data['plan_id'] ?? 0;
 
-    if ($userId <= 0) {
-        throw new Exception("Invalid User ID");
+    if ($userId <= 0 || $planId <= 0) {
+        throw new Exception("Invalid User ID or Plan ID");
     }
+
+    // Fetch the correct price for the plan_id from the subscriptions table
+    $conn = $pdo;
+    $planStmt = $conn->prepare("SELECT price FROM subscriptions WHERE plan_id = ? AND is_active = 1");
+    $planStmt->execute([$planId]);
+    $plan = $planStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$plan) {
+        throw new Exception("Invalid or Inactive Plan Selected");
+    }
+
+    $amount = (float)$plan['price'];
 
     // 2. Initialize Razorpay
     $api = new Api(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET);
 
     // 3. Create Order
     // Amount is in paice (100 paise = 1 Rupee). So 99 INR = 9900 paise.
+    $paiseAmount = (int)round($amount * 100);
     $orderData = [
         'receipt'         => 'rcpt_' . $userId . '_' . time(),
-        'amount'          => $amount * 100, 
+        'amount'          => $paiseAmount, 
         'currency'        => 'INR',
         'payment_capture' => 1 // Auto capture
     ];
@@ -38,10 +51,8 @@ try {
     $orderId = $razorpayOrder['id'];
 
     // 4. Save to Database (Status: Created)
-    $conn = $pdo;
-    
-    $stmt = $conn->prepare("INSERT INTO transactions (user_id, order_id, amount, status) VALUES (?, ?, ?, 'created')");
-    $stmt->execute([$userId, $orderId, $amount]);
+    $stmt = $conn->prepare("INSERT INTO transactions (user_id, plan_id, order_id, amount, status) VALUES (?, ?, ?, ?, 'created')");
+    $stmt->execute([$userId, $planId, $orderId, $amount]);
 
     // 5. Return Order ID to Frontend
     echo json_encode([

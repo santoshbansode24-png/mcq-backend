@@ -19,6 +19,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSubjects } from '../api/subjects';
+import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
@@ -174,7 +175,7 @@ const HomeBanner = React.memo(({ colors, title, subtitle, icon, onPress, iconIsT
 
 const HomeListHeader = React.memo(({ 
     userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate,
-    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam 
+    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam, activeLiveClass 
 }) => {
     return (
         <View>
@@ -214,10 +215,28 @@ const HomeListHeader = React.memo(({
                     subtitle={`${activeLiveExam.title} • ${Math.floor(activeLiveExam.remaining_seconds / 60)} mins left`}
                     icon="⚡"
                     iconIsText={true}
-                    onPress={() => navigation.navigate('MCQViewer', { 
-                        chapterId: activeLiveExam.chapter_id, 
+                    onPress={() => navigation.navigate('ChapterContent', { 
+                        chapter: {
+                            chapter_id: activeLiveExam.chapter_id,
+                            chapter_name: activeLiveExam.title,
+                            subject_name: 'Live Exam'
+                        },
+                        initialTab: 'MCQs',
                         isLiveExam: true, 
                         durationMinutes: activeLiveExam.duration_minutes 
+                    })}
+                />
+            )}
+
+            {activeLiveClass && (
+                <HomeBanner 
+                    colors={['#E11D48', '#BE123C']}
+                    title="🔴 LIVE CLASS"
+                    subtitle={`${activeLiveClass.title} • Join Now`}
+                    icon="youtube-tv"
+                    onPress={() => navigation.navigate('LiveClass', { 
+                        classUpdate: activeLiveClass,
+                        userId: user?.user_id || user?.id
                     })}
                 />
             )}
@@ -277,27 +296,43 @@ const HomeScreen = ({ user, navigation, route }) => {
     const [isFullySynced, setIsFullySynced] = useState(false);
     const [hasUpdate, setHasUpdate] = useState(false);
     const [activeLiveExam, setActiveLiveExam] = useState(null);
+    const [activeLiveClass, setActiveLiveClass] = useState(null);
     const glowAnim = useRef(new Animated.Value(0)).current;
     const syncRotAnim = useRef(new Animated.Value(0)).current;
 
-    // Live Exam Polling
+    // Live Exam & Live Class Polling
     useEffect(() => {
         if (!classId) return;
         const checkExam = async () => {
             try {
+                // Check Live Exam
                 const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}`, { timeout: 8000 });
                 if (response.data && response.data.status === 'success' && response.data.data) {
                     setActiveLiveExam(response.data.data);
                 } else {
                     setActiveLiveExam(null);
                 }
+
+                // Check Notifications for Live Class
+                const notifsResponse = await fetchNotifications(classId);
+                if (notifsResponse && notifsResponse.status === 'success' && Array.isArray(notifsResponse.data)) {
+                    const today = new Date().toDateString();
+                    const latestLiveClass = notifsResponse.data.find(n => 
+                        n.update_type === 'live_class' && 
+                        new Date(n.created_at).toDateString() === today
+                    );
+                    setActiveLiveClass(latestLiveClass || null);
+                } else {
+                    setActiveLiveClass(null);
+                }
+
             } catch (error) {
-                console.log('Error checking live exam:', error.message);
+                console.log('Error checking live events:', error.message);
             }
         };
 
         checkExam(); // Check immediately
-        const interval = setInterval(checkExam, 60000); // Poll every 60 seconds (1 minute) is highly optimized
+        const interval = setInterval(checkExam, 60000); // Poll every 60 seconds
         return () => clearInterval(interval);
     }, [classId]);
 
@@ -577,8 +612,9 @@ const HomeScreen = ({ user, navigation, route }) => {
             onSyncPress={handleSyncPress}
             onProfilePress={handleProfilePress}
             activeLiveExam={activeLiveExam}
+            activeLiveClass={activeLiveClass}
         />
-    ), [userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam]);
+    ), [userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam, activeLiveClass]);
 
     return (
         <View style={styles.container}>

@@ -53,6 +53,8 @@ try {
             "class_name" => $user['class_name'] ?? null,
             "board_type" => $user['board_type'] ?? null,
             "google_id" => $google_id,
+            "subscription_status" => $user['subscription_status'] ?? 'inactive',
+            "subscription_expiry" => $user['subscription_expiry'] ?? null,
             "is_new_user" => false
         ], 200);
 
@@ -74,6 +76,8 @@ try {
             "class_id" => null,
             "board_type" => null,
             "google_id" => $google_id,
+            "subscription_status" => 'inactive',
+            "subscription_expiry" => null,
             "is_new_user" => true
         ], 200);
     }

@@ -191,26 +191,39 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         };
     }, [userState?.class_id, route.params?.isNewSelection]);
 
-    // SELF-HEALING: Load user data if it's missing (happens on app restart)
+    // SELF-HEALING: Load user data if it's missing or refresh it when screen focuses
     useEffect(() => {
         const recoverUser = async () => {
-            if (!userState || !userState.user_id) {
-                try {
-                    const savedUser = await AsyncStorage.getItem('user_data');
-                    if (savedUser) {
-                        const parsedUser = JSON.parse(savedUser);
-                        if (parsedUser && parsedUser.user_id) {
-                            console.log("[MainScreen] Recovered user data from AsyncStorage");
-                            setUserState(parsedUser);
-                        }
+            try {
+                const savedUser = await AsyncStorage.getItem('user_data');
+                if (savedUser) {
+                    const parsedUser = JSON.parse(savedUser);
+                    if (parsedUser && parsedUser.user_id) {
+                        // Only update state if something changed to avoid unnecessary re-renders
+                        setUserState(prev => {
+                            if (JSON.stringify(prev) !== JSON.stringify(parsedUser)) {
+                                console.log("[MainScreen] Recovered/Refreshed user data from AsyncStorage");
+                                return parsedUser;
+                            }
+                            return prev;
+                        });
                     }
-                } catch (e) {
-                    console.error("Failed to recover user data", e);
                 }
+            } catch (e) {
+                console.error("Failed to recover user data", e);
             }
         };
+
+        // Run immediately on mount
         recoverUser();
-    }, [userState]);
+
+        // Run on every screen focus
+        const unsubscribe = parentNavigation.addListener('focus', () => {
+            recoverUser();
+        });
+
+        return unsubscribe;
+    }, [parentNavigation]);
 
     // Update user state handler
     const handleUpdateUser = useCallback(async (updates) => {
@@ -245,10 +258,25 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     }, [currentView]);
 
     const handleNavigate = useCallback((screen, params = {}) => {
-        if (screen === 'VideoPlayer' || screen === 'Subscription') {
+        if (screen === 'VideoPlayer' || screen === 'Subscription' || screen === 'LiveClass' || screen === 'Chat') {
             parentNavigation.navigate(screen, params);
             return;
         }
+
+        // --- PREMIUM FEATURE LOCK ---
+        const premiumScreens = [
+            'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'MyExam', 'MyExamTest',
+            'WorksheetGenerator', 'StudyPlanner', 'VocabDashboard', 'VocabBooster', 'MentalMaths',
+            'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets', 'AI', 'HomeworkSolver',
+            'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'
+        ];
+
+        // If user is trying to access a premium screen and subscription is NOT active
+        if (premiumScreens.includes(screen) && userState?.subscription_status !== 'active') {
+            parentNavigation.navigate('Subscription');
+            return; // Block navigation and show paywall
+        }
+        // ----------------------------
 
         // Check if we are just switching tabs (Home, AI, Subjects, ClassUpdates)
         const isRootTab = ['Home', 'Subjects', 'AI', 'ClassUpdates'].includes(screen);
@@ -384,7 +412,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
             <SafeAreaView style={[styles.safeAreaTop, { backgroundColor: isDarkMode ? '#0f172a' : '#f0f9ff' }]} edges={['top']}>
-                <View style={[styles.content, { paddingBottom: 80 + insets.bottom }]}>
+                <View style={styles.content}>
                     {renderContent()}
                 </View>
             </SafeAreaView>
@@ -394,7 +422,6 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
                 styles.bottomNavContainer,
                 {
                     backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                    borderTopColor: isDarkMode ? '#334155' : '#e2e8f0',
                     shadowColor: "#000",
                 }
             ]}>
@@ -422,10 +449,8 @@ const styles = StyleSheet.create({
     safeAreaTop: { flex: 1, paddingTop: Platform.OS === 'android' ? 10 : 0 },
     content: { flex: 1 },
     bottomNavContainer: {
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        borderTopWidth: 1, elevation: 10,
-        shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.05, shadowRadius: 3,
-        zIndex: 100,
+        elevation: 15,
+        shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 6,
     },
     safeArea: { width: '100%' },
     tabRow: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -8,7 +8,34 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SubscriptionScreen = ({ navigation }) => {
     const { theme, isDarkMode } = useTheme();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [buying, setBuying] = useState(false);
+    const [plans, setPlans] = useState([]);
+    const [selectedPlanId, setSelectedPlanId] = useState(null);
+
+    useEffect(() => {
+        if (ENABLE_PAYMENTS) {
+            fetchPlans();
+        }
+    }, []);
+
+    const fetchPlans = async () => {
+        try {
+            const response = await fetch(`${config.API_URL}/get_subscription_plans.php`);
+            const data = await response.json();
+            if (data.status === 'success') {
+                setPlans(data.data);
+                if (data.data.length > 0) {
+                    setSelectedPlanId(data.data[0].plan_id);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load plans:", error);
+            Alert.alert("Error", "Could not load subscription plans.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // If payments are disabled, show "Coming Soon" or redirect
     if (!ENABLE_PAYMENTS) {
@@ -25,24 +52,36 @@ const SubscriptionScreen = ({ navigation }) => {
     }
 
     const buySubscription = async () => {
-        setLoading(true);
-        try {
-            const userId = await AsyncStorage.getItem('user_id');
-            const userPhone = await AsyncStorage.getItem('user_phone') || '9999999999';
-            const userEmail = await AsyncStorage.getItem('user_email') || 'student@example.com';
+        if (!selectedPlanId) {
+            Alert.alert("Error", "Please select a plan first.");
+            return;
+        }
 
-            if (!userId) {
+        setBuying(true);
+        try {
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            if (!userDataStr) {
                 Alert.alert("Error", "Please login again.");
                 return;
             }
+            
+            const user = JSON.parse(userDataStr);
+            const userId = user.user_id;
+            const userPhone = user.mobile || '9999999999';
+            const userEmail = user.email || 'student@example.com';
 
-            // 1. Create Order on Backend
+            if (!userId) {
+                Alert.alert("Error", "Invalid user session. Please login again.");
+                return;
+            }
+
+            // 1. Create Order on Backend using plan_id
             const response = await fetch(`${config.API_URL}/create_order.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: userId,
-                    amount: 99 // Amount in INR
+                    plan_id: selectedPlanId
                 })
             });
 
@@ -58,7 +97,7 @@ const SubscriptionScreen = ({ navigation }) => {
                 image: 'https://i.imgur.com/3g7nmJC.png', // Replace with your logo URL
                 currency: 'INR',
                 key: data.key_id,
-                amount: data.amount * 100, // Amount is already in paise from backend, but double check. Backend sends 9900.
+                amount: Math.round(data.amount * 100), // Amount is in paise from backend, rounded for safety
                 name: 'Veeru App',
                 order_id: data.order_id,
                 prefill: {
@@ -75,13 +114,13 @@ const SubscriptionScreen = ({ navigation }) => {
             }).catch((error) => {
                 // Payment Cancelled or Failed
                 Alert.alert("Payment Cancelled", `Error: ${error.description}`);
-                setLoading(false);
+                setBuying(false);
             });
 
         } catch (error) {
             console.error(error);
             Alert.alert("Error", error.message);
-            setLoading(false);
+            setBuying(false);
         }
     };
 
@@ -99,20 +138,40 @@ const SubscriptionScreen = ({ navigation }) => {
             });
 
             const data = await response.json();
-            setLoading(false);
+            setBuying(false);
 
             if (data.status === 'success') {
+                // Update local storage so premium unlocks immediately without restart
+                try {
+                    const userDataStr = await AsyncStorage.getItem('user_data');
+                    if (userDataStr) {
+                        const userData = JSON.parse(userDataStr);
+                        userData.subscription_status = 'active';
+                        await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+                    }
+                } catch (e) {
+                    console.error("Failed to update local storage:", e);
+                }
+
                 Alert.alert("Success!", "Welcome to Premium!", [
-                    { text: "OK", onPress: () => navigation.navigate('Home') }
+                    { text: "OK", onPress: () => navigation.navigate('Main') }
                 ]);
             } else {
                 Alert.alert("Verification Failed", data.message);
             }
         } catch (error) {
-            setLoading(false);
+            setBuying(false);
             Alert.alert("Error", "Payment verification failed. Please contact support.");
         }
     };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
 
     return (
         <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.background }]}>
@@ -124,26 +183,40 @@ const SubscriptionScreen = ({ navigation }) => {
                 <View style={{ width: 24 }} />
             </View>
 
-            <View style={styles.card}>
-                <Ionicons name="rocket" size={50} color="#fbbf24" style={{ marginBottom: 10 }} />
-                <Text style={[styles.planTitle, { color: theme.text }]}>Unlimited Access</Text>
-                <Text style={[styles.price, { color: theme.primary }]}>₹99 <Text style={{ fontSize: 16, color: theme.textSecondary }}>/ month</Text></Text>
+            {plans.map((plan) => {
+                const isSelected = selectedPlanId === plan.plan_id;
+                return (
+                    <TouchableOpacity 
+                        key={plan.plan_id}
+                        style={[styles.card, { borderColor: isSelected ? theme.primary : 'rgba(0,0,0,0.1)' }]}
+                        onPress={() => setSelectedPlanId(plan.plan_id)}
+                        activeOpacity={0.8}
+                    >
+                        {isSelected && (
+                            <View style={[styles.selectedBadge, { backgroundColor: theme.primary }]}>
+                                <Ionicons name="checkmark" size={16} color="white" />
+                            </View>
+                        )}
+                        <Ionicons name={plan.duration_days > 30 ? "rocket" : "star"} size={50} color={isSelected ? theme.primary : "#fbbf24"} style={{ marginBottom: 10 }} />
+                        <Text style={[styles.planTitle, { color: theme.text }]}>{plan.plan_name}</Text>
+                        <Text style={[styles.price, { color: theme.primary }]}>₹{parseFloat(plan.price)} <Text style={{ fontSize: 16, color: theme.textSecondary }}>/ {plan.duration_days > 30 ? 'year' : 'month'}</Text></Text>
 
-                <View style={styles.features}>
-                    <FeatureItem text="Unlimited AI Doubts" theme={theme} />
-                    <FeatureItem text="Ad-free Experience" theme={theme} />
-                    <FeatureItem text="Exclusive Study Notes" theme={theme} />
-                    <FeatureItem text="Priority Support" theme={theme} />
-                </View>
+                        <View style={styles.features}>
+                            {plan.features_list && plan.features_list.map((feature, idx) => (
+                                <FeatureItem key={idx} text={feature} theme={theme} />
+                            ))}
+                        </View>
+                    </TouchableOpacity>
+                );
+            })}
 
-                <TouchableOpacity
-                    style={[styles.buyBtn, { backgroundColor: theme.primary, opacity: loading ? 0.7 : 1 }]}
-                    onPress={buySubscription}
-                    disabled={loading}
-                >
-                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buyBtnText}>Buy Premium Now</Text>}
-                </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+                style={[styles.buyBtn, { backgroundColor: theme.primary, opacity: buying ? 0.7 : 1, marginTop: 10 }]}
+                onPress={buySubscription}
+                disabled={buying || plans.length === 0}
+            >
+                {buying ? <ActivityIndicator color="white" /> : <Text style={styles.buyBtnText}>Buy Premium Now</Text>}
+            </TouchableOpacity>
         </ScrollView>
     );
 };
@@ -166,15 +239,26 @@ const styles = StyleSheet.create({
     title: { fontSize: 24, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     card: {
         backgroundColor: 'rgba(255,255,255,0.05)',
-        padding: 30,
+        padding: 25,
         borderRadius: 20,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)'
+        borderWidth: 2,
+        marginBottom: 20,
+        position: 'relative'
+    },
+    selectedBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     planTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 5, fontFamily: 'NotoSans-Bold' },
     price: { fontSize: 36, fontWeight: 'bold', marginBottom: 20, fontFamily: 'NotoSans-Bold' },
-    features: { width: '100%', marginBottom: 30 },
+    features: { width: '100%', marginBottom: 10 },
     featureItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
     buyBtn: {
         width: '100%',
@@ -185,7 +269,8 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 5,
-        elevation: 5
+        elevation: 5,
+        marginBottom: 30
     },
     buyBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold', fontFamily: 'NotoSans-Bold' },
     btn: { padding: 15, borderRadius: 10 },

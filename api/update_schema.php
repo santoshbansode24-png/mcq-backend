@@ -31,5 +31,24 @@ addColumnRequest($pdo, 'users', 'school_name', 'VARCHAR(255) DEFAULT NULL');
 // Add board
 addColumnRequest($pdo, 'users', 'board', "ENUM('CBSE', 'State Board') DEFAULT NULL");
 
+// Create messages table if not exists
+try {
+    $sql = "CREATE TABLE IF NOT EXISTS messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sender_id INT NOT NULL,
+        receiver_id INT DEFAULT NULL,
+        class_code VARCHAR(50) DEFAULT NULL,
+        message_text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (class_code),
+        INDEX (sender_id),
+        INDEX (receiver_id)
+    )";
+    $pdo->exec($sql);
+    echo "<p style='color: green'>✅ Created table <strong>messages</strong>.</p>";
+} catch (PDOException $e) {
+    echo "<p style='color: red'>❌ Error creating messages table: " . $e->getMessage() . "</p>";
+}
+
 echo "<p>Done.</p>";
 ?>

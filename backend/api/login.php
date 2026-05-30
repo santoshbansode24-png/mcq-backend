@@ -85,11 +85,8 @@ try {
         sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
-    // Check subscription status (skip for reviewer)
-    if (!$isReviewerBypass && $user['subscription_status'] !== 'active') {
-        sendResponse('error', 'Your subscription is inactive. Please renew to continue.', null, 403);
-    }
-    // --- END REVIEWER BYPASS ---
+    // Removed hard block for inactive subscriptions. 
+    // The frontend should handle premium feature gating, allowing the user to access the Subscription screen to renew.
     
     // Update Login Streak and Last Login
     $today = date('Y-m-d');

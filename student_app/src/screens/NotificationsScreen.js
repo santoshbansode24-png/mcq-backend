@@ -15,7 +15,22 @@ const NotificationsScreen = ({ user, navigation }) => {
         try {
             const response = await fetchNotifications(user.class_id);
             if (response.status === 'success') {
-                setNotifications(response.data);
+                // Filter out class updates (worksheets, homework, etc.) so they only appear in the Class tab
+                const filteredNotifications = response.data.filter(item => {
+                    // Exclude any raw worksheet data
+                    if (item.message && item.message.includes('JSON_PAYLOAD:')) return false;
+                    
+                    // Exclude specific class material types
+                    const classTypes = ['pdf', 'photo', 'worksheet', 'homework', 'live_class'];
+                    if (classTypes.includes(item.update_type)) return false;
+                    
+                    // If it has a teacher_name, it's usually a class-specific announcement
+                    if (item.teacher_name) return false;
+                    
+                    return true;
+                });
+                
+                setNotifications(filteredNotifications);
             }
         } catch (error) {
             console.error('Failed to load notifications', error);

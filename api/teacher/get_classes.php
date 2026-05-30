@@ -54,10 +54,12 @@ try {
             cr.class_name,
             tc.division_name,
             tc.class_code,
-            (SELECT COUNT(*) FROM student_class_mapping scm WHERE scm.class_id = cr.class_id) as student_count
+            COUNT(scm.student_id) as student_count
         FROM teacher_classes tc
-        JOIN classrooms cr ON CONVERT(tc.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(cr.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        JOIN classrooms cr ON tc.class_code = cr.class_code
+        LEFT JOIN student_class_mapping scm ON scm.class_id = cr.class_id
         WHERE tc.teacher_id = ?
+        GROUP BY cr.class_id, cr.class_name, tc.division_name, tc.class_code
         ORDER BY cr.class_name ASC
     ");
     

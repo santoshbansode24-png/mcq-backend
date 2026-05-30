@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 // LOCAL XAMPP CONFIGURATION
 // ========================================
 const LOCAL_CONFIG = {
-    SERVER_IP: '10.19.27.239',
+    SERVER_IP: '10.186.128.239',
     DOMAIN: 'localhost',
     get API_URL() {
         return Platform.OS === 'web'
@@ -15,6 +15,11 @@ const LOCAL_CONFIG = {
         return Platform.OS === 'web'
             ? `http://${this.DOMAIN}/veeru/backend`
             : `http://${this.SERVER_IP}/veeru/backend`;
+    },
+    get ROOT_URL() {
+        return Platform.OS === 'web'
+            ? `http://${this.DOMAIN}/veeru`
+            : `http://${this.SERVER_IP}/veeru`;
     }
 };
 
@@ -32,8 +37,8 @@ const RAILWAY_CONFIG = {
 // ========================================
 
 // Export the configuration you want to use
-const config = RAILWAY_CONFIG; // ✅ Production - Railway (works on 4G/mobile data)
-// const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (switch back when on same WiFi as PC)
+// const config = RAILWAY_CONFIG; // ✅ Production - Railway (works on 4G/mobile data)
+const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (switch back when on same WiFi as PC)
 
 export default config;
 

@@ -42,18 +42,43 @@ try {
     // 2. Signature Valid -> Update Database
     $conn = $pdo;
 
-    // A. Update Transaction Status
+    // A. Verify the transaction and get plan_id
+    $txStmt = $conn->prepare("SELECT plan_id FROM transactions WHERE order_id = ? AND status = 'created'");
+    $txStmt->execute([$razorpayOrderId]);
+    $transaction = $txStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$transaction) {
+        throw new Exception("Transaction not found or already processed.");
+    }
+    
+    $planId = $transaction['plan_id'];
+
+    // B. Fetch plan duration
+    $planStmt = $conn->prepare("SELECT duration_days FROM subscriptions WHERE plan_id = ?");
+    $planStmt->execute([$planId]);
+    $plan = $planStmt->fetch(PDO::FETCH_ASSOC);
+    $durationDays = $plan ? (int)$plan['duration_days'] : 30; // Fallback to 30 days if somehow missing
+
+    // C. Update Transaction Status
     $stmt = $conn->prepare("UPDATE transactions SET payment_id = ?, status = 'success' WHERE order_id = ?");
     $stmt->execute([$razorpayPaymentId, $razorpayOrderId]);
 
-    // B. Activate Subscription for User (Unlimited AI)
-    // Set status to 'active' and maybe set expiry to +30 days (optional, here just active)
-    $stmt2 = $conn->prepare("UPDATE users SET subscription_status = 'active', subscription_expiry = DATE_ADD(NOW(), INTERVAL 30 DAY) WHERE user_id = ?");
-    $stmt2->execute([$userId]);
+    // D. Activate Subscription for User (Dynamic Expiry)
+    // If the user already has an active subscription in the future, append to it. Otherwise, start from NOW().
+    $stmt2 = $conn->prepare("
+        UPDATE users 
+        SET subscription_status = 'active', 
+            subscription_expiry = CASE 
+                WHEN subscription_expiry > NOW() THEN DATE_ADD(subscription_expiry, INTERVAL ? DAY)
+                ELSE DATE_ADD(NOW(), INTERVAL ? DAY)
+            END 
+        WHERE user_id = ?
+    ");
+    $stmt2->execute([$durationDays, $durationDays, $userId]);
 
     echo json_encode([
         "status" => "success",
-        "message" => "Payment Verified & Subscription Activated"
+        "message" => "Payment Verified & Subscription Activated for " . $durationDays . " days"
     ]);
 
 } catch (Exception $e) {

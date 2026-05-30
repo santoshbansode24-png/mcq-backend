@@ -2,13 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, Text, StyleSheet, SectionList, ActivityIndicator, 
     TouchableOpacity, Linking, Image, TextInput, Alert,
-    RefreshControl 
+    RefreshControl, Platform 
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
 import { BASE_URL, API_URL } from '../api/config';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as FileSystem from 'expo-file-system';
 
 const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const { theme, isDarkMode } = useTheme();
@@ -166,6 +170,66 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         return groups;
     };
 
+    const createHTML = (mcqs, short, long, subjectTitle, currentMarks, schoolName, date) => {
+        let mcqSection = "", shortSection = "", longSection = "";
+
+        if (mcqs && mcqs.length > 0) {
+            mcqSection += `<h3>Section A: Multiple Choice Questions (1 Mark each)</h3><ol>`;
+            mcqs.forEach(q => {
+                mcqSection += `<li class="question-item"><div class="question-text">${q.question || q.question_text}</div><div class="options-grid"><div class="option">(A) ${q.option_a}</div><div class="option">(B) ${q.option_b}</div><div class="option">(C) ${q.option_c}</div><div class="option">(D) ${q.option_d}</div></div></li>`;
+            });
+            mcqSection += `</ol>`;
+        }
+
+        if (short && short.length > 0) {
+            shortSection += `<h3>Section B: Short Answer Questions (2 Marks each)</h3><ol>`;
+            short.forEach(q => {
+                const qText = q.question_front || q.question || q.front || "Question";
+                shortSection += `<li class="question-item"><div class="question-text">${q.isCustom ? '<span style="color:#C026D3;">[Custom]</span> ' : ''}${qText}</div><br/><br/><br/></li>`;
+            });
+            shortSection += `</ol>`;
+        }
+
+        if (long && long.length > 0) {
+            longSection += `<h3>Section C: Long Answer Questions (5 Marks each)</h3><ol>`;
+            long.forEach((q) => {
+                longSection += `<li class="question-item"><div class="question-text">${q.q}</div><br/><br/><br/><br/><br/></li>`;
+            });
+            longSection += `</ol>`;
+        }
+
+        return `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+            <style>
+              @page { margin: 70px 80px; }
+              body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; line-height: 1.6; }
+              .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 35px; }
+              .header h1 { margin: 0; font-size: 26px; color: #4A00E0; text-transform: uppercase; }
+              .header h2 { margin: 5px 0; font-size: 18px; color: #333; }
+              .details { display: flex; justify-content: space-between; margin-bottom: 35px; font-weight: bold; border: 1px solid #ddd; padding: 12px 15px; font-size: 15px; }
+              h3 { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 35px; margin-bottom: 20px; color: #444; font-size: 18px; }
+              .question-item { margin-bottom: 20px; page-break-inside: avoid; }
+              .question-text { font-weight: 500; font-size: 16px; }
+              .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 14px; }
+              .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; color: rgba(0,0,0,0.03); z-index: -1; }
+            </style>
+          </head>
+          <body>
+            <div class="watermark">${schoolName || 'VEERU APP'}</div>
+            <div class="header">
+              <h2>${schoolName || 'VEERU APP'}</h2>
+              <h1>WORKSHEET</h1>
+              <p>Subjects: ${subjectTitle}</p>
+            </div>
+            <div class="details"><span>Name: ____________________</span><span>Date: ${date || new Date().toLocaleDateString()}</span><span>Total Marks: ${Math.round(currentMarks)}</span></div>
+            ${mcqSection + shortSection + longSection}
+          </body>
+        </html>
+        `;
+    };
+
     const groupedData = groupNotifications(notifications);
 
     const renderItem = useCallback(({ item }) => {
@@ -177,11 +241,61 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const isWorksheet = item.update_type === 'worksheet';
         const isLiveClass = item.update_type === 'live_class';
 
+        // Check if the message is actually a JSON Payload for client-side rendering
+        let displayMessage = item.message;
+        let htmlPayload = null;
+        if (item.message && item.message.includes('JSON_PAYLOAD:')) {
+            try {
+                // Find exactly where the payload begins
+                const payloadIndex = item.message.indexOf('JSON_PAYLOAD:');
+                const jsonStartIndex = item.message.indexOf('{', payloadIndex);
+                const jsonEndIndex = item.message.lastIndexOf('}');
+                
+                if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+                    const jsonStr = item.message.substring(jsonStartIndex, jsonEndIndex + 1);
+                    const payloadData = JSON.parse(jsonStr);
+                    
+                    displayMessage = payloadData.textMessage || 'New Worksheet Available';
+                    
+                    if (payloadData.type === 'worksheet_data' && payloadData.data) {
+                        const d = payloadData.data;
+                        htmlPayload = createHTML(d.mcqs, d.short, d.long, payloadData.subjectNames, d.totalMarks, d.schoolName, d.date);
+                    } else if (payloadData.html) {
+                        htmlPayload = payloadData.html;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse JSON_PAYLOAD", e);
+                // Fallback to a clean message if parsing fails so the user doesn't see raw JSON
+                displayMessage = "New Worksheet Available (Update your app to view)";
+            }
+        }
+
         const openAttachment = () => {
             if (hasFile) {
                 const fileUrl = item.payload.file_url || item.payload.url;
                 const url = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}/${fileUrl}`;
                 Linking.openURL(url);
+            }
+        };
+
+        const generateAndOpenLocalPdf = async () => {
+            if (!htmlPayload) return;
+            try {
+                const fileUri = `${FileSystem.cacheDirectory}worksheet_${item.id}.pdf`;
+                const fileInfo = await FileSystem.getInfoAsync(fileUri);
+                let uriToOpen = fileUri;
+
+                // Only generate the PDF if it hasn't been generated yet
+                if (!fileInfo.exists) {
+                    const { uri } = await Print.printToFileAsync({ html: htmlPayload });
+                    await FileSystem.moveAsync({ from: uri, to: fileUri });
+                }
+                
+                await Sharing.shareAsync(uriToOpen, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: 'Open Worksheet' });
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                Alert.alert('Error', 'Failed to open PDF worksheet.');
             }
         };
 
@@ -201,8 +315,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 isPdf ? "file-pdf-box" : 
                                 isPhoto ? "image" : 
                                 isExam ? "timer-outline" : 
+                                (htmlPayload || isWorksheet) ? "file-document-edit-outline" :
                                 isHomework ? "home-edit-outline" : 
-                                isWorksheet ? "file-document-edit-outline" : 
                                 isLiveClass ? "youtube-tv" : "bell-outline"
                             } 
                             size={22} 
@@ -210,8 +324,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 isPdf ? "#EF4444" : 
                                 isPhoto ? "#10B981" : 
                                 isExam ? "#D97706" : 
+                                (htmlPayload || isWorksheet) ? "#8B5CF6" :
                                 isHomework ? "#0EA5E9" : 
-                                isWorksheet ? "#8B5CF6" : 
                                 isLiveClass ? "#E11D48" : "#6366F1"
                             }
                         />
@@ -219,9 +333,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     <View style={styles.titleContainer}>
                         <View style={styles.typeRow}>
                             <Text style={[styles.typeTag, { 
-                                color: isExam ? '#D97706' : isHomework ? '#0EA5E9' : isLiveClass ? '#E11D48' : '#94a3b8' 
+                                color: isExam ? '#D97706' : (htmlPayload || isWorksheet) ? '#8B5CF6' : isHomework ? '#0EA5E9' : isLiveClass ? '#E11D48' : '#94a3b8' 
                             }]}>
-                                {isLiveClass ? '🔴 LIVE CLASS' : (item.update_type?.toUpperCase() || 'ANNOUNCEMENT')}
+                                {isLiveClass ? '🔴 LIVE CLASS' : ((htmlPayload ? 'WORKSHEET' : item.update_type?.toUpperCase()) || 'ANNOUNCEMENT')}
                             </Text>
                             <Text style={styles.date}>{formatDate(item.created_at)}</Text>
                         </View>
@@ -230,7 +344,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 </View>
 
                 <View style={styles.cardBody}>
-                    <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
+                    <Text style={[styles.message, { color: theme.textSecondary }]}>{displayMessage}</Text>
                     
                     {isLiveClass && (
                         <TouchableOpacity 
@@ -258,13 +372,23 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                         </TouchableOpacity>
                     )}
 
-                    {isHomework && (
+                    {isHomework && !htmlPayload && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#0EA5E9' }]} 
                             onPress={() => Alert.alert("Homework", "Opening homework details...")}
                         >
                             <MaterialCommunityIcons name="clipboard-text" size={20} color="white" />
                             <Text style={styles.actionButtonText}>View Homework</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {htmlPayload && (
+                        <TouchableOpacity 
+                            style={[styles.actionButton, { backgroundColor: '#8B5CF6' }]} 
+                            onPress={generateAndOpenLocalPdf}
+                        >
+                            <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="white" />
+                            <Text style={styles.actionButtonText}>Generate & View Worksheet</Text>
                         </TouchableOpacity>
                     )}
 
@@ -311,7 +435,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                         Alert.alert("Select a Class", "Please select a specific subject from the chips below to chat with its teacher.");
                                         return;
                                     }
-                                    navigation.navigate('Chat', { userId: user.user_id, classId: selectedClassId });
+                                    navigation.navigate('Chat', { userId: user?.user_id || user?.id, classId: selectedClassId });
                                 }}
                             >
                                 <MaterialCommunityIcons name="chat" size={18} color="#FFF" />

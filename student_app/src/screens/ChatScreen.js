@@ -26,7 +26,24 @@ export default function ChatScreen({ route, navigation }) {
             setLoading(false);
             return;
         }
-        loadData();
+        
+        let intervalId;
+        
+        const initChat = async () => {
+            const data = await loadData();
+            if (data && data.tId && data.code) {
+                // Start polling after initial load
+                intervalId = setInterval(() => {
+                    fetchMessages(data.tId, data.code);
+                }, 3000);
+            }
+        };
+        
+        initChat();
+        
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [userId, classId]);
 
     const loadData = async () => {
@@ -47,8 +64,10 @@ export default function ChatScreen({ route, navigation }) {
 
             // 2. Fetch Messages
             await fetchMessages(teacherData.teacher_id, currentClassCode);
+            return { tId: teacherData.teacher_id, code: currentClassCode };
         } catch (error) {
             console.error('Error loading chat:', error);
+            return null;
         } finally {
             setLoading(false);
         }

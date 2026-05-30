@@ -2,7 +2,7 @@
 NIXPACKS_PHP_VERSION = '8.2.27'
 
 [phases.install]
-cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx", "rm -f composer.lock", "composer update --no-interaction --ignore-platform-reqs"]
+cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx", "cd backend && rm -f composer.lock", "cd backend && composer update --no-interaction --ignore-platform-reqs"]
 
 [phases.build]
-cmds = ["composer update --no-interaction --prefer-dist --optimize-autoloader"]
+cmds = ["cd backend && composer update --no-interaction --prefer-dist --optimize-autoloader"]

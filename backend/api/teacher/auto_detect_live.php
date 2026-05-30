@@ -6,7 +6,12 @@
  */
 
 require_once '../../config/db.php';
-require_once '../../config/secrets.php';
+if (file_exists('../../config/secrets.php')) {
+    require_once '../../config/secrets.php';
+}
+if (!defined('GEMINI_API_KEY')) {
+    define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: '');
+}
 require_once '../cors_middleware.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

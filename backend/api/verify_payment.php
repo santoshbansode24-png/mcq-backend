@@ -5,7 +5,13 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 require_once '../vendor/autoload.php';
-require_once '../config/secrets.php';
+if (file_exists('../config/secrets.php')) {
+    require_once '../config/secrets.php';
+}
+
+if (!defined('RAZORPAY_KEY_SECRET')) {
+    define('RAZORPAY_KEY_SECRET', getenv('RAZORPAY_KEY_SECRET') ?: '');
+}
 require_once '../config/db.php';
 
 use Razorpay\Api\Api;

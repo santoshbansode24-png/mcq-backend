@@ -16,7 +16,8 @@ try {
     $teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : 0;
     $class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : 0;
     $title = isset($_POST['title']) ? sanitizeInput($_POST['title']) : '';
-    $message = isset($_POST['message']) ? sanitizeInput($_POST['message']) : '';
+    $raw_message = isset($_POST['message']) ? trim($_POST['message']) : '';
+    $message = sanitizeInput($raw_message);
     $update_type = isset($_POST['update_type']) ? sanitizeInput($_POST['update_type']) : 'homework';
 
     if ($teacher_id <= 0 || $class_id <= 0) {
@@ -93,10 +94,10 @@ try {
     }
 
     // Extract JSON_PAYLOAD from message if present to prevent truncation in TEXT column
-    if (strpos($message, 'JSON_PAYLOAD:') !== false) {
-        $jsonStart = strpos($message, '{');
+    if (strpos($raw_message, 'JSON_PAYLOAD:') !== false) {
+        $jsonStart = strpos($raw_message, '{');
         if ($jsonStart !== false) {
-            $jsonStr = substr($message, $jsonStart);
+            $jsonStr = substr($raw_message, $jsonStart);
             $parsedJson = json_decode($jsonStr, true);
             if ($parsedJson) {
                 // Merge into payloadData

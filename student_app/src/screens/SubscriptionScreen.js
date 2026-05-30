@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StatusBar, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StatusBar, Platform, TextInput, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import RazorpayCheckout from 'react-native-razorpay';
 import { useTheme } from '../context/ThemeContext';
@@ -12,6 +12,11 @@ const SubscriptionScreen = ({ navigation }) => {
     const [buying, setBuying] = useState(false);
     const [plans, setPlans] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
+    
+    // Coupon State
+    const [couponCode, setCouponCode] = useState('');
+    const [applyingCoupon, setApplyingCoupon] = useState(false);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
 
     useEffect(() => {
         if (ENABLE_PAYMENTS) {
@@ -37,7 +42,54 @@ const SubscriptionScreen = ({ navigation }) => {
         }
     };
 
-    // If payments are disabled, show "Coming Soon" or redirect
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) {
+            Alert.alert("Error", "Please enter a coupon code");
+            return;
+        }
+        if (!selectedPlanId) return;
+
+        Keyboard.dismiss();
+        setApplyingCoupon(true);
+        try {
+            const userDataStr = await AsyncStorage.getItem('user_data');
+            const user = userDataStr ? JSON.parse(userDataStr) : null;
+            const userId = user ? user.user_id : 0;
+
+            const response = await fetch(`${config.API_URL}/verify_coupon.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    coupon_code: couponCode.trim(),
+                    plan_id: selectedPlanId,
+                    user_id: userId
+                })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                setAppliedCoupon({
+                    code: couponCode.trim(),
+                    discount: data.discount_amount,
+                    finalPrice: data.final_price
+                });
+                Alert.alert("Success", `Coupon applied! You save ₹${data.discount_amount}`);
+            } else {
+                setAppliedCoupon(null);
+                Alert.alert("Invalid Coupon", data.message);
+            }
+        } catch (error) {
+            Alert.alert("Error", "Could not verify coupon");
+        } finally {
+            setApplyingCoupon(false);
+        }
+    };
+
+    const clearCoupon = () => {
+        setCouponCode('');
+        setAppliedCoupon(null);
+    };
+
     if (!ENABLE_PAYMENTS) {
         return (
             <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
@@ -75,29 +127,42 @@ const SubscriptionScreen = ({ navigation }) => {
                 return;
             }
 
-            // 1. Create Order on Backend using plan_id
             const response = await fetch(`${config.API_URL}/create_order.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: userId,
-                    plan_id: selectedPlanId
+                    plan_id: selectedPlanId,
+                    coupon_code: appliedCoupon ? appliedCoupon.code : ''
                 })
             });
 
             const data = await response.json();
 
+            // Handle Free Coupon Success instantly
+            if (data.status === 'success_free') {
+                try {
+                    const userDataObj = JSON.parse(await AsyncStorage.getItem('user_data'));
+                    userDataObj.subscription_status = 'active';
+                    await AsyncStorage.setItem('user_data', JSON.stringify(userDataObj));
+                } catch(e) {}
+                setBuying(false);
+                Alert.alert("Success!", "100% Free Coupon Applied! Welcome to Premium!", [
+                    { text: "OK", onPress: () => navigation.navigate('Main') }
+                ]);
+                return;
+            }
+
             if (data.status !== 'success') {
                 throw new Error(data.message || "Failed to create order");
             }
 
-            // 2. Open Razorpay Checkout
             const options = {
                 description: 'Premium Subscription',
-                image: 'https://i.imgur.com/3g7nmJC.png', // Replace with your logo URL
+                image: 'https://i.imgur.com/3g7nmJC.png',
                 currency: 'INR',
                 key: data.key_id,
-                amount: Math.round(data.amount * 100), // Amount is in paise from backend, rounded for safety
+                amount: Math.round(data.amount * 100),
                 name: 'Veeru App',
                 order_id: data.order_id,
                 prefill: {
@@ -109,11 +174,9 @@ const SubscriptionScreen = ({ navigation }) => {
             };
 
             RazorpayCheckout.open(options).then(async (checkoutData) => {
-                // 3. Payment Success -> Verify on Backend
                 verifyPayment(checkoutData, userId);
             }).catch((error) => {
-                // Payment Cancelled or Failed
-                Alert.alert("Payment Cancelled", `Error: ${error.description}`);
+                Alert.alert("Payment Cancelled", `Error: ${error.description || 'User cancelled'}`);
                 setBuying(false);
             });
 
@@ -137,11 +200,18 @@ const SubscriptionScreen = ({ navigation }) => {
                 })
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch(e) {
+                // If JSON parsing fails (PHP warning HTML output, etc)
+                throw new Error("Server returned an invalid response. Please contact support.");
+            }
+
             setBuying(false);
 
             if (data.status === 'success') {
-                // Update local storage so premium unlocks immediately without restart
                 try {
                     const userDataStr = await AsyncStorage.getItem('user_data');
                     if (userDataStr) {
@@ -157,11 +227,11 @@ const SubscriptionScreen = ({ navigation }) => {
                     { text: "OK", onPress: () => navigation.navigate('Main') }
                 ]);
             } else {
-                Alert.alert("Verification Failed", data.message);
+                Alert.alert("Verification Failed", data.message || "Invalid signature");
             }
         } catch (error) {
             setBuying(false);
-            Alert.alert("Error", "Payment verification failed. Please contact support.");
+            Alert.alert("Error", error.message || "Payment verification failed. Please contact support.");
         }
     };
 
@@ -172,6 +242,11 @@ const SubscriptionScreen = ({ navigation }) => {
             </View>
         );
     }
+
+    // Get current plan price
+    const currentPlan = plans.find(p => p.plan_id === selectedPlanId);
+    const originalPrice = currentPlan ? parseFloat(currentPlan.price) : 0;
+    const finalPrice = appliedCoupon ? appliedCoupon.finalPrice : originalPrice;
 
     return (
         <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.background }]}>
@@ -189,7 +264,10 @@ const SubscriptionScreen = ({ navigation }) => {
                     <TouchableOpacity 
                         key={plan.plan_id}
                         style={[styles.card, { borderColor: isSelected ? theme.primary : 'rgba(0,0,0,0.1)' }]}
-                        onPress={() => setSelectedPlanId(plan.plan_id)}
+                        onPress={() => {
+                            setSelectedPlanId(plan.plan_id);
+                            clearCoupon(); // Reset coupon when plan changes
+                        }}
                         activeOpacity={0.8}
                     >
                         {isSelected && (
@@ -210,12 +288,54 @@ const SubscriptionScreen = ({ navigation }) => {
                 );
             })}
 
+            <View style={styles.couponContainer}>
+                <Text style={[styles.couponLabel, { color: theme.textSecondary }]}>Have a Promo Code?</Text>
+                
+                {!appliedCoupon ? (
+                    <View style={styles.couponInputRow}>
+                        <TextInput
+                            style={[styles.couponInputOpt, { 
+                                borderColor: theme.border || 'rgba(0,0,0,0.2)',
+                                color: theme.text,
+                                backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'
+                            }]}
+                            placeholder="Enter Coupon Code"
+                            placeholderTextColor={theme.textSecondary}
+                            value={couponCode}
+                            onChangeText={setCouponCode}
+                            autoCapitalize="characters"
+                        />
+                        <TouchableOpacity 
+                            style={[styles.applyBtn, { backgroundColor: theme.primary }]}
+                            onPress={handleApplyCoupon}
+                            disabled={applyingCoupon}
+                        >
+                            {applyingCoupon ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.applyBtnText}>Apply</Text>}
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={[styles.appliedCouponBox, { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: '#22c55e' }]}>
+                        <View>
+                            <Text style={{ color: '#22c55e', fontWeight: 'bold' }}>{appliedCoupon.code} APPLIED</Text>
+                            <Text style={{ color: theme.textSecondary, fontSize: 12 }}>You saved ₹{appliedCoupon.discount}</Text>
+                        </View>
+                        <TouchableOpacity onPress={clearCoupon}>
+                            <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
+
             <TouchableOpacity
                 style={[styles.buyBtn, { backgroundColor: theme.primary, opacity: buying ? 0.7 : 1, marginTop: 10 }]}
                 onPress={buySubscription}
                 disabled={buying || plans.length === 0}
             >
-                {buying ? <ActivityIndicator color="white" /> : <Text style={styles.buyBtnText}>Buy Premium Now</Text>}
+                {buying ? (
+                    <ActivityIndicator color="white" />
+                ) : (
+                    <Text style={styles.buyBtnText}>Pay ₹{finalPrice}</Text>
+                )}
             </TouchableOpacity>
         </ScrollView>
     );
@@ -260,6 +380,49 @@ const styles = StyleSheet.create({
     price: { fontSize: 36, fontWeight: 'bold', marginBottom: 20, fontFamily: 'NotoSans-Bold' },
     features: { width: '100%', marginBottom: 10 },
     featureItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+    couponContainer: {
+        width: '100%',
+        marginBottom: 20,
+        marginTop: 5
+    },
+    couponLabel: {
+        fontSize: 14,
+        marginBottom: 8,
+        fontWeight: 'bold',
+    },
+    couponInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    couponInputOpt: {
+        flex: 1,
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 15,
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginRight: 10
+    },
+    applyBtn: {
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    applyBtnText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 16
+    },
+    appliedCouponBox: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 15,
+    },
     buyBtn: {
         width: '100%',
         padding: 15,
@@ -278,3 +441,4 @@ const styles = StyleSheet.create({
 });
 
 export default SubscriptionScreen;
+

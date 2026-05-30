@@ -282,7 +282,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const generateAndOpenLocalPdf = async () => {
             if (!htmlPayload) return;
             try {
-                const fileUri = `${FileSystem.cacheDirectory}worksheet_${item.id}.pdf`;
+                const fileUri = `${FileSystem.cacheDirectory}worksheet_${item.notification_id || item.id}.pdf`;
                 const fileInfo = await FileSystem.getInfoAsync(fileUri);
                 let uriToOpen = fileUri;
 
@@ -292,7 +292,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     await FileSystem.moveAsync({ from: uri, to: fileUri });
                 }
                 
-                await Sharing.shareAsync(uriToOpen, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: 'Open Worksheet' });
+                navigation.navigate('PDFViewer', { url: uriToOpen, title: item.title || 'Worksheet' });
             } catch (error) {
                 console.error('Error generating PDF:', error);
                 Alert.alert('Error', 'Failed to open PDF worksheet.');

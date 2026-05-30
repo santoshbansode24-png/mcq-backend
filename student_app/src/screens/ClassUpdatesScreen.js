@@ -244,30 +244,43 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         // Check if the message is actually a JSON Payload for client-side rendering
         let displayMessage = item.message;
         let htmlPayload = null;
-        if (item.message && item.message.includes('JSON_PAYLOAD:')) {
-            try {
-                // Find exactly where the payload begins
-                const payloadIndex = item.message.indexOf('JSON_PAYLOAD:');
-                const jsonStartIndex = item.message.indexOf('{', payloadIndex);
-                const jsonEndIndex = item.message.lastIndexOf('}');
-                
-                if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
-                    const jsonStr = item.message.substring(jsonStartIndex, jsonEndIndex + 1);
-                    const payloadData = JSON.parse(jsonStr);
-                    
-                    displayMessage = payloadData.textMessage || 'New Worksheet Available';
-                    
-                    if (payloadData.type === 'worksheet_data' && payloadData.data) {
-                        const d = payloadData.data;
-                        htmlPayload = createHTML(d.mcqs, d.short, d.long, payloadData.subjectNames, d.totalMarks, d.schoolName, d.date);
-                    } else if (payloadData.html) {
-                        htmlPayload = payloadData.html;
-                    }
+        let payloadData = null;
+
+        try {
+            // First, try reading from the actual LONGTEXT payload column (new method)
+            if (item.payload) {
+                const parsedPayload = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+                if (parsedPayload && parsedPayload.type === 'worksheet_data') {
+                    payloadData = parsedPayload;
                 }
-            } catch (e) {
-                console.error("Failed to parse JSON_PAYLOAD", e);
-                // Fallback to a clean message if parsing fails so the user doesn't see raw JSON
-                displayMessage = "New Worksheet Available (Update your app to view)";
+            }
+
+            // Fallback: If not in payload, check if it's stuffed in message (old method)
+            if (!payloadData && item.message && item.message.includes('JSON_PAYLOAD:')) {
+                const jsonStr = item.message.substring(item.message.indexOf('{')).trim();
+                if (jsonStr.startsWith('{')) {
+                    payloadData = JSON.parse(jsonStr);
+                }
+            }
+            
+            // If we successfully found and parsed the payload
+            if (payloadData) {
+                displayMessage = payloadData.textMessage || 'New Worksheet Available';
+                
+                if (payloadData.type === 'worksheet_data' && payloadData.data) {
+                    const d = payloadData.data;
+                    htmlPayload = createHTML(d.mcqs, d.short, d.long, payloadData.subjectNames, d.totalMarks, d.schoolName, d.date);
+                } else if (payloadData.html) {
+                    htmlPayload = payloadData.html;
+                }
+            } else if (item.message && item.message.includes('JSON_PAYLOAD:')) {
+                // If it looks like a payload but failed to parse (e.g. truncated DB row)
+                displayMessage = "New Worksheet Available";
+            }
+        } catch (e) {
+            console.error("Failed to parse worksheet payload", e);
+            if (item.message && item.message.includes('JSON_PAYLOAD:')) {
+                displayMessage = "New Worksheet Available";
             }
         }
 

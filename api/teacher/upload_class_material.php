@@ -86,8 +86,28 @@ try {
         }
     }
 
-    // Insert into class_updates
-    $payload = $attachment_url ? json_encode(['attachment_url' => $attachment_url]) : json_encode([]);
+    // Process payload
+    $payloadData = [];
+    if ($attachment_url) {
+        $payloadData['attachment_url'] = $attachment_url;
+    }
+
+    // Extract JSON_PAYLOAD from message if present to prevent truncation in TEXT column
+    if (strpos($message, 'JSON_PAYLOAD:') !== false) {
+        $jsonStart = strpos($message, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($message, $jsonStart);
+            $parsedJson = json_decode($jsonStr, true);
+            if ($parsedJson) {
+                // Merge into payloadData
+                $payloadData = array_merge($payloadData, $parsedJson);
+            }
+            // Clear message or set to a fallback
+            $message = "New Worksheet Available";
+        }
+    }
+
+    $payload = json_encode($payloadData);
     
     try {
         $stmt = $pdo->prepare("

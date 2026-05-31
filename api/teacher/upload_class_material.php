@@ -110,6 +110,12 @@ try {
         }
     }
 
+    // Support direct payload array from POST (new method)
+    $postPayload = isset($_POST['payload']) ? json_decode($_POST['payload'], true) : null;
+    if (is_array($postPayload)) {
+        $payloadData = array_merge($payloadData, $postPayload);
+    }
+
     $payload = json_encode($payloadData);
     
     try {
@@ -125,7 +131,7 @@ try {
         // If strict mode rejects 'worksheet', fallback to 'material' instead of altering table
         if (strpos($e->getMessage(), 'update_type') !== false || strpos($e->getMessage(), 'ENUM') !== false || strpos($e->getMessage(), 'Data truncated') !== false) {
             try {
-                $update_type = 'pdf'; // Fallback to 'pdf' as it is almost always supported in older schemas
+                $update_type = 'material'; // Fallback to 'material' instead of 'pdf' so it shows up in worksheets tab
                 $stmt = $pdo->prepare("
                     INSERT INTO class_updates (class_id, teacher_id, school_name, title, message, payload, update_type, created_at) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())

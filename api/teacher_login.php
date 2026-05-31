@@ -61,24 +61,8 @@ try {
         sendResponse('error', 'Invalid email or password', null, 401);
     }
     
-    // Check School Subscription Status
-    $schoolStmt = $pdo->prepare("
-        SELECT u.school_id, s.valid_until, s.school_name 
-        FROM users u
-        LEFT JOIN school_subscriptions s ON u.school_id = s.school_id 
-        WHERE u.user_id = ?
-    ");
-    $schoolStmt->execute([$user['user_id']]);
-    $schoolSub = $schoolStmt->fetch();
-
-    if (!$schoolSub['school_id'] || empty($schoolSub['valid_until'])) {
-        sendResponse('error', "Your account is not linked to an active school subscription.", null, 403);
-    } else {
-        $expiry_timestamp = strtotime($schoolSub['valid_until'] . ' 23:59:59');
-        if ($expiry_timestamp < time()) {
-            sendResponse('error', "Your school's subscription (" . $schoolSub['school_name'] . ") expired on " . $schoolSub['valid_until'] . ".", null, 403);
-        }
-    }
+    // School name is retrieved directly from the users table.
+    // Teacher app is free, so we no longer block them based on school_subscriptions.
     
     // Remove password from response
     unset($user['password']);

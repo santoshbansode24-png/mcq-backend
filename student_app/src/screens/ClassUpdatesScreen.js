@@ -200,7 +200,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const tabData = useMemo(() => notifications.filter(item => {
         if (isEventActive(item)) return false; // Already shown in Active Sessions at top
         
-        const isWksht = item.update_type === 'worksheet' || (item.message && item.message.includes('JSON_PAYLOAD:'));
+        const isWksht = item.update_type === 'worksheet' || item.update_type === 'material' || (item.message && item.message.includes('JSON_PAYLOAD:'));
         const isLive = item.update_type === 'live_class' || item.update_type === 'live_exam';
 
         if (activeTab === 'Worksheets') {
@@ -281,7 +281,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const isPhoto = item.update_type === 'photo';
         const isExam = item.update_type === 'live_exam';
         const isHomework = item.update_type === 'homework';
-        const isWorksheet = item.update_type === 'worksheet';
+        const isWorksheet = item.update_type === 'worksheet' || item.update_type === 'material';
         const isLiveClass = item.update_type === 'live_class';
 
         // Check if the message is actually a JSON Payload for client-side rendering

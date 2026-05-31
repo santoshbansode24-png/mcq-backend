@@ -21,7 +21,7 @@ const NotificationsScreen = ({ user, navigation }) => {
                     if (item.message && item.message.includes('JSON_PAYLOAD:')) return false;
                     
                     // Exclude specific class material types
-                    const classTypes = ['pdf', 'photo', 'worksheet', 'homework', 'live_class'];
+                    const classTypes = ['pdf', 'photo', 'worksheet', 'homework', 'live_class', 'material'];
                     if (classTypes.includes(item.update_type)) return false;
                     
                     // If it has a teacher_name, it's usually a class-specific announcement

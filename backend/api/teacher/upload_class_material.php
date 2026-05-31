@@ -37,7 +37,8 @@ try {
     sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
 }
 
-$payload = [];
+$payload = isset($_POST['payload']) ? json_decode($_POST['payload'], true) : [];
+if (!is_array($payload)) $payload = [];
 
 // 2. Handle File Upload if present
 if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
@@ -102,7 +103,7 @@ try {
     // If strict mode rejects 'worksheet', fallback to 'material' instead of altering table
     if (strpos($e->getMessage(), 'update_type') !== false || strpos($e->getMessage(), 'ENUM') !== false || strpos($e->getMessage(), 'Data truncated') !== false) {
         try {
-            $update_type = 'pdf'; // Fallback to 'pdf' instead of material
+            $update_type = 'material'; // Fallback to 'material'
             $stmt->execute([
                 $teacher_id,
                 $school_name,

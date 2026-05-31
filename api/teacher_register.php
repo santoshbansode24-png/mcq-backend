@@ -1,6 +1,6 @@
 <?php
 /**
- * Teacher Registration API (with Access Code)
+ * Teacher Registration API (Open Registration with School Name)
  * Veeru
  */
 
@@ -16,7 +16,7 @@ if (!$input) {
     $input = $_POST;
 }
 
-$required = ['name', 'email', 'password', 'access_code'];
+$required = ['name', 'email', 'password', 'school_name'];
 $missing = validateRequired($input, $required);
 
 if (!empty($missing)) {
@@ -26,7 +26,7 @@ if (!empty($missing)) {
 $name = sanitizeInput($input['name']);
 $email = sanitizeInput($input['email']);
 $password = $input['password'];
-$access_code = strtoupper(trim(sanitizeInput($input['access_code'])));
+$school_name = sanitizeInput($input['school_name']);
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     sendResponse('error', 'Invalid email format', null, 400);
@@ -36,48 +36,21 @@ if (strlen($password) < 6) {
 }
 
 try {
-    // 1. Validate the Access Code
-    $codeStmt = $pdo->prepare("SELECT school_id, school_name, valid_until, max_teachers FROM school_subscriptions WHERE access_code = ?");
-    $codeStmt->execute([$access_code]);
-    $school = $codeStmt->fetch();
-
-    if (!$school) {
-        sendResponse('error', 'Invalid School Access Code.', null, 403);
-    }
-
-    // Set expiry to the end of the day (23:59:59) so they don't expire prematurely on the day of expiry
-    $expiry_timestamp = strtotime($school['valid_until'] . ' 23:59:59');
-    if ($expiry_timestamp < time()) {
-        sendResponse('error', "This school's subscription expired on " . $school['valid_until'] . ".", null, 403);
-    }
-
-    $school_id = $school['school_id'];
-    $school_name = $school['school_name'];
-
-    // Check teacher limit
-    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE school_id = ? AND user_type = 'teacher'");
-    $countStmt->execute([$school_id]);
-    $current_teachers = $countStmt->fetchColumn();
-
-    if ($school['max_teachers'] > 0 && $current_teachers >= $school['max_teachers']) {
-        sendResponse('error', 'Registration full: This school has reached its maximum number of authorized teachers.', null, 403);
-    }
-
-    // 2. Check if email already exists
+    // Check if email already exists
     $emailStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
     $emailStmt->execute([$email]);
     if ($emailStmt->fetch()) {
         sendResponse('error', 'Email is already registered.', null, 409);
     }
 
-    // 3. Register the Teacher
+    // Register the Teacher
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
     
     $insertStmt = $pdo->prepare("
-        INSERT INTO users (name, email, password, user_type, subscription_status, school_name, school_id, created_at)
-        VALUES (?, ?, ?, 'teacher', 'active', ?, ?, NOW())
+        INSERT INTO users (name, email, password, user_type, subscription_status, school_name, created_at)
+        VALUES (?, ?, ?, 'teacher', 'active', ?, NOW())
     ");
-    $insertStmt->execute([$name, $email, $hashedPassword, $school_name, $school_id]);
+    $insertStmt->execute([$name, $email, $hashedPassword, $school_name]);
     $user_id = $pdo->lastInsertId();
 
     sendResponse('success', 'Teacher account created successfully!', [

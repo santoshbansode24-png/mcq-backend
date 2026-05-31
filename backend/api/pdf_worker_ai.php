@@ -95,10 +95,10 @@ foreach ($jobs as $job) {
             throw new Exception("Failed to extract any text from the PDF. The file might be an empty image or corrupted.");
         }
 
-        // STEP 2: Chunking Logic (Exactly 5 Chunks for 20% Segments)
+        // STEP 2: Chunking Logic (Exactly 2 Chunks for 50% Segments)
         $words = explode(' ', $extractedText);
         $totalWords = count($words);
-        $totalChunks = 5;
+        $totalChunks = 2;
         
         $chunkSize = max(1, ceil($totalWords / $totalChunks));
         $chunks = array_chunk($words, $chunkSize);
@@ -154,6 +154,7 @@ foreach ($jobs as $job) {
         CRITICAL RULES:
         1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
         2. FORMAT: Return ONLY a valid JSON object. No markdown.
+        3. CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. If necessary, infer logical educational concepts. NEVER return an empty array for any category.
         
         SCHEMA:
         {
@@ -181,7 +182,8 @@ foreach ($jobs as $job) {
             try {
                 $aiResponse = callGeminiAPI($prompt, [
                     'temperature' => 0.3,
-                    'maxOutputTokens' => 8192
+                    'maxOutputTokens' => 8192,
+                    'responseMimeType' => 'application/json'
                 ]);
                 if (!empty($aiResponse)) break;
             } catch (Exception $e) {

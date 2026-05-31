@@ -113,6 +113,7 @@ try {
     CRITICAL RULES:
     1. STRICT NATIVE LANGUAGE MATCH: If the source text is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the source text is Hindi, output MUST be Hindi. If the source text is English, output MUST be English.
     2. FORMAT: Return ONLY a valid JSON object. No markdown wrappers.
+    3. CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. If necessary, infer logical educational concepts. NEVER return an empty array for any category.
     
     SCHEMA:
     {

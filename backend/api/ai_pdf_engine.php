@@ -67,17 +67,20 @@ try {
 
     sendProgress("Preparing Section Marker: Part $segment_index...", 25);
 
-    // COST OPTIMIZATION: Divide text into 5 segments (20% each)
-    $partStr = "Part $segment_index of 5";
-    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " 20% segment of the text.";
+    // COST OPTIMIZATION: Divide text into segments dynamically
+    $totalSegments = isset($job['total_chunks']) && intval($job['total_chunks']) > 0 ? intval($job['total_chunks']) : 2;
+    $percentage = round(100 / $totalSegments);
+    
+    $partStr = "Part $segment_index of $totalSegments";
+    $rangeHint = "FOCUS RANGE: You are processing the $segment_index" . ($segment_index==2?"nd":($segment_index==3?"rd":"th")) . " $percentage% segment of the text.";
 
     // VEERU LENS CONTENT ENGINE PROMPT
     $systemPrompt = "You are the 'Veeru Lens Content Engine.' Your task is to perform an exhaustive, line-by-line extraction of educational content (MCQs, Flashcards, and Notes) from a specific portion of the provided text.
 
 Operational Protocol:
 1. Zero-Loss Extraction: Do not summarize. If a sentence contains a fact, it must be converted into a learning artifact.
-2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific 20% slice to ensure maximum depth.
-3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned 20%.
+2. Context Awareness: You are currently processing SECTION MARKER: $partStr. $rangeHint Only process the text within this specific $percentage% slice to ensure maximum depth.
+3. Avoid Duplication: Do not repeat information or questions from previous sections. Focus ONLY on your assigned $percentage%.
 4. HIGH-VOLUME MANDATORY GENERATION: You MUST generate as many relevant MCQs, Flashcards, and Smart Notes as possible from the provided text. All three categories (mcqs, flashcards, and notes) are strictly mandatory and MUST be fully populated. Do not leave notes or any other section empty.
 5. 1:1 BALANCE RATIO: Maintain a strict 1:1 balance between MCQs and Flashcards. For every concept or fact you convert into a Flashcard, you must also generate a corresponding high-quality MCQ. They must be generated at the exact same level of abundance.
 
@@ -111,7 +114,11 @@ Output Format (Strict JSON):
     \"definitions\": [\"Def 1\", \"Def 2\"],
     \"key_facts\": [\"Fact 1\", \"Fact 2\"],
     \"core_concepts\": [\"Concept 1\", \"Concept 2\"]
-  }";
+  }
+}
+
+CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. If necessary, infer logical educational concepts. NEVER return an empty array for any category.
+";
 
     if (!empty($pdfBase64)) {
         $systemPrompt .= ",\n  \"full_text\": \"Exhaustive transcript of the ENTIRE document (Required since master text is missing)\"";
@@ -125,7 +132,7 @@ Constraints:
 - STRICT NATIVE LANGUAGE MATCH: If the source text is in Marathi, you MUST answer/generate in Marathi. If the source text is in Hindi, answer/generate in Hindi. Otherwise, answer in $language.";
 
     $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
-    Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific 20% segment.
+    Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific $percentage% segment.
     Maximize MCQ and flashcard count. Generate a card/question for EVERY SINGLE fact or concept. Do not stop after just one.
     DO NOT generate content from earlier or later parts of the text to avoid duplication.";
 
@@ -147,7 +154,7 @@ Constraints:
                 // --- TOKEN OPTIMIZATION: SLICE THE MASTER KNOWLEDGE ---
                 // Instead of sending 100,000 words, we only send the relevant chunk.
                 $totalLen = mb_strlen($extractedText);
-                $totalSegments = isset($job['total_chunks']) && intval($job['total_chunks']) > 0 ? intval($job['total_chunks']) : 5;
+                $totalSegments = isset($job['total_chunks']) && intval($job['total_chunks']) > 0 ? intval($job['total_chunks']) : 2;
                 $chunkSize = ceil($totalLen / $totalSegments);
                 
                 // Calculate start position with a 500-character overlap for context

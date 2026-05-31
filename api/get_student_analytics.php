@@ -15,9 +15,9 @@ try {
     // 1. Total Tests Taken & Average Score
     $statsQuery = "SELECT 
                     COUNT(*) as total_tests, 
-                    AVG(score) as avg_score,
-                    SUM(score) as total_points
-                   FROM mcq_scores 
+                    AVG(percentage) as avg_score,
+                    SUM(mcq_score) as total_points
+                   FROM student_progress 
                    WHERE user_id = ?";
     $stmt = $pdo->prepare($statsQuery);
     $stmt->execute([$user_id]);
@@ -26,9 +26,9 @@ try {
     // 2. Subject-wise Performance
     $subjectQuery = "SELECT 
                         s.subject_name, 
-                        AVG(ms.score) as avg_score,
-                        COUNT(ms.id) as tests_taken
-                     FROM mcq_scores ms
+                        AVG(ms.percentage) as avg_score,
+                        COUNT(ms.progress_id) as tests_taken
+                     FROM student_progress ms
                      JOIN chapters c ON ms.chapter_id = c.chapter_id
                      JOIN subjects s ON c.subject_id = s.subject_id
                      WHERE ms.user_id = ?
@@ -37,17 +37,17 @@ try {
     $stmt->execute([$user_id]);
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 3. Recent Activity (Last 5 tests)
+    // 3. Recent Activity (Last 50 tests)
     $recentQuery = "SELECT 
                       c.chapter_name, 
-                      ms.score, 
-                      ms.total_questions,
-                      ms.created_at
-                    FROM mcq_scores ms
+                      ms.mcq_score as score, 
+                      ms.total_mcq as total_questions,
+                      ms.completed_at as created_at
+                    FROM student_progress ms
                     JOIN chapters c ON ms.chapter_id = c.chapter_id
                     WHERE ms.user_id = ?
-                    ORDER BY ms.created_at DESC
-                    LIMIT 5";
+                    ORDER BY ms.completed_at DESC
+                    LIMIT 50";
     $stmt = $pdo->prepare($recentQuery);
     $stmt->execute([$user_id]);
     $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -14,10 +14,10 @@ try {
     $query = "SELECT 
                 u.user_id as id, 
                 u.name as full_name, 
-                SUM(ms.score) as total_score,
-                COUNT(ms.id) as tests_taken
+                SUM(ms.mcq_score) as total_score,
+                COUNT(ms.progress_id) as tests_taken
               FROM users u
-              JOIN mcq_scores ms ON u.user_id = ms.user_id
+              JOIN student_progress ms ON u.user_id = ms.user_id
               WHERE u.class_id = ? AND u.user_type = 'student'
               GROUP BY u.user_id
               ORDER BY total_score DESC

@@ -33,9 +33,14 @@ try {
         $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN class_code VARCHAR(10) DEFAULT NULL");
     }
 
-    // 2.5 Drop unique key to allow multiple divisions of the same class
+    // 2.5 Drop unique key and old foreign key to allow multiple divisions of the same class
     try {
         $pdo->exec("ALTER TABLE teacher_classes DROP INDEX unique_teacher_class");
+    } catch (PDOException $e) {
+        // Ignore
+    }
+    try {
+        $pdo->exec("ALTER TABLE teacher_classes DROP FOREIGN KEY teacher_classes_ibfk_1");
     } catch (PDOException $e) {
         // Ignore
     }

@@ -18,7 +18,7 @@ try {
     // We filter by class_id. Optional: filter by school_name if multiple schools use the same class_id.
     $stmt = $pdo->prepare("
         SELECT 
-            cu.update_id,
+            cu.id as update_id,
             cu.teacher_id,
             u.name as teacher_name,
             cu.update_type,

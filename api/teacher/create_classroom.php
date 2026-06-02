@@ -19,31 +19,7 @@ $class_id = intval($data['class_id']);
 $division_name = isset($data['division_name']) ? sanitizeInput($data['division_name']) : '';
 
 try {
-    // 1. Ensure schema supports division_name
-    try {
-        $pdo->query("SELECT division_name FROM teacher_classes LIMIT 1");
-    } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN division_name VARCHAR(50) DEFAULT NULL");
-    }
 
-    // 2. Ensure schema supports class_code
-    try {
-        $pdo->query("SELECT class_code FROM teacher_classes LIMIT 1");
-    } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE teacher_classes ADD COLUMN class_code VARCHAR(10) DEFAULT NULL");
-    }
-
-    // 2.5 Drop unique key and old foreign key to allow multiple divisions of the same class
-    try {
-        $pdo->exec("ALTER TABLE teacher_classes DROP INDEX unique_teacher_class");
-    } catch (PDOException $e) {
-        // Ignore
-    }
-    try {
-        $pdo->exec("ALTER TABLE teacher_classes DROP FOREIGN KEY teacher_classes_ibfk_1");
-    } catch (PDOException $e) {
-        // Ignore
-    }
 
     // 3. Generate Unique 6-Digit Code
     $is_unique = false;

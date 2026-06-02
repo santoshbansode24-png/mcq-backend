@@ -128,13 +128,13 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
     <View style={styles.gridContainer}>
         <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('VocabDashboard')}>
-                <LinearGradient colors={['#1E3A8A', '#3B82F6']} style={styles.gridGradient}>
+                <LinearGradient colors={['#FF7EB3', '#FF758C']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <MaterialCommunityIcons name="book-open-page-variant" size={32} color="white" style={{ marginBottom: 8 }} />
                     <Text style={styles.gridTitle}>{t('vocab')}</Text>
                 </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MentalMaths')}>
-                <LinearGradient colors={['#0F766E', '#14B8A6']} style={styles.gridGradient}>
+                <LinearGradient colors={['#FF9A44', '#FC6076']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
                     <Text style={styles.gridTitle}>Mental Maths</Text>
                 </LinearGradient>
@@ -142,13 +142,13 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
         </View>
         <View style={{ flexDirection: 'row' }}>
             <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('MyExam')}>
-                <LinearGradient colors={['#4338CA', '#6366F1']} style={styles.gridGradient}>
+                <LinearGradient colors={['#05E8BA', '#087EE1']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <MaterialCommunityIcons name="file-document-edit-outline" size={32} color="white" style={{ marginBottom: 8 }} />
                     <Text style={styles.gridTitle}>{t('myExam')}</Text>
                 </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
-                <LinearGradient colors={['#0369A1', '#0EA5E9']} style={styles.gridGradient}>
+                <LinearGradient colors={['#B321F8', '#8E2DE2']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <MaterialCommunityIcons name="printer-outline" size={32} color="white" style={{ marginBottom: 8 }} />
                     <Text style={styles.gridTitle}>Worksheet</Text>
                 </LinearGradient>
@@ -177,6 +177,20 @@ const HomeListHeader = React.memo(({
     userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate,
     syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam, activeLiveClass 
 }) => {
+    // Memoize the navigation handlers to prevent HomeBanner from re-rendering
+    const navToStudyPlanner = useCallback(() => navigation.navigate('StudyPlanner'), [navigation]);
+    const navToNotifications = useCallback(() => navigation.navigate('Notifications'), [navigation]);
+    const navToScholarship = useCallback(() => {
+        const studentClass = parseInt(user?.class_id);
+        let scholarshipClassId = 38;
+        if (studentClass >= 5 && studentClass <= 7) scholarshipClassId = 39;
+        else if (studentClass >= 8 && studentClass <= 10) scholarshipClassId = 40;
+        let title = 'Scholarship (Primary)';
+        if (scholarshipClassId === 39) title = 'Scholarship (Upper Primary)';
+        if (scholarshipClassId === 40) title = 'Scholarship (Secondary)';
+        navigation.navigate('ScholarshipSubjects', { scholarshipClassId, levelTitle: title });
+    }, [navigation, user?.class_id]);
+
     return (
         <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rsv(20) }}>
@@ -213,8 +227,7 @@ const HomeListHeader = React.memo(({
                     colors={['#EF4444', '#B91C1C']}
                     title="LIVE EXAM NOW!"
                     subtitle={`${activeLiveExam.title} • ${Math.floor(activeLiveExam.remaining_seconds / 60)} mins left`}
-                    icon="⚡"
-                    iconIsText={true}
+                    icon="lightning-bolt"
                     onPress={() => navigation.navigate('ChapterContent', { 
                         chapter: {
                             chapter_id: activeLiveExam.chapter_id,
@@ -245,37 +258,27 @@ const HomeListHeader = React.memo(({
             <HomeBoosterGrid t={t} navigation={navigation} />
 
             <HomeBanner 
-                colors={['#1D4ED8', '#60A5FA']}
+                colors={['#FF416C', '#FF4B2B']}
                 title={t('studyPlanner') || 'My Study Plan'}
                 subtitle="Your Daily Missions & Streaks 🔥"
                 icon="compass-outline"
-                onPress={() => navigation.navigate('StudyPlanner')}
+                onPress={navToStudyPlanner}
             />
 
             <HomeBanner 
-                colors={['#312E81', '#4F46E5']}
+                colors={['#8B5CF6', '#4C1D95']}
                 title="Scholarship & Olympiad Corner"
                 subtitle="Ace your competitive exams! 🏆"
-                icon="trophy-award"
-                onPress={() => {
-                    const studentClass = parseInt(user?.class_id);
-                    let scholarshipClassId = 38;
-                    if (studentClass >= 5 && studentClass <= 7) scholarshipClassId = 39;
-                    else if (studentClass >= 8 && studentClass <= 10) scholarshipClassId = 40;
-                    let title = 'Scholarship (Primary)';
-                    if (scholarshipClassId === 39) title = 'Scholarship (Upper Primary)';
-                    if (scholarshipClassId === 40) title = 'Scholarship (Secondary)';
-                    navigation.navigate('ScholarshipSubjects', { scholarshipClassId, levelTitle: title });
-                }}
+                icon="star-circle-outline"
+                onPress={navToScholarship}
             />
 
             <HomeBanner 
-                colors={['#4facfe', '#00f2fe']}
+                colors={['#00E5FF', '#0284C7']}
                 title={t('classUpdates')}
                 subtitle={t('checkAnnouncements')}
-                icon="🔔"
-                iconIsText={true}
-                onPress={() => navigation.navigate('Notifications')}
+                icon="bullhorn-outline"
+                onPress={navToNotifications}
             />
 
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('yourSubjects')}</Text>

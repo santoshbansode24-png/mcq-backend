@@ -13,6 +13,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as FileSystem from 'expo-file-system';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const { theme, isDarkMode } = useTheme();
@@ -201,15 +202,18 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         if (isEventActive(item)) return false; // Already shown in Active Sessions at top
         
         const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.message && item.message.includes('JSON_PAYLOAD:'));
-        const isLive = item.update_type === 'live_class' || item.update_type === 'live_exam';
+        const isClassRecording = item.update_type === 'live_class';
+        const isLiveExam = item.update_type === 'live_exam';
 
         if (activeTab === 'Worksheets') {
              return isWksht;
         } else if (activeTab === 'Recordings') {
-             return isLive;
+             return isClassRecording;
+        } else if (activeTab === 'Live Exams') {
+             return isLiveExam;
         } else {
              // Updates tab
-             return !isWksht && !isLive;
+             return !isWksht && !isClassRecording && !isLiveExam;
         }
     }), [notifications, isEventActive, activeTab]);
 
@@ -290,12 +294,12 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         let payloadData = null;
 
         try {
-            // First, try reading from the actual LONGTEXT payload column (new method)
+            // Optimized: We avoid full JSON parsing during render if possible, 
+            // but if item.payload is already an object (from fetch), we just use it.
             if (item.payload) {
-                const parsedPayload = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
-                if (parsedPayload && parsedPayload.type === 'worksheet_data') {
-                    payloadData = parsedPayload;
-                }
+                // If it's a string, we only parse it when the button is pressed to save render time,
+                // UNLESS we quickly need the textMessage. 
+                payloadData = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
             }
 
             // Fallback: If not in payload, check if it's stuffed in message (old method)
@@ -307,15 +311,12 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             }
             
             // If we successfully found and parsed the payload
-            if (payloadData) {
+            if (payloadData && payloadData.type === 'worksheet_data') {
                 displayMessage = payloadData.textMessage || 'New Worksheet Available';
-                // HTML generation is deferred to generateAndOpenLocalPdf to optimize scroll performance
             } else if (item.message && item.message.includes('JSON_PAYLOAD:')) {
-                // If it looks like a payload but failed to parse (e.g. truncated DB row)
                 displayMessage = "New Worksheet Available";
             }
         } catch (e) {
-            console.error("Failed to parse worksheet payload", e);
             if (item.message && item.message.includes('JSON_PAYLOAD:')) {
                 displayMessage = "New Worksheet Available";
             }
@@ -377,7 +378,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         };
 
         return (
-            <View style={[styles.card, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
+            <View style={[styles.card, { backgroundColor: isDarkMode ? '#1e293b' : 'rgba(255, 255, 255, 0.65)' }]}>
                 <View style={styles.cardHeader}>
                     <View style={[styles.iconContainer, { 
                         backgroundColor: isPdf ? '#FEE2E2' : 
@@ -496,11 +497,24 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     }, [theme, isDarkMode, navigation, user]);
 
     return (
-        <View style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
+        <LinearGradient 
+            colors={isDarkMode ? ['#0f172a', '#1e1b4b'] : ['#e0c3fc', '#8ec5fc']} 
+            style={styles.container}
+        >
             <View style={styles.header}>
                 <View style={{ flex: 1 }}>
                     <Text style={[styles.headerSubtitle, { color: theme.primary }]}>SCHOOL UPDATES</Text>
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Class</Text>
+                    {joinedClasses.length > 0 && selectedClassId !== 'all' && (
+                        <Text style={{ fontSize: 13, color: isDarkMode ? '#94a3b8' : '#334155', marginTop: 4, fontFamily: 'NotoSans-Bold' }}>
+                            {joinedClasses.find(c => c.class_id === selectedClassId)?.class_name || joinedClasses[0].class_name} • Code: {joinedClasses.find(c => c.class_id === selectedClassId)?.class_code || joinedClasses[0].class_code || 'N/A'}
+                        </Text>
+                    )}
+                    {joinedClasses.length > 0 && selectedClassId === 'all' && (
+                        <Text style={{ fontSize: 13, color: isDarkMode ? '#94a3b8' : '#334155', marginTop: 4, fontFamily: 'NotoSans-Bold' }}>
+                            {joinedClasses.length} Joined Class{joinedClasses.length > 1 ? 'es' : ''}
+                        </Text>
+                    )}
                 </View>
                 {!showJoinForm && (
                     <View style={styles.headerButtons}>
@@ -661,7 +675,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             )}
 
                             <View style={[styles.tabContainer, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
-                                {['Updates', 'Worksheets', 'Recordings'].map(tab => {
+                                {['Updates', 'Worksheets', 'Recordings', 'Live Exams'].map(tab => {
                                     const isActive = activeTab === tab;
                                     return (
                                         <TouchableOpacity 
@@ -710,7 +724,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     }
                 />
             )}
-        </View>
+        </LinearGradient>
     );
 };
 
@@ -736,7 +750,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     tabBtnText: {
-        fontSize: 13,
+        fontSize: 11,
         fontFamily: 'NotoSans-Bold',
     },
     activeSessionCard: {

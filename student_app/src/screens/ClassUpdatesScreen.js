@@ -352,13 +352,27 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 // Only generate the PDF if it hasn't been generated yet
                 if (!fileInfo.exists) {
                     const { uri } = await Print.printToFileAsync({ html: currentHtmlPayload });
-                    await FileSystem.moveAsync({ from: uri, to: fileUri });
+                    // Use copyAsync instead of moveAsync to prevent file lock issues on Android
+                    await FileSystem.copyAsync({ from: uri, to: fileUri });
                 }
                 
-                navigation.navigate('PDFViewer', { url: uriToOpen, title: item.title || 'Worksheet' });
+                if (Platform.OS === 'android') {
+                    try {
+                        const contentUri = await FileSystem.getContentUriAsync(uriToOpen);
+                        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+                            data: contentUri,
+                            flags: 1,
+                            type: 'application/pdf',
+                        });
+                    } catch (e) {
+                        await Sharing.shareAsync(uriToOpen, { UTI: '.pdf', mimeType: 'application/pdf' });
+                    }
+                } else {
+                    await Sharing.shareAsync(uriToOpen, { UTI: '.pdf', mimeType: 'application/pdf' });
+                }
             } catch (error) {
                 console.error('Error generating PDF:', error);
-                Alert.alert('Error', 'Failed to open PDF worksheet.');
+                Alert.alert('Error', `Failed to open PDF worksheet.\nDetails: ${error.message || 'Unknown error'}`);
             }
         };
 

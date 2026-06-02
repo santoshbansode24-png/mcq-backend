@@ -452,7 +452,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     {isHomework && !payloadData && !htmlPayload && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#0EA5E9' }]} 
-                            onPress={() => Alert.alert("Homework", "Opening homework details...")}
+                            onPress={() => Alert.alert(item.title || "Homework", displayMessage || "No description provided.")}
                         >
                             <MaterialCommunityIcons name="clipboard-text" size={20} color="white" />
                             <Text style={styles.actionButtonText}>View Homework</Text>
@@ -465,7 +465,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             onPress={generateAndOpenLocalPdf}
                         >
                             <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="white" />
-                            <Text style={styles.actionButtonText}>Generate & View Worksheet</Text>
+                            <Text style={styles.actionButtonText}>Open</Text>
                         </TouchableOpacity>
                     )}
 

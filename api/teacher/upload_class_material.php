@@ -91,6 +91,8 @@ try {
     $payloadData = [];
     if ($attachment_url) {
         $payloadData['attachment_url'] = $attachment_url;
+        $payloadData['file_url'] = $attachment_url; // Required by student app
+        $payloadData['url'] = $attachment_url;      // Fallback for student app
     }
 
     // Extract JSON_PAYLOAD from message if present to prevent truncation in TEXT column

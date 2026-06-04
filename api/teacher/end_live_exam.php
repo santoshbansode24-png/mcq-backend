@@ -1,9 +1,10 @@
 <?php
 /**
- * End Live Exam API (Teacher) - Legacy Folder
+ * End Live Exam API (Teacher)
  * Veeru
  * 
  * Endpoint: POST /api/teacher/end_live_exam.php
+ * Purpose: Transition an active exam status to completed.
  */
 
 require_once '../../config/db.php';
@@ -15,11 +16,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get JSON input
-$input = json_decode(file_get_contents('php://input'), true);
+$input = getJsonInput();
 
-if (!isset($input['teacher_id']) || !isset($input['class_id']) || !isset($input['exam_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
-    exit;
+$required = ['teacher_id', 'class_id', 'exam_id'];
+$missing = validateRequired($input, $required);
+
+if (!empty($missing)) {
+    sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
 $teacher_id = intval($input['teacher_id']);
@@ -34,12 +37,10 @@ try {
     ");
     $stmt->execute([$exam_id, $class_id, $teacher_id]);
 
-    echo json_encode([
-        'status' => 'success',
-        'message' => 'Live Exam ended successfully.'
-    ]);
+    sendResponse('success', 'Live Exam ended successfully.', null, 200);
 
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+    error_log("Error ending live exam: " . $e->getMessage());
+    sendResponse('error', 'Database error occurred: ' . $e->getMessage(), null, 500);
 }
 ?>

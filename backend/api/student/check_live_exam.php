@@ -13,6 +13,7 @@ if ($class_id <= 0) {
     sendResponse('error', 'Valid class_id required', null, 400);
 }
 
+try {
     // Look for an active exam for this class
     $stmt = $pdo->prepare("
         SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 

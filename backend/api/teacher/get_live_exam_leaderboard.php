@@ -23,6 +23,23 @@ try {
     
     $class_id = $exam['class_id'];
     
+    // Self-healing: Ensure class_exam_results table exists
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS class_exam_results (
+            result_id INT AUTO_INCREMENT PRIMARY KEY,
+            update_id INT NOT NULL,
+            user_id INT NOT NULL,
+            correct INT DEFAULT 0,
+            incorrect INT DEFAULT 0,
+            unanswered INT DEFAULT 0,
+            total INT DEFAULT 0,
+            time_seconds INT DEFAULT 0,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user_id (user_id),
+            UNIQUE KEY unique_attempt (update_id, user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    
     // Query actual submissions from class_exam_results
     $query = "SELECT 
                 u.user_id as id, 

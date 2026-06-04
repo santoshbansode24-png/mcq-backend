@@ -15,6 +15,66 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
 
+const createHTML = (mcqs, short, long, subjectTitle, currentMarks, schoolName, date) => {
+    let mcqSection = "", shortSection = "", longSection = "";
+
+    if (mcqs && mcqs.length > 0) {
+        mcqSection += `<h3>Section A: Multiple Choice Questions (1 Mark each)</h3><ol>`;
+        mcqs.forEach(q => {
+            mcqSection += `<li class="question-item"><div class="question-text">${q.question || q.question_text}</div><div class="options-grid"><div class="option">(A) ${q.option_a}</div><div class="option">(B) ${q.option_b}</div><div class="option">(C) ${q.option_c}</div><div class="option">(D) ${q.option_d}</div></div></li>`;
+        });
+        mcqSection += `</ol>`;
+    }
+
+    if (short && short.length > 0) {
+        shortSection += `<h3>Section B: Short Answer Questions (2 Marks each)</h3><ol>`;
+        short.forEach(q => {
+            const qText = q.question_front || q.question || q.front || "Question";
+            shortSection += `<li class="question-item"><div class="question-text">${q.isCustom ? '<span style="color:#C026D3;">[Custom]</span> ' : ''}${qText}</div><br/><br/><br/></li>`;
+        });
+        shortSection += `</ol>`;
+    }
+
+    if (long && long.length > 0) {
+        longSection += `<h3>Section C: Long Answer Questions (5 Marks each)</h3><ol>`;
+        long.forEach((q) => {
+            longSection += `<li class="question-item"><div class="question-text">${q.q}</div><br/><br/><br/><br/><br/></li>`;
+        });
+        longSection += `</ol>`;
+    }
+
+    return `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+        <style>
+          @page { margin: 70px 80px; }
+          body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; line-height: 1.6; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 35px; }
+          .header h1 { margin: 0; font-size: 26px; color: #4A00E0; text-transform: uppercase; }
+          .header h2 { margin: 5px 0; font-size: 18px; color: #333; }
+          .details { display: flex; justify-content: space-between; margin-bottom: 35px; font-weight: bold; border: 1px solid #ddd; padding: 12px 15px; font-size: 15px; }
+          h3 { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 35px; margin-bottom: 20px; color: #444; font-size: 18px; }
+          .question-item { margin-bottom: 20px; page-break-inside: avoid; }
+          .question-text { font-weight: 500; font-size: 16px; }
+          .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 14px; }
+          .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; color: rgba(0,0,0,0.03); z-index: -1; }
+        </style>
+      </head>
+      <body>
+        <div class="watermark">${schoolName || 'VEERU APP'}</div>
+        <div class="header">
+          <h2>${schoolName || 'VEERU APP'}</h2>
+          <h1>WORKSHEET</h1>
+          <p>Subjects: ${subjectTitle}</p>
+        </div>
+        <div class="details"><span>Name: ____________________</span><span>Date: ${date || new Date().toLocaleDateString()}</span><span>Total Marks: ${Math.round(currentMarks)}</span></div>
+        ${mcqSection + shortSection + longSection}
+      </body>
+    </html>
+    `;
+};
+
 const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const { theme, isDarkMode } = useTheme();
     const [notifications, setNotifications] = useState([]);
@@ -177,12 +237,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         if (item.update_type !== 'live_class' && item.update_type !== 'live_exam') return false;
         
         let scheduledTimeStr = item.created_at;
-        try {
-            if (item.payload) {
-                const p = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
-                if (p && p.scheduled_time) scheduledTimeStr = p.scheduled_time;
-            }
-        } catch(e) {}
+        if (item.parsedPayload && item.parsedPayload.scheduled_time) {
+            scheduledTimeStr = item.parsedPayload.scheduled_time;
+        }
 
         // Replace space with 'T' for reliable iOS/Safari date parsing
         if (scheduledTimeStr && typeof scheduledTimeStr === 'string') {
@@ -201,7 +258,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const tabData = useMemo(() => notifications.filter(item => {
         if (isEventActive(item)) return false; // Already shown in Active Sessions at top
         
-        const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.message && item.message.includes('JSON_PAYLOAD:'));
+        const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.parsedPayload && item.parsedPayload.type === 'worksheet_data');
         const isClassRecording = item.update_type === 'live_class';
         const isLiveExam = item.update_type === 'live_exam';
 
@@ -219,65 +276,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
     const groupedData = useMemo(() => groupNotifications(tabData), [tabData, groupNotifications]);
 
-    const createHTML = (mcqs, short, long, subjectTitle, currentMarks, schoolName, date) => {
-        let mcqSection = "", shortSection = "", longSection = "";
 
-        if (mcqs && mcqs.length > 0) {
-            mcqSection += `<h3>Section A: Multiple Choice Questions (1 Mark each)</h3><ol>`;
-            mcqs.forEach(q => {
-                mcqSection += `<li class="question-item"><div class="question-text">${q.question || q.question_text}</div><div class="options-grid"><div class="option">(A) ${q.option_a}</div><div class="option">(B) ${q.option_b}</div><div class="option">(C) ${q.option_c}</div><div class="option">(D) ${q.option_d}</div></div></li>`;
-            });
-            mcqSection += `</ol>`;
-        }
-
-        if (short && short.length > 0) {
-            shortSection += `<h3>Section B: Short Answer Questions (2 Marks each)</h3><ol>`;
-            short.forEach(q => {
-                const qText = q.question_front || q.question || q.front || "Question";
-                shortSection += `<li class="question-item"><div class="question-text">${q.isCustom ? '<span style="color:#C026D3;">[Custom]</span> ' : ''}${qText}</div><br/><br/><br/></li>`;
-            });
-            shortSection += `</ol>`;
-        }
-
-        if (long && long.length > 0) {
-            longSection += `<h3>Section C: Long Answer Questions (5 Marks each)</h3><ol>`;
-            long.forEach((q) => {
-                longSection += `<li class="question-item"><div class="question-text">${q.q}</div><br/><br/><br/><br/><br/></li>`;
-            });
-            longSection += `</ol>`;
-        }
-
-        return `
-        <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-            <style>
-              @page { margin: 70px 80px; }
-              body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; line-height: 1.6; }
-              .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 35px; }
-              .header h1 { margin: 0; font-size: 26px; color: #4A00E0; text-transform: uppercase; }
-              .header h2 { margin: 5px 0; font-size: 18px; color: #333; }
-              .details { display: flex; justify-content: space-between; margin-bottom: 35px; font-weight: bold; border: 1px solid #ddd; padding: 12px 15px; font-size: 15px; }
-              h3 { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 35px; margin-bottom: 20px; color: #444; font-size: 18px; }
-              .question-item { margin-bottom: 20px; page-break-inside: avoid; }
-              .question-text { font-weight: 500; font-size: 16px; }
-              .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 14px; }
-              .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; color: rgba(0,0,0,0.03); z-index: -1; }
-            </style>
-          </head>
-          <body>
-            <div class="watermark">${schoolName || 'VEERU APP'}</div>
-            <div class="header">
-              <h2>${schoolName || 'VEERU APP'}</h2>
-              <h1>WORKSHEET</h1>
-              <p>Subjects: ${subjectTitle}</p>
-            </div>
-            <div class="details"><span>Name: ____________________</span><span>Date: ${date || new Date().toLocaleDateString()}</span><span>Total Marks: ${Math.round(currentMarks)}</span></div>
-            ${mcqSection + shortSection + longSection}
-          </body>
-        </html>
-        `;
-    };
 
     const renderItem = useCallback(({ item }) => {
         const hasFile = item.payload && (item.payload.file_url || item.payload.url);
@@ -288,39 +287,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const isWorksheet = item.update_type === 'worksheet' || item.update_type === 'material';
         const isLiveClass = item.update_type === 'live_class';
 
-        // Check if the message is actually a JSON Payload for client-side rendering
-        let displayMessage = item.message;
+        let displayMessage = item.cleanMessage || item.message;
         let htmlPayload = null;
-        let payloadData = null;
-
-        try {
-            // Optimized: We avoid full JSON parsing during render if possible, 
-            // but if item.payload is already an object (from fetch), we just use it.
-            if (item.payload) {
-                // If it's a string, we only parse it when the button is pressed to save render time,
-                // UNLESS we quickly need the textMessage. 
-                payloadData = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
-            }
-
-            // Fallback: If not in payload, check if it's stuffed in message (old method)
-            if (!payloadData && item.message && item.message.includes('JSON_PAYLOAD:')) {
-                const jsonStr = item.message.substring(item.message.indexOf('{')).trim();
-                if (jsonStr.startsWith('{')) {
-                    payloadData = JSON.parse(jsonStr);
-                }
-            }
-            
-            // If we successfully found and parsed the payload
-            if (payloadData && payloadData.type === 'worksheet_data') {
-                displayMessage = payloadData.textMessage || 'New Worksheet Available';
-            } else if (item.message && item.message.includes('JSON_PAYLOAD:')) {
-                displayMessage = "New Worksheet Available";
-            }
-        } catch (e) {
-            if (item.message && item.message.includes('JSON_PAYLOAD:')) {
-                displayMessage = "New Worksheet Available";
-            }
-        }
+        let payloadData = item.parsedPayload || null;
 
         const openAttachment = () => {
             if (hasFile) {
@@ -443,7 +412,31 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     {isExam && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#D97706' }]} 
-                            onPress={() => Alert.alert("Live Exam", "Connecting to exam portal...")}
+                            onPress={async () => {
+                                try {
+                                    setLoading(true);
+                                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}`);
+                                    if (response.data && response.data.status === 'success' && response.data.data) {
+                                        const examData = response.data.data;
+                                        if (examData.questions && examData.questions.length > 0) {
+                                            navigation.navigate('MyExamTest', {
+                                                questions: examData.questions,
+                                                totalQuestions: examData.questions.length,
+                                                subjectName: examData.title,
+                                                update_id: examData.exam_id
+                                            });
+                                        } else {
+                                            Alert.alert("Notice", "This exam does not contain any questions.");
+                                        }
+                                    } else {
+                                        Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
+                                    }
+                                } catch (err) {
+                                    Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
                         >
                             <MaterialCommunityIcons name="play-circle" size={20} color="white" />
                             <Text style={styles.actionButtonText}>Start Live Exam</Text>

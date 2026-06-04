@@ -228,16 +228,18 @@ const HomeListHeader = React.memo(({
                     title="LIVE EXAM NOW!"
                     subtitle={`${activeLiveExam.title} • ${Math.floor(activeLiveExam.remaining_seconds / 60)} mins left`}
                     icon="lightning-bolt"
-                    onPress={() => navigation.navigate('ChapterContent', { 
-                        chapter: {
-                            chapter_id: activeLiveExam.chapter_id,
-                            chapter_name: activeLiveExam.title,
-                            subject_name: 'Live Exam'
-                        },
-                        initialTab: 'MCQs',
-                        isLiveExam: true, 
-                        durationMinutes: activeLiveExam.duration_minutes 
-                    })}
+                    onPress={() => {
+                        if (activeLiveExam.questions && activeLiveExam.questions.length > 0) {
+                            navigation.navigate('MyExamTest', {
+                                questions: activeLiveExam.questions,
+                                totalQuestions: activeLiveExam.questions.length,
+                                subjectName: activeLiveExam.title,
+                                update_id: activeLiveExam.exam_id
+                            });
+                        } else {
+                            Alert.alert("Notice", "Exam questions are loading, please try again in a moment.");
+                        }
+                    }}
                 />
             )}
 
@@ -308,8 +310,8 @@ const HomeScreen = ({ user, navigation, route }) => {
         if (!classId) return;
         const checkExam = async () => {
             try {
-                // Check Live Exam
-                const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}`, { timeout: 8000 });
+                // Check Live Exam (passes user_id to auto-hide if already completed)
+                const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}&user_id=${user?.user_id || user?.id || 0}`, { timeout: 8000 });
                 if (response.data && response.data.status === 'success' && response.data.data) {
                     setActiveLiveExam(response.data.data);
                 } else {

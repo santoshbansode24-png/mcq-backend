@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS live_exams (
     title VARCHAR(255) NOT NULL,
     duration_minutes INT NOT NULL DEFAULT 15,
     status ENUM('active', 'completed') DEFAULT 'active',
+    selected_mcq_ids TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX (class_id),
@@ -25,6 +26,13 @@ CREATE TABLE IF NOT EXISTS live_exams (
 
 try {
     $pdo->exec($createTableQuery);
+    
+    // Ensure column exists for older tables
+    try {
+        $pdo->exec("ALTER TABLE live_exams ADD COLUMN selected_mcq_ids TEXT DEFAULT NULL");
+    } catch (PDOException $alterEx) {
+        // Ignore error if column already exists
+    }
 } catch (PDOException $e) {
     error_log("Error creating live_exams table: " . $e->getMessage());
     sendResponse('error', 'Database setup failed', null, 500);
@@ -50,16 +58,21 @@ try {
 // 4. Create new Live Exam
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO live_exams (teacher_id, class_id, chapter_id, title, duration_minutes, status)
-        VALUES (?, ?, ?, ?, ?, 'active')
+        INSERT INTO live_exams (teacher_id, class_id, chapter_id, title, duration_minutes, status, selected_mcq_ids)
+        VALUES (?, ?, ?, ?, ?, 'active', ?)
     ");
     
+    $selected_ids = isset($input['selected_question_ids']) && is_array($input['selected_question_ids'])
+        ? implode(',', array_map('intval', $input['selected_question_ids']))
+        : null;
+
     $stmt->execute([
         $input['teacher_id'],
         $input['class_id'],
         $input['chapter_id'],
         $input['title'],
-        $input['duration_minutes']
+        $input['duration_minutes'],
+        $selected_ids
     ]);
     
     $examId = $pdo->lastInsertId();

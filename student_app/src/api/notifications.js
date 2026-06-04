@@ -26,13 +26,33 @@ export const fetchNotifications = async (classIdOrIds) => {
         // have to repeatedly parse them while scrolling through the list.
         if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
             response.data.data = response.data.data.map(item => {
-                if (item.payload && typeof item.payload === 'string') {
-                    try {
-                        item.payload = JSON.parse(item.payload);
-                    } catch (e) {
-                        // Keep as string if parsing fails
+                item.parsedPayload = null;
+                item.cleanMessage = item.message;
+
+                if (item.payload) {
+                    if (typeof item.payload === 'string') {
+                        try {
+                            item.parsedPayload = JSON.parse(item.payload);
+                        } catch (e) {}
+                    } else {
+                        item.parsedPayload = item.payload; 
                     }
                 }
+
+                if (!item.parsedPayload && item.cleanMessage && item.cleanMessage.includes('JSON_PAYLOAD:')) {
+                    try {
+                        const jsonStr = item.cleanMessage.substring(item.cleanMessage.indexOf('{')).trim();
+                        if (jsonStr.startsWith('{')) {
+                            item.parsedPayload = JSON.parse(jsonStr);
+                            item.cleanMessage = "New Worksheet Available";
+                        }
+                    } catch (e) {}
+                }
+
+                if (item.parsedPayload && item.parsedPayload.type === 'worksheet_data' && item.parsedPayload.textMessage) {
+                    item.cleanMessage = item.parsedPayload.textMessage;
+                }
+
                 return item;
             });
         }

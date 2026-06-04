@@ -34,11 +34,31 @@ try {
             FROM class_updates cu
             JOIN users u ON cu.teacher_id = u.user_id
             WHERE cu.class_id IN ($inQuery)
-            ORDER BY cu.created_at DESC
+            
+            UNION ALL
+            
+            SELECT 
+                n.notification_id,
+                n.teacher_id,
+                n.class_id,
+                NULL as school_name,
+                n.title,
+                n.message,
+                'announcement' as update_type,
+                NULL as payload,
+                n.created_at,
+                u.name as teacher_name 
+            FROM notifications n
+            JOIN users u ON n.teacher_id = u.user_id
+            WHERE n.class_id IN ($inQuery)
+            
+            ORDER BY created_at DESC
             LIMIT 100
         ";
+        // Merge parameters for the UNION (needs two sets of class_ids)
+        $params = array_merge($ids_array, $ids_array);
         $stmt = $pdo->prepare($query);
-        $stmt->execute($ids_array);
+        $stmt->execute($params);
     } else {
         $query = "
             SELECT 
@@ -55,11 +75,29 @@ try {
             FROM class_updates cu
             JOIN users u ON cu.teacher_id = u.user_id
             WHERE cu.class_id = ?
-            ORDER BY cu.created_at DESC
+            
+            UNION ALL
+            
+            SELECT 
+                n.notification_id,
+                n.teacher_id,
+                n.class_id,
+                NULL as school_name,
+                n.title,
+                n.message,
+                'announcement' as update_type,
+                NULL as payload,
+                n.created_at,
+                u.name as teacher_name 
+            FROM notifications n
+            JOIN users u ON n.teacher_id = u.user_id
+            WHERE n.class_id = ?
+            
+            ORDER BY created_at DESC
             LIMIT 50
         ";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$class_id]);
+        $stmt->execute([$class_id, $class_id]);
     }
     
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);

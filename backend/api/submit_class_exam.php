@@ -41,6 +41,7 @@ try {
             total INT DEFAULT 0,
             time_seconds INT DEFAULT 0,
             submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user_id (user_id),
             UNIQUE KEY unique_attempt (update_id, user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");

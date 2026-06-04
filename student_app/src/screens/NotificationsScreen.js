@@ -20,12 +20,9 @@ const NotificationsScreen = ({ user, navigation }) => {
                     // Exclude any raw worksheet data
                     if (item.message && item.message.includes('JSON_PAYLOAD:')) return false;
                     
-                    // Exclude specific class material types
+                    // Exclude specific class material types (only show simple announcements)
                     const classTypes = ['pdf', 'photo', 'worksheet', 'homework', 'live_class', 'material'];
                     if (classTypes.includes(item.update_type)) return false;
-                    
-                    // If it has a teacher_name, it's usually a class-specific announcement
-                    if (item.teacher_name) return false;
                     
                     return true;
                 });
@@ -53,13 +50,14 @@ const NotificationsScreen = ({ user, navigation }) => {
     };
 
     const renderItem = useCallback(({ item }) => {
-        const hasFile = item.payload && (item.payload.file_url || item.payload.url);
+        const payloadObj = item.parsedPayload || (typeof item.payload === 'object' ? item.payload : null);
+        const hasFile = payloadObj && (payloadObj.file_url || payloadObj.url);
         const isPdf = item.update_type === 'pdf';
         const isPhoto = item.update_type === 'photo';
 
         const openAttachment = () => {
             if (hasFile) {
-                const fileUrl = item.payload.file_url || item.payload.url;
+                const fileUrl = payloadObj.file_url || payloadObj.url;
                 const url = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}/${fileUrl}`;
                 Linking.openURL(url);
             }
@@ -77,7 +75,7 @@ const NotificationsScreen = ({ user, navigation }) => {
                     </View>
                 </View>
                 <View style={styles.cardBody}>
-                    <Text style={[styles.message, { color: theme.textSecondary }]}>{item.message}</Text>
+                    <Text style={[styles.message, { color: theme.textSecondary }]}>{item.cleanMessage || item.message}</Text>
                     
                     {hasFile && (
                         <TouchableOpacity style={[styles.attachmentButton, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]} onPress={openAttachment}>
@@ -122,7 +120,7 @@ const NotificationsScreen = ({ user, navigation }) => {
                 <FlatList
                     data={notifications}
                     renderItem={renderItem}
-                    keyExtractor={item => item.notification_id?.toString() || Math.random().toString()}
+                    keyExtractor={item => item.notification_id?.toString() || `${item.update_type || 'notif'}_${item.created_at || ''}`}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={

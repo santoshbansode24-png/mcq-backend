@@ -235,6 +235,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
     const isEventActive = useCallback((item) => {
         if (item.update_type !== 'live_class' && item.update_type !== 'live_exam') return false;
+        if (item.parsedPayload && (item.parsedPayload.status === 'completed' || item.parsedPayload.ended === true)) return false;
         
         let scheduledTimeStr = item.created_at;
         if (item.parsedPayload && item.parsedPayload.scheduled_time) {

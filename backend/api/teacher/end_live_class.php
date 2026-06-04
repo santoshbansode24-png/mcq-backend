@@ -50,6 +50,23 @@ try {
         'id,status'
     );
 
+    // 3. Mark the class update as completed in the database
+    try {
+        $stmt = $pdo->prepare("SELECT id, payload FROM class_updates WHERE update_type = 'live_class' AND payload LIKE ?");
+        $stmt->execute(['%"youtube_id":"' . $youtube_id . '"%']);
+        $row = $stmt->fetch();
+        if ($row) {
+            $payloadData = json_decode($row['payload'], true);
+            $payloadData['status'] = 'completed';
+            $payloadData['ended'] = true;
+            
+            $updateStmt = $pdo->prepare("UPDATE class_updates SET payload = ? WHERE id = ?");
+            $updateStmt->execute([json_encode($payloadData), $row['id']]);
+        }
+    } catch (PDOException $dbEx) {
+        error_log("Failed to mark live class update as completed: " . $dbEx->getMessage());
+    }
+
     sendResponse('success', 'Live Class ended successfully. The video will now be processed by YouTube for archiving.', null, 200);
 
 } catch (Google_Service_Exception $e) {

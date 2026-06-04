@@ -324,7 +324,8 @@ const HomeScreen = ({ user, navigation, route }) => {
                     const today = new Date().toDateString();
                     const latestLiveClass = notifsResponse.data.find(n => 
                         n.update_type === 'live_class' && 
-                        new Date(n.created_at).toDateString() === today
+                        new Date(n.created_at).toDateString() === today &&
+                        !(n.parsedPayload && (n.parsedPayload.status === 'completed' || n.parsedPayload.ended === true))
                     );
                     setActiveLiveClass(latestLiveClass || null);
                 } else {

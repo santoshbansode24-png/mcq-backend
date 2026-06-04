@@ -32,7 +32,7 @@ try {
 
     // 2. Fetch all exams sent by this teacher
     $examsStmt = $pdo->prepare("
-        SELECT cu.update_id, cu.class_id, cu.title, cu.message, cu.created_at, c.class_name
+        SELECT cu.id as update_id, cu.class_id, cu.title, cu.message, cu.created_at, c.class_name
         FROM class_updates cu
         LEFT JOIN classes c ON cu.class_id = c.class_id
         WHERE cu.teacher_id = ? AND cu.update_type = 'exam'

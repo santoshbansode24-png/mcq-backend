@@ -32,7 +32,7 @@ foreach ($uploadDirs as $dir) {
 
         // Check if file is in database
         $stmt = $pdo->prepare("
-            SELECT update_id FROM class_updates WHERE payload LIKE ?
+            SELECT id FROM class_updates WHERE payload LIKE ?
             UNION
             SELECT note_id FROM notes WHERE file_path = ?
             UNION

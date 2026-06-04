@@ -25,7 +25,7 @@ $class_update_id = intval($input['class_update_id']);
 
 try {
     // 1. Verify class update exists and is of type live_class
-    $updateStmt = $pdo->prepare("SELECT update_id FROM class_updates WHERE update_id = ? AND update_type = 'live_class'");
+    $updateStmt = $pdo->prepare("SELECT id FROM class_updates WHERE id = ? AND update_type = 'live_class'");
     $updateStmt->execute([$class_update_id]);
     if (!$updateStmt->fetch()) {
         sendResponse('error', 'Invalid live class session', null, 404);

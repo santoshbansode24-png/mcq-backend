@@ -35,7 +35,7 @@ try {
         teacher_id INT NOT NULL,
         school_name VARCHAR(255) NOT NULL,
         class_id INT NOT NULL,
-        update_type ENUM('homework', 'exam', 'worksheet', 'photo', 'pdf', 'announcement') NOT NULL DEFAULT 'announcement',
+        update_type ENUM('homework', 'exam', 'worksheet', 'photo', 'pdf', 'announcement', 'live_class', 'live_exam') NOT NULL DEFAULT 'announcement',
         title VARCHAR(255) NOT NULL,
         message TEXT,
         payload JSON,
@@ -43,6 +43,13 @@ try {
         INDEX idx_updates_school_class (school_name, class_id),
         FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Ensure ENUM includes live_class and live_exam for existing tables
+    try {
+        $pdo->exec("ALTER TABLE class_updates MODIFY COLUMN update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf', 'live_class', 'live_exam') DEFAULT 'announcement'");
+    } catch (PDOException $e) {
+        // Ignore if alter fails
+    }
 
     sendResponse('success', 'Teacher schema updated successfully.', null, 200);
 

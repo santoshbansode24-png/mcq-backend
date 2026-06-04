@@ -73,7 +73,7 @@ try {
         teacher_id INT NOT NULL,
         school_name VARCHAR(255) DEFAULT NULL,
         class_id INT NOT NULL,
-        update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf') DEFAULT 'announcement',
+        update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf', 'live_class', 'live_exam') DEFAULT 'announcement',
         title VARCHAR(255) NOT NULL,
         message TEXT,
         payload JSON DEFAULT NULL,
@@ -83,6 +83,14 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     $pdo->exec($sql_updates);
     echo "<p style='color: green'>✅ Table 'class_updates' ensured.</p>";
+
+    // Ensure ENUM includes live_class and live_exam for existing tables
+    try {
+        $pdo->exec("ALTER TABLE class_updates MODIFY COLUMN update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf', 'live_class', 'live_exam') DEFAULT 'announcement'");
+        echo "<p style='color: green'>✅ Column 'update_type' ENUM expanded to support live_class and live_exam.</p>";
+    } catch (PDOException $e) {
+        echo "<p style='color: orange'>⚠️ Column 'update_type' ENUM alter check: " . $e->getMessage() . "</p>";
+    }
 
     // 5. Create notifications table if missing (used for stats in login)
     $sql_notif = "CREATE TABLE IF NOT EXISTS notifications (

@@ -94,6 +94,45 @@ try {
         ['streamId' => $streamId]
     );
 
+    // Self-healing: Ensure live class tables exist and update_type ENUM is expanded
+    try {
+        $pdo->exec("
+        CREATE TABLE IF NOT EXISTS live_class_attendance (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            class_update_id INT NOT NULL,
+            student_id INT NOT NULL,
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_class_update (class_update_id),
+            KEY idx_student (student_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
+        $pdo->exec("
+        CREATE TABLE IF NOT EXISTS live_class_chat (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            class_update_id INT NOT NULL,
+            student_id INT NOT NULL,
+            student_name VARCHAR(150) NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_class_update (class_update_id),
+            KEY idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
+        $pdo->exec("
+        CREATE TABLE IF NOT EXISTS live_class_reactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            class_update_id INT NOT NULL,
+            reaction_type VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_class_update (class_update_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
+        // Expand update_type ENUM for class_updates
+        $pdo->exec("ALTER TABLE class_updates MODIFY COLUMN update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf', 'live_class', 'live_exam') DEFAULT 'announcement'");
+    } catch (PDOException $dbEx) {
+        error_log("Self-healing live class DB setup failed: " . $dbEx->getMessage());
+    }
+
     // 5. Save the live class record in the database
     // Get teacher's school_name
     $teacherStmt = $pdo->prepare("SELECT school_name FROM users WHERE user_id = ? AND user_type = 'teacher'");

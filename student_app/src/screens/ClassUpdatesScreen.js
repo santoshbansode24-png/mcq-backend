@@ -415,7 +415,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             onPress={async () => {
                                 try {
                                     setLoading(true);
-                                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}`);
+                                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}&user_id=${user?.user_id || user?.id || 0}`);
                                     if (response.data && response.data.status === 'success' && response.data.data) {
                                         const examData = response.data.data;
                                         if (examData.questions && examData.questions.length > 0) {

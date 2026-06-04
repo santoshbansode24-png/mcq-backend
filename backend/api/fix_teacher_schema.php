@@ -77,6 +77,20 @@ try {
     $pdo->exec($sql_exams);
     echo "<p style='color: green'>✅ Table 'live_exams' ensured.</p>";
 
+    // Ensure columns exist on live_exams table
+    try {
+        $pdo->exec("ALTER TABLE live_exams ADD COLUMN selected_mcq_ids TEXT DEFAULT NULL");
+        echo "<p style='color: green'>✅ Column 'selected_mcq_ids' added/verified in live_exams.</p>";
+    } catch (PDOException $e) {
+        // Ignore if exists
+    }
+    try {
+        $pdo->exec("ALTER TABLE live_exams ADD COLUMN selected_question_ids TEXT DEFAULT NULL");
+        echo "<p style='color: green'>✅ Column 'selected_question_ids' added/verified in live_exams.</p>";
+    } catch (PDOException $e) {
+        // Ignore if exists
+    }
+
     // 6. Create class_updates table (for sharing materials)
     $sql_updates = "CREATE TABLE IF NOT EXISTS class_updates (
         id INT AUTO_INCREMENT PRIMARY KEY,

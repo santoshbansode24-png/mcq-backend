@@ -33,6 +33,11 @@ try {
     } catch (PDOException $alterEx) {
         // Ignore error if column already exists
     }
+    try {
+        $pdo->exec("ALTER TABLE live_exams ADD COLUMN selected_question_ids TEXT DEFAULT NULL");
+    } catch (PDOException $alterEx) {
+        // Ignore error if column already exists
+    }
 } catch (PDOException $e) {
     error_log("Error creating live_exams table: " . $e->getMessage());
     sendResponse('error', 'Database setup failed', null, 500);
@@ -58,12 +63,16 @@ try {
 // 4. Create new Live Exam
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO live_exams (teacher_id, class_id, chapter_id, title, duration_minutes, status, selected_mcq_ids)
-        VALUES (?, ?, ?, ?, ?, 'active', ?)
+        INSERT INTO live_exams (teacher_id, class_id, chapter_id, title, duration_minutes, status, selected_mcq_ids, selected_question_ids)
+        VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
     ");
     
     $selected_ids = isset($input['selected_question_ids']) && is_array($input['selected_question_ids'])
         ? implode(',', array_map('intval', $input['selected_question_ids']))
+        : null;
+        
+    $json_questions = isset($input['selected_question_ids']) && is_array($input['selected_question_ids'])
+        ? json_encode(array_map('intval', $input['selected_question_ids']))
         : null;
 
     $stmt->execute([
@@ -72,7 +81,8 @@ try {
         $input['chapter_id'],
         $input['title'],
         $input['duration_minutes'],
-        $selected_ids
+        $selected_ids,
+        $json_questions
     ]);
     
     $examId = $pdo->lastInsertId();

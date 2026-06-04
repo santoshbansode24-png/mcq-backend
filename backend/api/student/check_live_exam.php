@@ -13,10 +13,9 @@ if ($class_id <= 0) {
     sendResponse('error', 'Valid class_id required', null, 400);
 }
 
-try {
     // Look for an active exam for this class
     $stmt = $pdo->prepare("
-        SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, created_at 
+        SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
         FROM live_exams 
         WHERE class_id = ? AND status = 'active'
         ORDER BY id DESC LIMIT 1
@@ -56,8 +55,20 @@ try {
             // Fetch selected questions
             $questions = [];
             try {
+                $selected_ids_str = '';
                 if (!empty($activeExam['selected_mcq_ids'])) {
-                    $qIds = array_map('intval', explode(',', $activeExam['selected_mcq_ids']));
+                    $selected_ids_str = $activeExam['selected_mcq_ids'];
+                } elseif (!empty($activeExam['selected_question_ids'])) {
+                    $decoded = json_decode($activeExam['selected_question_ids'], true);
+                    if (is_array($decoded)) {
+                        $selected_ids_str = implode(',', $decoded);
+                    } else {
+                        $selected_ids_str = $activeExam['selected_question_ids'];
+                    }
+                }
+
+                if (!empty($selected_ids_str)) {
+                    $qIds = array_map('intval', explode(',', $selected_ids_str));
                     if (!empty($qIds)) {
                         $placeholders = implode(',', array_fill(0, count($qIds), '?'));
                         $qStmt = $pdo->prepare("

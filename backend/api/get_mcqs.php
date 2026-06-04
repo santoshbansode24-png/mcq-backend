@@ -19,15 +19,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse('error', 'Only GET requests are allowed', null, 405);
 }
 
-// Get chapter_id from query parameter
+// Get chapter_id or chapter_ids from query parameters
 $chapter_id = isset($_GET['chapter_id']) ? intval($_GET['chapter_id']) : 0;
+$chapter_ids = isset($_GET['chapter_ids']) ? $_GET['chapter_ids'] : '';
 
 // Get medium from query parameter (default to 'english')
 $medium = isset($_GET['medium']) ? strtolower(trim($_GET['medium'])) : 'english';
 
-// Validate chapter_id
-if ($chapter_id <= 0) {
-    sendResponse('error', 'Valid chapter_id is required', null, 400);
+// Validate parameters
+if ($chapter_id <= 0 && empty($chapter_ids)) {
+    sendResponse('error', 'Valid chapter_id or chapter_ids is required', null, 400);
 }
 
 // Validate medium (only allow 'english' or 'marathi')
@@ -36,27 +37,44 @@ if (!in_array($medium, ['english', 'marathi'])) {
 }
 
 try {
-    // Query MCQs for the chapter filtered by medium
-    $stmt = $pdo->prepare("
-        SELECT 
-            mcq_id,
-            chapter_id,
-            question,
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-            correct_answer,
-            explanation,
-            difficulty,
-            medium,
-            image_url
-        FROM mcqs
-        WHERE chapter_id = ? AND medium = ?
-        ORDER BY mcq_id ASC
-    ");
-    
-    $stmt->execute([$chapter_id, $medium]);
+    if (!empty($chapter_ids)) {
+        // Handle multiple chapters
+        $ids_array = array_filter(array_map('intval', explode(',', $chapter_ids)));
+        if (empty($ids_array)) {
+            sendResponse('error', 'Invalid chapter_ids format', null, 400);
+        }
+        $inQuery = implode(',', array_fill(0, count($ids_array), '?'));
+        
+        $stmt = $pdo->prepare("
+            SELECT mcq_id, chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium, image_url
+            FROM mcqs
+            WHERE chapter_id IN ($inQuery) AND medium = ?
+            ORDER BY mcq_id ASC
+        ");
+        $params = array_merge(array_values($ids_array), [$medium]);
+        $stmt->execute($params);
+    } else {
+        // Query MCQs for single chapter filtered by medium
+        $stmt = $pdo->prepare("
+            SELECT 
+                mcq_id,
+                chapter_id,
+                question,
+                option_a,
+                option_b,
+                option_c,
+                option_d,
+                correct_answer,
+                explanation,
+                difficulty,
+                medium,
+                image_url
+            FROM mcqs
+            WHERE chapter_id = ? AND medium = ?
+            ORDER BY mcq_id ASC
+        ");
+        $stmt->execute([$chapter_id, $medium]);
+    }
     $mcqs = $stmt->fetchAll();
     
     // Check if MCQs exist

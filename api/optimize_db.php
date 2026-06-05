@@ -61,6 +61,13 @@ try {
     addIndexIfNotExists($pdo, 'vocab_words', 'idx_vocab_set_number', 'set_number');
     addIndexIfNotExists($pdo, 'user_vocab_stats', 'idx_vocab_stats_user', 'user_id');
 
+    // 8. Teacher Classes (class_code) mapping optimization
+    addIndexIfNotExists($pdo, 'teacher_classes', 'idx_tc_class_code', 'class_code');
+
+    // 9. Videos and Notes chapter_id index optimization
+    addIndexIfNotExists($pdo, 'videos', 'idx_videos_chapter_id', 'chapter_id');
+    addIndexIfNotExists($pdo, 'notes', 'idx_notes_chapter_id', 'chapter_id');
+
     if (basename($_SERVER['PHP_SELF']) == basename(__FILE__)) {
         echo "<p><strong>Optimization Complete!</strong></p>";
     }

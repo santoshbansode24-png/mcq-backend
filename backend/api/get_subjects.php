@@ -25,17 +25,17 @@ if ($class_id <= 0) {
 
 // Map classroom ID to generic class ID if applicable
 try {
-    $stmt_cr = $pdo->prepare("
-        SELECT tc.class_id 
-        FROM teacher_classes tc
-        JOIN classrooms cr ON CONVERT(tc.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(cr.class_code USING utf8mb4) COLLATE utf8mb4_unicode_ci
-        WHERE cr.class_id = ?
-        LIMIT 1
-    ");
-    $stmt_cr->execute([$class_id]);
-    $mapped_class_id = $stmt_cr->fetchColumn();
-    if ($mapped_class_id) {
-        $class_id = (int)$mapped_class_id;
+    $stmt_code = $pdo->prepare("SELECT class_code FROM classrooms WHERE class_id = ? LIMIT 1");
+    $stmt_code->execute([$class_id]);
+    $class_code = $stmt_code->fetchColumn();
+
+    if ($class_code) {
+        $stmt_generic = $pdo->prepare("SELECT class_id FROM teacher_classes WHERE class_code = ? LIMIT 1");
+        $stmt_generic->execute([$class_code]);
+        $mapped_class_id = $stmt_generic->fetchColumn();
+        if ($mapped_class_id) {
+            $class_id = (int)$mapped_class_id;
+        }
     }
 } catch (PDOException $e) {
     // Fail silently and use original class_id if classrooms tables don't exist

@@ -54,7 +54,7 @@ try {
     }
     
     // Verify class exists
-    $classStmt = $pdo->prepare("SELECT class_id FROM classes WHERE class_id = ?");
+    $classStmt = $pdo->prepare("SELECT class_id FROM classrooms WHERE class_id = ?");
     $classStmt->execute([$class_id]);
     if (!$classStmt->fetch()) {
         sendResponse('error', 'Invalid class ID', null, 400);
@@ -74,7 +74,7 @@ try {
     // Get count of students in this class
     $student_count = 0;
     try {
-        $countStmt = $pdo->prepare("SELECT COUNT(*) as student_count FROM users WHERE class_id = ? AND user_type = 'student'");
+        $countStmt = $pdo->prepare("SELECT COUNT(*) as student_count FROM student_class_mapping WHERE class_id = ?");
         $countStmt->execute([$class_id]);
         $count = $countStmt->fetch();
         $student_count = $count['student_count'] ?? 0;

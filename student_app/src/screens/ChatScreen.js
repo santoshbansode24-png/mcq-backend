@@ -20,6 +20,14 @@ export default function ChatScreen({ route, navigation }) {
     const [teacher, setTeacher] = useState(null);
     const [resolvedClassCode, setResolvedClassCode] = useState(null);
     const flatListRef = useRef(null);
+    const isMounted = useRef(true);
+
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (!userId || !classId) {
@@ -31,10 +39,12 @@ export default function ChatScreen({ route, navigation }) {
         
         const initChat = async () => {
             const data = await loadData();
-            if (data && data.tId && data.code) {
+            if (isMounted.current && data && data.tId && data.code) {
                 // Start polling after initial load
                 intervalId = setInterval(() => {
-                    fetchMessages(data.tId, data.code);
+                    if (isMounted.current) {
+                        fetchMessages(data.tId, data.code);
+                    }
                 }, 3000);
             }
         };
@@ -55,10 +65,12 @@ export default function ChatScreen({ route, navigation }) {
             if (tRes.data && tRes.data.status === 'success') {
                 teacherData = tRes.data.data;
                 currentClassCode = teacherData.class_code;
-                setTeacher(teacherData);
-                setResolvedClassCode(currentClassCode);
+                if (isMounted.current) {
+                    setTeacher(teacherData);
+                    setResolvedClassCode(currentClassCode);
+                }
             } else {
-                setLoading(false);
+                if (isMounted.current) setLoading(false);
                 return;
             }
 
@@ -69,7 +81,9 @@ export default function ChatScreen({ route, navigation }) {
             console.error('Error loading chat:', error);
             return null;
         } finally {
-            setLoading(false);
+            if (isMounted.current) {
+                setLoading(false);
+            }
         }
     };
 
@@ -80,7 +94,9 @@ export default function ChatScreen({ route, navigation }) {
 
             const response = await axios.get(url);
             if (response.data && response.data.status === 'success') {
-                setMessages(response.data.data);
+                if (isMounted.current) {
+                    setMessages(response.data.data);
+                }
             }
         } catch (error) {
             console.error('Fetch messages error:', error);
@@ -101,14 +117,20 @@ export default function ChatScreen({ route, navigation }) {
             
             const response = await axios.post(`${config.ROOT_URL}/api/chat/send_message.php`, payload);
             if (response.data && response.data.status === 'success') {
-                setNewMessage('');
+                if (isMounted.current) {
+                    setNewMessage('');
+                }
                 await fetchMessages(teacher.teacher_id, resolvedClassCode);
-                setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+                setTimeout(() => {
+                    if (isMounted.current) flatListRef.current?.scrollToEnd();
+                }, 100);
             }
         } catch (error) {
             console.error('Send message error:', error);
         } finally {
-            setSending(false);
+            if (isMounted.current) {
+                setSending(false);
+            }
         }
     };
 
@@ -138,7 +160,8 @@ export default function ChatScreen({ route, navigation }) {
     return (
         <KeyboardAvoidingView 
             style={[styles.container, { backgroundColor: isDarkMode ? '#0f172a' : '#F9FAFB' }]}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
             <LinearGradient colors={[theme.primary, theme.primaryDark || theme.primary]} style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -178,9 +201,9 @@ export default function ChatScreen({ route, navigation }) {
 
             <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF', borderColor: isDarkMode ? '#334155' : '#E5E7EB' }]}>
                 <TextInput
-                    style={[styles.input, { backgroundColor: isDarkMode ? '#334155' : '#F3F4F6', color: theme.text }]}
+                    style={[styles.input, { backgroundColor: isDarkMode ? '#334155' : '#F3F4F6', color: isDarkMode ? '#FFFFFF' : '#1F2937' }]}
                     placeholder="Type a message..."
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={isDarkMode ? '#94A3B8' : '#9CA3AF'}
                     value={newMessage}
                     onChangeText={setNewMessage}
                     multiline

@@ -35,9 +35,16 @@ try {
     $identifier = strtolower($identifier);
     $otpCode = trim($input['otp_code']);
 
+    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $identifier);
+    $mobile_search = $identifier;
+    if (strpos($identifier, '@') === false && is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $mobile_search = substr($cleaned_digits, -10);
+    }
+
     // Find the user to get their phone number
-    $stmt = $pdo->prepare("SELECT user_id, mobile, phone FROM users WHERE email = ? OR mobile = ? OR phone = ?");
-    $stmt->execute([$identifier, $identifier, $identifier]);
+    $stmt = $pdo->prepare("SELECT user_id, mobile, phone FROM users WHERE email = ? OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?");
+    $stmt->execute([$identifier, $mobile_search, $mobile_search]);
     $user = $stmt->fetch();
 
     if (!$user) {

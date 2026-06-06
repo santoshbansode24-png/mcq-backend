@@ -1,7 +1,13 @@
 @echo off
-echo Switching to LOCAL configuration...
+echo =======================================================
+echo Switching to LOCAL Development Environment...
+echo =======================================================
+echo.
 
-powershell -Command "(Get-Content student_app\src\api\config.js) -replace 'const config = RAILWAY_CONFIG', '// const config = RAILWAY_CONFIG' -replace '// const config = LOCAL_CONFIG', 'const config = LOCAL_CONFIG' | Set-Content student_app\src\api\config.js"
+node switch_env.js local
 
-echo Done. App is now pointing to LOCALHOST.
+echo.
+echo =======================================================
+echo Done. Apps are now configured for LOCALHOST/Local WiFi.
+echo =======================================================
 pause

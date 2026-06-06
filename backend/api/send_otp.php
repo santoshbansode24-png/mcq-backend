@@ -34,9 +34,16 @@ try {
 
     $identifier = strtolower($identifier);
 
+    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $identifier);
+    $mobile_search = $identifier;
+    if (strpos($identifier, '@') === false && is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $mobile_search = substr($cleaned_digits, -10);
+    }
+
     // Check if user exists with this email or mobile
-    $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, phone FROM users WHERE email = ? OR mobile = ? OR phone = ?");
-    $stmt->execute([$identifier, $identifier, $identifier]);
+    $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, phone FROM users WHERE email = ? OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?");
+    $stmt->execute([$identifier, $mobile_search, $mobile_search]);
     $user = $stmt->fetch();
 
     if (!$user) {

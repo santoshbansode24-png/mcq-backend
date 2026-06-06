@@ -17,9 +17,16 @@ if ($action === 'send_otp') {
         exit;
     }
 
+    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $mobile);
+    $mobile_search = $mobile;
+    if (is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $mobile_search = substr($cleaned_digits, -10);
+    }
+
     // Check if user exists
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE mobile = ?");
-    $stmt->execute([$mobile]);
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ?");
+    $stmt->execute([$mobile_search]);
     if (!$stmt->fetch()) {
         echo json_encode(['status' => 'error', 'message' => 'Mobile number not registered']);
         exit;
@@ -30,10 +37,10 @@ if ($action === 'send_otp') {
 
     // Save to DB
     // First delete old OTPs for this number
-    $pdo->prepare("DELETE FROM otp_store WHERE mobile = ?")->execute([$mobile]);
+    $pdo->prepare("DELETE FROM otp_store WHERE mobile = ?")->execute([$mobile_search]);
     
     $stmt = $pdo->prepare("INSERT INTO otp_store (mobile, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
-    if ($stmt->execute([$mobile, $otp])) {
+    if ($stmt->execute([$mobile_search, $otp])) {
         
         // --- SIMULATE SENDING SMS ---
         // For production, replace this with Msg91/Fast2SMS API call
@@ -41,7 +48,7 @@ if ($action === 'send_otp') {
         
         // Log it clearly for the user to see
         $logMessage = "--------------------------------------------------\n";
-        $logMessage .= "OTP for Mobile $mobile is: $otp\n";
+        $logMessage .= "OTP for Mobile $mobile_search is: $otp\n";
         $logMessage .= "--------------------------------------------------\n";
         file_put_contents('../OTP_SENT.log', $logMessage, FILE_APPEND);
 
@@ -63,20 +70,27 @@ if ($action === 'send_otp') {
         exit;
     }
 
+    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $mobile);
+    $mobile_search = $mobile;
+    if (is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $mobile_search = substr($cleaned_digits, -10);
+    }
+
     // Verify OTP
     $stmt = $pdo->prepare("SELECT * FROM otp_store WHERE mobile = ? AND otp = ? AND expires_at > NOW()");
-    $stmt->execute([$mobile, $otp]);
+    $stmt->execute([$mobile_search, $otp]);
     $otpRecord = $stmt->fetch();
 
     if ($otpRecord) {
         // OTP Valid. Reset Password.
         $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         
-        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE mobile = ?");
-        if ($updateStmt->execute([$hashedPassword, $mobile])) {
+        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE RIGHT(mobile, 10) = ?");
+        if ($updateStmt->execute([$hashedPassword, $mobile_search])) {
             
             // Delete used OTP
-            $pdo->prepare("DELETE FROM otp_store WHERE mobile = ?")->execute([$mobile]);
+            $pdo->prepare("DELETE FROM otp_store WHERE mobile = ?")->execute([$mobile_search]);
 
             echo json_encode(['status' => 'success', 'message' => 'Password reset successful']);
         } else {

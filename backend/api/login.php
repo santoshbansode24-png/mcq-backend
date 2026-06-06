@@ -57,8 +57,19 @@ if ($isReviewerBypass) {
 
 try {
     // Optimization: determine if input is email or mobile to prevent full table scan
-    $is_mobile = is_numeric($email) && strlen($email) == 10;
-    $field = $is_mobile ? 'mobile' : 'email';
+    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $email);
+    $is_mobile = false;
+    $search_value = $email;
+
+    if (strpos($email, '@') === false && is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $is_mobile = true;
+        // Extract the last 10 digits as the core mobile number
+        $search_value = substr($cleaned_digits, -10);
+        $field_query = "RIGHT(u.mobile, 10) = ?";
+    } else {
+        $field_query = "u.email = ?";
+    }
 
     // Query database for user with JOIN to get class_name in one go
     $stmt = $pdo->prepare("
@@ -68,10 +79,10 @@ try {
                c.class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.class_id
-        WHERE u.$field = ? AND u.user_type = 'student'
+        WHERE $field_query AND u.user_type = 'student'
     ");
     
-    $stmt->execute([$email]); 
+    $stmt->execute([$search_value]); 
     $user = $stmt->fetch();
     
     // Check if user exists

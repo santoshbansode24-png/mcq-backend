@@ -61,6 +61,12 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     sendResponse('error', 'Invalid email format', null, 400);
 }
 
+// Clean mobile number (extract last 10 digits if formatted with country code)
+$cleaned_mobile = preg_replace('/[^0-9]/', '', $mobile);
+if (strlen($cleaned_mobile) >= 10) {
+    $mobile = substr($cleaned_mobile, -10);
+}
+
 // Validate mobile (exactly 10 digits)
 if (strlen($mobile) !== 10 || !is_numeric($mobile)) {
     sendResponse('error', 'Mobile number must be exactly 10 digits', null, 400);
@@ -74,8 +80,8 @@ try {
         sendResponse('error', 'Email already registered. Please try logging in.', null, 409);
     }
 
-    // Check if mobile already registered
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE mobile = ? OR phone = ?");
+    // Check if mobile already registered (using right-most 10-digit match)
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?");
     $stmt->execute([$mobile, $mobile]);
     if ($stmt->fetch()) {
         sendResponse('error', 'Mobile number already registered. Please use a different number.', null, 409);

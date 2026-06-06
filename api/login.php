@@ -36,16 +36,23 @@ if (strpos($email, '@') !== false) {
 }
 
 try {
-    // Query database for user (by Email OR Mobile)
+    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $email);
+    $mobile_search = $email;
+    if (strpos($email, '@') === false && is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $mobile_search = substr($cleaned_digits, -10);
+    }
+
+    // Query database for user (by Email OR Mobile with right-most 10-digit match)
     $stmt = $pdo->prepare("
         SELECT user_id, name, email, password, user_type, class_id, 
                subscription_status, subscription_expiry 
         FROM users 
-        WHERE (email = ? OR mobile = ?) AND user_type = 'student'
+        WHERE (email = ? OR RIGHT(mobile, 10) = ?) AND user_type = 'student'
     ");
     
-    // Pass the same input twice to check against both columns
-    $stmt->execute([$email, $email]); 
+    // Pass the input email and cleaned mobile number
+    $stmt->execute([$email, $mobile_search]); 
     $user = $stmt->fetch();
     
     // Check if user exists

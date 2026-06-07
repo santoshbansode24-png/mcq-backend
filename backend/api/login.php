@@ -66,9 +66,9 @@ try {
         $is_mobile = true;
         // Extract the last 10 digits as the core mobile number
         $search_value = substr($cleaned_digits, -10);
-        $field_query = "RIGHT(u.mobile, 10) = ?";
+        $field_query = "(RIGHT(u.mobile, 10) = ? OR RIGHT(u.phone, 10) = ? OR RIGHT(u.phone_number, 10) = ?)";
     } else {
-        $field_query = "u.email = ?";
+        $field_query = "LOWER(u.email) = LOWER(?)";
     }
 
     // Query database for user with JOIN to get class_name in one go
@@ -82,17 +82,22 @@ try {
         WHERE $field_query AND u.user_type = 'student'
     ");
     
-    $stmt->execute([$search_value]); 
+    if ($is_mobile) {
+        $stmt->execute([$search_value, $search_value, $search_value]); 
+    } else {
+        $stmt->execute([$search_value]); 
+    }
     $user = $stmt->fetch();
     
     // Check if user exists
     if (!$user) {
+        file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: No user found for: $email (IsMobile: " . ($is_mobile ? 'Yes' : 'No') . ")\n", FILE_APPEND);
         sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     
     // Verify password
     if (!password_verify($password, $user['password'])) {
-        file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: Password mismatch for: $email\n", FILE_APPEND);
+        file_put_contents('../login_debug.log', date('Y-m-d H:i:s') . " Login Fail: Password mismatch for user ID: " . $user['user_id'] . " (Email: " . $user['email'] . ")\n", FILE_APPEND);
         sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
     

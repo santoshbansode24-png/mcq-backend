@@ -41,9 +41,9 @@ try {
         $mobile_search = substr($cleaned_digits, -10);
     }
 
-    // Check if user exists with this email or mobile
-    $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, phone FROM users WHERE email = ? OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?");
-    $stmt->execute([$identifier, $mobile_search, $mobile_search]);
+    // Check if user exists with this email or mobile (including case-insensitive email check and all three phone columns)
+    $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, phone, phone_number FROM users WHERE LOWER(email) = LOWER(?) OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
+    $stmt->execute([$identifier, $mobile_search, $mobile_search, $mobile_search]);
     $user = $stmt->fetch();
 
     if (!$user) {
@@ -53,7 +53,7 @@ try {
     $userId = $user['user_id'];
     
     // We need a phone number to send WhatsApp
-    $userPhone = !empty($user['mobile']) ? $user['mobile'] : $user['phone'];
+    $userPhone = !empty($user['mobile']) ? $user['mobile'] : (!empty($user['phone']) ? $user['phone'] : $user['phone_number']);
     
     if (empty($userPhone)) {
         sendResponse('error', 'No phone number associated with this account. Cannot send WhatsApp OTP.', null, 400);

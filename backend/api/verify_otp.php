@@ -42,16 +42,16 @@ try {
         $mobile_search = substr($cleaned_digits, -10);
     }
 
-    // Find the user to get their phone number
-    $stmt = $pdo->prepare("SELECT user_id, mobile, phone FROM users WHERE email = ? OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?");
-    $stmt->execute([$identifier, $mobile_search, $mobile_search]);
+    // Find the user to get their phone number (using case-insensitive email check and all three phone columns)
+    $stmt = $pdo->prepare("SELECT user_id, mobile, phone, phone_number FROM users WHERE LOWER(email) = LOWER(?) OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
+    $stmt->execute([$identifier, $mobile_search, $mobile_search, $mobile_search]);
     $user = $stmt->fetch();
 
     if (!$user) {
         sendResponse('error', 'Invalid account', null, 404);
     }
 
-    $userPhone = !empty($user['mobile']) ? $user['mobile'] : $user['phone'];
+    $userPhone = !empty($user['mobile']) ? $user['mobile'] : (!empty($user['phone']) ? $user['phone'] : $user['phone_number']);
 
     if (empty($userPhone)) {
         sendResponse('error', 'No phone number associated with this account', null, 404);

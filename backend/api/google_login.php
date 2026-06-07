@@ -26,12 +26,12 @@ $name = isset($input['name']) ? sanitizeInput($input['name']) : 'Student';
 $photo = isset($input['photo']) ? sanitizeInput($input['photo']) : '';
 
 try {
-    // 1. Check if user already exists by email OR google_id in 'users' table
+    // 1. Check if user already exists by email OR google_id in 'users' table (case-insensitive email)
     $stmt = $pdo->prepare("
         SELECT u.*, c.class_name 
         FROM users u 
         LEFT JOIN classes c ON u.class_id = c.class_id 
-        WHERE (u.email = ? OR u.google_id = ?) AND u.user_type = 'student' 
+        WHERE (LOWER(u.email) = LOWER(?) OR u.google_id = ?) AND u.user_type = 'student' 
         LIMIT 1
     ");
     $stmt->execute([$email, $google_id]);

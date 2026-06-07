@@ -24,9 +24,9 @@ if ($action === 'send_otp') {
         $mobile_search = substr($cleaned_digits, -10);
     }
 
-    // Check if user exists
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ?");
-    $stmt->execute([$mobile_search]);
+    // Check if user exists in mobile, phone, or phone_number columns
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
+    $stmt->execute([$mobile_search, $mobile_search, $mobile_search]);
     if (!$stmt->fetch()) {
         echo json_encode(['status' => 'error', 'message' => 'Mobile number not registered']);
         exit;
@@ -86,8 +86,8 @@ if ($action === 'send_otp') {
         // OTP Valid. Reset Password.
         $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         
-        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE RIGHT(mobile, 10) = ?");
-        if ($updateStmt->execute([$hashedPassword, $mobile_search])) {
+        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
+        if ($updateStmt->execute([$hashedPassword, $mobile_search, $mobile_search, $mobile_search])) {
             
             // Delete used OTP
             $pdo->prepare("DELETE FROM otp_store WHERE mobile = ?")->execute([$mobile_search]);

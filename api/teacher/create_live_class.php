@@ -11,6 +11,7 @@ require_once '../../config/db.php';
 require_once '../../config/secrets.php';
 require_once '../cors_middleware.php';
 require_once '../../vendor/autoload.php';
+require_once '../../config/push_notifications.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -152,6 +153,18 @@ try {
         VALUES (?, ?, ?, 'live_class', ?, ?, ?, NOW())
     ");
     $stmt->execute([$teacher_id, $school_name, $class_id, $title, $message, $payload]);
+
+    // Trigger instant push notification to all students in the class
+    sendClassPushNotifications(
+        $pdo,
+        $class_id,
+        "🔴 LIVE CLASS STARTED: " . $title,
+        !empty($message) ? $message : "Your teacher has started a live video class. Join now!",
+        [
+            'type' => 'announcement',
+            'screen' => 'ClassUpdates'
+        ]
+    );
 
     sendResponse('success', 'Live Class created on YouTube successfully', [
         'youtube_id' => $videoId,

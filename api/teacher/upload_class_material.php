@@ -6,6 +6,7 @@
 
 require_once '../../config/db.php';
 require_once '../cors_middleware.php';
+require_once '../../config/push_notifications.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -127,8 +128,16 @@ try {
         ");
         
         $stmt->execute([$class_id, $teacher_id, $school_name, $title, $message, $payload, $update_type]);
+        $update_id = $pdo->lastInsertId();
+
+        // Trigger push notification to students in this class
+        sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
+            'type' => 'worksheet',
+            'update_id' => $update_id,
+            'screen' => 'ClassUpdates'
+        ]);
         
-        sendResponse('success', 'Material uploaded successfully', ['id' => $pdo->lastInsertId()], 201);
+        sendResponse('success', 'Material uploaded successfully', ['id' => $update_id], 201);
     } catch (PDOException $e) {
         // If strict mode rejects 'worksheet', fallback to 'material' instead of altering table
         if (strpos($e->getMessage(), 'update_type') !== false || strpos($e->getMessage(), 'ENUM') !== false || strpos($e->getMessage(), 'Data truncated') !== false) {
@@ -139,7 +148,16 @@ try {
                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
                 $stmt->execute([$class_id, $teacher_id, $school_name, $title, $message, $payload, $update_type]);
-                sendResponse('success', 'Material uploaded successfully', ['id' => $pdo->lastInsertId()], 201);
+                $update_id = $pdo->lastInsertId();
+
+                // Trigger push notification to students in this class
+                sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
+                    'type' => 'worksheet',
+                    'update_id' => $update_id,
+                    'screen' => 'ClassUpdates'
+                ]);
+
+                sendResponse('success', 'Material uploaded successfully', ['id' => $update_id], 201);
             } catch (PDOException $retryEx) {
                 file_put_contents('../../debug_log.txt', "PDOException Retry: " . $retryEx->getMessage() . "\n", FILE_APPEND);
                 sendResponse('error', 'Database error occurred: ' . $retryEx->getMessage(), ['error' => $retryEx->getMessage()], 500);

@@ -1,6 +1,7 @@
 <?php
 require_once '../../config/db.php';
 require_once '../cors_middleware.php';
+require_once '../../config/push_notifications.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse('error', 'Only POST requests allowed', null, 405);
@@ -106,6 +107,18 @@ try {
             "Your teacher has started a live exam. Click to join immediately! Duration: " . $input['duration_minutes'] . " mins.",
             json_encode(['exam_id' => $examId, 'duration' => $input['duration_minutes']])
         ]);
+
+        // Trigger instant push notification to all students in the class
+        sendClassPushNotifications(
+            $pdo,
+            $input['class_id'],
+            "🔴 LIVE EXAM STARTED: " . $input['title'],
+            "Your teacher has started a live exam. Click to join immediately! Duration: " . $input['duration_minutes'] . " mins.",
+            [
+                'type' => 'announcement',
+                'screen' => 'ClassUpdates'
+            ]
+        );
     } catch (PDOException $notifEx) {
         error_log("Failed to post exam notification: " . $notifEx->getMessage());
     }

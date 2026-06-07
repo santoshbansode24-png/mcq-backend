@@ -207,6 +207,16 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
                             }
                             return prev;
                         });
+
+                        // Register push notifications in the background
+                        try {
+                            const { registerForPushNotificationsAsync } = require('../utils/pushNotificationHelper');
+                            registerForPushNotificationsAsync(parsedUser.user_id).catch(err => {
+                                console.log('[PushRegister] Async error:', err);
+                            });
+                        } catch (pushErr) {
+                            console.log('[PushRegister] Failed to invoke push registration:', pushErr.message);
+                        }
                     }
                 }
             } catch (e) {

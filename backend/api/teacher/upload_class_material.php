@@ -1,6 +1,7 @@
 <?php
 require_once '../../config/db.php';
 require_once '../cors_middleware.php';
+require_once '../../config/push_notifications.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse('error', 'Only POST requests allowed', null, 405);
@@ -97,6 +98,14 @@ try {
         $message,
         $payloadJson
     ]);
+    $update_id = $pdo->lastInsertId();
+
+    // Trigger push notification to students in this class
+    sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
+        'type' => 'worksheet',
+        'update_id' => $update_id,
+        'screen' => 'ClassUpdates'
+    ]);
     
     sendResponse('success', 'Material uploaded successfully!', null, 200);
 } catch (PDOException $e) {
@@ -113,6 +122,15 @@ try {
                 $message,
                 $payloadJson
             ]);
+            $update_id = $pdo->lastInsertId();
+
+            // Trigger push notification to students in this class
+            sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
+                'type' => 'worksheet',
+                'update_id' => $update_id,
+                'screen' => 'ClassUpdates'
+            ]);
+
             sendResponse('success', 'Material uploaded successfully!', null, 200);
         } catch (PDOException $retryEx) {
             error_log("Error saving class update after retry: " . $retryEx->getMessage());

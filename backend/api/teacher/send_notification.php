@@ -9,6 +9,7 @@
 
 require_once '../../config/db.php';
 require_once '../cors_middleware.php';
+require_once '../../config/push_notifications.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -70,6 +71,13 @@ try {
     
     // Get the inserted notification_id
     $notification_id = $pdo->lastInsertId();
+
+    // Trigger instant push notifications to all students in the class
+    sendClassPushNotifications($pdo, $class_id, "New Announcement: " . $title, $message, [
+        'type' => 'announcement',
+        'notification_id' => $notification_id,
+        'screen' => 'ClassUpdates'
+    ]);
     
     // Get count of students in this class
     $student_count = 0;

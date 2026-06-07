@@ -53,7 +53,22 @@ export default function App() {
     }
 
     const handleNotificationTap = (data) => {
-        if (!navigationRef.isReady() || !data) return;
+        if (!data) return;
+
+        if (!navigationRef.isReady()) {
+            let retries = 0;
+            const checkNavReady = setInterval(() => {
+                retries++;
+                if (navigationRef.isReady()) {
+                    clearInterval(checkNavReady);
+                    handleNotificationTap(data);
+                } else if (retries >= 30) {
+                    clearInterval(checkNavReady);
+                    console.warn('[NotificationTap] Defer link failed: Navigation container timeout.');
+                }
+            }, 150);
+            return;
+        }
 
         // ── Study Planner notification ──
         if (data.type === 'STUDY_PLANNER') {
@@ -99,6 +114,13 @@ export default function App() {
                 },
                 initialTab: tabMap[data.taskType] || 'Notes'
             });
+            return;
+        }
+
+        // ── Class Announcements & Worksheets ──
+        if (data.type === 'worksheet' || data.type === 'announcement' || data.screen === 'ClassUpdates') {
+            navigationRef.navigate('Main', { initialScreen: 'ClassUpdates' });
+            return;
         }
     };
 

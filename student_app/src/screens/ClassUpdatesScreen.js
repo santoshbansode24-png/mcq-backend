@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
     View, Text, StyleSheet, SectionList, ActivityIndicator, 
     TouchableOpacity, Linking, Image, TextInput, Alert,
-    RefreshControl, Platform, ScrollView, LayoutAnimation, UIManager
+    RefreshControl, Platform, ScrollView, LayoutAnimation, UIManager,
+    Modal
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
@@ -89,6 +90,8 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
     const [activeTab, setActiveTab] = useState('Updates');
     const [expandedCardIds, setExpandedCardIds] = useState({});
+    const [selectedImageViewUrl, setSelectedImageViewUrl] = useState(null);
+    const [imageViewVisible, setImageViewVisible] = useState(false);
 
     const toggleExpand = (id) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -306,6 +309,13 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         let displayMessage = item.cleanMessage || item.message;
         let htmlPayload = null;
         let payloadData = item.parsedPayload || null;
+        const getUrlType = (url) => {
+            if (!url || typeof url !== 'string') return 'other';
+            const cleanUrl = url.toLowerCase().split('?')[0];
+            if (cleanUrl.endsWith('.pdf')) return 'pdf';
+            if (cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp')) return 'image';
+            return 'other';
+        };
 
         const openAttachment = () => {
             if (hasFile) {
@@ -315,7 +325,16 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     : (fileUrl.startsWith('uploads/materials') 
                         ? `${config.ROOT_URL}/${fileUrl}` 
                         : `${BASE_URL}/${fileUrl}`);
-                Linking.openURL(url);
+                
+                const type = getUrlType(url);
+                if (type === 'pdf') {
+                    navigation.navigate('PDFViewer', { url: url, title: item.title || 'Document' });
+                } else if (type === 'image') {
+                    setSelectedImageViewUrl(url);
+                    setImageViewVisible(true);
+                } else {
+                    Linking.openURL(url);
+                }
             }
         };
 
@@ -1195,6 +1214,32 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     }
                 />
             )}
+            
+            {/* Glowing Full-Screen Image Viewer Modal */}
+            <Modal
+                visible={imageViewVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setImageViewVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <TouchableOpacity 
+                        style={styles.modalCloseButton} 
+                        onPress={() => setImageViewVisible(false)}
+                    >
+                        <MaterialCommunityIcons name="close-circle" size={36} color="white" />
+                    </TouchableOpacity>
+                    <View style={styles.modalImageWrapper}>
+                        {selectedImageViewUrl && (
+                            <Image 
+                                source={{ uri: selectedImageViewUrl }} 
+                                style={styles.modalImage} 
+                                resizeMode="contain" 
+                            />
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </LinearGradient>
     );
 };
@@ -1867,6 +1912,201 @@ const styles = StyleSheet.create({
     recordingMessage: {
         fontSize: 14,
         fontFamily: 'NotoSans-Regular',
+        overflow: 'hidden',
+    },
+    updateCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
+    },
+    updateHeaderTouch: {
+        width: '100%',
+    },
+    divider: {
+        height: 1,
+        marginVertical: 12,
+        opacity: 0.8,
+    },
+    expandedContent: {
+        marginTop: 4,
+    },
+    expandedMessage: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 22,
+        marginBottom: 16,
+        paddingHorizontal: 2,
+    },
+    examCard: {
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 8,
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(217, 119, 6, 0.08)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    examCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
+    },
+    examHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    examIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    examTitleContainer: {
+        flex: 1,
+    },
+    examTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        lineHeight: 22,
+    },
+    examTypeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    examTypeTag: {
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+    },
+    examDate: {
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    examBody: {
+        marginTop: 4,
+        gap: 14,
+    },
+    examMessage: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 20,
+        marginBottom: 2,
+    },
+    examMetaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    examStartButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 16,
+        elevation: 3,
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    examStartButtonText: {
+        color: 'white',
+        fontSize: 15,
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    recordingCard: {
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 8,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.08)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    recordingCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
+    },
+    recordingHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    recordingIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    recordingTitleContainer: {
+        flex: 1,
+    },
+    recordingTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        lineHeight: 22,
+    },
+    recordingTypeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    recordingTypeTag: {
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+    },
+    recordingDate: {
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    recordingBody: {
+        marginTop: 4,
+        gap: 14,
+    },
+    recordingMessage: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
         lineHeight: 20,
         marginBottom: 2,
     },
@@ -1892,6 +2132,33 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalCloseButton: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 60 : 30,
+        right: 20,
+        zIndex: 10,
+    },
+    modalImageWrapper: {
+        width: '90%',
+        height: '80%',
+        borderRadius: 24,
+        overflow: 'hidden',
+        elevation: 10,
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+    },
+    modalImage: {
+        width: '100%',
+        height: '100%',
     }
 });
 

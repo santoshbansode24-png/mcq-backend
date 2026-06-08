@@ -13,7 +13,10 @@ define('R2_ACCESS_KEY_ID',     getenv('R2_ACCESS_KEY_ID')     ?: '');
 define('R2_SECRET_ACCESS_KEY', getenv('R2_SECRET_ACCESS_KEY') ?: '');
 define('R2_ENDPOINT',          getenv('R2_ENDPOINT')          ?: 'https://df57a4dcdaa565e80969e7b3b7ca183f.r2.cloudflarestorage.com');
 define('R2_BUCKET_NAME',       getenv('R2_BUCKET_NAME')       ?: 'veeru-storage');
-define('R2_PUBLIC_URL',        getenv('R2_PUBLIC_URL')        ?: ''); // e.g. https://pub-xxxx.r2.dev
+
+// Fallback to the known public URL if the env var is missing
+$envPublicUrl = getenv('R2_PUBLIC_URL');
+define('R2_PUBLIC_URL',        $envPublicUrl ? $envPublicUrl : 'https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev');
 
 // Legacy aliases for backward compatibility
 define('AWS_ACCESS_KEY_ID',     R2_ACCESS_KEY_ID);

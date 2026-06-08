@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
     View, Text, StyleSheet, SectionList, ActivityIndicator, 
     TouchableOpacity, Linking, Image, TextInput, Alert,
-    RefreshControl, Platform, ScrollView
+    RefreshControl, Platform, ScrollView, LayoutAnimation, UIManager
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
@@ -12,8 +12,12 @@ import config, { BASE_URL, API_URL } from '../api/config';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const createHTML = (mcqs, short, long, subjectTitle, currentMarks, schoolName, date) => {
     let mcqSection = "", shortSection = "", longSection = "";
@@ -84,6 +88,15 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [showJoinForm, setShowJoinForm] = useState(!user?.class_id);
 
     const [activeTab, setActiveTab] = useState('Updates');
+    const [expandedCardIds, setExpandedCardIds] = useState({});
+
+    const toggleExpand = (id) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpandedCardIds(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
 
     const [joinedClasses, setJoinedClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('all');
@@ -103,8 +116,10 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 const classes = response.data.data;
                 setJoinedClasses(classes);
                 if (classes.length > 0) {
+                    setShowJoinForm(false);
                     loadNotifications(classes, selectedClassId);
                 } else {
+                    setShowJoinForm(true);
                     setNotifications([]);
                     setLoading(false);
                 }
@@ -350,6 +365,257 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 Alert.alert('Error', `Failed to open PDF worksheet.\nDetails: ${error.message || 'Unknown error'}`);
             }
         };
+
+        if (activeTab === 'Updates') {
+            const cardId = item.notification_id || item.id;
+            const isExpanded = !!expandedCardIds[cardId];
+            
+            return (
+                <View style={[styles.updateCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                    <TouchableOpacity 
+                        activeOpacity={0.7}
+                        onPress={() => toggleExpand(cardId)}
+                        style={styles.updateHeaderTouch}
+                    >
+                        <View style={styles.cardHeader}>
+                            <View style={[styles.iconContainer, { 
+                                backgroundColor: isPdf ? '#FEE2E2' : 
+                                                isPhoto ? '#ECFDF5' : 
+                                                isExam ? '#FEF3C7' : 
+                                                isHomework ? '#E0F2FE' : 
+                                                isWorksheet ? '#F5F3FF' : 
+                                                isLiveClass ? '#FFE4E6' : '#EEF2FF' 
+                            }]}>
+                                <MaterialCommunityIcons 
+                                    name={
+                                        isPdf ? "file-pdf-box" : 
+                                        isPhoto ? "image" : 
+                                        isExam ? "timer-outline" : 
+                                        (payloadData || htmlPayload || isWorksheet) ? "file-document-edit-outline" :
+                                        isHomework ? "home-edit-outline" : 
+                                        isLiveClass ? "youtube-tv" : "bell-outline"
+                                    } 
+                                    size={22} 
+                                    color={
+                                        isPdf ? "#EF4444" : 
+                                        isPhoto ? "#10B981" : 
+                                        isExam ? "#D97706" : 
+                                        (payloadData || htmlPayload || isWorksheet) ? "#8B5CF6" :
+                                        isHomework ? "#0EA5E9" : 
+                                        isLiveClass ? "#E11D48" : "#6366F1"
+                                    }
+                                />
+                            </View>
+                            <View style={styles.titleContainer}>
+                                <View style={styles.typeRow}>
+                                    <Text style={[styles.typeTag, { 
+                                        color: isExam ? '#D97706' : (payloadData || htmlPayload || isWorksheet) ? '#8B5CF6' : isHomework ? '#0EA5E9' : isLiveClass ? '#E11D48' : '#6366F1' 
+                                    }]}>
+                                        {isLiveClass ? '🔴 LIVE CLASS' : (((payloadData || htmlPayload) ? 'WORKSHEET' : item.update_type?.toUpperCase()) || 'ANNOUNCEMENT')}
+                                    </Text>
+                                    <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                                    <Text style={[styles.title, { color: theme.text, flex: 1, paddingRight: 12 }]} numberOfLines={2}>{item.title}</Text>
+                                    <MaterialCommunityIcons 
+                                        name={isExpanded ? "chevron-up" : "chevron-down"} 
+                                        size={22} 
+                                        color={isDarkMode ? '#94a3b8' : '#64748b'} 
+                                    />
+                                </View>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+
+                    {!isExpanded && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingHorizontal: 4 }}>
+                            <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                                <MaterialCommunityIcons name="account-tie" size={14} color="#64748b" />
+                                <Text style={[styles.teacher, { color: '#64748b' }]}>{item.teacher_name}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => toggleExpand(cardId)}>
+                                <Text style={{ fontSize: 12, color: theme.primary, fontFamily: 'NotoSans-Bold' }}>Tap to view details</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {isExpanded && (
+                        <View style={styles.expandedContent}>
+                            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#334155' : '#e2e8f0' }]} />
+                            
+                            <Text style={[styles.expandedMessage, { color: theme.textSecondary }]}>{displayMessage}</Text>
+                            
+                            {isLiveClass && (
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { backgroundColor: '#E11D48' }]} 
+                                    onPress={() => {
+                                        navigation.navigate('LiveClass', { 
+                                            classUpdate: item,
+                                            userId: user?.user_id || user?.id
+                                        });
+                                    }}
+                                >
+                                    <MaterialCommunityIcons name="youtube-tv" size={20} color="white" />
+                                    <Text style={styles.actionButtonText}>Join Live Class</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {isExam && (
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { backgroundColor: '#D97706' }]} 
+                                    onPress={async () => {
+                                        try {
+                                            setLoading(true);
+                                            const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}&user_id=${user?.user_id || user?.id || 0}`);
+                                            if (response.data && response.data.status === 'success' && response.data.data) {
+                                                const examData = response.data.data;
+                                                if (examData.questions && examData.questions.length > 0) {
+                                                    navigation.navigate('MyExamTest', {
+                                                        questions: examData.questions,
+                                                        totalQuestions: examData.questions.length,
+                                                        subjectName: examData.title,
+                                                        update_id: examData.exam_id
+                                                    });
+                                                } else {
+                                                    Alert.alert("Notice", "This exam does not contain any questions.");
+                                                }
+                                            } else {
+                                                Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
+                                            }
+                                        } catch (err) {
+                                            Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }}
+                                >
+                                    <MaterialCommunityIcons name="play-circle" size={20} color="white" />
+                                    <Text style={styles.actionButtonText}>Start Live Exam</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {isHomework && !payloadData && !htmlPayload && (
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { backgroundColor: '#0EA5E9' }]} 
+                                    onPress={() => Alert.alert(item.title || "Homework", displayMessage || "No description provided.")}
+                                >
+                                    <MaterialCommunityIcons name="clipboard-text" size={20} color="white" />
+                                    <Text style={styles.actionButtonText}>View Homework</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {(payloadData || htmlPayload) && (
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { backgroundColor: '#8B5CF6' }]} 
+                                    onPress={generateAndOpenLocalPdf}
+                                >
+                                    <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="white" />
+                                    <Text style={styles.actionButtonText}>Open</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {hasFile && (
+                                <TouchableOpacity 
+                                    style={[styles.attachmentButton, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]} 
+                                    onPress={openAttachment}
+                                >
+                                    <MaterialCommunityIcons 
+                                        name={isPdf ? "file-pdf-box" : isWorksheet ? "file-document-outline" : "image"} 
+                                        size={20} 
+                                        color={isPdf ? "#EF4444" : isWorksheet ? "#8B5CF6" : "#10B981"} 
+                                    />
+                                    <Text style={[styles.attachmentText, { color: isPdf ? "#EF4444" : isWorksheet ? "#8B5CF6" : "#10B981" }]}>
+                                        {isPdf ? 'Download PDF' : isWorksheet ? 'Open Worksheet' : 'View Attachment'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingHorizontal: 4 }}>
+                                <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                                    <MaterialCommunityIcons name="account-tie" size={14} color="#64748b" />
+                                    <Text style={[styles.teacher, { color: '#64748b' }]}>{item.teacher_name}</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => toggleExpand(cardId)}>
+                                    <Text style={{ fontSize: 12, color: theme.primary, fontFamily: 'NotoSans-Bold' }}>Collapse</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                </View>
+            );
+        }
+
+        if (activeTab === 'Worksheets') {
+            const isDynamicWksht = (payloadData && (payloadData.type === 'worksheet_data' && payloadData.data || payloadData.html)) || htmlPayload;
+            const isStaticWksht = hasFile;
+            
+            const handleOpenWorksheet = () => {
+                if (isDynamicWksht) {
+                    generateAndOpenLocalPdf();
+                } else if (isStaticWksht) {
+                    openAttachment();
+                } else {
+                    Alert.alert("Worksheet", "No attachment file or content available.");
+                }
+            };
+
+            return (
+                <View style={[styles.worksheetCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                    <LinearGradient
+                        colors={isDarkMode ? ['#8B5CF6', '#4F46E5'] : ['#A78BFA', '#8B5CF6']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.worksheetCardAccent}
+                    />
+                    
+                    <View style={styles.worksheetHeader}>
+                        <View style={[styles.worksheetIconContainer, { backgroundColor: isDarkMode ? '#334155' : '#F5F3FF' }]}>
+                            <MaterialCommunityIcons 
+                                name={isStaticWksht ? "file-pdf-box" : "file-document-edit-outline"} 
+                                size={26} 
+                                color="#8B5CF6" 
+                            />
+                        </View>
+                        
+                        <View style={styles.worksheetTitleContainer}>
+                            <View style={styles.worksheetTypeRow}>
+                                <Text style={[styles.worksheetTypeTag, { color: '#8B5CF6' }]}>
+                                    {isDynamicWksht ? 'AI WORKSHEET' : 'PRACTICE WORKSHEET'}
+                                </Text>
+                                <Text style={styles.worksheetDate}>{formatDate(item.created_at)}</Text>
+                            </View>
+                            <Text style={[styles.worksheetTitle, { color: theme.text }]} numberOfLines={2}>
+                                {item.title}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.worksheetBody}>
+                        <View style={styles.worksheetMetaRow}>
+                            <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                                <MaterialCommunityIcons name="account-tie" size={14} color="#64748b" />
+                                <Text style={[styles.teacher, { color: '#64748b' }]}>{item.teacher_name}</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity 
+                            onPress={handleOpenWorksheet}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#8B5CF6', '#7C3AED']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.worksheetOpenButton}
+                            >
+                                <MaterialCommunityIcons name="eye-outline" size={18} color="white" style={{ marginRight: 6 }} />
+                                <Text style={styles.worksheetOpenButtonText}>Open</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            );
+        }
 
         return (
             <View style={[styles.card, { backgroundColor: isDarkMode ? '#1e293b' : 'rgba(255, 255, 255, 0.65)' }]}>
@@ -602,7 +868,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     </View>
 
                     <View style={styles.joinActions}>
-                        {user?.class_id && (
+                        {joinedClasses.length > 0 && (
                             <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowJoinForm(false)}>
                                 <Text style={styles.cancelBtnText}>Cancel</Text>
                             </TouchableOpacity>
@@ -694,16 +960,36 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 </View>
                             )}
 
-                            <View style={[styles.tabContainer, { backgroundColor: isDarkMode ? '#1e293b' : '#fff' }]}>
+                            <View style={[styles.tabContainer, { backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
                                 {['Updates', 'Worksheets', 'Recordings', 'Live Exams'].map(tab => {
                                     const isActive = activeTab === tab;
+                                    if (isActive) {
+                                        return (
+                                            <TouchableOpacity 
+                                                key={tab}
+                                                style={styles.tabBtnActive}
+                                                onPress={() => setActiveTab(tab)}
+                                            >
+                                                <LinearGradient
+                                                    colors={['#8B5CF6', '#6366F1']}
+                                                    start={{ x: 0, y: 0 }}
+                                                    end={{ x: 1, y: 0 }}
+                                                    style={styles.tabBtnGradient}
+                                                >
+                                                    <Text style={[styles.tabBtnText, { color: '#fff' }]}>
+                                                        {tab}
+                                                    </Text>
+                                                </LinearGradient>
+                                            </TouchableOpacity>
+                                        );
+                                    }
                                     return (
                                         <TouchableOpacity 
                                             key={tab}
-                                            style={[styles.tabBtn, isActive && { backgroundColor: theme.primary }]}
+                                            style={styles.tabBtn}
                                             onPress={() => setActiveTab(tab)}
                                         >
-                                            <Text style={[styles.tabBtnText, isActive ? { color: '#fff' } : { color: theme.textSecondary }]}>
+                                            <Text style={[styles.tabBtnText, { color: theme.textSecondary }]}>
                                                 {tab}
                                             </Text>
                                         </TouchableOpacity>
@@ -1094,6 +1380,138 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: 'bold',
         color: '#FFF',
+    },
+    worksheetCard: {
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.04)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    worksheetCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
+    },
+    worksheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    worksheetIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    worksheetTitleContainer: {
+        flex: 1,
+    },
+    worksheetTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        lineHeight: 22,
+    },
+    worksheetTypeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    worksheetTypeTag: {
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+    },
+    worksheetDate: {
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    worksheetBody: {
+        marginTop: 4,
+        gap: 14,
+    },
+    worksheetMetaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    worksheetOpenButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 16,
+        elevation: 3,
+        shadowColor: '#8B5CF6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    worksheetOpenButtonText: {
+        color: 'white',
+        fontSize: 15,
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    tabBtnActive: {
+        flex: 1,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    tabBtnGradient: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    updateCard: {
+        borderRadius: 22,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+    },
+    updateHeaderTouch: {
+        width: '100%',
+    },
+    divider: {
+        height: 1,
+        marginVertical: 12,
+        opacity: 0.8,
+    },
+    expandedContent: {
+        marginTop: 4,
+    },
+    expandedMessage: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 22,
+        marginBottom: 16,
+        paddingHorizontal: 2,
     }
 });
 

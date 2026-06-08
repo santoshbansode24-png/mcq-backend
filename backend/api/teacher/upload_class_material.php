@@ -62,19 +62,43 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
 
     // Generate unique name
     $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
-    $destPath = $uploadDir . $newFileName;
     
-    if (move_uploaded_file($fileTmpPath, $destPath)) {
-        $payload['file_url'] = 'uploads/class_materials/' . $newFileName;
+    // AWS S3 UPLOAD LOGIC with Fallback
+    require_once '../../config/aws-config.php';
+    
+    $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+    $s3_url = false;
+
+    if ($is_aws_configured) {
+        // Define S3 Key (Path in bucket)
+        $s3_key = "class_materials/" . $newFileName;
+        
+        // Upload directly from temp location to S3
+        $s3_url = uploadToS3($fileTmpPath, $s3_key);
+    }
+
+    if ($s3_url) {
+        $payload['file_url'] = $s3_url;
         $payload['file_name'] = $fileName;
         
         // Auto-correct update_type ONLY if it's currently 'announcement' or generic.
-        // If teacher specifically sent 'homework' or 'worksheet', KEEP it.
         if ($update_type === 'announcement' || $update_type === 'material') {
             $update_type = ($fileExtension === 'pdf') ? 'pdf' : 'photo';
         }
     } else {
-        sendResponse('error', 'Error moving the uploaded file.', null, 500);
+        // FALLBACK: Local Upload
+        $destPath = $uploadDir . $newFileName;
+        if (move_uploaded_file($fileTmpPath, $destPath)) {
+            $payload['file_url'] = 'uploads/class_materials/' . $newFileName;
+            $payload['file_name'] = $fileName;
+            
+            // Auto-correct update_type ONLY if it's currently 'announcement' or generic.
+            if ($update_type === 'announcement' || $update_type === 'material') {
+                $update_type = ($fileExtension === 'pdf') ? 'pdf' : 'photo';
+            }
+        } else {
+            sendResponse('error', 'Error moving the uploaded file (AWS and local fallback failed).', null, 500);
+        }
     }
 } else if ($update_type === 'pdf' || $update_type === 'photo') {
     sendResponse('error', 'File is required for ' . $update_type . ' updates.', null, 400);

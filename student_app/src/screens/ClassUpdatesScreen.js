@@ -92,6 +92,43 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [expandedCardIds, setExpandedCardIds] = useState({});
     const [selectedImageViewUrl, setSelectedImageViewUrl] = useState(null);
     const [imageViewVisible, setImageViewVisible] = useState(false);
+    const [imageLoading, setImageLoading] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    const [hasTriedFallback, setHasTriedFallback] = useState(false);
+
+    const handleCloseImageViewer = () => {
+        setImageViewVisible(false);
+        setSelectedImageViewUrl(null);
+        setImageLoading(false);
+        setImageError(false);
+        setHasTriedFallback(false);
+    };
+
+    const handleImageError = () => {
+        if (!hasTriedFallback && selectedImageViewUrl) {
+            let fallbackUrl = selectedImageViewUrl;
+            
+            // Check if the current URL has /backend/
+            if (selectedImageViewUrl.includes('/backend/uploads/')) {
+                // Try removing /backend/
+                fallbackUrl = selectedImageViewUrl.replace('/backend/uploads/', '/uploads/');
+            } else if (selectedImageViewUrl.includes('/uploads/') && !selectedImageViewUrl.includes('/backend/uploads/')) {
+                // Try adding /backend/
+                fallbackUrl = selectedImageViewUrl.replace('/uploads/', '/backend/uploads/');
+            }
+            
+            if (fallbackUrl !== selectedImageViewUrl) {
+                console.log(`[Image Load Failure] Trying fallback URL: ${fallbackUrl}`);
+                setHasTriedFallback(true);
+                setSelectedImageViewUrl(fallbackUrl);
+                return;
+            }
+        }
+        
+        console.error(`[Image Load Failure] All URL attempts failed for: ${selectedImageViewUrl}`);
+        setImageError(true);
+        setImageLoading(false);
+    };
 
     const toggleExpand = (id) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -277,7 +314,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         // Only hide active events from the general Updates feed, let them show up in their specific tabs
         if (isEventActive(item) && activeTab === 'Updates') return false;
         
-        const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.parsedPayload && item.parsedPayload.type === 'worksheet_data');
+        const hasFileUrl = item.payload && (item.payload.file_url || item.payload.url);
+        const urlStr = hasFileUrl ? (item.payload.file_url || item.payload.url).toLowerCase() : '';
+        const isUrlPdf = urlStr.includes('.pdf') || urlStr.includes('.doc');
+        
+        const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.parsedPayload && item.parsedPayload.type === 'worksheet_data') || isUrlPdf;
         const isClassRecording = item.update_type === 'live_class';
         const isLiveExam = item.update_type === 'live_exam';
 
@@ -299,11 +340,14 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
     const renderItem = useCallback(({ item }) => {
         const hasFile = item.payload && (item.payload.file_url || item.payload.url);
-        const isPdf = item.update_type === 'pdf';
-        const isPhoto = item.update_type === 'photo';
+        const urlStr = hasFile ? (item.payload.file_url || item.payload.url).toLowerCase() : '';
+        const isUrlPdf = urlStr.includes('.pdf');
+        
+        const isPdf = item.update_type === 'pdf' || isUrlPdf;
+        const isPhoto = item.update_type === 'photo' && !isUrlPdf;
         const isExam = item.update_type === 'live_exam';
-        const isHomework = item.update_type === 'homework';
-        const isWorksheet = item.update_type === 'worksheet' || item.update_type === 'material';
+        const isHomework = item.update_type === 'homework' && !isUrlPdf;
+        const isWorksheet = item.update_type === 'worksheet' || item.update_type === 'material' || isUrlPdf;
         const isLiveClass = item.update_type === 'live_class';
 
         let displayMessage = item.cleanMessage || item.message;
@@ -320,20 +364,33 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const openAttachment = () => {
             if (hasFile) {
                 const fileUrl = item.payload.file_url || item.payload.url;
-                const url = fileUrl.startsWith('http') 
-                    ? fileUrl 
-                    : (fileUrl.startsWith('uploads/materials') 
-                        ? `${config.ROOT_URL}/${fileUrl}` 
-                        : `${BASE_URL}/${fileUrl}`);
                 
-                const type = getUrlType(url);
+                // Clean the fileUrl to remove leading slashes and trailing whitespace
+                let cleanFileUrl = fileUrl.trim();
+                if (cleanFileUrl.startsWith('/')) {
+                    cleanFileUrl = cleanFileUrl.substring(1);
+                }
+                
+                const url = cleanFileUrl.startsWith('http') 
+                    ? cleanFileUrl 
+                    : (cleanFileUrl.startsWith('uploads/materials') 
+                        ? `${config.ROOT_URL}/${cleanFileUrl}` 
+                        : `${BASE_URL}/${cleanFileUrl}`);
+                
+                // Remove potential double slashes (except in http:// or https://)
+                const finalUrl = url.replace(/([^:]\/)\/+/g, "$1");
+                
+                const type = getUrlType(finalUrl);
                 if (type === 'pdf') {
-                    navigation.navigate('PDFViewer', { url: url, title: item.title || 'Document' });
+                    navigation.navigate('PDFViewer', { url: finalUrl, title: item.title || 'Document' });
                 } else if (type === 'image') {
-                    setSelectedImageViewUrl(url);
+                    setImageLoading(true);
+                    setImageError(false);
+                    setHasTriedFallback(false);
+                    setSelectedImageViewUrl(finalUrl);
                     setImageViewVisible(true);
                 } else {
-                    Linking.openURL(url);
+                    Linking.openURL(finalUrl);
                 }
             }
         };
@@ -390,7 +447,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             const isExpanded = !!expandedCardIds[cardId];
             
             return (
-                <View style={[styles.updateCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                <View style={[styles.updateCard, { backgroundColor: isDarkMode ? '#082f49' : '#f0f9ff' }]}>
                     <LinearGradient
                         colors={isDarkMode ? ['#3B82F6', '#1E40AF'] : ['#93C5FD', '#3B82F6']}
                         start={{ x: 0, y: 0 }}
@@ -598,7 +655,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             };
 
             return (
-                <View style={[styles.examCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                <View style={[styles.examCard, { backgroundColor: isDarkMode ? '#451a03' : '#fffbeb' }]}>
                     <LinearGradient
                         colors={['#F59E0B', '#D97706']}
                         start={{ x: 0, y: 0 }}
@@ -744,7 +801,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             };
 
             return (
-                <View style={[styles.worksheetCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                <View style={[styles.worksheetCard, { backgroundColor: isDarkMode ? '#2e1065' : '#faf5ff' }]}>
                     <LinearGradient
                         colors={isDarkMode ? ['#8B5CF6', '#4F46E5'] : ['#A78BFA', '#8B5CF6']}
                         start={{ x: 0, y: 0 }}
@@ -1183,7 +1240,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                         </View>
                     )}
                     renderSectionHeader={({ section: { title } }) => (
-                        <View style={[styles.sectionHeader, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]}>
+                        <View style={[styles.sectionHeader, { backgroundColor: 'transparent' }]}>
                             <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>{title}</Text>
                             <View style={[styles.sectionLine, { backgroundColor: isDarkMode ? '#334155' : '#e2e8f0' }]} />
                         </View>
@@ -1220,24 +1277,52 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 visible={imageViewVisible}
                 transparent={true}
                 animationType="fade"
-                onRequestClose={() => setImageViewVisible(false)}
+                onRequestClose={handleCloseImageViewer}
             >
                 <View style={styles.modalContainer}>
                     <TouchableOpacity 
                         style={styles.modalCloseButton} 
-                        onPress={() => setImageViewVisible(false)}
+                        onPress={handleCloseImageViewer}
                     >
                         <MaterialCommunityIcons name="close-circle" size={36} color="white" />
                     </TouchableOpacity>
+                    
                     <View style={styles.modalImageWrapper}>
-                        {selectedImageViewUrl && (
+                        {selectedImageViewUrl && !imageError && (
                             <Image 
                                 source={{ uri: selectedImageViewUrl }} 
                                 style={styles.modalImage} 
-                                resizeMode="contain" 
+                                resizeMode="contain"
+                                onLoadStart={() => setImageLoading(true)}
+                                onLoadEnd={() => setImageLoading(false)}
+                                onError={handleImageError}
                             />
                         )}
+                        
+                        {imageLoading && (
+                            <View style={styles.modalLoaderContainer}>
+                                <ActivityIndicator size="large" color="#3B82F6" />
+                                <Text style={styles.modalLoadingText}>Loading attachment...</Text>
+                            </View>
+                        )}
+                        
+                        {imageError && (
+                            <View style={styles.modalErrorContainer}>
+                                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#EF4444" />
+                                <Text style={styles.modalErrorText}>Failed to load image</Text>
+                                <Text style={styles.modalErrorSubText}>
+                                    The attachment might have been removed or the path is invalid.
+                                </Text>
+                            </View>
+                        )}
                     </View>
+                    
+                    {/* Subtle debug URL display */}
+                    {selectedImageViewUrl && (
+                        <Text style={styles.modalDebugText} numberOfLines={2}>
+                            URL: {selectedImageViewUrl}
+                        </Text>
+                    )}
                 </View>
             </Modal>
         </LinearGradient>
@@ -1411,14 +1496,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 12,
-        borderRadius: 14,
+        padding: 14,
+        borderRadius: 20,
         marginBottom: 12,
-        gap: 8,
+        gap: 10,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
     },
     actionButtonText: {
         color: 'white',
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: 'bold',
         fontFamily: 'NotoSans-Bold',
     },
@@ -1592,16 +1682,16 @@ const styles = StyleSheet.create({
         color: '#FFF',
     },
     worksheetCard: {
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 16,
-        elevation: 8,
+        borderRadius: 28,
+        padding: 22,
+        marginBottom: 20,
+        elevation: 10,
         shadowColor: '#8B5CF6',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(139, 92, 246, 0.08)',
+        borderColor: 'rgba(139, 92, 246, 0.15)',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -1610,7 +1700,7 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        height: 6,
+        height: 8,
     },
     worksheetHeader: {
         flexDirection: 'row',
@@ -1618,17 +1708,17 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     worksheetIconContainer: {
-        width: 52,
-        height: 52,
-        borderRadius: 18,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 14,
+        marginRight: 16,
         elevation: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowRadius: 4,
     },
     worksheetTitleContainer: {
         flex: 1,
@@ -1668,13 +1758,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 16,
-        elevation: 3,
+        paddingVertical: 14,
+        borderRadius: 20,
+        elevation: 4,
         shadowColor: '#8B5CF6',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
     },
     worksheetOpenButtonText: {
         color: 'white',
@@ -1706,16 +1796,16 @@ const styles = StyleSheet.create({
         shadowRadius: 16,
     },
     updateCard: {
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 16,
-        elevation: 8,
+        borderRadius: 28,
+        padding: 22,
+        marginBottom: 20,
+        elevation: 10,
         shadowColor: '#3B82F6',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.08)',
+        borderColor: 'rgba(59, 130, 246, 0.15)',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -1724,7 +1814,7 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        height: 6,
+        height: 8,
     },
     updateHeaderTouch: {
         width: '100%',
@@ -1745,16 +1835,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 2,
     },
     examCard: {
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 16,
-        elevation: 8,
+        borderRadius: 28,
+        padding: 22,
+        marginBottom: 20,
+        elevation: 10,
         shadowColor: '#D97706',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(217, 119, 6, 0.08)',
+        borderColor: 'rgba(217, 119, 6, 0.15)',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -1763,7 +1853,7 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        height: 6,
+        height: 8,
     },
     examHeader: {
         flexDirection: 'row',
@@ -2150,6 +2240,11 @@ const styles = StyleSheet.create({
         height: '80%',
         borderRadius: 24,
         overflow: 'hidden',
+        backgroundColor: 'rgba(30, 41, 59, 0.5)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
         elevation: 10,
         shadowColor: '#3B82F6',
         shadowOffset: { width: 0, height: 10 },
@@ -2159,6 +2254,48 @@ const styles = StyleSheet.create({
     modalImage: {
         width: '100%',
         height: '100%',
+    },
+    modalLoaderContainer: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalLoadingText: {
+        color: '#94A3B8',
+        marginTop: 10,
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+    },
+    modalErrorContainer: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalErrorText: {
+        color: '#EF4444',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 12,
+        fontFamily: 'NotoSans-Bold',
+    },
+    modalErrorSubText: {
+        color: '#94A3B8',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 6,
+        fontFamily: 'NotoSans-Regular',
+    },
+    modalDebugText: {
+        color: 'rgba(148, 163, 184, 0.5)',
+        fontSize: 11,
+        textAlign: 'center',
+        position: 'absolute',
+        bottom: Platform.OS === 'ios' ? 40 : 20,
+        paddingHorizontal: 20,
+        fontFamily: 'NotoSans-Regular',
     }
 });
 

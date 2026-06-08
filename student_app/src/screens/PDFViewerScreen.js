@@ -23,17 +23,25 @@ const PDFViewerScreen = ({ navigation, route }) => {
     console.log("PDFViewer Debug - URL:", url, "isLocal:", isLocalFile);
 
     const loadPdfData = async () => {
-      // Only load base64 if it's a local file
-      if (isLocalFile) {
-        try {
-          console.log("Reading file as Base64...");
+      try {
+        if (isLocalFile) {
+          console.log("Reading local file as Base64...");
           const base64 = await FileSystem.readAsStringAsync(url, { encoding: 'base64' });
-          console.log("Base64 read success, length:", base64.length);
           setPdfBase64(base64);
-        } catch (error) {
-          console.error("Error reading PDF file:", error);
-          setError("Could not read file: " + error.message);
+        } else {
+          console.log("Downloading remote PDF...");
+          const tempFileUri = `${FileSystem.cacheDirectory}temp_pdf_${Date.now()}.pdf`;
+          const { uri } = await FileSystem.downloadAsync(url, tempFileUri);
+          console.log("Downloaded, reading Base64...");
+          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+          setPdfBase64(base64);
+          
+          // Cleanup
+          FileSystem.deleteAsync(uri, { idempotent: true }).catch(e => console.log(e));
         }
+      } catch (error) {
+        console.error("Error loading PDF file:", error);
+        setError("Could not load PDF: " + error.message);
       }
       setLoadingFile(false);
     };
@@ -62,13 +70,8 @@ const PDFViewerScreen = ({ navigation, route }) => {
     setWebViewLoaded(true);
   };
 
-  // CONDITIONAL SCRIPT GENERATION
-  // We determine strictly in JS which script to inject, so the HTML assumes nothing.
-  let loaderScript = '';
-
-  if (isLocalFile) {
-    // SCRIPT FOR LOCAL FILES (Wait for Message)
-    loaderScript = `
+  // We ALWAYS use the base64 loader script now
+  const loaderScript = `
           // Listen for Base64 data from React Native
           document.addEventListener('message', function(event) {
               handleMessage(event.data);
@@ -106,21 +109,6 @@ const PDFViewerScreen = ({ navigation, route }) => {
               }
           }
       `;
-  } else {
-    // SCRIPT FOR REMOTE URLS (Load Directly)
-    loaderScript = `
-          document.getElementById('status').innerText = 'Loading Remote URL...';
-          pdfjsLib.getDocument('${url}').promise.then(function(pdfDoc_) {
-            pdfDoc = pdfDoc_;
-            document.getElementById('loading').style.display = 'none';
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
-                renderPage(i);
-            }
-          }).catch(function(reason){
-             showError('Remote Fetch Error: ' + reason.message);
-          });
-      `;
-  }
 
   const pdfJsHtml = `
       <!DOCTYPE html>

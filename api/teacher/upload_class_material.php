@@ -78,13 +78,32 @@ try {
         // Generate unique filename securely
         $trusted_ext = $allowedMimeTypes[$mimeType];
         $fileName = 'material_' . bin2hex(random_bytes(16)) . '.' . $trusted_ext;
-        $targetPath = $uploadDir . $fileName;
+        
+        // AWS S3 UPLOAD LOGIC with Fallback
+        require_once '../../backend/config/aws-config.php';
+        
+        $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+        $s3_url = false;
 
-        if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
-            $attachment_url = 'uploads/materials/' . $fileName;
+        if ($is_aws_configured) {
+            // Define S3 Key (Path in bucket)
+            $s3_key = "materials/" . $fileName;
+            
+            // Upload directly from temp location to S3
+            $s3_url = uploadToS3($_FILES['file']['tmp_name'], $s3_key);
+        }
+
+        if ($s3_url) {
+            $attachment_url = $s3_url;
         } else {
-            $error = error_get_last();
-            sendResponse('error', 'Failed to save uploaded file: ' . ($error['message'] ?? 'Unknown error'), null, 500);
+            // FALLBACK: Local Upload
+            $targetPath = $uploadDir . $fileName;
+            if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
+                $attachment_url = 'uploads/materials/' . $fileName;
+            } else {
+                $error = error_get_last();
+                sendResponse('error', 'Failed to save uploaded file (AWS and local fallback failed): ' . ($error['message'] ?? 'Unknown error'), null, 500);
+            }
         }
     }
 

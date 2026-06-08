@@ -373,7 +373,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 
                 const url = cleanFileUrl.startsWith('http') 
                     ? cleanFileUrl 
-                    : (cleanFileUrl.startsWith('uploads/materials') 
+                    : (cleanFileUrl.startsWith('uploads/materials') || cleanFileUrl.startsWith('uploads/class_materials') || cleanFileUrl.startsWith('uploads/')
                         ? `${config.ROOT_URL}/${cleanFileUrl}` 
                         : `${BASE_URL}/${cleanFileUrl}`);
                 

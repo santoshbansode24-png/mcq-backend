@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
-import { BASE_URL, API_URL } from '../api/config';
+import config, { BASE_URL, API_URL } from '../api/config';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
@@ -295,7 +295,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const openAttachment = () => {
             if (hasFile) {
                 const fileUrl = item.payload.file_url || item.payload.url;
-                const url = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}/${fileUrl}`;
+                const url = fileUrl.startsWith('http') 
+                    ? fileUrl 
+                    : (fileUrl.startsWith('uploads/materials') 
+                        ? `${config.ROOT_URL}/${fileUrl}` 
+                        : `${BASE_URL}/${fileUrl}`);
                 Linking.openURL(url);
             }
         };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, StatusBar, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar, ActivityIndicator, Platform, Alert, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy'; // Use legacy to match downloadUtils
 
@@ -16,40 +16,69 @@ const PDFViewerScreen = ({ navigation, route }) => {
   const webViewRef = React.useRef(null);
 
   // ROBUST CHECK: If it looks like a file, treat it as local.
-  // Defaults to TRUE if not http/https to avoid accidental remote fetch of local paths.
   const isLocalFile = url && (url.startsWith('file:') || url.startsWith('/') || (!url.startsWith('http') && !url.startsWith('https')));
 
-  React.useEffect(() => {
-    console.log("PDFViewer Debug - URL:", url, "isLocal:", isLocalFile);
-
-    const loadPdfData = async () => {
-      try {
-        if (isLocalFile) {
-          console.log("Reading local file as Base64...");
-          const base64 = await FileSystem.readAsStringAsync(url, { encoding: 'base64' });
-          setPdfBase64(base64);
-        } else {
-          console.log("Downloading remote PDF...");
-          const tempFileUri = `${FileSystem.cacheDirectory}temp_pdf_${Date.now()}.pdf`;
-          const { uri } = await FileSystem.downloadAsync(url, tempFileUri);
-          console.log("Downloaded, reading Base64...");
-          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-          setPdfBase64(base64);
-          
-          // Cleanup
-          FileSystem.deleteAsync(uri, { idempotent: true }).catch(e => console.log(e));
+  const loadPdfData = async () => {
+    setError(null);
+    setLoadingFile(true);
+    setPdfBase64(null);
+    setWebViewLoaded(false);
+    try {
+      if (isLocalFile) {
+        console.log("Reading local file as Base64...");
+        const base64 = await FileSystem.readAsStringAsync(url, { encoding: 'base64' });
+        setPdfBase64(base64);
+      } else {
+        console.log("Downloading remote PDF from:", url);
+        const tempFileUri = `${FileSystem.cacheDirectory}temp_pdf_${Date.now()}.pdf`;
+        const downloadResult = await FileSystem.downloadAsync(url, tempFileUri);
+        
+        console.log("Download status:", downloadResult.status);
+        
+        // Check HTTP status
+        if (downloadResult.status !== 200) {
+          FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(() => {});
+          throw new Error(`Server returned status ${downloadResult.status}.\n\nThe file may not exist on the server.\n\nURL: ${url}`);
         }
-      } catch (error) {
-        console.error("Error loading PDF file:", error);
-        setError("Could not load PDF: " + error.message);
-      }
-      setLoadingFile(false);
-    };
 
+        // Check Content-Type header
+        const contentType = (downloadResult.headers?.['content-type'] || '').toLowerCase();
+        if (contentType.includes('text/html')) {
+          FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(() => {});
+          throw new Error(`Server returned an HTML page instead of a PDF.\n\nThe file may have moved or the URL is incorrect.\n\nURL: ${url}`);
+        }
+
+        // Verify PDF header bytes (%PDF)
+        const headerBytes = await FileSystem.readAsStringAsync(tempFileUri, { 
+          encoding: 'utf8', 
+          length: 5, 
+          position: 0 
+        }).catch(() => '');
+        
+        if (headerBytes && !headerBytes.startsWith('%PDF')) {
+          FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(() => {});
+          throw new Error(`The downloaded file is not a valid PDF.\n\nThe teacher may need to re-upload the file.\n\nURL: ${url}`);
+        }
+
+        console.log("Downloaded valid PDF, reading Base64...");
+        const base64 = await FileSystem.readAsStringAsync(tempFileUri, { encoding: 'base64' });
+        setPdfBase64(base64);
+        
+        // Cleanup temp file
+        FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(e => console.log(e));
+      }
+    } catch (err) {
+      console.error("Error loading PDF file:", err);
+      setError(err.message || "Could not load PDF.");
+    }
+    setLoadingFile(false);
+  };
+
+  React.useEffect(() => {
     if (url) {
       loadPdfData();
     } else {
-      setError("No URL provided to viewer");
+      setError("No URL provided to viewer.");
       setLoadingFile(false);
     }
   }, [url]);
@@ -70,15 +99,9 @@ const PDFViewerScreen = ({ navigation, route }) => {
     setWebViewLoaded(true);
   };
 
-  // We ALWAYS use the base64 loader script now
   const loaderScript = `
-          // Listen for Base64 data from React Native
-          document.addEventListener('message', function(event) {
-              handleMessage(event.data);
-          });
-          window.addEventListener('message', function(event) {
-              handleMessage(event.data);
-          });
+          document.addEventListener('message', function(event) { handleMessage(event.data); });
+          window.addEventListener('message', function(event) { handleMessage(event.data); });
 
           function handleMessage(dataStr) {
               try {
@@ -87,9 +110,7 @@ const PDFViewerScreen = ({ navigation, route }) => {
                       document.getElementById('status').innerText = 'Rendering PDF...';
                       loadPdf(message.data);
                   }
-              } catch(e) {
-                  console.error(e);
-              }
+              } catch(e) { console.error(e); }
           }
 
           function loadPdf(data) {
@@ -98,14 +119,14 @@ const PDFViewerScreen = ({ navigation, route }) => {
                  pdfjsLib.getDocument({data: uint8Array}).promise.then(function(pdfDoc_) {
                     pdfDoc = pdfDoc_;
                     document.getElementById('loading').style.display = 'none';
-                    for (let i = 1; i <= pdfDoc.numPages; i++) {
-                        renderPage(i);
-                    }
+                    for (let i = 1; i <= pdfDoc.numPages; i++) { renderPage(i); }
                  }).catch(function(reason) {
                     showError('Render Error: ' + reason.message);
+                    window.ReactNativeWebView.postMessage(JSON.stringify({type: 'render_error', message: reason.message}));
                  });
               } catch(e) {
                   showError('Data Error: ' + e.message);
+                  window.ReactNativeWebView.postMessage(JSON.stringify({type: 'render_error', message: e.message}));
               }
           }
       `;
@@ -134,11 +155,9 @@ const PDFViewerScreen = ({ navigation, route }) => {
             <div id="status">Preparing Document...</div>
         </div>
         <div id="container"></div>
-
         <script>
           let pdfDoc = null;
-          const scale = 2.0; // Increased scale for better clarity
-
+          const scale = 2.0;
           function renderPage(num) {
             pdfDoc.getPage(num).then(function(page) {
               const viewport = page.getViewport({scale: scale});
@@ -151,17 +170,12 @@ const PDFViewerScreen = ({ navigation, route }) => {
               canvas.width = viewport.width;
               canvas.style.width = '95%'; 
               canvas.style.height = 'auto';
-              const renderContext = { canvasContext: ctx, viewport: viewport };
-              page.render(renderContext);
+              page.render({ canvasContext: ctx, viewport: viewport });
             });
           }
-
           function showError(msg) {
-              const box = document.getElementById('loading');
-              box.innerHTML = '<div style="color:#ff6b6b; font-weight:bold;">' + msg + '</div>';
-              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', message: msg}));
+              document.getElementById('loading').innerHTML = '<div style="color:#ff6b6b; font-weight:bold;">' + msg + '</div>';
           }
-
           ${loaderScript}
         </script>
       </body>
@@ -170,6 +184,10 @@ const PDFViewerScreen = ({ navigation, route }) => {
 
   const handleDownload = async () => {
     downloadFile(url, title, setDownloading);
+  };
+
+  const handleOpenInBrowser = () => {
+    Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open URL in browser.'));
   };
 
   return (
@@ -189,12 +207,35 @@ const PDFViewerScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-
       <View style={styles.contentContainer}>
-        {error ? (
+        {loadingFile ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>Error</Text>
-            <Text style={{ color: 'red', textAlign: 'center', padding: 20 }}>{error}</Text>
+            <ActivityIndicator size="large" color="#4f46e5" />
+            <Text style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Loading PDF...</Text>
+          </View>
+        ) : error ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+            <Ionicons name="document-text-outline" size={64} color="#e2e8f0" />
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 16, color: '#1e293b', textAlign: 'center' }}>
+              Could Not Open PDF
+            </Text>
+            <Text style={{ color: '#64748b', textAlign: 'center', marginTop: 8, fontSize: 13, lineHeight: 20 }}>
+              {error}
+            </Text>
+            <TouchableOpacity
+              onPress={loadPdfData}
+              style={{ marginTop: 20, backgroundColor: '#4f46e5', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 }}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>🔄 Retry</Text>
+            </TouchableOpacity>
+            {!isLocalFile && (
+              <TouchableOpacity
+                onPress={handleOpenInBrowser}
+                style={{ marginTop: 12, backgroundColor: '#0ea5e9', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 }}
+              >
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>🌐 Open in Browser</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <WebView
@@ -213,7 +254,15 @@ const PDFViewerScreen = ({ navigation, route }) => {
             allowUniversalAccessFromFileURLs={true}
             onLoadEnd={handleWebViewLoad}
             onMessage={(event) => {
-              console.log('PDF Msg:', event.nativeEvent.data);
+              try {
+                const msg = JSON.parse(event.nativeEvent.data || '{}');
+                console.log('PDF Msg:', msg);
+                if (msg.type === 'render_error' || msg.type === 'error') {
+                  setError(
+                    `PDF rendering failed: ${msg.message}\n\nThe file may be corrupted or in an unsupported format.\n\nURL: ${url}`
+                  );
+                }
+              } catch(e) {}
             }}
           />
         )}

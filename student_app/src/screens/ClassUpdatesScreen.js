@@ -255,9 +255,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     }, []);
 
     const activeSessions = useMemo(() => notifications.filter(isEventActive), [notifications, isEventActive]);
-    
     const tabData = useMemo(() => notifications.filter(item => {
-        if (isEventActive(item)) return false; // Already shown in Active Sessions at top
+        // Only hide active events from the general Updates feed, let them show up in their specific tabs
+        if (isEventActive(item) && activeTab === 'Updates') return false;
         
         const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.parsedPayload && item.parsedPayload.type === 'worksheet_data');
         const isClassRecording = item.update_type === 'live_class';
@@ -651,11 +651,33 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                                     </Text>
                                                     <TouchableOpacity 
                                                         style={[styles.activeSessionBtn, { backgroundColor: isClass ? '#E11D48' : '#D97706' }]}
-                                                        onPress={() => {
+                                                        onPress={async () => {
                                                             if (isClass) {
                                                                 navigation.navigate('LiveClass', { classUpdate: session, userId: user?.user_id || user?.id });
                                                             } else {
-                                                                Alert.alert("Live Exam", "Connecting to exam portal...");
+                                                                try {
+                                                                    setLoading(true);
+                                                                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${session.class_id}&user_id=${user?.user_id || user?.id || 0}`);
+                                                                    if (response.data && response.data.status === 'success' && response.data.data) {
+                                                                        const examData = response.data.data;
+                                                                        if (examData.questions && examData.questions.length > 0) {
+                                                                            navigation.navigate('MyExamTest', {
+                                                                                questions: examData.questions,
+                                                                                totalQuestions: examData.questions.length,
+                                                                                subjectName: examData.title,
+                                                                                update_id: examData.exam_id
+                                                                            });
+                                                                        } else {
+                                                                            Alert.alert("Notice", "This exam does not contain any questions.");
+                                                                        }
+                                                                    } else {
+                                                                        Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
+                                                                    }
+                                                                } catch (err) {
+                                                                    Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                                                                } finally {
+                                                                    setLoading(false);
+                                                                }
                                                             }
                                                         }}
                                                     >

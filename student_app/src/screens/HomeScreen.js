@@ -128,29 +128,49 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
     <View style={styles.gridContainer}>
         <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('VocabDashboard')}>
-                <LinearGradient colors={['#FF7EB3', '#FF758C']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <MaterialCommunityIcons name="book-open-page-variant" size={32} color="white" style={{ marginBottom: 8 }} />
-                    <Text style={styles.gridTitle}>{t('vocab')}</Text>
+                <LinearGradient colors={['#FF82A9', '#E11D48']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    {/* Glossy Overlay */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
+                        style={styles.glossyOverlay}
+                    />
+                    <MaterialCommunityIcons name="book-open" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
+                    <Text style={[styles.gridTitle, { zIndex: 1 }]}>{t('vocab')}</Text>
                 </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('MentalMaths')}>
-                <LinearGradient colors={['#FF9A44', '#FC6076']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8 }} />
-                    <Text style={styles.gridTitle}>Mental Maths</Text>
+                <LinearGradient colors={['#FF9E49', '#FF4E50']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    {/* Glossy Overlay */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
+                        style={styles.glossyOverlay}
+                    />
+                    <MaterialCommunityIcons name="brain" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
+                    <Text style={[styles.gridTitle, { zIndex: 1 }]}>Mental Maths</Text>
                 </LinearGradient>
             </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row' }}>
             <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('MyExam')}>
-                <LinearGradient colors={['#05E8BA', '#087EE1']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <MaterialCommunityIcons name="file-document-edit-outline" size={32} color="white" style={{ marginBottom: 8 }} />
-                    <Text style={styles.gridTitle}>{t('myExam')}</Text>
+                <LinearGradient colors={['#00FFB0', '#0072FF']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    {/* Glossy Overlay */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
+                        style={styles.glossyOverlay}
+                    />
+                    <MaterialCommunityIcons name="file-document-edit" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
+                    <Text style={[styles.gridTitle, { zIndex: 1 }]}>{t('myExam')}</Text>
                 </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
-                <LinearGradient colors={['#B321F8', '#8E2DE2']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <MaterialCommunityIcons name="printer-outline" size={32} color="white" style={{ marginBottom: 8 }} />
-                    <Text style={styles.gridTitle}>Worksheet</Text>
+                <LinearGradient colors={['#E064EC', '#7F00FF']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    {/* Glossy Overlay */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
+                        style={styles.glossyOverlay}
+                    />
+                    <MaterialCommunityIcons name="printer" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
+                    <Text style={[styles.gridTitle, { zIndex: 1 }]}>Worksheet</Text>
                 </LinearGradient>
             </TouchableOpacity>
         </View>
@@ -160,7 +180,12 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
 const HomeBanner = React.memo(({ colors, title, subtitle, icon, onPress, iconIsText = false }) => (
     <TouchableOpacity style={styles.fullWidthCard} onPress={onPress}>
         <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bannerGradient}>
-            <View style={styles.bannerContent}>
+            {/* Glossy Overlay */}
+            <LinearGradient
+                colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+                style={styles.glossyOverlay}
+            />
+            <View style={[styles.bannerContent, { zIndex: 1 }]}>
                 <View style={{ flex: 1 }}>
                     <Text style={styles.bannerTitle}>{title}</Text>
                     <Text style={styles.bannerSubtitle}>{subtitle}</Text>
@@ -260,7 +285,7 @@ const HomeListHeader = React.memo(({
             <HomeBoosterGrid t={t} navigation={navigation} />
 
             <HomeBanner 
-                colors={['#FF416C', '#FF4B2B']}
+                colors={['#FF5252', '#FF1744']}
                 title={t('studyPlanner') || 'My Study Plan'}
                 subtitle="Your Daily Missions & Streaks 🔥"
                 icon="compass-outline"
@@ -268,7 +293,7 @@ const HomeListHeader = React.memo(({
             />
 
             <HomeBanner 
-                colors={['#8B5CF6', '#4C1D95']}
+                colors={['#5A38FD', '#B245FF']}
                 title="Scholarship & Olympiad Corner"
                 subtitle="Ace your competitive exams! 🏆"
                 icon="star-circle-outline"
@@ -276,7 +301,7 @@ const HomeListHeader = React.memo(({
             />
 
             <HomeBanner 
-                colors={['#00E5FF', '#0284C7']}
+                colors={['#00E5FF', '#0072FF']}
                 title={t('classUpdates')}
                 subtitle={t('checkAnnouncements')}
                 icon="bullhorn-outline"
@@ -730,6 +755,14 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '60%',
+        zIndex: 0,
+    },
+    glossyOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '65%',
         zIndex: 0,
     },
     subjectIcon3D: {

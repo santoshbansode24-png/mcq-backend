@@ -38,7 +38,7 @@ const RAILWAY_CONFIG = {
 
 // Export the configuration you want to use
 const config = RAILWAY_CONFIG; // ✅ Production - Railway (works on 4G/mobile data)
-// const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (switch back when on same WiFi as PC)
+// // const config = LOCAL_CONFIG; // 🔧 Local dev - XAMPP (switch back when on same WiFi as PC)
 
 export default config;
 

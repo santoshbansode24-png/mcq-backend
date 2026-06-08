@@ -10,7 +10,7 @@ echo.
 echo Server URLs:
 echo - Admin Portal: https://api.veeruapp.in/backend/admin
 echo - Student App:  https://api.veeruapp.in/backend/api
-echo - Teacher App:  https://api.veeruapp.in/api
+echo - Teacher App:  https://api.veeruapp.in/backend/api
 echo.
 echo ⚠️  Make sure Railway deployment is active!
 echo.

@@ -67,7 +67,7 @@ export async function registerForPushNotificationsAsync(userId) {
 
         return token;
     } catch (error) {
-        console.error('[PushHelper] Error in push token registration flow:', error);
+        console.warn('[PushHelper] Error in push token registration flow:', error.message || error);
         return null;
     }
 }

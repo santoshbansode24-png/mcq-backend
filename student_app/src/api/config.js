@@ -82,7 +82,7 @@ export const checkServerConnection = async () => {
 // PAYMENT CONFIGURATION
 // ========================================
 // Set this to TRUE only when ready to launch payments
-export const ENABLE_PAYMENTS = true; // Set to true when ready to launch payments
+export const ENABLE_PAYMENTS = false; // 🔒 PAYMENTS DISABLED — set to true when ready to launch
 
 // Worker Security Secret (Must match backend/config/ai_config.php)
 export const WORKER_SECRET = 'veeru_ai_worker_v2_secure_ping';

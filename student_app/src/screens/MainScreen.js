@@ -273,19 +273,17 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             return;
         }
 
-        // --- PREMIUM FEATURE LOCK ---
-        const premiumScreens = [
-            'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'MyExam', 'MyExamTest',
-            'WorksheetGenerator', 'StudyPlanner', 'VocabDashboard', 'VocabBooster', 'MentalMaths',
-            'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets', 'AI', 'HomeworkSolver',
-            'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'
-        ];
-
-        // If user is trying to access a premium screen and subscription is NOT active
-        if (premiumScreens.includes(screen) && userState?.subscription_status !== 'active') {
-            parentNavigation.navigate('Subscription');
-            return; // Block navigation and show paywall
-        }
+        // --- PREMIUM FEATURE LOCK (DISABLED FOR TESTING) ---
+        // const premiumScreens = [
+        //     'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'MyExam', 'MyExamTest',
+        //     'WorksheetGenerator', 'StudyPlanner', 'VocabDashboard', 'VocabBooster', 'MentalMaths',
+        //     'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets', 'AI', 'HomeworkSolver',
+        //     'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'
+        // ];
+        // if (premiumScreens.includes(screen) && userState?.subscription_status !== 'active') {
+        //     parentNavigation.navigate('Subscription');
+        //     return;
+        // }
         // ----------------------------
 
         // Check if we are just switching tabs (Home, AI, Subjects, ClassUpdates)

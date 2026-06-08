@@ -372,6 +372,12 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             
             return (
                 <View style={[styles.updateCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                    <LinearGradient
+                        colors={isDarkMode ? ['#3B82F6', '#1E40AF'] : ['#93C5FD', '#3B82F6']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.updateCardAccent}
+                    />
                     <TouchableOpacity 
                         activeOpacity={0.7}
                         onPress={() => toggleExpand(cardId)}
@@ -541,6 +547,165 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             </View>
                         </View>
                     )}
+                </View>
+            );
+        }
+
+        if (activeTab === 'Live Exams') {
+            const handleStartExam = async () => {
+                try {
+                    setLoading(true);
+                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}&user_id=${user?.user_id || user?.id || 0}`);
+                    if (response.data && response.data.status === 'success' && response.data.data) {
+                        const examData = response.data.data;
+                        if (examData.questions && examData.questions.length > 0) {
+                            navigation.navigate('MyExamTest', {
+                                questions: examData.questions,
+                                totalQuestions: examData.questions.length,
+                                subjectName: examData.title,
+                                update_id: examData.exam_id
+                            });
+                        } else {
+                            Alert.alert("Notice", "This exam does not contain any questions.");
+                        }
+                    } else {
+                        Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
+                    }
+                } catch (err) {
+                    Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <View style={[styles.examCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                    <LinearGradient
+                        colors={['#F59E0B', '#D97706']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.examCardAccent}
+                    />
+                    
+                    <View style={styles.examHeader}>
+                        <View style={[styles.examIconContainer, { backgroundColor: isDarkMode ? '#334155' : '#FEF3C7' }]}>
+                            <MaterialCommunityIcons 
+                                name="timer-outline" 
+                                size={26} 
+                                color="#D97706" 
+                            />
+                        </View>
+                        
+                        <View style={styles.examTitleContainer}>
+                            <View style={styles.examTypeRow}>
+                                <Text style={[styles.examTypeTag, { color: '#D97706' }]}>
+                                    LIVE EXAM
+                                </Text>
+                                <Text style={styles.examDate}>{formatDate(item.created_at)}</Text>
+                            </View>
+                            <Text style={[styles.examTitle, { color: theme.text }]} numberOfLines={2}>
+                                {item.title}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.examBody}>
+                        {displayMessage && (
+                            <Text style={[styles.examMessage, { color: theme.textSecondary }]}>{displayMessage}</Text>
+                        )}
+                        
+                        <View style={styles.examMetaRow}>
+                            <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                                <MaterialCommunityIcons name="account-tie" size={14} color="#64748b" />
+                                <Text style={[styles.teacher, { color: '#64748b' }]}>{item.teacher_name}</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity 
+                            onPress={handleStartExam}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#F59E0B', '#D97706']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.examStartButton}
+                            >
+                                <MaterialCommunityIcons name="play-circle-outline" size={18} color="white" style={{ marginRight: 6 }} />
+                                <Text style={styles.examStartButtonText}>Start Exam</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            );
+        }
+
+        if (activeTab === 'Recordings') {
+            const handleOpenRecording = () => {
+                navigation.navigate('LiveClass', { 
+                    classUpdate: item,
+                    userId: user?.user_id || user?.id
+                });
+            };
+
+            return (
+                <View style={[styles.recordingCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+                    <LinearGradient
+                        colors={['#EF4444', '#F87171']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.recordingCardAccent}
+                    />
+                    
+                    <View style={styles.recordingHeader}>
+                        <View style={[styles.recordingIconContainer, { backgroundColor: isDarkMode ? '#334155' : '#FFE4E6' }]}>
+                            <MaterialCommunityIcons 
+                                name="video-play-outline" 
+                                size={26} 
+                                color="#EF4444" 
+                            />
+                        </View>
+                        
+                        <View style={styles.recordingTitleContainer}>
+                            <View style={styles.recordingTypeRow}>
+                                <Text style={[styles.recordingTypeTag, { color: '#EF4444' }]}>
+                                    CLASS RECORDING
+                                </Text>
+                                <Text style={styles.recordingDate}>{formatDate(item.created_at)}</Text>
+                            </View>
+                            <Text style={[styles.recordingTitle, { color: theme.text }]} numberOfLines={2}>
+                                {item.title}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.recordingBody}>
+                        {displayMessage && (
+                            <Text style={[styles.recordingMessage, { color: theme.textSecondary }]}>{displayMessage}</Text>
+                        )}
+                        
+                        <View style={styles.recordingMetaRow}>
+                            <View style={[styles.teacherBadge, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+                                <MaterialCommunityIcons name="account-tie" size={14} color="#64748b" />
+                                <Text style={[styles.teacher, { color: '#64748b' }]}>{item.teacher_name}</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity 
+                            onPress={handleOpenRecording}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#EF4444', '#DC2626']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.recordingStartButton}
+                            >
+                                <MaterialCommunityIcons name="play-circle" size={18} color="white" style={{ marginRight: 6 }} />
+                                <Text style={styles.recordingStartButtonText}>Watch Recording</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             );
         }
@@ -758,7 +923,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 </View>
             </View>
         );
-    }, [theme, isDarkMode, navigation, user]);
+    }, [theme, isDarkMode, navigation, user, expandedCardIds, activeTab]);
 
     return (
         <LinearGradient 
@@ -1385,13 +1550,13 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 20,
         marginBottom: 16,
-        elevation: 6,
-        shadowColor: '#000',
+        elevation: 8,
+        shadowColor: '#8B5CF6',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.1,
         shadowRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.04)',
+        borderColor: 'rgba(139, 92, 246, 0.08)',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -1483,17 +1648,38 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    updateCard: {
-        borderRadius: 22,
-        padding: 16,
+    tabContainer: {
+        flexDirection: 'row',
+        padding: 4,
+        borderRadius: 18,
         marginBottom: 16,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.03)',
+        elevation: 6,
+        shadowColor: '#8B5CF6',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+    },
+    updateCard: {
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 8,
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(59, 130, 246, 0.08)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    updateCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
     },
     updateHeaderTouch: {
         width: '100%',
@@ -1512,6 +1698,200 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 16,
         paddingHorizontal: 2,
+    },
+    examCard: {
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 8,
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(217, 119, 6, 0.08)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    examCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
+    },
+    examHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    examIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    examTitleContainer: {
+        flex: 1,
+    },
+    examTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        lineHeight: 22,
+    },
+    examTypeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    examTypeTag: {
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+    },
+    examDate: {
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    examBody: {
+        marginTop: 4,
+        gap: 14,
+    },
+    examMessage: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 20,
+        marginBottom: 2,
+    },
+    examMetaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    examStartButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 16,
+        elevation: 3,
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    examStartButtonText: {
+        color: 'white',
+        fontSize: 15,
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    recordingCard: {
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 8,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.08)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    recordingCardAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 6,
+    },
+    recordingHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    recordingIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    recordingTitleContainer: {
+        flex: 1,
+    },
+    recordingTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        lineHeight: 22,
+    },
+    recordingTypeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    recordingTypeTag: {
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+    },
+    recordingDate: {
+        fontSize: 11,
+        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+    },
+    recordingBody: {
+        marginTop: 4,
+        gap: 14,
+    },
+    recordingMessage: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 20,
+        marginBottom: 2,
+    },
+    recordingMetaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    recordingStartButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 16,
+        elevation: 3,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    recordingStartButtonText: {
+        color: 'white',
+        fontSize: 15,
+        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
     }
 });
 

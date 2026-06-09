@@ -1,0 +1,18 @@
+Add-Type -AssemblyName System.Drawing
+$img1 = [System.Drawing.Image]::FromFile('C:\Users\ADMIN\.gemini\antigravity\brain\6a0e8017-b258-4998-9b88-a2290601c6c7\app_icon_raw_1781035174465.png')
+$bmp1 = New-Object System.Drawing.Bitmap(512, 512)
+$graph1 = [System.Drawing.Graphics]::FromImage($bmp1)
+$graph1.DrawImage($img1, 0, 0, 512, 512)
+$bmp1.Save('c:\xampp\htdocs\veeru\app_icon_512.png', [System.Drawing.Imaging.ImageFormat]::Png)
+$img1.Dispose()
+$bmp1.Dispose()
+$graph1.Dispose()
+
+$img2 = [System.Drawing.Image]::FromFile('C:\Users\ADMIN\.gemini\antigravity\brain\6a0e8017-b258-4998-9b88-a2290601c6c7\feature_graphic_raw_1781035188130.png')
+$bmp2 = New-Object System.Drawing.Bitmap(1024, 500)
+$graph2 = [System.Drawing.Graphics]::FromImage($bmp2)
+$graph2.DrawImage($img2, 0, 0, 1024, 500)
+$bmp2.Save('c:\xampp\htdocs\veeru\feature_graphic_1024x500.png', [System.Drawing.Imaging.ImageFormat]::Png)
+$img2.Dispose()
+$bmp2.Dispose()
+$graph2.Dispose()

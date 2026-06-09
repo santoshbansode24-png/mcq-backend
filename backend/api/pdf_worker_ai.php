@@ -86,7 +86,7 @@ foreach ($jobs as $job) {
                 }
             } catch (Exception $e) {
                 error_log("Worker PDF Text Extraction Failed: " . $e->getMessage());
-                // Fallback to whatever extracted_text was already there
+                throw new Exception("AI Extraction Error: " . $e->getMessage());
             }
         }
 

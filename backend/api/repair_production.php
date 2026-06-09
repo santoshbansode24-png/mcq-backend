@@ -83,6 +83,17 @@ try {
         echo "   [ok] claim_token index exists.\n";
     }
 
+    // 2.3 Add Index for status if missing
+    echo "\n2.3 Checking status index...\n";
+    $checkStatusIndex = $pdo->query("SHOW INDEX FROM pdf_study_jobs WHERE Column_name = 'status'");
+    if (!$checkStatusIndex->fetch()) {
+        echo "   [+] Adding index for status... ";
+        $pdo->exec("ALTER TABLE pdf_study_jobs ADD INDEX (status)");
+        echo "Done.\n";
+    } else {
+        echo "   [ok] status index exists.\n";
+    }
+
     // 2.5 Ensure content_progress table exists (Fixes 500 error on Railway)
     echo "\n2.5 Checking content_progress table...\n";
     $pdo->exec("CREATE TABLE IF NOT EXISTS `content_progress` (

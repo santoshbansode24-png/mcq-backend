@@ -231,7 +231,7 @@ try {
         'completed' => ($nextChunk >= $totalChunks)
     ]);
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log("Generate Next Chunk Error: " . $e->getMessage());
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }

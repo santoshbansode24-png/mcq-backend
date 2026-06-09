@@ -110,6 +110,8 @@ foreach ($jobs as $job) {
         $pdo->prepare("UPDATE pdf_study_jobs SET extracted_text = ?, total_chunks = ?, last_processed_chunk = 0, pdf_base64 = NULL WHERE job_id = ?")
             ->execute([$extractedText, $totalChunks, $job['job_id']]);
 
+        $difficultyStr = "Adapt difficulty based on the source text, ensuring a mix of foundational and advanced concepts.";
+
         // STEP 3: Generate Content for Chunk 0
         $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
         
@@ -271,7 +273,7 @@ foreach ($jobs as $job) {
             }
         }
 
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         error_log("Veeru Worker Error: " . $e->getMessage());
         $pdo->prepare("UPDATE pdf_study_jobs SET status = 'failed', error_message = ? WHERE job_id = ?")
             ->execute([$e->getMessage(), $job['job_id']]);

@@ -88,7 +88,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [joining, setJoining] = useState(false);
     const [showJoinForm, setShowJoinForm] = useState(!user?.class_id);
 
-    const [activeTab, setActiveTab] = useState('Updates');
+    const [activeTab, setActiveTab] = useState('Notifications');
     const [expandedCardIds, setExpandedCardIds] = useState({});
     const [selectedImageViewUrl, setSelectedImageViewUrl] = useState(null);
     const [imageViewVisible, setImageViewVisible] = useState(false);
@@ -312,7 +312,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const activeSessions = useMemo(() => notifications.filter(isEventActive), [notifications, isEventActive]);
     const tabData = useMemo(() => notifications.filter(item => {
         // Only hide active events from the general Updates feed, let them show up in their specific tabs
-        if (isEventActive(item) && activeTab === 'Updates') return false;
+        if (isEventActive(item) && activeTab === 'Notifications') return false;
         
         const hasFileUrl = item.payload && (item.payload.file_url || item.payload.url);
         const urlStr = hasFileUrl ? (item.payload.file_url || item.payload.url).toLowerCase() : '';
@@ -442,7 +442,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             }
         };
 
-        if (activeTab === 'Updates') {
+        if (activeTab === 'Notifications') {
             const cardId = item.notification_id || item.id;
             const isExpanded = !!expandedCardIds[cardId];
             
@@ -1008,7 +1008,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         >
             <View style={styles.header}>
                 <View style={{ flex: 1 }}>
-                    <Text style={[styles.headerSubtitle, { color: theme.primary }]}>SCHOOL UPDATES</Text>
+                    <Text style={[styles.headerSubtitle, { color: theme.primary }]}>SCHOOL NOTIFICATIONS</Text>
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Class</Text>
                     {joinedClasses.length > 0 && selectedClassId !== 'all' && (
                         <Text style={{ fontSize: 13, color: isDarkMode ? '#94a3b8' : '#334155', marginTop: 4, fontFamily: 'NotoSans-Bold' }}>
@@ -1202,7 +1202,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             )}
 
                             <View style={[styles.tabContainer, { backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-                                {['Updates', 'Worksheets', 'Recordings', 'Live Exams'].map(tab => {
+                                {['Notifications', 'Worksheets', 'Recordings', 'Live Exams'].map(tab => {
                                     const isActive = activeTab === tab;
                                     if (isActive) {
                                         return (
@@ -1254,7 +1254,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             <View style={[styles.emptyIconCircle, { backgroundColor: theme.primary + '10' }]}>
                                 <MaterialCommunityIcons name="bell-off-outline" size={60} color={theme.primary} />
                             </View>
-                            <Text style={[styles.emptyText, { color: theme.text }]}>No Updates Yet</Text>
+                            <Text style={[styles.emptyText, { color: theme.text }]}>No Notifications Yet</Text>
                             <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
                                 When your teacher sends homework, exams, or worksheets, they will appear here.
                             </Text>
@@ -1262,7 +1262,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 style={[styles.refreshBtn, { backgroundColor: theme.primary }]}
                                 onPress={loadNotifications}
                             >
-                                <Text style={styles.refreshBtnText}>Check for Updates</Text>
+                                <Text style={styles.refreshBtnText}>Check for Notifications</Text>
                             </TouchableOpacity>
                         </View>
                     }

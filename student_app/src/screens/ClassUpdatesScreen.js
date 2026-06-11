@@ -361,29 +361,34 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             return 'other';
         };
 
+        let finalUrl = null;
+        let urlType = 'other';
+        
+        if (hasFile) {
+            const fileUrl = item.payload.file_url || item.payload.url;
+            
+            // Clean the fileUrl to remove leading slashes and trailing whitespace
+            let cleanFileUrl = fileUrl.trim();
+            if (cleanFileUrl.startsWith('/')) {
+                cleanFileUrl = cleanFileUrl.substring(1);
+            }
+            
+            const url = cleanFileUrl.startsWith('http') 
+                ? cleanFileUrl 
+                : (cleanFileUrl.startsWith('uploads/materials') || cleanFileUrl.startsWith('uploads/class_materials') || cleanFileUrl.startsWith('uploads/')
+                    ? `${config.ROOT_URL}/${cleanFileUrl}` 
+                    : `${BASE_URL}/${cleanFileUrl}`);
+            
+            // Remove potential double slashes (except in http:// or https://)
+            finalUrl = url.replace(/([^:]\/)\/+/g, "$1");
+            urlType = getUrlType(finalUrl);
+        }
+
         const openAttachment = () => {
-            if (hasFile) {
-                const fileUrl = item.payload.file_url || item.payload.url;
-                
-                // Clean the fileUrl to remove leading slashes and trailing whitespace
-                let cleanFileUrl = fileUrl.trim();
-                if (cleanFileUrl.startsWith('/')) {
-                    cleanFileUrl = cleanFileUrl.substring(1);
-                }
-                
-                const url = cleanFileUrl.startsWith('http') 
-                    ? cleanFileUrl 
-                    : (cleanFileUrl.startsWith('uploads/materials') || cleanFileUrl.startsWith('uploads/class_materials') || cleanFileUrl.startsWith('uploads/')
-                        ? `${config.ROOT_URL}/${cleanFileUrl}` 
-                        : `${BASE_URL}/${cleanFileUrl}`);
-                
-                // Remove potential double slashes (except in http:// or https://)
-                const finalUrl = url.replace(/([^:]\/)\/+/g, "$1");
-                
-                const type = getUrlType(finalUrl);
-                if (type === 'pdf') {
+            if (hasFile && finalUrl) {
+                if (urlType === 'pdf') {
                     navigation.navigate('PDFViewer', { url: finalUrl, title: item.title || 'Document' });
-                } else if (type === 'image') {
+                } else if (urlType === 'image') {
                     setImageLoading(true);
                     setImageError(false);
                     setHasTriedFallback(false);
@@ -592,22 +597,32 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                     onPress={generateAndOpenLocalPdf}
                                 >
                                     <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="white" />
-                                    <Text style={styles.actionButtonText}>Open</Text>
+                                    <Text style={styles.actionButtonText}>Open Interactive Worksheet</Text>
                                 </TouchableOpacity>
                             )}
 
-                            {hasFile && (
+                            {hasFile && !payloadData && !htmlPayload && urlType === 'image' && (
+                                <TouchableOpacity onPress={openAttachment} activeOpacity={0.9} style={{ marginTop: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9' }}>
+                                    <Image source={{ uri: finalUrl }} style={{ width: '100%', height: 200, resizeMode: 'cover' }} />
+                                    <View style={{ position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+                                        <MaterialCommunityIcons name="fullscreen" size={16} color="white" />
+                                        <Text style={{ color: 'white', fontSize: 12, marginLeft: 4, fontFamily: 'NotoSans-Medium' }}>View Full</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {hasFile && !payloadData && !htmlPayload && urlType !== 'image' && (
                                 <TouchableOpacity 
                                     style={[styles.attachmentButton, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]} 
                                     onPress={openAttachment}
                                 >
                                     <MaterialCommunityIcons 
-                                        name={isPdf ? "file-pdf-box" : isWorksheet ? "file-document-outline" : "image"} 
+                                        name={isPdf ? "file-pdf-box" : "file-outline"} 
                                         size={20} 
-                                        color={isPdf ? "#EF4444" : isWorksheet ? "#8B5CF6" : "#10B981"} 
+                                        color={isPdf ? "#EF4444" : "#64748b"} 
                                     />
-                                    <Text style={[styles.attachmentText, { color: isPdf ? "#EF4444" : isWorksheet ? "#8B5CF6" : "#10B981" }]}>
-                                        {isPdf ? 'Download PDF' : isWorksheet ? 'Open Worksheet' : 'View Attachment'}
+                                    <Text style={[styles.attachmentText, { color: isPdf ? "#EF4444" : "#64748b" }]}>
+                                        {isPdf ? 'Download PDF' : 'View Attachment'}
                                     </Text>
                                 </TouchableOpacity>
                             )}

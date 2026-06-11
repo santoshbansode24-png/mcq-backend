@@ -121,6 +121,23 @@ try {
         echo "   [ok] No stuck jobs found.\n";
     }
 
+    // 3.5 Fix broken R2 URLs in class_updates
+    echo "\n3.5 Fixing broken Cloudflare R2 internal URLs in class_updates...\n";
+    $badDomain = 'df57a4dcdaa565e80969e7b3b7ca183f.r2.cloudflarestorage.com/veeru-storage';
+    $goodDomain = 'pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev';
+    
+    $stmtUrls = $pdo->query("SELECT id, payload FROM class_updates WHERE payload LIKE '%$badDomain%'");
+    $brokenUpdates = $stmtUrls->fetchAll(PDO::FETCH_ASSOC);
+    
+    $fixedCount = 0;
+    foreach ($brokenUpdates as $update) {
+        $newPayload = str_replace($badDomain, $goodDomain, $update['payload']);
+        $updateStmt = $pdo->prepare("UPDATE class_updates SET payload = ? WHERE id = ?");
+        $updateStmt->execute([$newPayload, $update['id']]);
+        $fixedCount++;
+    }
+    echo "   [ok] Fixed $fixedCount broken attachment URLs.\n";
+
     // 4. Check Database Configuration
     echo "\n4. Checking MySQL limits...\n";
     $stmt = $pdo->query("SHOW VARIABLES LIKE 'max_allowed_packet'");

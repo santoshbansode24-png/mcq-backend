@@ -318,7 +318,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const urlStr = hasFileUrl ? (item.payload.file_url || item.payload.url).toLowerCase() : '';
         const isUrlPdf = urlStr.includes('.pdf') || urlStr.includes('.doc');
         
-        const isWksht = item.update_type === 'pdf' || item.update_type === 'worksheet' || item.update_type === 'material' || (item.parsedPayload && item.parsedPayload.type === 'worksheet_data') || isUrlPdf;
+        const isWksht = item.update_type === 'worksheet' || item.update_type === 'material' || (item.parsedPayload && item.parsedPayload.type === 'worksheet_data');
         const isClassRecording = item.update_type === 'live_class';
         const isLiveExam = item.update_type === 'live_exam';
 
@@ -347,7 +347,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         const isPhoto = item.update_type === 'photo' && !isUrlPdf;
         const isExam = item.update_type === 'live_exam';
         const isHomework = item.update_type === 'homework' && !isUrlPdf;
-        const isWorksheet = item.update_type === 'worksheet' || item.update_type === 'material' || isUrlPdf;
+        const isWorksheet = item.update_type === 'worksheet' || item.update_type === 'material';
         const isLiveClass = item.update_type === 'live_class';
 
         let displayMessage = item.cleanMessage || item.message;
@@ -591,17 +591,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 </TouchableOpacity>
                             )}
 
-                            {(payloadData || htmlPayload) && (
-                                <TouchableOpacity 
-                                    style={[styles.actionButton, { backgroundColor: '#8B5CF6' }]} 
-                                    onPress={generateAndOpenLocalPdf}
-                                >
-                                    <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="white" />
-                                    <Text style={styles.actionButtonText}>Open Interactive Worksheet</Text>
-                                </TouchableOpacity>
-                            )}
 
-                            {hasFile && !payloadData && !htmlPayload && urlType === 'image' && (
+
+                            {hasFile && urlType === 'image' && (
                                 <TouchableOpacity onPress={openAttachment} activeOpacity={0.9} style={{ marginTop: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9' }}>
                                     <Image source={{ uri: finalUrl }} style={{ width: '100%', height: 200, resizeMode: 'cover' }} />
                                     <View style={{ position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
@@ -611,7 +603,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 </TouchableOpacity>
                             )}
 
-                            {hasFile && !payloadData && !htmlPayload && urlType !== 'image' && (
+                            {hasFile && urlType !== 'image' && (
                                 <TouchableOpacity 
                                     style={[styles.attachmentButton, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc' }]} 
                                     onPress={openAttachment}
@@ -622,7 +614,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                         color={isPdf ? "#EF4444" : "#64748b"} 
                                     />
                                     <Text style={[styles.attachmentText, { color: isPdf ? "#EF4444" : "#64748b" }]}>
-                                        {isPdf ? 'Download PDF' : 'View Attachment'}
+                                        {isPdf ? 'Download PDF' : 'Open'}
                                     </Text>
                                 </TouchableOpacity>
                             )}

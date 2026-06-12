@@ -75,5 +75,21 @@ try {
     ]);
 }
 
+// Search for any autoload.php in the filesystem
+$found_autoloaders = [];
+try {
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator('/app'));
+    foreach ($it as $file) {
+        if ($file->isDir()) continue;
+        if ($file->getFilename() === 'autoload.php') {
+            $found_autoloaders[] = $file->getPathname();
+        }
+    }
+} catch (Throwable $e) {
+    $found_autoloaders[] = "Search error: " . $e->getMessage();
+}
+
+reportStatus("Search Autoloaders", true, "Autoloader search results", $found_autoloaders);
+
 reportStatus("Completed", true, "All checks passed successfully");
 ?>

@@ -22,7 +22,7 @@ $files = [
     'db.php' => '../../config/db.php',
     'secrets.php' => '../../config/secrets.php',
     'cors_middleware.php' => '../cors_middleware.php',
-    'autoload.php' => '../../vendor/autoload.php',
+    'autoload.php' => file_exists('../../vendor/autoload.php') ? '../../vendor/autoload.php' : '../../../vendor/autoload.php',
     'push_notifications.php' => '../../config/push_notifications.php'
 ];
 

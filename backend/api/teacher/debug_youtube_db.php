@@ -14,7 +14,7 @@ try {
     }
 
     // Query all users with a non-empty youtube_refresh_token
-    $stmt = $pdo->query("SELECT user_id, phone, username, user_type, youtube_channel_id, LENGTH(youtube_refresh_token) as token_len FROM users WHERE youtube_refresh_token IS NOT NULL AND youtube_refresh_token != ''");
+    $stmt = $pdo->query("SELECT user_id, phone, user_type, youtube_channel_id, LENGTH(youtube_refresh_token) as token_len FROM users WHERE youtube_refresh_token IS NOT NULL AND youtube_refresh_token != ''");
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([

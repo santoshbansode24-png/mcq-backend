@@ -32,14 +32,30 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse('error', 'Only GET requests are allowed', null, 405);
 }
 
-// Since the new architecture uses a single central Admin YouTube account, 
-// we just check if the Admin has configured the refresh token.
+$teacher_id = isset($_GET['teacher_id']) ? (int)$_GET['teacher_id'] : 0;
+$isConnected = false;
 
-$isConnected = defined('YOUTUBE_REFRESH_TOKEN') && !empty(YOUTUBE_REFRESH_TOKEN);
+if (isset($pdo) && $teacher_id > 0) {
+    try {
+        $stmt = $pdo->prepare("SELECT youtube_refresh_token FROM users WHERE user_id = ? AND user_type = 'teacher'");
+        $stmt->execute([$teacher_id]);
+        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($teacher && !empty($teacher['youtube_refresh_token'])) {
+            $isConnected = true;
+        }
+    } catch (PDOException $e) {
+        error_log("Failed to load teacher YouTube token: " . $e->getMessage());
+    }
+}
+
+// Fallback to global constant if not connected in DB
+if (!$isConnected) {
+    $isConnected = defined('YOUTUBE_REFRESH_TOKEN') && !empty(YOUTUBE_REFRESH_TOKEN);
+}
 
 sendResponse('success', 'YouTube status fetched', [
     'connected' => $isConnected,
-    'channel_id' => 'AdminChannel' // Placeholder, the app just needs to know it's connected
+    'channel_id' => $teacher_id > 0 ? ('TeacherChannel_' . $teacher_id) : 'AdminChannel'
 ], 200);
 
 ?>

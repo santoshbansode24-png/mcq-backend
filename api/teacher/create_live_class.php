@@ -52,15 +52,34 @@ if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
-if (!defined('YOUTUBE_REFRESH_TOKEN') || empty(YOUTUBE_REFRESH_TOKEN)) {
-    sendResponse('error', 'Admin YouTube Refresh Token is not configured. Please contact the administrator.', null, 500);
-}
-
 $teacher_id = (int)$input['teacher_id'];
 $class_id = (int)$input['class_id'];
 $title = substr($input['title'], 0, 100);
 $scheduled_time = $input['scheduled_time'] ?? date('Y-m-d\TH:i:sP'); // default to now
 $message = $input['message'] ?? '';
+
+// Load refresh token dynamically from database for the teacher, fallback to global constant
+$refresh_token = '';
+if (isset($pdo) && $teacher_id > 0) {
+    try {
+        $stmt = $pdo->prepare("SELECT youtube_refresh_token FROM users WHERE user_id = ? AND user_type = 'teacher'");
+        $stmt->execute([$teacher_id]);
+        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($teacher && !empty($teacher['youtube_refresh_token'])) {
+            $refresh_token = $teacher['youtube_refresh_token'];
+        }
+    } catch (PDOException $e) {
+        error_log("Failed to load teacher YouTube token: " . $e->getMessage());
+    }
+}
+
+if (empty($refresh_token)) {
+    $refresh_token = YOUTUBE_REFRESH_TOKEN;
+}
+
+if (empty($refresh_token)) {
+    sendResponse('error', 'YouTube account is not linked. Please connect your YouTube account first.', null, 400);
+}
 
 try {
     // 1. Initialize Google Client
@@ -68,7 +87,7 @@ try {
     $client->setClientId(GOOGLE_CLIENT_ID);
     $client->setClientSecret(GOOGLE_CLIENT_SECRET);
     $client->addScope(Google_Service_YouTube::YOUTUBE);
-    $client->refreshToken(YOUTUBE_REFRESH_TOKEN);
+    $client->refreshToken($refresh_token);
 
     $youtube = new Google_Service_YouTube($client);
 

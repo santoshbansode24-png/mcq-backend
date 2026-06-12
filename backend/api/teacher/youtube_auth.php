@@ -1,4 +1,10 @@
 <?php
+if (file_exists(__DIR__ . '/../../config/db.php')) {
+    require_once __DIR__ . '/../../config/db.php';
+} elseif (file_exists(__DIR__ . '/../../../config/db.php')) {
+    require_once __DIR__ . '/../../../config/db.php';
+}
+
 if (file_exists(__DIR__ . '/../../config/secrets.php')) {
     require_once __DIR__ . '/../../config/secrets.php';
 }
@@ -29,11 +35,15 @@ header('Content-Type: text/html; charset=utf-8');
 
 $custom_cid = '';
 $custom_sec = '';
+$teacher_id = 0;
 
-// 1. Check if state parameter contains custom client credentials (from Google redirect callback)
+// 1. Check if state parameter contains variables (from Google redirect callback)
 if (isset($_GET['state'])) {
     $stateData = json_decode(base64_decode($_GET['state']), true);
     if (is_array($stateData)) {
+        if (!empty($stateData['teacher_id'])) {
+            $teacher_id = (int)$stateData['teacher_id'];
+        }
         if (!empty($stateData['cid'])) {
             $custom_cid = trim($stateData['cid']);
         }
@@ -43,10 +53,17 @@ if (isset($_GET['state'])) {
     }
 }
 
-// 2. Check if a POST request was submitted with custom credentials (from input form)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['custom_client_id']) && !empty($_POST['custom_client_secret'])) {
-    $custom_cid = trim($_POST['custom_client_id']);
-    $custom_sec = trim($_POST['custom_client_secret']);
+// 2. Read teacher_id and custom credentials on standard load/POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $teacher_id = isset($_POST['teacher_id']) ? (int)$_POST['teacher_id'] : 0;
+    if (!empty($_POST['custom_client_id']) && !empty($_POST['custom_client_secret'])) {
+        $custom_cid = trim($_POST['custom_client_id']);
+        $custom_sec = trim($_POST['custom_client_secret']);
+    }
+} else {
+    if (isset($_GET['teacher_id'])) {
+        $teacher_id = (int)$_GET['teacher_id'];
+    }
 }
 
 // 3. Initialize Google Client with active credentials
@@ -68,11 +85,14 @@ $client->setAccessType('offline');
 $client->setPrompt('consent'); // Force to get refresh token
 
 // 4. Handle POST form submit by redirecting directly to Google's Auth URL
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['custom_client_id']) && !empty($_POST['custom_client_secret'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['custom_client_id']) || isset($_POST['initiate_default']))) {
     $stateData = [
-        'cid' => $custom_cid,
-        'sec' => $custom_sec
+        'teacher_id' => $teacher_id
     ];
+    if (!empty($custom_cid) && !empty($custom_sec)) {
+        $stateData['cid'] = $custom_cid;
+        $stateData['sec'] = $custom_sec;
+    }
     $client->setState(base64_encode(json_encode($stateData)));
     $authUrl = $client->createAuthUrl();
     header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));
@@ -83,6 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['custom_client_id']) 
 $tokenExchangeSuccess = false;
 $tokenError = null;
 $refreshToken = null;
+$dbSaved = false;
+$dbError = null;
 
 if (isset($_GET['code'])) {
     // Exchange the authorization code for an access token
@@ -94,10 +116,24 @@ if (isset($_GET['code'])) {
         $tokenExchangeSuccess = true;
         if (isset($token['refresh_token'])) {
             $refreshToken = $token['refresh_token'];
+            
+            // Save to database if teacher_id is active
+            if ($teacher_id > 0 && isset($pdo)) {
+                try {
+                    $stmt = $pdo->prepare("UPDATE users SET youtube_refresh_token = ? WHERE user_id = ? AND user_type = 'teacher'");
+                    $stmt->execute([$refreshToken, $teacher_id]);
+                    $dbSaved = true;
+                } catch (PDOException $e) {
+                    $dbError = $e->getMessage();
+                }
+            }
         }
     }
 } else {
     // Generate standard authentication URL (for default credentials)
+    // We also set the state to pass the teacher_id to Google
+    $stateData = ['teacher_id' => $teacher_id];
+    $client->setState(base64_encode(json_encode($stateData)));
     $authUrl = $client->createAuthUrl();
 }
 ?>
@@ -448,8 +484,20 @@ if (isset($_GET['code'])) {
                 
                 <?php if ($refreshToken): ?>
                     <div class="token-area">
-                        <span class="token-label">🚀 YouTube Refresh Token</span>
-                        <p class="token-desc">Copy this token and add it to your <strong>Railway Project Variables</strong> as <code>YOUTUBE_REFRESH_TOKEN</code>.</p>
+                        <?php if ($dbSaved): ?>
+                            <div class="alert-info" style="background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2); color: #a7f3d0; margin-bottom: 20px;">
+                                ✅ **Success!** Your YouTube channel has been linked directly to your school account profile in the database. You can close this window now.
+                            </div>
+                        <?php else: ?>
+                            <?php if ($teacher_id > 0): ?>
+                                <div class="alert-info" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); color: #fca5a5; margin-bottom: 20px;">
+                                    ⚠️ **Notice:** We couldn't save the token automatically to the database (<?= htmlspecialchars($dbError ?? 'Database connection missing') ?>). Please copy the token below and configure it manually.
+                                </div>
+                            <?php endif; ?>
+                            <span class="token-label">🚀 YouTube Refresh Token</span>
+                            <p class="token-desc">Copy this token and add it to your <strong>Railway Project Variables</strong> as <code>YOUTUBE_REFRESH_TOKEN</code>.</p>
+                        <?php endif; ?>
+                        
                         <div style="position: relative;">
                             <textarea id="refresh-token-val" class="token-box" rows="3" readonly><?= htmlspecialchars($refreshToken) ?></textarea>
                             <button class="btn" style="margin-top: 5px;" onclick="copyText('refresh-token-val', this)">Copy Refresh Token</button>
@@ -486,7 +534,7 @@ if (isset($_GET['code'])) {
                     </div>
                 <?php endif; ?>
                 
-                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Back to Start</a>
+                <a href="<?= $_SERVER['PHP_SELF'] ?><?= $teacher_id > 0 ? '?teacher_id=' . $teacher_id : '' ?>" class="btn btn-secondary">Back to Start</a>
             <?php endif; ?>
         </div>
     <?php else: ?>
@@ -494,6 +542,12 @@ if (isset($_GET['code'])) {
             <h3 class="card-title">Link Admin YouTube Channel</h3>
             <p class="card-subtitle">Authorize the Veeru platform to generate live broadcast RTMP feeds on your YouTube channel.</p>
             
+            <?php if ($teacher_id > 0): ?>
+                <div class="alert-info" style="background: rgba(56, 189, 248, 0.12); color: #bae6fd; text-align: center;">
+                    👤 Linking school channel for **Teacher ID: <?= htmlspecialchars($teacher_id) ?>**
+                </div>
+            <?php endif; ?>
+
             <div class="tabs-header">
                 <button id="tab-default-btn" class="tab-btn active" onclick="switchTab('tab-default')">Console Setup (Standard)</button>
                 <button id="tab-localhost-btn" class="tab-btn" onclick="switchTab('tab-localhost')">Local Bypass (Easy)</button>
@@ -531,7 +585,11 @@ if (isset($_GET['code'])) {
                     </li>
                 </ul>
                 
-                <a href="<?= filter_var($authUrl, FILTER_SANITIZE_URL) ?>" class="btn">Connect YouTube Account</a>
+                <form action="<?= $_SERVER['PHP_SELF'] ?>" method="POST">
+                    <input type="hidden" name="teacher_id" value="<?= $teacher_id ?>">
+                    <input type="hidden" name="initiate_default" value="1">
+                    <button type="submit" class="btn">Connect YouTube Account</button>
+                </form>
             </div>
 
             <!-- TAB 2: LOCAL BYPASS -->
@@ -557,7 +615,7 @@ if (isset($_GET['code'])) {
 
                 <?php
                 // Construct localhost URI
-                $localUri = 'http://localhost/veeru/api/teacher/youtube_auth.php';
+                $localUri = 'http://localhost/veeru/api/teacher/youtube_auth.php' . ($teacher_id > 0 ? '?teacher_id=' . $teacher_id : '');
                 ?>
                 <a href="<?= $localUri ?>" target="_blank" class="btn">🔗 Open Localhost Auth Bypass</a>
             </div>
@@ -569,6 +627,7 @@ if (isset($_GET['code'])) {
                 </div>
 
                 <form action="<?= $_SERVER['PHP_SELF'] ?>" method="POST">
+                    <input type="hidden" name="teacher_id" value="<?= $teacher_id ?>">
                     <div class="form-group">
                         <label class="form-label" for="custom_client_id">Google Client ID</label>
                         <input type="text" id="custom_client_id" name="custom_client_id" class="form-input" placeholder="e.g. 123456-abcdef.apps.googleusercontent.com" required>

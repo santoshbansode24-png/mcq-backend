@@ -117,8 +117,34 @@ export default function LiveClassScreen({ route, navigation }) {
     const flatListRef = useRef(null);
     const isPollingRef = useRef(false);
 
-    // Extract youtube video ID from payload
-    const youtubeId = classUpdate?.payload?.youtube_id || '';
+    // Extract youtube video ID from payload (handles parsedPayload object, parsed payload, or raw string)
+    const getYoutubeId = () => {
+        if (!classUpdate) return '';
+        
+        // 1. Try parsedPayload first (it is set by notifications.js helper)
+        if (classUpdate.parsedPayload && classUpdate.parsedPayload.youtube_id) {
+            return classUpdate.parsedPayload.youtube_id;
+        }
+        
+        // 2. Try raw payload object
+        if (classUpdate.payload) {
+            if (typeof classUpdate.payload === 'object') {
+                return classUpdate.payload.youtube_id || '';
+            }
+            if (typeof classUpdate.payload === 'string') {
+                try {
+                    const parsed = JSON.parse(classUpdate.payload);
+                    return parsed.youtube_id || '';
+                } catch (e) {
+                    console.log('Failed to parse raw payload string:', e);
+                }
+            }
+        }
+        
+        return '';
+    };
+
+    const youtubeId = getYoutubeId();
 
 
     useEffect(() => {

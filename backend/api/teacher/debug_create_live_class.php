@@ -5,16 +5,16 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json');
 
-function reportStatus($step, $success, $message, $data = null) {
-    echo json_encode([
+$results = [];
+
+function logStatus($step, $success, $message, $data = null) {
+    global $results;
+    $results[] = [
         'step' => $step,
         'success' => $success,
         'message' => $message,
         'data' => $data
-    ]) . "\n";
-    if (!$success) {
-        exit;
-    }
+    ];
 }
 
 // Check require files existence
@@ -30,66 +30,66 @@ foreach ($files as $name => $path) {
     if (file_exists($path)) {
         try {
             require_once $path;
-            reportStatus("Require $name", true, "$name successfully required");
+            logStatus("Require $name", true, "$name successfully required");
         } catch (Throwable $e) {
-            reportStatus("Require $name", false, "Error loading $name: " . $e->getMessage());
+            logStatus("Require $name", false, "Error loading $name: " . $e->getMessage());
         }
     } else {
-        $is_required = ($name !== 'secrets.php');
-        reportStatus("File Check $name", $name === 'secrets.php' ? true : false, "$name does not exist at path: $path (Resolved: " . realpath($path) . ")");
+        $optional = ($name === 'secrets.php');
+        logStatus("File Check $name", $optional, "$name does not exist at path: $path");
     }
-}
-
-// Test Google Client initialization
-try {
-    if (!class_exists('Google\Client')) {
-        reportStatus("Google Client Check", false, "Google\\Client class does not exist!");
-    }
-    
-    $client = new Google\Client();
-    reportStatus("Google Client Instantiation", true, "Google\\Client instantiated successfully");
-    
-    if (!defined('GOOGLE_CLIENT_ID')) {
-        reportStatus("Secrets Check", false, "GOOGLE_CLIENT_ID is not defined");
-    }
-    
-    $client->setClientId(GOOGLE_CLIENT_ID);
-    $client->setClientSecret(GOOGLE_CLIENT_SECRET);
-    $client->addScope(Google_Service_YouTube::YOUTUBE);
-    
-    if (!defined('YOUTUBE_REFRESH_TOKEN')) {
-        reportStatus("Secrets Check", false, "YOUTUBE_REFRESH_TOKEN is not defined");
-    }
-    
-    $client->refreshToken(YOUTUBE_REFRESH_TOKEN);
-    reportStatus("Google Client Token Refresh", true, "Token refresh executed without throwing");
-
-    $youtube = new Google_Service_YouTube($client);
-    reportStatus("YouTube Service Instantiation", true, "Google_Service_YouTube instantiated successfully");
-
-} catch (Throwable $e) {
-    reportStatus("Google API test", false, "Google API error: " . $e->getMessage(), [
-        'trace' => $e->getTraceAsString(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-    ]);
 }
 
 // Search for any autoload.php in the filesystem
 $found_autoloaders = [];
 try {
-    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator('/app'));
-    foreach ($it as $file) {
-        if ($file->isDir()) continue;
-        if ($file->getFilename() === 'autoload.php') {
-            $found_autoloaders[] = $file->getPathname();
+    // Start search from /app
+    if (is_dir('/app')) {
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator('/app'));
+        foreach ($it as $file) {
+            if ($file->isDir()) continue;
+            if ($file->getFilename() === 'autoload.php') {
+                $found_autoloaders[] = $file->getPathname();
+            }
         }
+    } else {
+        $found_autoloaders[] = "/app is not a directory";
     }
 } catch (Throwable $e) {
     $found_autoloaders[] = "Search error: " . $e->getMessage();
 }
 
-reportStatus("Search Autoloaders", true, "Autoloader search results", $found_autoloaders);
+logStatus("Search Autoloaders", true, "Autoloader search results", $found_autoloaders);
 
-reportStatus("Completed", true, "All checks passed successfully");
+// Test Google Client initialization if autoload exists
+if (class_exists('Google\Client')) {
+    try {
+        $client = new Google\Client();
+        logStatus("Google Client Instantiation", true, "Google\\Client instantiated successfully");
+        
+        $clientId = defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : (getenv('GOOGLE_CLIENT_ID') ?: '');
+        $clientSecret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : (getenv('GOOGLE_CLIENT_SECRET') ?: '');
+        $refreshToken = defined('YOUTUBE_REFRESH_TOKEN') ? YOUTUBE_REFRESH_TOKEN : (getenv('YOUTUBE_REFRESH_TOKEN') ?: '');
+
+        logStatus("Configs Check", true, "Credentials check", [
+            'client_id_set' => !empty($clientId),
+            'client_secret_set' => !empty($clientSecret),
+            'refresh_token_set' => !empty($refreshToken)
+        ]);
+
+        if (!empty($clientId) && !empty($clientSecret) && !empty($refreshToken)) {
+            $client->setClientId($clientId);
+            $client->setClientSecret($clientSecret);
+            $client->addScope(Google_Service_YouTube::YOUTUBE);
+            $client->refreshToken($refreshToken);
+            logStatus("Google Client Token Refresh", true, "Token refresh executed");
+        }
+    } catch (Throwable $e) {
+        logStatus("Google API test", false, "Google API error: " . $e->getMessage());
+    }
+} else {
+    logStatus("Google Client Check", false, "Google\\Client class not found");
+}
+
+echo json_encode($results, JSON_PRETTY_PRINT);
 ?>

@@ -26,7 +26,12 @@ header('Content-Type: text/html');
 $client = new Google\Client();
 $client->setClientId(GOOGLE_CLIENT_ID);
 $client->setClientSecret(GOOGLE_CLIENT_SECRET);
-$client->setRedirectUri('http://localhost/veeru/api/teacher/youtube_auth.php'); // Or whatever the local URL is
+
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'];
+$redirectUri = $protocol . '://' . $host . $_SERVER['PHP_SELF'];
+$client->setRedirectUri($redirectUri);
+
 $client->addScope(Google_Service_YouTube::YOUTUBE);
 $client->addScope(Google_Service_YouTube::YOUTUBE_FORCE_SSL);
 $client->setAccessType('offline');

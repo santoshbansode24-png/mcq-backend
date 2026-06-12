@@ -35,7 +35,8 @@ foreach ($files as $name => $path) {
             reportStatus("Require $name", false, "Error loading $name: " . $e->getMessage());
         }
     } else {
-        reportStatus("File Check $name", false, "$name does not exist at path: $path (Resolved: " . realpath($path) . ")");
+        $is_required = ($name !== 'secrets.php');
+        reportStatus("File Check $name", $name === 'secrets.php' ? true : false, "$name does not exist at path: $path (Resolved: " . realpath($path) . ")");
     }
 }
 

@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = getJsonInput();
 
-$required = ['name', 'email', 'password', 'school_name', 'class_ids'];
+$required = ['name', 'email', 'password', 'school_name'];
 $missing = validateRequired($input, $required);
 
 if (!empty($missing)) {
@@ -23,14 +23,10 @@ $name = sanitizeInput($input['name']);
 $email = sanitizeInput($input['email']);
 $password = $input['password'];
 $school_name = sanitizeInput($input['school_name']);
-$class_ids = $input['class_ids']; // Array of class IDs
+$class_ids = isset($input['class_ids']) && is_array($input['class_ids']) ? $input['class_ids'] : []; // Array of class IDs
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     sendResponse('error', 'Invalid email format', null, 400);
-}
-
-if (!is_array($class_ids) || empty($class_ids)) {
-    sendResponse('error', 'You must select at least one class', null, 400);
 }
 
 try {

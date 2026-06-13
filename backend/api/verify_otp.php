@@ -42,9 +42,12 @@ try {
         $mobile_search = substr($cleaned_digits, -10);
     }
 
+    // Scope search by user_type (default to 'student' if not specified)
+    $user_type = !empty($input['user_type']) ? sanitizeInput($input['user_type']) : 'student';
+
     // Find the user to get their phone number (using case-insensitive email check and all three phone columns)
-    $stmt = $pdo->prepare("SELECT user_id, mobile, phone, phone_number FROM users WHERE LOWER(email) = LOWER(?) OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
-    $stmt->execute([$identifier, $mobile_search, $mobile_search, $mobile_search]);
+    $stmt = $pdo->prepare("SELECT user_id, mobile, phone, phone_number FROM users WHERE (LOWER(email) = LOWER(?) OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?) AND user_type = ?");
+    $stmt->execute([$identifier, $mobile_search, $mobile_search, $mobile_search, $user_type]);
     $user = $stmt->fetch();
 
     if (!$user) {

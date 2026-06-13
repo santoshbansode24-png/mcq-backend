@@ -32,8 +32,8 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 try {
     $pdo->beginTransaction();
 
-    // Check if email exists in users table
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
+    // Check if email exists in users table as a teacher
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_type = 'teacher'");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
         $pdo->rollBack();

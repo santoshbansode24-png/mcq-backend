@@ -36,8 +36,8 @@ if (strlen($password) < 6) {
 }
 
 try {
-    // Check if email already exists
-    $emailStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
+    // Check if email already exists as a teacher
+    $emailStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_type = 'teacher'");
     $emailStmt->execute([$email]);
     if ($emailStmt->fetch()) {
         sendResponse('error', 'Email is already registered.', null, 409);

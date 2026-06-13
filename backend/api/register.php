@@ -73,15 +73,15 @@ if (strlen($mobile) !== 10 || !is_numeric($mobile)) {
 }
 
 try {
-    // Check if email already registered
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
+    // Check if email already registered as a student
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_type = 'student'");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
         sendResponse('error', 'Email already registered. Please try logging in.', null, 409);
     }
 
-    // Check if mobile already registered (using right-most 10-digit match)
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?");
+    // Check if mobile already registered as student (using right-most 10-digit match)
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE (RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?) AND user_type = 'student'");
     $stmt->execute([$mobile, $mobile]);
     if ($stmt->fetch()) {
         sendResponse('error', 'Mobile number already registered. Please use a different number.', null, 409);

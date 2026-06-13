@@ -24,9 +24,12 @@ if ($action === 'send_otp') {
         $mobile_search = substr($cleaned_digits, -10);
     }
 
+    // Scope search by user_type (default to 'student' if not specified)
+    $user_type = !empty($input['user_type']) ? sanitizeInput($input['user_type']) : 'student';
+
     // Check if user exists in mobile, phone, or phone_number columns
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
-    $stmt->execute([$mobile_search, $mobile_search, $mobile_search]);
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE (RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?) AND user_type = ?");
+    $stmt->execute([$mobile_search, $mobile_search, $mobile_search, $user_type]);
     if (!$stmt->fetch()) {
         echo json_encode(['status' => 'error', 'message' => 'Mobile number not registered']);
         exit;
@@ -86,8 +89,11 @@ if ($action === 'send_otp') {
         // OTP Valid. Reset Password.
         $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         
-        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?");
-        if ($updateStmt->execute([$hashedPassword, $mobile_search, $mobile_search, $mobile_search])) {
+        // Scope search by user_type (default to 'student' if not specified)
+        $user_type = !empty($input['user_type']) ? sanitizeInput($input['user_type']) : 'student';
+        
+        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE (RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?) AND user_type = ?");
+        if ($updateStmt->execute([$hashedPassword, $mobile_search, $mobile_search, $mobile_search, $user_type])) {
             
             // Delete used OTP
             $pdo->prepare("DELETE FROM otp_store WHERE mobile = ?")->execute([$mobile_search]);

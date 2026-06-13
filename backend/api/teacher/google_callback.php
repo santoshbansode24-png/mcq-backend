@@ -37,9 +37,13 @@ $host = $_SERVER['HTTP_HOST'];
 $redirectUri = $protocol . '://' . $host . $_SERVER['PHP_SELF'];
 $client->setRedirectUri($redirectUri);
 
+// Capture dynamic redirect URL passed via state parameter
+$appRedirectUrl = !empty($_GET['state']) ? $_GET['state'] : 'veeru-teacher://auth';
+$separator = (strpos($appRedirectUrl, '?') === false) ? '?' : '&';
+
 if (!isset($_GET['code'])) {
     $err = urlencode('Authorization code not returned by Google.');
-    header("Location: veeru-teacher://auth?status=error&message=$err");
+    header("Location: " . $appRedirectUrl . $separator . "status=error&message=$err");
     exit;
 }
 
@@ -49,7 +53,7 @@ try {
     
     if (isset($token['error'])) {
         $err = urlencode('Failed to retrieve token: ' . ($token['error_description'] ?? $token['error']));
-        header("Location: veeru-teacher://auth?status=error&message=$err");
+        header("Location: " . $appRedirectUrl . $separator . "status=error&message=$err");
         exit;
     }
     
@@ -64,7 +68,7 @@ try {
     
     if (empty($email)) {
         $err = urlencode('Unable to retrieve email from Google Account.');
-        header("Location: veeru-teacher://auth?status=error&message=$err");
+        header("Location: " . $appRedirectUrl . $separator . "status=error&message=$err");
         exit;
     }
     
@@ -91,24 +95,24 @@ try {
             $user['stats'] = $stats;
             
             $userJson = json_encode($user);
-            $redirectUrl = 'veeru-teacher://auth?status=success&user=' . urlencode($userJson);
+            $redirectUrl = $appRedirectUrl . $separator . 'status=success&user=' . urlencode($userJson);
             header("Location: $redirectUrl");
             exit;
         } else {
             // User does not exist: redirect to registration with name and email prefilled
-            $redirectUrl = 'veeru-teacher://auth?status=register&email=' . urlencode($email) . '&name=' . urlencode($name);
+            $redirectUrl = $appRedirectUrl . $separator . 'status=register&email=' . urlencode($email) . '&name=' . urlencode($name);
             header("Location: $redirectUrl");
             exit;
         }
     } else {
         $err = urlencode('Database connection issue.');
-        header("Location: veeru-teacher://auth?status=error&message=$err");
+        header("Location: " . $appRedirectUrl . $separator . "status=error&message=$err");
         exit;
     }
     
 } catch (Exception $e) {
     $err = urlencode('Auth Callback Error: ' . $e->getMessage());
-    header("Location: veeru-teacher://auth?status=error&message=$err");
+    header("Location: " . $appRedirectUrl . $separator . "status=error&message=$err");
     exit;
 }
 ?>

@@ -34,6 +34,11 @@ $client->setRedirectUri($redirectUri);
 $client->addScope('email');
 $client->addScope('profile');
 
+$redirectUrlParam = isset($_GET['redirect_url']) ? $_GET['redirect_url'] : '';
+if (!empty($redirectUrlParam)) {
+    $client->setState($redirectUrlParam);
+}
+
 // Redirect the user directly to Google's OAuth consent screen
 $authUrl = $client->createAuthUrl();
 header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));

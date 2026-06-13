@@ -1,4 +1,4 @@
-const CACHE_NAME = 'veeru-teacher-pwa-1781205589359';
+const CACHE_NAME = 'veeru-teacher-pwa-1781370676697';
 const urlsToCache = [
   '/',
   '/index.html',

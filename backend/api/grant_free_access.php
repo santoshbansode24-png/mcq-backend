@@ -29,8 +29,8 @@ try {
         throw new Exception("Unauthorized.");
     }
 
-    // Find user
-    $stmt = $pdo->prepare("SELECT user_id, subscription_expiry FROM users WHERE email = ?");
+    // Find student user
+    $stmt = $pdo->prepare("SELECT user_id, subscription_expiry FROM users WHERE email = ? AND user_type = 'student'");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

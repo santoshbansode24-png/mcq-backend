@@ -94,6 +94,7 @@ try {
         $tStmt = $pdo->prepare("SELECT name, school_name FROM users WHERE user_id = ?");
         $tStmt->execute([$input['teacher_id']]);
         $teacher = $tStmt->fetch(PDO::FETCH_ASSOC);
+        $school_name = ($teacher && !empty($teacher['school_name'])) ? $teacher['school_name'] : 'School';
 
         $notifStmt = $pdo->prepare("
             INSERT INTO class_updates (teacher_id, school_name, class_id, update_type, title, message, payload)
@@ -101,7 +102,7 @@ try {
         ");
         $notifStmt->execute([
             $input['teacher_id'],
-            $teacher['school_name'] ?? 'School',
+            $school_name,
             $input['class_id'],
             "🔴 LIVE EXAM STARTED: " . $input['title'],
             "Your teacher has started a live exam. Click to join immediately! Duration: " . $input['duration_minutes'] . " mins.",

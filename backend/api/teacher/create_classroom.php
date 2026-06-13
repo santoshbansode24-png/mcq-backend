@@ -43,10 +43,14 @@ try {
     $t_stmt->execute([$teacher_id]);
     $teacher_info = $t_stmt->fetch();
     
-    $board = $teacher_info['board'] ?? 'State Board';
-    $medium = $teacher_info['medium'] ?? 'Marathi';
-    $school_name = $teacher_info['school_name'] ?? 'Your School';
-    $teacher_name = $teacher_info['name'];
+    if (!$teacher_info) {
+        sendResponse('error', 'Teacher account not found. Please log in again.', null, 404);
+    }
+    
+    $board = (!empty($teacher_info['board'])) ? $teacher_info['board'] : 'State Board';
+    $medium = (!empty($teacher_info['medium'])) ? $teacher_info['medium'] : 'Marathi';
+    $school_name = (!empty($teacher_info['school_name'])) ? $teacher_info['school_name'] : 'Your School';
+    $teacher_name = $teacher_info['name'] ?? 'Teacher';
 
     // 2. Fetch Class Name from existing generic classes table
     $c_stmt = $pdo->prepare("SELECT class_name FROM classes WHERE class_id = ?");

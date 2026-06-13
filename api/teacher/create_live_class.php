@@ -182,7 +182,7 @@ try {
     $teacherStmt = $pdo->prepare("SELECT school_name FROM users WHERE user_id = ? AND user_type = 'teacher'");
     $teacherStmt->execute([$teacher_id]);
     $teacher = $teacherStmt->fetch(PDO::FETCH_ASSOC);
-    $school_name = $teacher['school_name'] ?? '';
+    $school_name = ($teacher && !empty($teacher['school_name'])) ? $teacher['school_name'] : '';
 
     // Construct payload JSON string matching student app expectations
     $payload = json_encode([

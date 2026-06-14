@@ -24,9 +24,12 @@ const LoginScreen = ({ navigation }) => {
     const [errorMsg, setErrorMsg] = useState('');
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        clientId: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com',
+        clientId: Platform.select({
+            android: '1047709706514-phie30mddp915i6ucqit1ph4rr37gf9k.apps.googleusercontent.com',
+            default: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com'
+        }),
         redirectUri: AuthSession.makeRedirectUri({
-            useProxy: true,
+            scheme: 'com.veeru.app',
         }),
     });
 
@@ -229,31 +232,27 @@ const LoginScreen = ({ navigation }) => {
                     </TouchableOpacity>
 
                     {/* OR Separator */}
-                    {false && (
-                        <View style={styles.separatorContainer}>
-                            <View style={styles.separatorLine} />
-                            <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
-                            <View style={styles.separatorLine} />
-                        </View>
-                    )}
+                    <View style={styles.separatorContainer}>
+                        <View style={styles.separatorLine} />
+                        <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
+                        <View style={styles.separatorLine} />
+                    </View>
 
                     {/* Google Login Button */}
-                    {false && (
-                        <TouchableOpacity
-                            style={styles.googleButton}
-                            onPress={handleGoogleSignIn}
-                            disabled={googleLoading}
-                        >
-                            {googleLoading ? (
-                                <ActivityIndicator color="#4f46e5" />
-                            ) : (
-                                <View style={styles.googleButtonContent}>
-                                    <Ionicons name="logo-google" size={20} color="#EA4335" />
-                                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                        style={styles.googleButton}
+                        onPress={handleGoogleSignIn}
+                        disabled={googleLoading}
+                    >
+                        {googleLoading ? (
+                            <ActivityIndicator color="#4f46e5" />
+                        ) : (
+                            <View style={styles.googleButtonContent}>
+                                <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
 
                     {errorMsg ? (
                         <Text style={styles.errorText}>

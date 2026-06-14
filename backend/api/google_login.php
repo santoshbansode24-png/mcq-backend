@@ -59,26 +59,13 @@ try {
         ], 200);
 
     } else {
-        // User is NEW - Create account now!
-        // Generate a random password since it's required in some schema versions
-        $random_pass = password_hash(bin2hex(random_bytes(10)), PASSWORD_DEFAULT);
-        
-        $insertStmt = $pdo->prepare("INSERT INTO users (name, email, password, google_id, profile_picture, user_type) VALUES (?, ?, ?, ?, ?, 'student')");
-        $insertStmt->execute([$name, $email, $random_pass, $google_id, $photo]);
-        
-        $newId = $pdo->lastInsertId();
-        
-        // Return newly created user data
-        sendResponse('success', 'Account created successfully', [
-            "user_id" => $newId,
+        // User is NEW - Do not create account yet.
+        // Return new_user status to prompt registration screen pre-fill.
+        sendResponse('new_user', 'Complete your registration', [
             "name" => $name,
             "email" => $email,
-            "class_id" => null,
-            "board_type" => null,
             "google_id" => $google_id,
-            "subscription_status" => 'inactive',
-            "subscription_expiry" => null,
-            "is_new_user" => true
+            "photo" => $photo
         ], 200);
     }
 } catch (PDOException $e) {

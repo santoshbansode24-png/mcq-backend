@@ -23,7 +23,7 @@ if (!$tableExists) {
         CREATE TABLE IF NOT EXISTS password_reset_otps (
             id INT PRIMARY KEY AUTO_INCREMENT,
             user_id INT NOT NULL,
-            phone_number VARCHAR(20) NOT NULL,
+            phone_number VARCHAR(100) NOT NULL,
             otp_code VARCHAR(6) NOT NULL,
             expires_at TIMESTAMP NOT NULL,
             verified BOOLEAN DEFAULT FALSE,
@@ -43,7 +43,7 @@ if (!$tableExists) {
             CREATE TABLE IF NOT EXISTS password_reset_otps (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 user_id INT NOT NULL,
-                phone_number VARCHAR(20) NOT NULL,
+                phone_number VARCHAR(100) NOT NULL,
                 otp_code VARCHAR(6) NOT NULL,
                 expires_at TIMESTAMP NOT NULL,
                 verified BOOLEAN DEFAULT FALSE,
@@ -57,6 +57,12 @@ if (!$tableExists) {
     }
 } else {
     $results[] = "✅ Table 'password_reset_otps' already exists.";
+    try {
+        $pdo->exec("ALTER TABLE password_reset_otps MODIFY phone_number VARCHAR(100) NOT NULL");
+        $results[] = "✅ Modified column phone_number to VARCHAR(100) successfully.";
+    } catch (PDOException $e) {
+        $results[] = "❌ Failed to modify phone_number: " . $e->getMessage();
+    }
 }
 
 // 2. Verify columns

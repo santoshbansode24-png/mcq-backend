@@ -35,29 +35,39 @@ try {
     $identifier = strtolower($identifier);
     $otpCode = trim($input['otp_code']);
 
-    // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
-    $cleaned_digits = preg_replace('/[^0-9]/', '', $identifier);
-    $mobile_search = $identifier;
-    if (strpos($identifier, '@') === false && is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
-        $mobile_search = substr($cleaned_digits, -10);
-    }
-
     // Scope search by user_type (default to 'student' if not specified)
     $user_type = !empty($input['user_type']) ? sanitizeInput($input['user_type']) : 'student';
 
-    // Find the user to get their phone number (using case-insensitive email check and all three phone columns)
-    $stmt = $pdo->prepare("SELECT user_id, mobile, phone, phone_number FROM users WHERE (LOWER(email) = LOWER(?) OR RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?) AND user_type = ?");
-    $stmt->execute([$identifier, $mobile_search, $mobile_search, $mobile_search, $user_type]);
+    $isEmail = (strpos($identifier, '@') !== false);
+
+    // Find the user (optimized queries for email vs phone number)
+    if ($isEmail) {
+        $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, phone, phone_number FROM users WHERE LOWER(email) = LOWER(?) AND user_type = ?");
+        $stmt->execute([$identifier, $user_type]);
+    } else {
+        // Clean input to check if it's a mobile number (handles +91, spaces, leading zero)
+        $cleaned_digits = preg_replace('/[^0-9]/', '', $identifier);
+        $mobile_search = $identifier;
+        if (is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+            $mobile_search = substr($cleaned_digits, -10);
+        }
+
+        $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, phone, phone_number FROM users WHERE (RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ? OR RIGHT(phone_number, 10) = ?) AND user_type = ?");
+        $stmt->execute([$mobile_search, $mobile_search, $mobile_search, $user_type]);
+    }
     $user = $stmt->fetch();
 
     if (!$user) {
         sendResponse('error', 'Invalid account', null, 404);
     }
 
-    $userPhone = !empty($user['mobile']) ? $user['mobile'] : (!empty($user['phone']) ? $user['phone'] : $user['phone_number']);
-
-    if (empty($userPhone)) {
-        sendResponse('error', 'No phone number associated with this account', null, 404);
+    $isEmail = (strpos($identifier, '@') !== false);
+    
+    // Choose the database key to verify the OTP (must match the key stored by send_otp.php)
+    $lookupKey = $isEmail ? $user['email'] : (!empty($user['mobile']) ? $user['mobile'] : (!empty($user['phone']) ? $user['phone'] : $user['phone_number']));
+    
+    if (empty($lookupKey)) {
+        sendResponse('error', 'No contact information associated with this account', null, 404);
     }
 
     // Find valid OTP
@@ -71,7 +81,7 @@ try {
         ORDER BY created_at DESC 
         LIMIT 1
     ");
-    $stmt->execute([$userPhone, $otpCode]);
+    $stmt->execute([$lookupKey, $otpCode]);
     $otpRecord = $stmt->fetch();
 
     if (!$otpRecord) {

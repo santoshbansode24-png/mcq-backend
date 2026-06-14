@@ -9,22 +9,23 @@ import { useTheme } from '../context/ThemeContext';
 const ForgotPasswordScreen = ({ navigation }) => {
     const { theme } = useTheme();
     const [step, setStep] = useState(1); // 1: Send OTP, 2: Verify & Reset
-    const [mobile, setMobile] = useState('');
+    const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSendOTP = async () => {
-        if (!mobile || mobile.length < 10) {
-            Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email.trim())) {
+            Alert.alert('Invalid Email Address', 'Please enter a valid email address');
             return;
         }
 
         setLoading(true);
         try {
             const response = await axios.post(`${API_URL}/send_otp.php`, {
-                mobile: mobile.trim()
+                email: email.trim()
             });
 
             if (response.data.status === 'success') {
@@ -63,7 +64,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         try {
             // Step 1: Verify OTP
             const verifyResponse = await axios.post(`${API_URL}/verify_otp.php`, {
-                mobile: mobile.trim(),
+                email: email.trim(),
                 otp_code: otp
             });
 
@@ -120,7 +121,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                 <View style={styles.headerContainer}>
                     <Text style={styles.title}>FORGOT PASSWORD</Text>
                     <Text style={styles.subtitle}>
-                        {step === 1 ? 'Enter your registered mobile number' : 'Enter OTP and new password'}
+                        {step === 1 ? 'Enter your registered email address' : 'Enter OTP and new password'}
                     </Text>
                 </View>
 
@@ -128,18 +129,17 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     {step === 1 ? (
                         <>
                             <View style={styles.inputWrapper}>
-                                <Text style={styles.label}>MOBILE NUMBER</Text>
+                                <Text style={styles.label}>EMAIL ADDRESS</Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="call-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                    <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="10-digit mobile number"
+                                        placeholder="Enter your registered email"
                                         placeholderTextColor="#94a3b8"
-                                        keyboardType="phone-pad"
+                                        keyboardType="email-address"
                                         autoCapitalize="none"
-                                        maxLength={10}
-                                        value={mobile}
-                                        onChangeText={setMobile}
+                                        value={email}
+                                        onChangeText={setEmail}
                                     />
                                 </View>
                             </View>

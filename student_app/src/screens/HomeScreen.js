@@ -28,6 +28,7 @@ import { dataCache } from '../utils/dataCache';
 import { SmartCacheService } from '../services/SmartCacheService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { moderateScale as rs, verticalScale as rsv } from '../utils/responsive';
+import NetInfo from '@react-native-community/netinfo';
 
 const SUBJECT_GRADIENTS = [
     ['#4f46e5', '#818cf8'], // Indigo
@@ -63,14 +64,16 @@ const SkeletonItem = () => {
 // ── ListHeader must be defined OUTSIDE the component so React doesn't
 // unmount/remount it on every re-render (was a major perf issue).
 // --- Optimized Sub-Components ---
-const HomeGreeting = React.memo(({ userName, t, theme, isSyncing, isFullySynced, hasUpdate }) => (
+const HomeGreeting = React.memo(({ userName, t, theme, isSyncing, isFullySynced, hasUpdate, itemsLeft }) => (
     <View style={{ flex: 1, marginRight: 12, justifyContent: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 2 }}>
             <Text style={[styles.greeting, { color: theme.textSecondary, marginBottom: 0 }]}>{t('welcome')},</Text>
             {isSyncing && (
                 <View style={styles.syncIndicator}>
                     <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
-                    <Text style={styles.syncText}>Syncing...</Text>
+                    <Text style={styles.syncText}>
+                        {itemsLeft > 0 ? `Syncing (${itemsLeft} left)` : 'Syncing...'}
+                    </Text>
                 </View>
             )}
             {!isSyncing && isFullySynced && !hasUpdate && (
@@ -199,7 +202,7 @@ const HomeBanner = React.memo(({ colors, title, subtitle, icon, onPress, iconIsT
 ));
 
 const HomeListHeader = React.memo(({ 
-    userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate,
+    userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, itemsLeft,
     syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam, activeLiveClass 
 }) => {
     // Memoize the navigation handlers to prevent HomeBanner from re-rendering
@@ -222,6 +225,7 @@ const HomeListHeader = React.memo(({
                 <HomeGreeting 
                     userName={userName} t={t} theme={theme} 
                     isSyncing={isSyncing} isFullySynced={isFullySynced} hasUpdate={hasUpdate} 
+                    itemsLeft={itemsLeft}
                 />
                 
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -323,6 +327,7 @@ const HomeScreen = ({ user, navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [itemsLeft, setItemsLeft] = useState(0);
     const [isFullySynced, setIsFullySynced] = useState(false);
     const [hasUpdate, setHasUpdate] = useState(false);
     const [activeLiveExam, setActiveLiveExam] = useState(null);
@@ -372,6 +377,7 @@ const HomeScreen = ({ user, navigation, route }) => {
     useEffect(() => {
         const unsubscribe = SmartCacheService.subscribe((status) => {
             if (status.isSyncing !== undefined) setIsSyncing(status.isSyncing);
+            if (status.itemsLeft !== undefined) setItemsLeft(status.itemsLeft);
             if (status.isFullySynced !== undefined) {
                 setIsFullySynced(status.isFullySynced);
                 if (status.isFullySynced) {
@@ -599,6 +605,18 @@ const HomeScreen = ({ user, navigation, route }) => {
     // Stable sync press handler — memoized so HomeListHeader doesn't re-render unnecessarily
     const handleSyncPress = useCallback(async () => {
         if (isSyncing) return;
+
+        // Check if offline
+        const netInfo = await NetInfo.fetch();
+        if (!netInfo.isConnected) {
+            if (isFullySynced && !hasUpdate) {
+                Alert.alert('Offline Ready 🟢', 'All textual data for your class is downloaded and available offline.');
+            } else {
+                Alert.alert('Connection Needed ⚠️', 'Please connect to the internet to download updates or start syncing.');
+            }
+            return;
+        }
+
         try {
             const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
             const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
@@ -617,7 +635,7 @@ const HomeScreen = ({ user, navigation, route }) => {
             }
         } catch {
             if (isFullySynced && !hasUpdate) {
-                Alert.alert('Offline Ready', 'All textual data for your class is downloaded.');
+                Alert.alert('Offline Ready 🟢', 'All textual data for your class is downloaded and available offline.');
             } else {
                 forceSync();
             }
@@ -634,6 +652,7 @@ const HomeScreen = ({ user, navigation, route }) => {
             t={t}
             isDarkMode={isDarkMode}
             isSyncing={isSyncing}
+            itemsLeft={itemsLeft}
             isFullySynced={isFullySynced}
             hasUpdate={hasUpdate}
             syncRotAnim={syncRotAnim}
@@ -645,7 +664,7 @@ const HomeScreen = ({ user, navigation, route }) => {
             activeLiveExam={activeLiveExam}
             activeLiveClass={activeLiveClass}
         />
-    ), [userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam, activeLiveClass]);
+    ), [userName, theme, t, isDarkMode, isSyncing, itemsLeft, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam, activeLiveClass]);
 
     return (
         <View style={styles.container}>

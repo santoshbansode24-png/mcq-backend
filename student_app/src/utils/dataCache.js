@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 // Cache TTLs per type (milliseconds)
 const EXPIRY_MAP = {
@@ -24,7 +25,7 @@ export const dataCache = {
     },
 
     /**
-     * Get data from cache. Returns null if missing OR expired.
+     * Get data from cache. Returns null if missing OR expired (unless offline).
      */
     get: async (key, type) => {
         try {
@@ -36,7 +37,14 @@ export const dataCache = {
             const age = Date.now() - cacheItem.timestamp;
 
             if (age > ttl) {
-                // Expired — remove and return null so caller fetches fresh data
+                // If offline, bypass expiry and return stale cache
+                const netInfo = await NetInfo.fetch();
+                if (!netInfo.isConnected) {
+                    if (DEBUG) console.log(`[Cache] Offline: Returning expired cache for ${key}`);
+                    return cacheItem.data;
+                }
+
+                // Expired & online — remove and return null so caller fetches fresh data
                 if (DEBUG) console.log(`[Cache] Expired ${key} (age: ${Math.round(age / 60000)}min)`);
                 await AsyncStorage.removeItem(`@cache_${key}`);
                 return null;
@@ -46,6 +54,21 @@ export const dataCache = {
             return cacheItem.data;
         } catch (error) {
             if (DEBUG) console.warn('[Cache] Get failed:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Force get data from cache regardless of expiration. Used as a network failure fallback.
+     */
+    getStale: async (key) => {
+        try {
+            const raw = await AsyncStorage.getItem(`@cache_${key}`);
+            if (!raw) return null;
+            const cacheItem = JSON.parse(raw);
+            return cacheItem.data;
+        } catch (error) {
+            if (DEBUG) console.warn('[Cache] getStale failed:', error);
             return null;
         }
     },

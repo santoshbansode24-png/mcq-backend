@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: 24,
         paddingTop: Platform.OS === 'ios' ? 60 : 80,
-        paddingBottom: 40,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 150,
     },
     backButton: {
         position: 'absolute',

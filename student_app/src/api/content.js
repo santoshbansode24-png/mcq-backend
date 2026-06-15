@@ -72,8 +72,11 @@ export const fetchMCQs = async (chapterId, forceRefresh = false) => {
 
         return response.data;
     } catch (error) {
-        // Fallback: If network fails and we have STALE cache, maybe return that?
-        // For now, standard error handling
+        // Fallback: If network fails and we have STALE cache, return that.
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
         throw error.response ? error.response.data : new Error('Network Error');
     }
 };
@@ -98,6 +101,10 @@ export const fetchNotes = async (chapterId, forceRefresh = false) => {
 
         return response.data;
     } catch (error) {
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
         throw error.response ? error.response.data : new Error('Network Error');
     }
 };
@@ -122,6 +129,10 @@ export const fetchVideos = async (chapterId, forceRefresh = false) => {
 
         return response.data;
     } catch (error) {
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
         throw error.response ? error.response.data : new Error('Network Error');
     }
 };
@@ -157,6 +168,10 @@ export const fetchFlashcards = async (chapterId, forceRefresh = false) => {
         return response.data;
     } catch (error) {
         console.error(`[Flashcards] Network Error:`, error.message);
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
         throw error;
     }
 };
@@ -190,6 +205,10 @@ export const fetchQuickRevision = async (chapterId, forceRefresh = false) => {
         return response.data;
     } catch (error) {
         console.error(`[QuickRev] Network Error:`, error.message);
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
         throw error;
     }
 };

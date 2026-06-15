@@ -30,6 +30,10 @@ export const fetchSubjects = async (classId, forceRefresh = false) => {
 
         return response.data;
     } catch (error) {
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
         throw error.response ? error.response.data : new Error('Network Error');
     }
 };

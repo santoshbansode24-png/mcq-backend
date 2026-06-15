@@ -67,13 +67,21 @@ export const fetchReviewList = async (userId, limit = 20, forceRefresh = false) 
         }
     }
 
-    const data = await executeRequest('get', '/vocab_get_review_list.php', { user_id: userId, limit }, `Fetching review list (${userId})`);
+    try {
+        const data = await executeRequest('get', '/vocab_get_review_list.php', { user_id: userId, limit }, `Fetching review list (${userId})`);
 
-    if (data && data.status === 'success') {
-        await dataCache.set(cacheKey, data, 'analytics');
+        if (data && data.status === 'success') {
+            await dataCache.set(cacheKey, data, 'analytics');
+        }
+
+        return data;
+    } catch (error) {
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
+        throw error;
     }
-
-    return data;
 };
 
 /**
@@ -124,13 +132,21 @@ export const fetchVocabStats = async (userId, forceRefresh = false) => {
         }
     }
 
-    const data = await executeRequest('get', '/vocab_get_stats.php', { user_id: userId }, `Fetching stats (${userId})`);
+    try {
+        const data = await executeRequest('get', '/vocab_get_stats.php', { user_id: userId }, `Fetching stats (${userId})`);
 
-    if (data && data.status === 'success') {
-        await dataCache.set(cacheKey, data, 'analytics');
+        if (data && data.status === 'success') {
+            await dataCache.set(cacheKey, data, 'analytics');
+        }
+
+        return data;
+    } catch (error) {
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
+        throw error;
     }
-
-    return data;
 };
 
 /**
@@ -165,16 +181,24 @@ export const fetchVocabSet = async (userId, setNumber = 0) => {
         return cached;
     }
 
-    const data = await executeRequest('get', '/vocab_get_set.php', {
-        user_id: userId,
-        set_number: setNumber
-    }, `Fetching set ${setNumber}`);
+    try {
+        const data = await executeRequest('get', '/vocab_get_set.php', {
+            user_id: userId,
+            set_number: setNumber
+        }, `Fetching set ${setNumber}`);
 
-    if (data && data.status === 'success') {
-        await dataCache.set(cacheKey, data, 'mcqs');
+        if (data && data.status === 'success') {
+            await dataCache.set(cacheKey, data, 'mcqs');
+        }
+
+        return data;
+    } catch (error) {
+        const staleCached = await dataCache.getStale(cacheKey);
+        if (staleCached) {
+            return staleCached;
+        }
+        throw error;
     }
-
-    return data;
 };
 
 /**

@@ -35,7 +35,7 @@ const LoginScreen = ({ navigation }) => {
         if (response?.type === 'success') {
             const { authentication } = response;
             getUserInfo(authentication.accessToken);
-        } else if (response?.type === 'error' || response?.type === 'cancel') {
+        } else if (response) {
             setGoogleLoading(false);
         }
     }, [response]);
@@ -46,13 +46,22 @@ const LoginScreen = ({ navigation }) => {
             const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
                 headers: { Authorization: `Bearer ${token}` },
             });
+            
+            if (!res.ok) {
+                throw new Error(`Google API returned status ${res.status}`);
+            }
+
             const user = await res.json();
+
+            if (!user || !user.email) {
+                throw new Error('Failed to retrieve email from Google account');
+            }
 
             const userDataForBackend = {
                 email: user.email,
-                name: user.name,
+                name: user.name || 'Student',
                 id: user.id,
-                photo: user.picture
+                photo: user.picture || ''
             };
 
             const data = await googleLogin(userDataForBackend);

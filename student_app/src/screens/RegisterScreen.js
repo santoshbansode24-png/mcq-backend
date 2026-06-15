@@ -56,10 +56,8 @@ const RegisterScreen = ({ navigation, route }) => {
   const [errorMsg, setErrorMsg] = useState("");
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: Platform.select({
-      android: '1047709706514-phie30mddp915i6ucqit1ph4rr37gf9k.apps.googleusercontent.com',
-      default: '228101833572-dc32st1ped33r02ouulbmoffp0v05uhg.apps.googleusercontent.com'
-    }),
+    androidClientId: '1047709706514-4rvops6i9hb0id374ndb0rgf0bajrta5.apps.googleusercontent.com',
+    webClientId: '1047709706514-o46ho477qi3em7o1jncubheu59qe1tk2.apps.googleusercontent.com',
     redirectUri: AuthSession.makeRedirectUri({
       scheme: 'com.veeru.app',
     }),

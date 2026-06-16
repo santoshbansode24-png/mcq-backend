@@ -16,15 +16,16 @@ if ($message_id <= 0 || $teacher_id <= 0) {
 
 try {
     // Check if table exists first
-    $tableCheck = $pdo->query("SHOW TABLES LIKE 'class_chat'");
+    $tableCheck = $pdo->query("SHOW TABLES LIKE 'messages'");
     if ($tableCheck->rowCount() == 0) {
         sendResponse('error', 'Chat system not fully initialized.', null, 404);
     }
-    // Verify the message exists
+    // Verify the message exists and sender is indeed a teacher
     $checkStmt = $pdo->prepare("
-        SELECT id, sender_id, sender_role 
-        FROM class_chat 
-        WHERE id = ?
+        SELECT m.id, m.sender_id, u.user_type 
+        FROM messages m
+        LEFT JOIN users u ON m.sender_id = u.user_id
+        WHERE m.id = ?
     ");
     $checkStmt->execute([$message_id]);
     $message = $checkStmt->fetch(PDO::FETCH_ASSOC);
@@ -34,12 +35,12 @@ try {
     }
 
     // Allow deletion if the teacher is the sender
-    if ($message['sender_id'] != $teacher_id || $message['sender_role'] !== 'teacher') {
+    if ($message['sender_id'] != $teacher_id || strtolower($message['user_type'] ?? '') !== 'teacher') {
         sendResponse('error', 'Unauthorized to delete this message.', null, 403);
     }
 
     // Delete the message
-    $delStmt = $pdo->prepare("DELETE FROM class_chat WHERE id = ?");
+    $delStmt = $pdo->prepare("DELETE FROM messages WHERE id = ?");
     $delStmt->execute([$message_id]);
 
     sendResponse('success', 'Message deleted successfully.', null, 200);

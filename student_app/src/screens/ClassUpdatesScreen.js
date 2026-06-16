@@ -570,7 +570,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                                 Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
                                             }
                                         } catch (err) {
-                                            Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                                            const errorMsg = err.response && err.response.data && err.response.data.message 
+                                                ? err.response.data.message 
+                                                : (err.message || String(err));
+                                            Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
+                                            console.error("[Start Live Exam Error 1]:", err);
                                         } finally {
                                             setLoading(false);
                                         }
@@ -655,7 +659,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                         Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
                     }
                 } catch (err) {
-                    Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                    const errorMsg = err.response && err.response.data && err.response.data.message 
+                        ? err.response.data.message 
+                        : (err.message || String(err));
+                    Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
+                    console.error("[Start Live Exam Error 2]:", err);
                 } finally {
                     setLoading(false);
                 }
@@ -951,7 +959,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                         Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
                                     }
                                 } catch (err) {
-                                    Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                                    const errorMsg = err.response && err.response.data && err.response.data.message 
+                                        ? err.response.data.message 
+                                        : (err.message || String(err));
+                                    Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
+                                    console.error("[Start Live Exam Error 3]:", err);
                                 } finally {
                                     setLoading(false);
                                 }
@@ -1192,7 +1204,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                                                         Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
                                                                     }
                                                                 } catch (err) {
-                                                                    Alert.alert("Error", "Failed to connect to the exam server. Please try again.");
+                                                                    const errorMsg = err.response && err.response.data && err.response.data.message 
+                                                                        ? err.response.data.message 
+                                                                        : (err.message || String(err));
+                                                                    Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
+                                                                    console.error("[Start Live Exam Error 4]:", err);
                                                                 } finally {
                                                                     setLoading(false);
                                                                 }

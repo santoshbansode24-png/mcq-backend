@@ -4,6 +4,9 @@
  * Veeru
  */
 
+// Force UTC timezone globally in PHP
+date_default_timezone_set('UTC');
+
 // Enable error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Disable display to prevent JSON corruption
@@ -52,6 +55,9 @@ try {
     }
     
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
+
+    // Force MySQL connection session to use UTC
+    $pdo->exec("SET time_zone = '+00:00'");
     
     // Fix for "Illegal mix of collations" error (utf8mb4_unicode_ci vs utf8mb4_0900_ai_ci)
     // Synchronize connection collation with database collation

@@ -595,6 +595,17 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                 </TouchableOpacity>
                             )}
 
+                            {(payloadData || htmlPayload) && (
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { backgroundColor: '#8B5CF6' }]} 
+                                    onPress={generateAndOpenLocalPdf}
+                                >
+                                    <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="white" />
+                                    <Text style={styles.actionButtonText}>Open Worksheet</Text>
+                                </TouchableOpacity>
+                            )}
+
+
 
 
                             {hasFile && urlType === 'image' && (

@@ -8,20 +8,30 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 $class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
+$exam_id = isset($_GET['exam_id']) ? intval($_GET['exam_id']) : 0;
 
-if ($class_id <= 0) {
-    sendResponse('error', 'Valid class_id required', null, 400);
+if ($class_id <= 0 && $exam_id <= 0) {
+    sendResponse('error', 'Valid class_id or exam_id required', null, 400);
 }
 
 try {
-    // Look for an active exam for this class
-    $stmt = $pdo->prepare("
-        SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
-        FROM live_exams 
-        WHERE class_id = ? AND status = 'active'
-        ORDER BY id DESC LIMIT 1
-    ");
-    $stmt->execute([$class_id]);
+    // Look for the specific exam or the latest active exam for this class
+    if ($exam_id > 0) {
+        $stmt = $pdo->prepare("
+            SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
+            FROM live_exams 
+            WHERE id = ? AND status = 'active'
+        ");
+        $stmt->execute([$exam_id]);
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
+            FROM live_exams 
+            WHERE class_id = ? AND status = 'active'
+            ORDER BY id DESC LIMIT 1
+        ");
+        $stmt->execute([$class_id]);
+    }
     $activeExam = $stmt->fetch();
 
     if ($activeExam) {
@@ -80,8 +90,10 @@ try {
                         $qStmt->execute($qIds);
                         $questions = $qStmt->fetchAll(PDO::FETCH_ASSOC);
                     }
-                } else {
-                    // Fallback to first 40 questions in the chapter
+                }
+
+                // Fallback to first 40 questions in the chapter if no selected questions found or empty
+                if (empty($questions)) {
                     $qStmt = $pdo->prepare("
                         SELECT mcq_id, chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, image_url
                         FROM mcqs

@@ -93,8 +93,7 @@ try {
         UPDATE users 
         SET class_id = ?, 
             school_name = ?,
-            board_type = ?,
-            subscription_status = 'active'
+            board_type = ?
         WHERE user_id = ? AND user_type = 'student'
     ");
     

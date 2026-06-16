@@ -259,7 +259,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
             'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'],
-            'ClassUpdates': ['ClassUpdates']
+            'ClassUpdates': ['ClassUpdates', 'PDFViewer', 'MyExamTest']
         };
         for (const [key, screens] of Object.entries(mapping)) {
             if (screens.includes(currentView)) return key;

@@ -9,10 +9,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchNotifications } from '../api/notifications';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
-import config, { BASE_URL, API_URL } from '../api/config';
+import { BASE_URL, API_URL } from '../api/config';
 import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import * as IntentLauncher from 'expo-intent-launcher';
 import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -249,9 +247,55 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     };
 
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
+        let cleanDateStr = dateString;
+        if (cleanDateStr && typeof cleanDateStr === 'string') {
+            cleanDateStr = cleanDateStr.replace(' ', 'T');
+            if (!cleanDateStr.endsWith('Z') && !cleanDateStr.includes('+') && !cleanDateStr.includes('-')) {
+                cleanDateStr += 'Z';
+            }
+        }
+        const date = new Date(cleanDateStr);
         return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
+
+    // ── Shared handler for ALL "Start Live Exam" buttons (was duplicated 4x) ──
+    const handleStartLiveExam = useCallback(async (session) => {
+        try {
+            setLoading(true);
+            const classId = session.class_id;
+            const userId = user?.user_id || user?.id || 0;
+            const examId = session.parsedPayload?.exam_id || session.payload?.exam_id || 0;
+            const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}&user_id=${userId}&exam_id=${examId}`);
+            if (response.data && response.data.status === 'success') {
+                if (response.data.data) {
+                    const examData = response.data.data;
+                    if (examData.questions && examData.questions.length > 0) {
+                        navigation.navigate('MyExamTest', {
+                            questions: examData.questions,
+                            totalQuestions: examData.questions.length,
+                            subjectName: examData.title,
+                            update_id: examData.exam_id
+                        });
+                    } else {
+                        Alert.alert('Notice', 'This exam does not contain any questions yet.');
+                    }
+                } else {
+                    const message = response.data.message || 'This live exam has already ended or is no longer active.';
+                    Alert.alert('Notice', message);
+                }
+            } else {
+                Alert.alert('Exam Ended', 'This live exam has already ended or is no longer active.');
+            }
+        } catch (err) {
+            const errorMsg = err.response && err.response.data && err.response.data.message
+                ? err.response.data.message
+                : (err.message || String(err));
+            Alert.alert('Connection Error', 'Failed to connect to exam server:\n' + errorMsg);
+            console.error('[handleStartLiveExam]:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [user, navigation, API_URL]);
 
     const groupNotifications = useCallback((data) => {
         const groups = [];
@@ -269,7 +313,14 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         };
 
         data.forEach(item => {
-            const itemDate = new Date(item.created_at);
+            let dateStr = item.created_at;
+            if (dateStr && typeof dateStr === 'string') {
+                dateStr = dateStr.replace(' ', 'T');
+                if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
+                    dateStr += 'Z';
+                }
+            }
+            const itemDate = new Date(dateStr);
             const itemDateStr = itemDate.toDateString();
 
             if (itemDateStr === todayStr) {
@@ -297,9 +348,12 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
             scheduledTimeStr = item.parsedPayload.scheduled_time;
         }
 
-        // Replace space with 'T' for reliable iOS/Safari date parsing
+        // Replace space with 'T' and append 'Z' for reliable UTC parsing on iOS/Safari/Android
         if (scheduledTimeStr && typeof scheduledTimeStr === 'string') {
             scheduledTimeStr = scheduledTimeStr.replace(' ', 'T');
+            if (!scheduledTimeStr.endsWith('Z') && !scheduledTimeStr.includes('+') && !scheduledTimeStr.includes('-')) {
+                scheduledTimeStr += 'Z';
+            }
         }
 
         const scheduledTime = new Date(scheduledTimeStr).getTime();
@@ -367,20 +421,20 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         if (hasFile) {
             const fileUrl = item.payload.file_url || item.payload.url;
             
-            // Clean the fileUrl to remove leading slashes and trailing whitespace
+            // Clean the fileUrl — strip leading slash and whitespace
             let cleanFileUrl = fileUrl.trim();
             if (cleanFileUrl.startsWith('/')) {
                 cleanFileUrl = cleanFileUrl.substring(1);
             }
             
+            // Build absolute URL: if already absolute, use as-is.
+            // If starts with uploads/, prepend the backend base URL.
             const url = cleanFileUrl.startsWith('http') 
                 ? cleanFileUrl 
-                : (cleanFileUrl.startsWith('uploads/materials') || cleanFileUrl.startsWith('uploads/class_materials') || cleanFileUrl.startsWith('uploads/')
-                    ? `${config.ROOT_URL}/${cleanFileUrl}` 
-                    : `${BASE_URL}/${cleanFileUrl}`);
+                : `${API_URL.replace('/api', '')}/${cleanFileUrl}`;
             
-            // Remove potential double slashes (except in http:// or https://)
-            finalUrl = url.replace(/([^:]\/)\/+/g, "$1");
+            // Remove potential double slashes (except protocol ones)
+            finalUrl = url.replace(/([^:]\/)\/+/g, '$1');
             urlType = getUrlType(finalUrl);
         }
 
@@ -414,33 +468,24 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     }
                 }
                 
-                if (!currentHtmlPayload) return;
+                if (!currentHtmlPayload) {
+                    Alert.alert('Error', 'No worksheet content available.');
+                    return;
+                }
 
+                const worksheetTitle = item.title || 'Worksheet';
                 const fileUri = `${FileSystem.cacheDirectory}worksheet_${item.notification_id || item.id}.pdf`;
                 const fileInfo = await FileSystem.getInfoAsync(fileUri);
-                let uriToOpen = fileUri;
 
                 // Only generate the PDF if it hasn't been generated yet
                 if (!fileInfo.exists) {
                     const { uri } = await Print.printToFileAsync({ html: currentHtmlPayload });
-                    // Use copyAsync instead of moveAsync to prevent file lock issues on Android
                     await FileSystem.copyAsync({ from: uri, to: fileUri });
                 }
                 
-                if (Platform.OS === 'android') {
-                    try {
-                        const contentUri = await FileSystem.getContentUriAsync(uriToOpen);
-                        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-                            data: contentUri,
-                            flags: 1,
-                            type: 'application/pdf',
-                        });
-                    } catch (e) {
-                        await Sharing.shareAsync(uriToOpen, { UTI: '.pdf', mimeType: 'application/pdf' });
-                    }
-                } else {
-                    await Sharing.shareAsync(uriToOpen, { UTI: '.pdf', mimeType: 'application/pdf' });
-                }
+                // Navigate to the built-in PDF viewer (works on all devices, no external app needed)
+                navigation.navigate('PDFViewer', { url: fileUri, title: worksheetTitle });
+
             } catch (error) {
                 console.error('Error generating PDF:', error);
                 Alert.alert('Error', `Failed to open PDF worksheet.\nDetails: ${error.message || 'Unknown error'}`);
@@ -550,35 +595,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             {isExam && (
                                 <TouchableOpacity 
                                     style={[styles.actionButton, { backgroundColor: '#D97706' }]} 
-                                    onPress={async () => {
-                                        try {
-                                            setLoading(true);
-                                            const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}&user_id=${user?.user_id || user?.id || 0}`);
-                                            if (response.data && response.data.status === 'success' && response.data.data) {
-                                                const examData = response.data.data;
-                                                if (examData.questions && examData.questions.length > 0) {
-                                                    navigation.navigate('MyExamTest', {
-                                                        questions: examData.questions,
-                                                        totalQuestions: examData.questions.length,
-                                                        subjectName: examData.title,
-                                                        update_id: examData.exam_id
-                                                    });
-                                                } else {
-                                                    Alert.alert("Notice", "This exam does not contain any questions.");
-                                                }
-                                            } else {
-                                                Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
-                                            }
-                                        } catch (err) {
-                                            const errorMsg = err.response && err.response.data && err.response.data.message 
-                                                ? err.response.data.message 
-                                                : (err.message || String(err));
-                                            Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
-                                            console.error("[Start Live Exam Error 1]:", err);
-                                        } finally {
-                                            setLoading(false);
-                                        }
-                                    }}
+                                    onPress={() => handleStartLiveExam(item)}
                                 >
                                     <MaterialCommunityIcons name="play-circle" size={20} color="white" />
                                     <Text style={styles.actionButtonText}>Start Live Exam</Text>
@@ -650,35 +667,6 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
         }
 
         if (activeTab === 'Live Exams') {
-            const handleStartExam = async () => {
-                try {
-                    setLoading(true);
-                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}&user_id=${user?.user_id || user?.id || 0}`);
-                    if (response.data && response.data.status === 'success' && response.data.data) {
-                        const examData = response.data.data;
-                        if (examData.questions && examData.questions.length > 0) {
-                            navigation.navigate('MyExamTest', {
-                                questions: examData.questions,
-                                totalQuestions: examData.questions.length,
-                                subjectName: examData.title,
-                                update_id: examData.exam_id
-                            });
-                        } else {
-                            Alert.alert("Notice", "This exam does not contain any questions.");
-                        }
-                    } else {
-                        Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
-                    }
-                } catch (err) {
-                    const errorMsg = err.response && err.response.data && err.response.data.message 
-                        ? err.response.data.message 
-                        : (err.message || String(err));
-                    Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
-                    console.error("[Start Live Exam Error 2]:", err);
-                } finally {
-                    setLoading(false);
-                }
-            };
 
             return (
                 <View style={[styles.examCard, { backgroundColor: isDarkMode ? '#451a03' : '#fffbeb' }]}>
@@ -724,7 +712,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                         </View>
 
                         <TouchableOpacity 
-                            onPress={handleStartExam}
+                            onPress={() => handleStartLiveExam(item)}
                             activeOpacity={0.8}
                         >
                             <LinearGradient
@@ -950,35 +938,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                     {isExam && (
                         <TouchableOpacity 
                             style={[styles.actionButton, { backgroundColor: '#D97706' }]} 
-                            onPress={async () => {
-                                try {
-                                    setLoading(true);
-                                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${item.class_id}&user_id=${user?.user_id || user?.id || 0}`);
-                                    if (response.data && response.data.status === 'success' && response.data.data) {
-                                        const examData = response.data.data;
-                                        if (examData.questions && examData.questions.length > 0) {
-                                            navigation.navigate('MyExamTest', {
-                                                questions: examData.questions,
-                                                totalQuestions: examData.questions.length,
-                                                subjectName: examData.title,
-                                                update_id: examData.exam_id
-                                            });
-                                        } else {
-                                            Alert.alert("Notice", "This exam does not contain any questions.");
-                                        }
-                                    } else {
-                                        Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
-                                    }
-                                } catch (err) {
-                                    const errorMsg = err.response && err.response.data && err.response.data.message 
-                                        ? err.response.data.message 
-                                        : (err.message || String(err));
-                                    Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
-                                    console.error("[Start Live Exam Error 3]:", err);
-                                } finally {
-                                    setLoading(false);
-                                }
-                            }}
+                            onPress={() => handleStartLiveExam(item)}
                         >
                             <MaterialCommunityIcons name="play-circle" size={20} color="white" />
                             <Text style={styles.actionButtonText}>Start Live Exam</Text>
@@ -1029,7 +989,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 </View>
             </View>
         );
-    }, [theme, isDarkMode, navigation, user, expandedCardIds, activeTab]);
+    }, [theme, isDarkMode, navigation, user, expandedCardIds, activeTab, setLoading, handleStartLiveExam]);
 
     return (
         <LinearGradient 
@@ -1192,37 +1152,11 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                                                     </Text>
                                                     <TouchableOpacity 
                                                         style={[styles.activeSessionBtn, { backgroundColor: isClass ? '#E11D48' : '#D97706' }]}
-                                                        onPress={async () => {
+                                                        onPress={() => {
                                                             if (isClass) {
                                                                 navigation.navigate('LiveClass', { classUpdate: session, userId: user?.user_id || user?.id });
                                                             } else {
-                                                                try {
-                                                                    setLoading(true);
-                                                                    const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${session.class_id}&user_id=${user?.user_id || user?.id || 0}`);
-                                                                    if (response.data && response.data.status === 'success' && response.data.data) {
-                                                                        const examData = response.data.data;
-                                                                        if (examData.questions && examData.questions.length > 0) {
-                                                                            navigation.navigate('MyExamTest', {
-                                                                                questions: examData.questions,
-                                                                                totalQuestions: examData.questions.length,
-                                                                                subjectName: examData.title,
-                                                                                update_id: examData.exam_id
-                                                                            });
-                                                                        } else {
-                                                                            Alert.alert("Notice", "This exam does not contain any questions.");
-                                                                        }
-                                                                    } else {
-                                                                        Alert.alert("Exam Completed", "This live exam has already ended or is no longer active.");
-                                                                    }
-                                                                } catch (err) {
-                                                                    const errorMsg = err.response && err.response.data && err.response.data.message 
-                                                                        ? err.response.data.message 
-                                                                        : (err.message || String(err));
-                                                                    Alert.alert("Error Details", "Failed to connect to the exam server:\n" + errorMsg);
-                                                                    console.error("[Start Live Exam Error 4]:", err);
-                                                                } finally {
-                                                                    setLoading(false);
-                                                                }
+                                                                handleStartLiveExam(session);
                                                             }
                                                         }}
                                                     >
@@ -1279,7 +1213,7 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                             <View style={[styles.sectionLine, { backgroundColor: isDarkMode ? '#334155' : '#e2e8f0' }]} />
                         </View>
                     )}
-                    keyExtractor={item => item.notification_id?.toString() || Math.random().toString()}
+                    keyExtractor={(item, index) => (item.notification_id ? item.notification_id.toString() : `notif-${index}`)}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     stickySectionHeadersEnabled={false}

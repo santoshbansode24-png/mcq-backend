@@ -30,7 +30,8 @@ function createMessagesTable($pdo) {
 
 function queryMessages($pdo, $class_code, $user_id, $with_user_id) {
     if ($with_user_id !== null) {
-        // 1-on-1 chat between user_id and with_user_id (in a specific class or globally)
+        // 1-on-1 chat: only private messages between these two specific users
+        // (NOT broadcasts — they have receiver_id IS NULL and should stay separate)
         $query = "
             SELECT m.*, u.name as sender_name 
             FROM messages m
@@ -39,20 +40,20 @@ function queryMessages($pdo, $class_code, $user_id, $with_user_id) {
                 (m.sender_id = ? AND m.receiver_id = ?) 
                 OR 
                 (m.sender_id = ? AND m.receiver_id = ?)
-                OR 
-                (m.class_code = ? AND m.receiver_id IS NULL)
             )
         ";
-        $params = [$user_id, $with_user_id, $with_user_id, $user_id, $class_code];
+        $params = [$user_id, $with_user_id, $with_user_id, $user_id];
         
+        // Optionally scope to a specific class if provided
         if (!empty($class_code)) {
             $query .= " AND m.class_code = ?";
             $params[] = $class_code;
         }
         
-        $query .= " ORDER BY m.created_at ASC";
+        $query .= " ORDER BY m.created_at ASC LIMIT 200";
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
+
     } else {
         // Broadcasts / Class-wide chat
         $query = "

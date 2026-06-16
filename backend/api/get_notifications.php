@@ -1,5 +1,6 @@
 <?php
 require_once '../config/db.php';
+require_once 'cors_middleware.php';
 
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -16,34 +17,36 @@ if (!$class_id && !$class_ids) {
 
 try {
     // Resolve classroom IDs (Option A Safe server-side translation safeguard - Optimized 1-query lookup)
-    $input_ids = [];
+    $joined_ids = [];
     if ($class_ids) {
-        $input_ids = array_map('intval', explode(',', $class_ids));
+        $joined_ids = array_map('intval', explode(',', $class_ids));
     } elseif ($class_id) {
-        $input_ids = [intval($class_id)];
+        $joined_ids = [intval($class_id)];
     }
 
-    $target_classroom_ids = [];
-    if (!empty($input_ids)) {
-        $placeholders = implode(',', array_fill(0, count($input_ids), '?'));
-        // Resolve both classroom IDs and generic class levels in a single query
+    $joined_ids = array_unique(array_map('intval', $joined_ids));
+
+    // Resolve standards (class_levels) for legacy notifications support
+    $class_levels = [];
+    if (!empty($joined_ids)) {
+        $placeholders = implode(',', array_fill(0, count($joined_ids), '?'));
         $stmt_resolve = $pdo->prepare("
-            SELECT class_id 
+            SELECT DISTINCT class_level 
             FROM classrooms 
-            WHERE class_id IN ($placeholders) OR class_level IN ($placeholders)
+            WHERE class_id IN ($placeholders)
         ");
-        $params = array_merge($input_ids, $input_ids);
-        $stmt_resolve->execute($params);
-        $target_classroom_ids = $stmt_resolve->fetchAll(PDO::FETCH_COLUMN);
+        $stmt_resolve->execute($joined_ids);
+        $class_levels = $stmt_resolve->fetchAll(PDO::FETCH_COLUMN);
     }
 
     // Fallback if no classrooms found
-    if (empty($target_classroom_ids)) {
-        $target_classroom_ids = $input_ids;
+    if (empty($class_levels)) {
+        $class_levels = $joined_ids;
     }
+    $class_levels = array_unique(array_map('intval', $class_levels));
 
-    $target_classroom_ids = array_unique(array_map('intval', $target_classroom_ids));
-    $inQuery = implode(',', array_fill(0, count($target_classroom_ids), '?'));
+    $inQueryClassrooms = implode(',', array_fill(0, count($joined_ids), '?'));
+    $inQueryStandards = implode(',', array_fill(0, count($class_levels), '?'));
 
     $query = "
         SELECT 
@@ -59,7 +62,8 @@ try {
             u.name as teacher_name 
         FROM class_updates cu
         JOIN users u ON cu.teacher_id = u.user_id
-        WHERE cu.class_id IN ($inQuery)
+        WHERE cu.class_id IN ($inQueryClassrooms)
+          AND cu.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         
         UNION ALL
         
@@ -76,19 +80,20 @@ try {
             u.name as teacher_name 
         FROM notifications n
         JOIN users u ON n.teacher_id = u.user_id
-        WHERE n.class_id IN ($inQuery)
+        WHERE n.class_id IN ($inQueryStandards)
+          AND n.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         
         ORDER BY created_at DESC
         LIMIT 100
     ";
     
-    // Merge parameters for the UNION (needs two sets of class_ids)
-    $params = array_merge($target_classroom_ids, $target_classroom_ids);
+    // Merge parameters in order: first classrooms, then standards
+    $params = array_merge($joined_ids, $class_levels);
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Parse JSON payload
+    // Parse JSON payload server-side (saves client from double-parsing)
     foreach ($notifications as $key => $n) {
         if (!empty($n['payload'])) {
             $notifications[$key]['payload'] = json_decode($n['payload'], true);

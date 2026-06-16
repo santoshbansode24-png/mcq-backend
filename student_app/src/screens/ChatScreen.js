@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
-    FlatList, KeyboardAvoidingView, Platform, ActivityIndicator
+    FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, AppState
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
-import config from '../api/config';
+import { API_URL } from '../api/config';
 
 export default function ChatScreen({ route, navigation }) {
     const { userId, classId } = route.params || {};
@@ -21,6 +21,7 @@ export default function ChatScreen({ route, navigation }) {
     const [resolvedClassCode, setResolvedClassCode] = useState(null);
     const flatListRef = useRef(null);
     const isMounted = useRef(true);
+    const appState = useRef(AppState.currentState);
 
     useEffect(() => {
         isMounted.current = true;
@@ -40,26 +41,33 @@ export default function ChatScreen({ route, navigation }) {
         const initChat = async () => {
             const data = await loadData();
             if (isMounted.current && data && data.tId && data.code) {
-                // Start polling after initial load
+                // Start polling — but only when app is in foreground
                 intervalId = setInterval(() => {
-                    if (isMounted.current) {
+                    if (isMounted.current && appState.current === 'active') {
                         fetchMessages(data.tId, data.code);
                     }
                 }, 3000);
             }
         };
         
+        // Pause/resume polling based on app state
+        const appStateSub = AppState.addEventListener('change', nextState => {
+            appState.current = nextState;
+        });
+        
         initChat();
         
         return () => {
             if (intervalId) clearInterval(intervalId);
+            appStateSub.remove();
         };
     }, [userId, classId]);
+
 
     const loadData = async () => {
         try {
             // 1. Fetch Teacher ID and Class Code for this specific class
-            const tRes = await axios.get(`${config.ROOT_URL}/api/chat/get_teacher_for_class_id.php?class_id=${classId}`);
+            const tRes = await axios.get(`${API_URL}/chat/get_teacher_for_class_id.php?class_id=${classId}`);
             let teacherData = null;
             let currentClassCode = null;
             if (tRes.data && tRes.data.status === 'success') {
@@ -89,7 +97,7 @@ export default function ChatScreen({ route, navigation }) {
 
     const fetchMessages = async (tId, code) => {
         try {
-            let url = `${config.ROOT_URL}/api/chat/get_messages.php?class_code=${code}&user_id=${userId}`;
+            let url = `${API_URL}/chat/get_messages.php?class_code=${code}&user_id=${userId}`;
             if (tId) url += `&with_user_id=${tId}`;
 
             const response = await axios.get(url);
@@ -115,7 +123,7 @@ export default function ChatScreen({ route, navigation }) {
                 receiver_id: teacher.teacher_id
             };
             
-            const response = await axios.post(`${config.ROOT_URL}/api/chat/send_message.php`, payload);
+            const response = await axios.post(`${API_URL}/chat/send_message.php`, payload);
             if (response.data && response.data.status === 'success') {
                 if (isMounted.current) {
                     setNewMessage('');
@@ -138,6 +146,14 @@ export default function ChatScreen({ route, navigation }) {
         const isMine = item.sender_id === userId;
         const isBroadcast = item.receiver_id === null;
         
+        let dateStr = item.created_at;
+        if (dateStr && typeof dateStr === 'string') {
+            dateStr = dateStr.replace(' ', 'T');
+            if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
+                dateStr += 'Z';
+            }
+        }
+        
         return (
             <View style={[styles.messageWrapper, isMine ? styles.myMessage : styles.theirMessage]}>
                 {!isMine && (
@@ -151,7 +167,7 @@ export default function ChatScreen({ route, navigation }) {
                     </Text>
                 </View>
                 <Text style={styles.timestamp}>
-                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
             </View>
         );

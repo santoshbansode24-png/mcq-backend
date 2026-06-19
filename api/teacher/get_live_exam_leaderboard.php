@@ -45,7 +45,10 @@ try {
                 u.user_id as id, 
                 u.name as full_name, 
                 r.correct as total_score,
-                1 as tests_taken,
+                r.incorrect,
+                r.unanswered,
+                r.total,
+                r.time_seconds,
                 CASE WHEN r.total > 0 THEN ROUND((r.correct / r.total * 100), 2) ELSE 0.0 END as percentage
               FROM users u
               JOIN class_exam_results r ON u.user_id = r.user_id
@@ -66,6 +69,10 @@ try {
         foreach ($result as $row) {
             $row['rank'] = $rank++;
             $row['total_score'] = (int)$row['total_score'];
+            $row['incorrect'] = (int)($row['incorrect'] ?? 0);
+            $row['unanswered'] = (int)($row['unanswered'] ?? 0);
+            $row['total'] = (int)($row['total'] ?? 0);
+            $row['time_seconds'] = (int)($row['time_seconds'] ?? 0);
             $row['percentage'] = (float)$row['percentage'];
             $leaderboard[] = $row;
         }

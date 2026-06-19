@@ -53,43 +53,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // 1. Handle CSV Upload if present
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-        $file = $_FILES['csv_file']['tmp_name'];
-        
-        // Read file content
-        $content = file_get_contents($file);
-        
-        // Detect and Convert to UTF-8 (Vital for Marathi/Hindi text)
-        // This handles cases where Excel saves as ANSI or other encodings
-        if (!mb_check_encoding($content, 'UTF-8')) {
-            $content = mb_convert_encoding($content, 'UTF-8', 'auto');
-        }
+        $filename = $_FILES['csv_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            $message = "❌ Error: Only CSV files are allowed.";
+        } else {
+            $file = $_FILES['csv_file']['tmp_name'];
+            
+            // Read file content
+            $content = file_get_contents($file);
+            
+            // Detect and Convert to UTF-8 (Vital for Marathi/Hindi text)
+            // This handles cases where Excel saves as ANSI or other encodings
+            if (!mb_check_encoding($content, 'UTF-8')) {
+                $content = mb_convert_encoding($content, 'UTF-8', 'auto');
+            }
 
-        // Split into lines (handle different line endings)
-        $lines = preg_split('/\r\n|\r|\n/', $content);
-        
-        foreach ($lines as $line) {
-            // Skip empty lines
-            if (empty(trim($line))) continue;
+            // Split into lines (handle different line endings)
+            $lines = preg_split('/\r\n|\r|\n/', $content);
+            
+            foreach ($lines as $line) {
+                // Skip empty lines
+                if (empty(trim($line))) continue;
 
-            // Parse CSV line
-            $data = str_getcsv($line);
+                // Parse CSV line
+                $data = str_getcsv($line);
 
-            // Expecting Format: [Question, Answer]
-            if (count($data) >= 2) {
-                // Sanitize and ensure UTF-8 strings
-                $q = trim($data[0]);
-                $a = trim($data[1]);
-                $e = isset($data[2]) ? trim($data[2]) : ''; // Handle Explanation
-                
-                // Skip header row
-                if (strtolower($q) == 'question' && strtolower($a) == 'answer') continue;
-                
-                if (!empty($q) && !empty($a)) {
-                    $key_points[] = [
-                        'q' => sanitizeInput($q), 
-                        'a' => sanitizeInput($a),
-                        'e' => sanitizeInput($e)
-                    ];
+                // Expecting Format: [Question, Answer]
+                if (count($data) >= 2) {
+                    // Sanitize and ensure UTF-8 strings
+                    $q = trim($data[0]);
+                    $a = trim($data[1]);
+                    $e = isset($data[2]) ? trim($data[2]) : ''; // Handle Explanation
+                    
+                    // Skip header row
+                    if (strtolower($q) == 'question' && strtolower($a) == 'answer') continue;
+                    
+                    if (!empty($q) && !empty($a)) {
+                        $key_points[] = [
+                            'q' => sanitizeInput($q), 
+                            'a' => sanitizeInput($a),
+                            'e' => sanitizeInput($e)
+                        ];
+                    }
                 }
             }
         }
@@ -264,6 +270,7 @@ $revisions = $revisions_query->fetchAll();
             <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
             <li><a href="quick_revision.php" class="active"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
             <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>

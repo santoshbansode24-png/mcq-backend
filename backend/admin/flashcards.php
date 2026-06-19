@@ -97,72 +97,79 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $chapter_id = intval($_POST['chapter_id']);
     
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-        $file = $_FILES['csv_file']['tmp_name'];
-        $handle = fopen($file, "r");
-        
-        // Skip header
-        fgetcsv($handle);
-        
-        $count = 0;
-        $errors = 0;
-        
-        // Get Subject Name
-        $stmtS = $pdo->prepare("SELECT s.subject_name FROM chapters c JOIN subjects s ON c.subject_id = s.subject_id WHERE c.chapter_id = ?");
-        $stmtS->execute([$chapter_id]);
-        $subject = $stmtS->fetchColumn() ?: 'Unknown';
-        $topic = 'General';
-
-        $stmt = $pdo->prepare("INSERT INTO flashcards (chapter_id, subject, topic, question_front, answer_back) VALUES (?, ?, ?, ?, ?)");
-        
-        $row_num = 1;
-        $first_error = "";
-        
-        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            $row_num++;
+        $filename = $_FILES['csv_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            $message = "Please upload a valid CSV file (only .csv extension is allowed).";
+            $messageType = "error";
+        } else {
+            $file = $_FILES['csv_file']['tmp_name'];
+            $handle = fopen($file, "r");
             
-            // Check if row is practically empty (Excel saves trailing rows as ",,,,,,,")
-            $is_empty_row = true;
-            foreach ($data as $cell) {
-                if (!empty(trim($cell ?? ''))) {
-                    $is_empty_row = false;
-                    break;
+            // Skip header
+            fgetcsv($handle);
+            
+            $count = 0;
+            $errors = 0;
+            
+            // Get Subject Name
+            $stmtS = $pdo->prepare("SELECT s.subject_name FROM chapters c JOIN subjects s ON c.subject_id = s.subject_id WHERE c.chapter_id = ?");
+            $stmtS->execute([$chapter_id]);
+            $subject = $stmtS->fetchColumn() ?: 'Unknown';
+            $topic = 'General';
+
+            $stmt = $pdo->prepare("INSERT INTO flashcards (chapter_id, subject, topic, question_front, answer_back) VALUES (?, ?, ?, ?, ?)");
+            
+            $row_num = 1;
+            $first_error = "";
+            
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                $row_num++;
+                
+                // Check if row is practically empty (Excel saves trailing rows as ",,,,,,,")
+                $is_empty_row = true;
+                foreach ($data as $cell) {
+                    if (!empty(trim($cell ?? ''))) {
+                        $is_empty_row = false;
+                        break;
+                    }
+                }
+                if ($is_empty_row) {
+                    continue; // Silently skip without incrementing errors
+                }
+                
+                // Need at least 2 columns now (Question, Answer)
+                if (count($data) < 2) { 
+                    if ($errors == 0) { $first_error = "Row $row_num: Not enough columns (" . count($data) . "). Is it comma-separated?"; }
+                    $errors++; 
+                    continue; 
+                }
+                
+                $front = sanitizeTop(convertUtf8($data[0]));
+                $back = sanitizeTop(convertUtf8($data[1]));
+                
+                if (empty($front) || empty($back)) { 
+                    if ($errors == 0) { $first_error = "Row $row_num: Question or Answer is empty."; }
+                    $errors++; 
+                    continue; 
+                }
+                
+                try {
+                    $stmt->execute([$chapter_id, $subject, $topic, $front, $back]);
+                    $count++;
+                } catch (Exception $e) {
+                    if ($errors == 0) { $first_error = "Row $row_num DB Error: " . $e->getMessage(); }
+                    $errors++;
                 }
             }
-            if ($is_empty_row) {
-                continue; // Silently skip without incrementing errors
-            }
+            fclose($handle);
             
-            // Need at least 2 columns now (Question, Answer)
-            if (count($data) < 2) { 
-                if ($errors == 0) { $first_error = "Row $row_num: Not enough columns (" . count($data) . "). Is it comma-separated?"; }
-                $errors++; 
-                continue; 
+            $message = "Bulk upload complete! Added: $count Flashcards. Skipped/Errors: $errors.";
+            if (!empty($first_error)) {
+                $message .= " Example error: " . $first_error;
             }
-            
-            $front = sanitizeTop(convertUtf8($data[0]));
-            $back = sanitizeTop(convertUtf8($data[1]));
-            
-            if (empty($front) || empty($back)) { 
-                if ($errors == 0) { $first_error = "Row $row_num: Question or Answer is empty."; }
-                $errors++; 
-                continue; 
-            }
-            
-            try {
-                $stmt->execute([$chapter_id, $subject, $topic, $front, $back]);
-                $count++;
-            } catch (Exception $e) {
-                if ($errors == 0) { $first_error = "Row $row_num DB Error: " . $e->getMessage(); }
-                $errors++;
-            }
+            $messageType = ($count > 0) ? "success" : "error";
         }
-        fclose($handle);
-        
-        $message = "Bulk upload complete! Added: $count Flashcards. Skipped/Errors: $errors.";
-        if (!empty($first_error)) {
-            $message .= " Example error: " . $first_error;
-        }
-        $messageType = ($count > 0) ? "success" : "error";
     } else {
         $message = "Please upload a valid CSV file.";
         $messageType = "error";
@@ -302,6 +309,7 @@ $flashcards = $flashcards_query->fetchAll();
             <li><a href="flashcards.php" class="active"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
             <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
             <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>

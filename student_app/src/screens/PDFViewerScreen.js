@@ -11,6 +11,7 @@ const PDFViewerScreen = ({ navigation, route }) => {
   const [downloading, setDownloading] = React.useState(false);
   const [loadingFile, setLoadingFile] = React.useState(true);
   const [pdfBase64, setPdfBase64] = React.useState(null);
+  const [useGoogleDocs, setUseGoogleDocs] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [webViewLoaded, setWebViewLoaded] = React.useState(false);
   const webViewRef = React.useRef(null);
@@ -60,12 +61,22 @@ const PDFViewerScreen = ({ navigation, route }) => {
           throw new Error(`The downloaded file is not a valid PDF.\n\nThe teacher may need to re-upload the file.\n\nURL: ${url}`);
         }
 
-        console.log("Downloaded valid PDF, reading Base64...");
-        const base64 = await FileSystem.readAsStringAsync(tempFileUri, { encoding: 'base64' });
-        setPdfBase64(base64);
-        
-        // Cleanup temp file
-        FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(e => console.log(e));
+        console.log("Downloaded valid PDF, checking size...");
+        const fileInfo = await FileSystem.getInfoAsync(tempFileUri);
+        const fileSize = fileInfo.size || 0;
+        console.log("File size in bytes:", fileSize);
+
+        if (fileSize >= 5 * 1024 * 1024) { // 5MB limit
+            console.log("File is too large for memory buffer. Using Google Docs Viewer...");
+            setUseGoogleDocs(true);
+            FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(() => {});
+        } else {
+            console.log("Reading PDF as Base64...");
+            const base64 = await FileSystem.readAsStringAsync(tempFileUri, { encoding: 'base64' });
+            setPdfBase64(base64);
+            setUseGoogleDocs(false);
+            FileSystem.deleteAsync(tempFileUri, { idempotent: true }).catch(() => {});
+        }
       }
     } catch (err) {
       console.error("Error loading PDF file:", err);
@@ -241,7 +252,7 @@ const PDFViewerScreen = ({ navigation, route }) => {
           <WebView
             ref={webViewRef}
             originWhitelist={['*']}
-            source={{ html: pdfJsHtml }}
+            source={useGoogleDocs ? { uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}` } : { html: pdfJsHtml }}
             style={{ flex: 1, backgroundColor: '#525659' }}
             startInLoadingState={true}
             renderLoading={() => <ActivityIndicator size="large" color="#4f46e5" style={{ position: 'absolute', top: '50%', left: '50%' }} />}

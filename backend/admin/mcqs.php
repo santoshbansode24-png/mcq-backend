@@ -66,20 +66,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'bulk_upload') {
     $chapter_id = intval($_POST['chapter_id']);
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-        $file = $_FILES['csv_file']['tmp_name'];
-        $handle = fopen($file, "r");
-        fgetcsv($handle); // Skip header
-        $count = 0; $errors = 0;
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            if (count($data) < 6) { $errors++; continue; }
-            try {
-                $stmt->execute([$chapter_id, sanitizeInput($data[0]), sanitizeInput($data[1]), sanitizeInput($data[2]), sanitizeInput($data[3]), sanitizeInput($data[4]), strtolower(trim($data[5])), sanitizeInput($data[6] ?? ''), strtolower(trim($data[7] ?? 'medium'))]);
-                $count++;
-            } catch (Exception $e) { $errors++; }
+        $filename = $_FILES['csv_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            $message = "❌ Error: Only CSV files are allowed.";
+            $messageType = "error";
+        } else {
+            $file = $_FILES['csv_file']['tmp_name'];
+            $handle = fopen($file, "r");
+            fgetcsv($handle); // Skip header
+            $count = 0; $errors = 0;
+            $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                if (count($data) < 6) { $errors++; continue; }
+                try {
+                    $stmt->execute([$chapter_id, sanitizeInput($data[0]), sanitizeInput($data[1]), sanitizeInput($data[2]), sanitizeInput($data[3]), sanitizeInput($data[4]), strtolower(trim($data[5])), sanitizeInput($data[6] ?? ''), strtolower(trim($data[7] ?? 'medium'))]);
+                    $count++;
+                } catch (Exception $e) { $errors++; }
+            }
+            fclose($handle);
+            $message = "✓ Uploaded: $count. Errors: $errors."; $messageType = "success";
         }
-        fclose($handle);
-        $message = "✓ Uploaded: $count. Errors: $errors."; $messageType = "success";
     }
 }
 
@@ -159,6 +166,7 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
             <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
             <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
             <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>

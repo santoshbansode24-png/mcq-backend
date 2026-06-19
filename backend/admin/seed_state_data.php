@@ -1,4 +1,12 @@
 <?php
+if (php_sapi_name() !== 'cli') {
+    session_start();
+    if (!isset($_SESSION['admin_logged_in'])) {
+        header('Location: index.php');
+        exit();
+    }
+}
+
 require_once '../config/db.php';
 
 // Enable error reporting

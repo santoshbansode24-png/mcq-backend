@@ -386,6 +386,7 @@ $all_chapters = $all_chapters_query->fetchAll();
             <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
             <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
             <li><a href="content_manager.php" class="active"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+            <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
         </ul>
     </nav>

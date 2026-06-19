@@ -1,4 +1,11 @@
 <?php
+// Security: Prevent production execution
+$isLocal = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) || ($_SERVER['HTTP_HOST'] ?? '') === 'localhost';
+if (!$isLocal) {
+    http_response_code(403);
+    die("<h1>❌ Access Denied</h1><p>This utility can only be run locally (localhost).</p>");
+}
+
 // Fix path
 $dbPath = dirname(__DIR__) . '/config/db.php';
 if (!file_exists($dbPath)) {

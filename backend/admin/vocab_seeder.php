@@ -7,6 +7,14 @@
  * 4. Inserts into Database with auto-set numbering.
  */
 
+if (php_sapi_name() !== 'cli') {
+    session_start();
+    if (!isset($_SESSION['admin_logged_in'])) {
+        header('Location: index.php');
+        exit();
+    }
+}
+
 // Increase limits for large data
 set_time_limit(600); 
 header('Content-Type: text/plain; charset=utf-8');

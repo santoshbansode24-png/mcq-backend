@@ -1,2 +1,3 @@
-3.0.0-FIX
-// Privacy Policy Root Fix & Video/Notes Flicker Elimination
+3.1.0-LIVE
+// Android APK live server configuration release (Build 39) with Class Updates, PDF Viewer, and Login enhancements.
+

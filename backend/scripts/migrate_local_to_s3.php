@@ -32,6 +32,9 @@ foreach ($local_notes as $note) {
     
     // Construct local absolute path
     $absolute_local_path = __DIR__ . '/../../' . $local_path;
+    if (!file_exists($absolute_local_path)) {
+        $absolute_local_path = __DIR__ . '/../' . $local_path; // Fallback to backend/uploads
+    }
     
     echo "⏳ Migrating: $title ($local_path)... ";
     

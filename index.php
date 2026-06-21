@@ -10,6 +10,14 @@ if ($request_uri == '/teacher' || $request_uri == '/teacher/') {
     exit();
 }
 
+// Redirect old local notes requests (direct URLs) to Cloudflare R2 public bucket
+if (preg_match('/uploads\/notes\/([^\/]+\.pdf)/i', $request_uri, $matches)) {
+    $filename = $matches[1];
+    $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
+    header("Location: " . $r2_url, true, 302);
+    exit();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

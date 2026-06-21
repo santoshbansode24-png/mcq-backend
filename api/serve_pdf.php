@@ -33,6 +33,14 @@ $real_path = realpath($full_path);
 
 // 1. Verify file exists
 if (!$real_path || !file_exists($real_path)) {
+    // Check if it's a note PDF, attempt redirect to R2
+    if (strpos($file_param, 'uploads/notes/') !== false && strtolower(pathinfo($file_param, PATHINFO_EXTENSION)) === 'pdf') {
+        $filename = basename($file_param);
+        $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
+        header("Location: " . $r2_url, true, 302);
+        exit;
+    }
+    
     header("Content-Type: text/plain");
     http_response_code(404);
     echo "Error: File not found.\n";

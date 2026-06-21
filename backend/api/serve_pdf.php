@@ -43,7 +43,17 @@ log_debug("Looking for Path: " . $file_path);
 
 // Check if file exists
 if (!file_exists($file_path)) {
-    log_debug("Error: File not found");
+    log_debug("Error: File not found locally. Attempting redirect to Cloudflare R2.");
+    
+    // Check if it's a note PDF
+    if (strpos($file_param, 'uploads/notes/') !== false && strtolower(pathinfo($file_param, PATHINFO_EXTENSION)) === 'pdf') {
+        $filename = basename($file_param);
+        $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
+        log_debug("Redirecting to R2: " . $r2_url);
+        header("Location: " . $r2_url, true, 302);
+        exit;
+    }
+    
     http_response_code(404);
     header("Content-Type: text/plain");
     die("Error: File not found\nLooking for: $file_path");

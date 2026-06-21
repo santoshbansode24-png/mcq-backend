@@ -605,7 +605,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
     };
 
     const onRefresh = useCallback(() => {
-        loadContent(true);
+        loadContent(true, true);
     }, [loadContent]);
 
     const generateAIQuiz = useCallback(async () => {

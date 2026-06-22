@@ -32,7 +32,7 @@ try {
 
     // 2. Fetch all exams sent by this teacher
     $examsStmt = $pdo->prepare("
-        SELECT cu.id as update_id, cu.class_id, cu.title, cu.message, cu.created_at, c.class_name
+        SELECT cu.update_id, cu.class_id, cu.title, cu.message, cu.created_at, cu.update_type, cu.payload, c.class_name
         FROM class_updates cu
         LEFT JOIN classes c ON cu.class_id = c.class_id
         WHERE cu.teacher_id = ? AND cu.update_type IN ('exam', 'live_exam')
@@ -46,10 +46,26 @@ try {
         exit();
     }
 
-    $update_ids = array_column($exams, 'update_id');
-    $placeholders = implode(',', array_fill(0, count($update_ids), '?'));
+    // Map each update to its target exam ID (live_exams.id for live exams, class_updates.id for regular)
+    $update_to_target_id = [];
+    $target_ids = [];
+    foreach ($exams as $exam) {
+        $uid = intval($exam['update_id']);
+        $target_id = $uid;
+        if ($exam['update_type'] === 'live_exam' && !empty($exam['payload'])) {
+            $payload = json_decode($exam['payload'], true);
+            if (isset($payload['exam_id'])) {
+                $target_id = intval($payload['exam_id']);
+            }
+        }
+        $update_to_target_id[$uid] = $target_id;
+        $target_ids[] = $target_id;
+    }
 
-    // 3. Fetch all results for these exams
+    $unique_target_ids = array_unique($target_ids);
+    $placeholders = implode(',', array_fill(0, count($unique_target_ids), '?'));
+
+    // 3. Fetch all results for these target IDs
     $resultsStmt = $pdo->prepare("
         SELECT r.update_id, r.correct, r.incorrect, r.unanswered, r.total, r.time_seconds, r.submitted_at, u.name as student_name, u.user_id
         FROM class_exam_results r
@@ -57,17 +73,17 @@ try {
         WHERE r.update_id IN ($placeholders)
         ORDER BY r.correct DESC, r.time_seconds ASC
     ");
-    $resultsStmt->execute($update_ids);
+    $resultsStmt->execute(array_values($unique_target_ids));
     $all_results = $resultsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 4. Group results by update_id
+    // 4. Group results by target update_id
     $grouped_results = [];
     foreach ($all_results as $row) {
-        $uid = $row['update_id'];
-        if (!isset($grouped_results[$uid])) {
-            $grouped_results[$uid] = [];
+        $tid = intval($row['update_id']);
+        if (!isset($grouped_results[$tid])) {
+            $grouped_results[$tid] = [];
         }
-        $grouped_results[$uid][] = [
+        $grouped_results[$tid][] = [
             'student_name' => $row['student_name'],
             'user_id' => $row['user_id'],
             'correct' => $row['correct'],
@@ -80,8 +96,9 @@ try {
 
     // 5. Attach results to exams
     foreach ($exams as &$exam) {
-        $uid = $exam['update_id'];
-        $exam['results'] = $grouped_results[$uid] ?? [];
+        $uid = intval($exam['update_id']);
+        $target_id = $update_to_target_id[$uid];
+        $exam['results'] = $grouped_results[$target_id] ?? [];
         $exam['total_submissions'] = count($exam['results']);
         
         // Calculate average score

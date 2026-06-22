@@ -84,6 +84,34 @@ $client->addScope(Google_Service_YouTube::YOUTUBE_FORCE_SSL);
 $client->setAccessType('offline');
 $client->setPrompt('consent'); // Force to get refresh token
 
+// Handle OPTIONS preflight request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Allow-Methods: GET, OPTIONS');
+    exit;
+}
+
+// Handle JSON response request for Auth URL
+if (isset($_GET['action']) && $_GET['action'] === 'url') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Allow-Methods: GET, OPTIONS');
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $stateData = ['teacher_id' => $teacher_id];
+    $client->setState(base64_encode(json_encode($stateData)));
+    $authUrl = $client->createAuthUrl();
+    
+    echo json_encode([
+        'status' => 'success',
+        'data' => [
+            'url' => $authUrl
+        ]
+    ]);
+    exit;
+}
+
 // 4. Handle POST form submit by redirecting directly to Google's Auth URL
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['custom_client_id']) || isset($_POST['initiate_default']))) {
     $stateData = [

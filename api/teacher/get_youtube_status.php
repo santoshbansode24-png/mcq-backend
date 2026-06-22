@@ -50,7 +50,8 @@ if (isset($pdo) && $teacher_id > 0) {
 
 // Fallback to global constant if not connected in DB
 if (!$isConnected) {
-    $isConnected = defined('YOUTUBE_REFRESH_TOKEN') && !empty(YOUTUBE_REFRESH_TOKEN);
+    $dummy_token = '1//06LRzxM1snDMdCgYIARAAGAYSNgF-L9IrJPnq5vLrKuK4rFgKNR2WHSK1Ido3KBX2yGVLI-mN1NS_gU9DKnn3JaqmOJ405GRL2g';
+    $isConnected = defined('YOUTUBE_REFRESH_TOKEN') && !empty(YOUTUBE_REFRESH_TOKEN) && YOUTUBE_REFRESH_TOKEN !== $dummy_token;
 }
 
 sendResponse('success', 'YouTube status fetched', [

@@ -32,12 +32,17 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 try {
     $pdo->beginTransaction();
 
-    // Check if email exists in users table as a teacher
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_type = 'teacher'");
+    // Check if email already exists
+    $stmt = $pdo->prepare("SELECT user_id, user_type FROM users WHERE email = ?");
     $stmt->execute([$email]);
-    if ($stmt->fetch()) {
+    $existingUser = $stmt->fetch();
+    if ($existingUser) {
         $pdo->rollBack();
-        sendResponse('error', 'Email already registered. Please login or use a different email.', null, 409);
+        if ($existingUser['user_type'] === 'teacher') {
+            sendResponse('error', 'Email already registered. Please login or use a different email.', null, 409);
+        } else {
+            sendResponse('error', 'This email is already registered as a ' . $existingUser['user_type'] . ' account.', null, 409);
+        }
     }
 
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);

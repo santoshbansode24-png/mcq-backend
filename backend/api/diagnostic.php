@@ -21,10 +21,15 @@ try {
     $packetVar = $packetStmt->fetch();
     echo "- max_allowed_packet: " . ($packetVar['Value'] / 1024 / 1024) . " MB\n";
     
+    echo "- All Tables in Database:\n";
+    $all_tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($all_tables as $tbl) {
+        echo "  - $tbl\n";
+    }
+    
     $tables = ['pdf_study_jobs', 'pdf_study_content'];
     foreach ($tables as $table) {
-        $check = $pdo->query("SHOW TABLES LIKE '$table'");
-        if ($check->rowCount() > 0) {
+        if (in_array($table, $all_tables)) {
             echo "- Table '$table': ✅ EXISTS\n";
             $cols = $pdo->query("SHOW COLUMNS FROM $table");
             while ($col = $cols->fetch()) {

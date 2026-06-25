@@ -35,10 +35,40 @@ try {
             echo "- Table '$table': ❌ MISSING\n";
         }
     }
-} catch (Exception $e) {
-    echo "- DB Error: " . $e->getMessage() . "\n";
-}
-echo "\n";
+    } catch (Exception $e) {
+        echo "- DB Error: " . $e->getMessage() . "\n";
+    }
+    
+    // Test Subjects Query
+    echo "\n🧪 TESTING SUBJECTS QUERY:\n";
+    try {
+        $test_class_id = 3;
+        echo "- Running subjects query for class_id = $test_class_id...\n";
+        $stmt_test = $pdo->prepare("
+            SELECT 
+                s.subject_id,
+                s.subject_name,
+                s.description,
+                s.class_id,
+                c.class_name,
+                COUNT(DISTINCT ch.chapter_id) as total_chapters,
+                COUNT(m.mcq_id) as total_mcqs
+            FROM subjects s
+            INNER JOIN classes c ON s.class_id = c.class_id
+            LEFT JOIN chapters ch ON s.subject_id = ch.subject_id
+            LEFT JOIN mcqs m ON ch.chapter_id = m.chapter_id
+            WHERE s.class_id = ?
+            GROUP BY s.subject_id
+            ORDER BY s.subject_name ASC
+        ");
+        $stmt_test->execute([$test_class_id]);
+        $res_test = $stmt_test->fetchAll();
+        echo "- Query Success! Found " . count($res_test) . " subjects.\n";
+        print_r($res_test);
+    } catch (Exception $e) {
+        echo "- Query FAILED: " . $e->getMessage() . "\n";
+    }
+    echo "\n";
 
 // 3. Job Status
 echo "📊 JOB STATISTICS:\n";

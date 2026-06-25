@@ -140,7 +140,9 @@ const SubjectsScreen = ({ user, navigation }) => {
                     <Text style={[styles.headerTitle, { color: theme.text }]}>My Subjects</Text>
                     {user?.class_name && (
                         <View style={[styles.classBadge, { backgroundColor: isDarkMode ? '#1e293b' : '#F1F5F9' }]}>
-                            <Text style={[styles.subHeader, { color: theme.textSecondary }]}>Class {user.class_name}</Text>
+                            <Text style={[styles.subHeader, { color: theme.textSecondary }]}>
+                                {user.class_name.toLowerCase().startsWith('class') ? user.class_name : `Class ${user.class_name}`}
+                            </Text>
                         </View>
                     )}
                 </View>

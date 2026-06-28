@@ -92,8 +92,8 @@ android {
         applicationId 'com.veeru.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 39
-        versionName "1.0.39"
+        versionCode 45
+        versionName "1.0.45"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -104,6 +104,12 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            storeFile file('../../../scratch/keystore_three/@virajbansode__mcq-student-app-keystore.bak.jks')
+            storePassword '8b57c1018b1e321a85cdfe919a10baf6'
+            keyAlias '374d462d84eeefca6271287f763bd8f3'
+            keyPassword 'e72b4175874f9d6b88083f8c2cec7686'
+        }
     }
     buildTypes {
         debug {
@@ -112,7 +118,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

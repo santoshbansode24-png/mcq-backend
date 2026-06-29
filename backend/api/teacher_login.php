@@ -27,19 +27,42 @@ $email = sanitizeInput($input['email']);
 $password = $input['password'];
 
 try {
-    // Robust query: case-insensitive user_type check and trimmed email
-    $stmt = $pdo->prepare("SELECT user_id as id, user_id, name, email, password, school_name, mobile FROM users WHERE LOWER(email) = LOWER(?) AND LOWER(user_type) = 'teacher'");
-    $stmt->execute([$email]);
+    // Clean input to check if it's a mobile number
+    $cleaned_digits = preg_replace('/[^0-9]/', '', $email);
+    $is_mobile = false;
+    $search_value = $email;
+
+    if (strpos($email, '@') === false && is_numeric($cleaned_digits) && strlen($cleaned_digits) >= 10) {
+        $is_mobile = true;
+        $search_value = substr($cleaned_digits, -10);
+        $field_query = "(RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?)";
+    } else {
+        $field_query = "LOWER(email) = LOWER(?)";
+    }
+
+    // Query user by email or mobile first to provide better feedback
+    $stmt = $pdo->prepare("SELECT user_id as id, user_id, name, email, password, school_name, mobile, user_type FROM users WHERE $field_query");
+    if ($is_mobile) {
+        $stmt->execute([$search_value, $search_value]);
+    } else {
+        $stmt->execute([$search_value]);
+    }
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$teacher) {
-        // Log the failure for debugging (optional, but good for production)
-        error_log("Teacher login failed: No user found with email $email and user_type 'teacher'");
-        sendResponse('error', 'Invalid email or password', null, 401);
+        error_log("Teacher login failed: No user found for $email");
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
+    }
+
+    // Verify user type
+    if (strtolower($teacher['user_type']) !== 'teacher') {
+        error_log("Teacher login failed: Account $email is registered as a " . $teacher['user_type']);
+        sendResponse('error', 'This account is registered as a ' . $teacher['user_type'] . '. Please use a teacher account.', null, 401);
     }
 
     if (!password_verify($password, $teacher['password'])) {
-        sendResponse('error', 'Invalid email or password', null, 401);
+        error_log("Teacher login failed: Password mismatch for $email");
+        sendResponse('error', 'Invalid email/mobile or password', null, 401);
     }
 
     // Get assigned classes

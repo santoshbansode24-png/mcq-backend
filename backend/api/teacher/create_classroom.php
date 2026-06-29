@@ -22,23 +22,7 @@ $new_name = isset($data['name']) ? sanitizeInput($data['name']) : null;
 $new_mobile = isset($data['mobile']) ? sanitizeInput($data['mobile']) : null;
 
 try {
-    // 0. Update Profile if provided
-    if ($new_name || $new_mobile) {
-        $updateFields = [];
-        $params = [];
-        if ($new_name) {
-            $updateFields[] = "name = ?";
-            $params[] = $new_name;
-        }
-        if ($new_mobile) {
-            $updateFields[] = "mobile = ?";
-            $params[] = $new_mobile;
-        }
-        $params[] = $teacher_id;
-        $pdo->prepare("UPDATE users SET " . implode(", ", $updateFields) . " WHERE user_id = ?")->execute($params);
-    }
-
-    // 1. Fetch Teacher Info (to get board and medium)
+    // 1. Fetch Teacher Info (to get school name)
     $t_stmt = $pdo->prepare("SELECT school_name, name, board, medium FROM users WHERE user_id = ?");
     $t_stmt->execute([$teacher_id]);
     $teacher_info = $t_stmt->fetch();
@@ -47,15 +31,43 @@ try {
         sendResponse('error', 'Teacher account not found. Please log in again.', null, 404);
     }
     
-    $board = (!empty($teacher_info['board'])) ? $teacher_info['board'] : 'State Board';
-    $medium = (!empty($teacher_info['medium'])) ? $teacher_info['medium'] : 'Marathi';
     $school_name = (!empty($teacher_info['school_name'])) ? $teacher_info['school_name'] : 'Your School';
     $teacher_name = $teacher_info['name'] ?? 'Teacher';
 
-    // 2. Fetch Class Name from existing generic classes table
-    $c_stmt = $pdo->prepare("SELECT class_name FROM classes WHERE class_id = ?");
+    // 2. Fetch Class Details (name and board type) from existing generic classes table
+    $c_stmt = $pdo->prepare("SELECT class_name, board_type FROM classes WHERE class_id = ?");
     $c_stmt->execute([$input_class_id]);
-    $class_name = $c_stmt->fetchColumn() ?: "Class $input_class_id";
+    $class_row = $c_stmt->fetch();
+    
+    $class_name = $class_row['class_name'] ?? "Class $input_class_id";
+    $board_type = $class_row['board_type'] ?? 'STATE_MARATHI';
+    
+    // Map board_type to classrooms schema values
+    if ($board_type === 'CBSE') {
+        $board = 'CBSE';
+        $medium = 'English';
+    } elseif ($board_type === 'STATE_SEMI') {
+        $board = 'State Board';
+        $medium = 'Semi-English';
+    } else {
+        $board = 'State Board';
+        $medium = 'Marathi';
+    }
+
+    // Update Profile including board, medium, name, and mobile
+    $updateFields = ["board = ?", "medium = ?"];
+    $params = [$board, $medium];
+    if ($new_name) {
+        $updateFields[] = "name = ?";
+        $params[] = $new_name;
+        $teacher_name = $new_name; // update teacher name in response too
+    }
+    if ($new_mobile) {
+        $updateFields[] = "mobile = ?";
+        $params[] = $new_mobile;
+    }
+    $params[] = $teacher_id;
+    $pdo->prepare("UPDATE users SET " . implode(", ", $updateFields) . " WHERE user_id = ?")->execute($params);
     
     // Attempt to extract numeric class level from class name (e.g. "Class 3" -> 3)
     $class_level = (int) filter_var($class_name, FILTER_SANITIZE_NUMBER_INT);

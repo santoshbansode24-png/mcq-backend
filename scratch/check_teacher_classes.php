@@ -13,7 +13,7 @@ try {
     ]);
     
     echo "Connected to DB\n";
-    $stmt = $pdo->query("SELECT * FROM teacher_classes WHERE teacher_id IN (8, 29)");
+    $stmt = $pdo->query("DESCRIBE student_progress");
     print_r($stmt->fetchAll());
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";

@@ -219,12 +219,13 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
                 // Refresh the joined classes list to include the newly joined class
                 await loadJoinedClasses();
                 
-                // Keep the backward compatibility callback if MainScreen relies on user.class_id
+                // Sync the user's primary standard, name, and board type locally
                 try {
                     if (onUserUpdate && result.data) {
                         onUserUpdate({ 
                             class_id: result.data.class_id,
-                            class_name: result.data.class_name
+                            class_name: result.data.class_name,
+                            board_type: result.data.board_type
                         });
                     }
                 } catch (stateErr) {

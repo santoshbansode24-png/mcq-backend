@@ -122,7 +122,8 @@ try {
         'school_name' => $classroom['school_name'] ?? 'Your School',
         'teacher_name' => $classroom['teacher_name'],
         'class_name' => $classroom['class_name'],
-        'class_id' => $classroom['class_level'] // Future-proof / Optimized: Return generic class_id to align client and db state
+        'class_id' => $classroom['class_level'], // Future-proof / Optimized: Return generic class_id to align client and db state
+        'board_type' => $board_type_val
     ]);
 
 } catch (PDOException $e) {

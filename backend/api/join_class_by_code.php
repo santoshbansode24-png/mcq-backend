@@ -120,7 +120,8 @@ try {
     sendResponse('success', 'Successfully joined Class ' . $classInfo['class_name'] . ' at ' . $classInfo['school_name'], [
         'school_name' => $classInfo['school_name'],
         'class_id' => $classInfo['class_level'], // Future-proof / Optimized: Return generic class_id to align client and db state
-        'class_name' => $classInfo['class_name']
+        'class_name' => $classInfo['class_name'],
+        'board_type' => $board_type_val
     ], 200);
 
 } catch (PDOException $e) {

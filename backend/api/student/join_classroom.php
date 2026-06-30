@@ -45,8 +45,8 @@ try {
         $fallback = $stmt_tc->fetch();
         
         if ($fallback) {
-            $class_level = (int) filter_var($fallback['class_name'], FILTER_SANITIZE_NUMBER_INT);
-            if ($class_level === 0) $class_level = $fallback['generic_class_id'];
+            // Future-proof / Optimized: Use generic class_id from classes table directly as class_level
+            $class_level = $fallback['generic_class_id'];
             
             $stmt_ins = $pdo->prepare("
                 INSERT INTO classrooms (teacher_id, class_code, class_name, board, medium, class_level) 

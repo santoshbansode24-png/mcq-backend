@@ -201,6 +201,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                     parsedUser.class_name = class_name;
                     parsedUser.school_name = school_name;
                     parsedUser.division_name = division_name;
+                    parsedUser.board_type = response.data.data.board_type; // Fix: Sync board_type
                     parsedUser.subscription_status = 'active';
                     await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
                 }
@@ -212,6 +213,7 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
                         class_name, 
                         school_name, 
                         division_name, 
+                        board_type: response.data.data.board_type, // Fix: Sync board_type
                         subscription_status: 'active' 
                     });
                 }

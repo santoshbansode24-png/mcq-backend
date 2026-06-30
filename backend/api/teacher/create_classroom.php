@@ -69,9 +69,8 @@ try {
     $params[] = $teacher_id;
     $pdo->prepare("UPDATE users SET " . implode(", ", $updateFields) . " WHERE user_id = ?")->execute($params);
     
-    // Attempt to extract numeric class level from class name (e.g. "Class 3" -> 3)
-    $class_level = (int) filter_var($class_name, FILTER_SANITIZE_NUMBER_INT);
-    if ($class_level === 0) $class_level = $input_class_id;
+    // Future-proof / Optimized: Store the correct generic class ID (from the classes table) in class_level
+    $class_level = $input_class_id;
 
     // Optional: Append division name to the class name for clarity
     $full_class_name = $division_name ? "$class_name - $division_name" : $class_name;

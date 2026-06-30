@@ -13,7 +13,7 @@ const NotificationsScreen = ({ user, navigation }) => {
     const loadNotifications = async () => {
         setLoading(true);
         try {
-            const response = await fetchNotifications(user.class_id);
+            const response = await fetchNotifications(user.class_id, user.user_id || user.id);
             if (response.status === 'success') {
                 // Filter out class updates (worksheets, homework, etc.) so they only appear in the Class tab
                 const filteredNotifications = response.data.filter(item => {

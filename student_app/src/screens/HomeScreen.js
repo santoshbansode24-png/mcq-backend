@@ -348,8 +348,8 @@ const HomeScreen = ({ user, navigation, route }) => {
                     setActiveLiveExam(null);
                 }
 
-                // Check Notifications for Live Class
-                const notifsResponse = await fetchNotifications(classId);
+                // Check Notifications for Live Class (pass user ID for classroom resolution)
+                const notifsResponse = await fetchNotifications(classId, user?.user_id || user?.id);
                 if (notifsResponse && notifsResponse.status === 'success' && Array.isArray(notifsResponse.data)) {
                     const today = new Date().toDateString();
                     const latestLiveClass = notifsResponse.data.find(n => 

@@ -23,19 +23,13 @@ if ($class_id <= 0) {
     sendResponse('error', 'Valid class_id is required', null, 400);
 }
 
-// Map classroom ID to generic class ID if applicable
+// Map classroom ID to generic class ID if applicable (Optimized direct mapping)
 try {
-    $stmt_code = $pdo->prepare("SELECT class_code FROM classrooms WHERE class_id = ? LIMIT 1");
-    $stmt_code->execute([$class_id]);
-    $class_code = $stmt_code->fetchColumn();
-
-    if ($class_code) {
-        $stmt_generic = $pdo->prepare("SELECT class_id FROM teacher_classes WHERE class_code = ? LIMIT 1");
-        $stmt_generic->execute([$class_code]);
-        $mapped_class_id = $stmt_generic->fetchColumn();
-        if ($mapped_class_id) {
-            $class_id = (int)$mapped_class_id;
-        }
+    $stmt_generic = $pdo->prepare("SELECT class_level FROM classrooms WHERE class_id = ? LIMIT 1");
+    $stmt_generic->execute([$class_id]);
+    $mapped_class_id = $stmt_generic->fetchColumn();
+    if ($mapped_class_id) {
+        $class_id = (int)$mapped_class_id;
     }
 } catch (PDOException $e) {
     // Fail silently and use original class_id if classrooms tables don't exist

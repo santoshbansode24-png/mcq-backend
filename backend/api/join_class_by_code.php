@@ -25,7 +25,7 @@ $class_code = strtoupper(sanitizeInput($input['class_code']));
 try {
     // 1. Find the class and teacher based on the code
     $stmt = $pdo->prepare("
-        SELECT c.teacher_id, c.class_id, c.class_name, u.school_name
+        SELECT c.teacher_id, c.class_id, c.class_name, c.board, c.medium, c.class_level, u.school_name
         FROM classrooms c
         LEFT JOIN users u ON c.teacher_id = u.user_id AND u.user_type = 'teacher'
         WHERE c.class_code = ?
@@ -88,17 +88,38 @@ try {
         $insertMap->execute([$user_id, $classInfo['class_id']]);
     }
 
-    // 2. Update the student's record (legacy fallback fields)
+    // 2. Update the student's record
+    $board_val = $classInfo['board'] ?? 'State Board';
+    $medium_val = $classInfo['medium'] ?? 'Marathi';
+
+    $board_type_val = 'STATE_MARATHI';
+    if ($board_val === 'CBSE') {
+        $board_type_val = 'CBSE';
+    } elseif ($board_val === 'State Board' && $medium_val === 'Semi-English') {
+        $board_type_val = 'STATE_SEMI';
+    } elseif ($board_val === 'State Board' && $medium_val === 'Marathi') {
+        $board_type_val = 'STATE_MARATHI';
+    }
+
     $updateStmt = $pdo->prepare("
         UPDATE users 
-        SET school_name = ?, class_id = ?
+        SET school_name = ?, 
+            class_id = ?,
+            board_type = ?,
+            board = ?
         WHERE user_id = ? AND user_type = 'student'
     ");
-    $updated = $updateStmt->execute([$classInfo['school_name'], $classInfo['class_id'], $user_id]);
+    $updated = $updateStmt->execute([
+        $classInfo['school_name'], 
+        $classInfo['class_level'], // Future-proof / Optimized: Use generic class_id
+        $board_type_val,
+        $board_val,
+        $user_id
+    ]);
 
     sendResponse('success', 'Successfully joined Class ' . $classInfo['class_name'] . ' at ' . $classInfo['school_name'], [
         'school_name' => $classInfo['school_name'],
-        'class_id' => $classInfo['class_id'],
+        'class_id' => $classInfo['class_level'], // Future-proof / Optimized: Return generic class_id to align client and db state
         'class_name' => $classInfo['class_name']
     ], 200);
 

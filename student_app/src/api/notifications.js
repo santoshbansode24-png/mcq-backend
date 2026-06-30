@@ -14,11 +14,15 @@ export const registerPushToken = async (userId, token) => {
     }
 };
 
-export const fetchNotifications = async (classIdOrIds) => {
+export const fetchNotifications = async (classIdOrIds, studentId = null) => {
     try {
-        const queryParam = typeof classIdOrIds === 'string' && classIdOrIds.includes(',') 
+        let queryParam = typeof classIdOrIds === 'string' && classIdOrIds.includes(',') 
             ? `class_ids=${classIdOrIds}` 
             : `class_id=${classIdOrIds}`;
+            
+        if (studentId) {
+            queryParam += `&student_id=${studentId}`;
+        }
             
         const response = await axios.get(`${API_URL}/get_notifications.php?${queryParam}`);
         

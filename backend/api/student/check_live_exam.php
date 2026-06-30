@@ -15,7 +15,7 @@ if ($class_id <= 0 && $exam_id <= 0) {
 }
 
 try {
-    // Look for the specific exam or the latest active exam for this class
+    // Look for the specific exam or the latest active exam for this class/student
     if ($exam_id > 0) {
         $stmt = $pdo->prepare("
             SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
@@ -24,13 +24,33 @@ try {
         ");
         $stmt->execute([$exam_id]);
     } else {
-        $stmt = $pdo->prepare("
-            SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
-            FROM live_exams 
-            WHERE class_id = ? AND status = 'active'
-            ORDER BY id DESC LIMIT 1
-        ");
-        $stmt->execute([$class_id]);
+        // Future-proof / Optimized: Resolve the student's joined classrooms
+        $classroom_ids = [];
+        if ($user_id > 0) {
+            $stmt_classrooms = $pdo->prepare("SELECT class_id FROM student_class_mapping WHERE student_id = ?");
+            $stmt_classrooms->execute([$user_id]);
+            $classroom_ids = $stmt_classrooms->fetchAll(PDO::FETCH_COLUMN);
+        }
+
+        if (!empty($classroom_ids)) {
+            $placeholders = implode(',', array_fill(0, count($classroom_ids), '?'));
+            $stmt = $pdo->prepare("
+                SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
+                FROM live_exams 
+                WHERE class_id IN ($placeholders) AND status = 'active'
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmt->execute($classroom_ids);
+        } else {
+            // Fallback to checking by single class_id
+            $stmt = $pdo->prepare("
+                SELECT id as exam_id, title, chapter_id, duration_minutes, selected_mcq_ids, selected_question_ids, created_at 
+                FROM live_exams 
+                WHERE class_id = ? AND status = 'active'
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmt->execute([$class_id]);
+        }
     }
     $activeExam = $stmt->fetch();
 

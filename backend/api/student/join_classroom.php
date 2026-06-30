@@ -89,18 +89,32 @@ try {
     }
 
     // 3. Optional: Sync user's global profile with the classroom's board and medium so they get the right content
+    $board_val = $classroom['board'] ?? 'State Board';
+    $medium_val = $classroom['medium'] ?? 'Marathi';
+
+    $board_type_val = 'STATE_MARATHI';
+    if ($board_val === 'CBSE') {
+        $board_type_val = 'CBSE';
+    } elseif ($board_val === 'State Board' && $medium_val === 'Semi-English') {
+        $board_type_val = 'STATE_SEMI';
+    } elseif ($board_val === 'State Board' && $medium_val === 'Marathi') {
+        $board_type_val = 'STATE_MARATHI';
+    }
+
     $updateStmt = $pdo->prepare("
         UPDATE users 
         SET class_id = ?, 
             school_name = ?,
-            board_type = ?
+            board_type = ?,
+            board = ?
         WHERE user_id = ? AND user_type = 'student'
     ");
     
     $updateStmt->execute([
         $classroom['class_level'],
         $classroom['school_name'],
-        $classroom['board'],
+        $board_type_val,
+        $board_val,
         $student_id
     ]);
 
@@ -108,7 +122,7 @@ try {
         'school_name' => $classroom['school_name'] ?? 'Your School',
         'teacher_name' => $classroom['teacher_name'],
         'class_name' => $classroom['class_name'],
-        'class_id' => $class_id
+        'class_id' => $classroom['class_level'] // Future-proof / Optimized: Return generic class_id to align client and db state
     ]);
 
 } catch (PDOException $e) {

@@ -176,12 +176,13 @@ const ProfileScreen = ({ user, onLogout, onUserUpdate, navigation }) => {
             return;
         }
 
-        if (!user?.user_id) return;
+        if (!user?.user_id && !user?.id) return;
 
         setJoiningClass(true);
         try {
+            const studentId = user?.user_id || user?.id;
             const response = await axios.post(`${API_URL}/student/join_classroom.php`, {
-                student_id: user.user_id,
+                student_id: studentId,
                 class_code: classCodeInput.trim().toUpperCase()
             });
 

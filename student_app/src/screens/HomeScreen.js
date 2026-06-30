@@ -470,16 +470,20 @@ const HomeScreen = ({ user, navigation, route }) => {
 
     const lastLoadTime = useRef(0);
     const lastVersionCheckTime = useRef(0);
+    const lastLoadedClassId = useRef(classId);
 
     useFocusEffect(
         useCallback(() => {
             const task = InteractionManager.runAfterInteractions(() => {
                 if (classId) {
                     const now = Date.now();
-                    // Only auto-reload if subjects are empty OR more than 120 seconds passed to prevent constant DB loading
-                    if (subjects.length === 0 || now - lastLoadTime.current > 120000) {
-                        loadSubjects();
+                    const isNewClass = classId !== lastLoadedClassId.current;
+                    
+                    // If classId changed, always force load subjects immediately
+                    if (isNewClass || subjects.length === 0 || now - lastLoadTime.current > 120000) {
+                        loadSubjects(isNewClass);
                         lastLoadTime.current = now;
+                        lastLoadedClassId.current = classId;
                     }
                     
                     // Throttle version checks to once every 5 minutes (300,000 ms) instead of on every screen focus

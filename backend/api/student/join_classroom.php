@@ -14,8 +14,12 @@ if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
-$student_id = intval($data['student_id']);
-$class_code = strtoupper(sanitizeInput($data['class_code']));
+$student_id = intval($data['student_id'] ?? 0);
+$class_code = strtoupper(sanitizeInput($data['class_code'] ?? ''));
+
+if ($student_id <= 0) {
+    sendResponse('error', 'Valid student_id is required', null, 400);
+}
 
 try {
     // 1. Look up the class_code in classrooms table

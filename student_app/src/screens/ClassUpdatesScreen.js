@@ -140,16 +140,17 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [selectedClassId, setSelectedClassId] = useState('all');
 
     useEffect(() => {
-        if (user?.user_id) {
+        if (user?.user_id || user?.id) {
             loadJoinedClasses();
         } else {
             setLoading(false);
         }
-    }, [user?.user_id]);
+    }, [user?.user_id, user?.id]);
 
     const loadJoinedClasses = async () => {
         try {
-            const response = await axios.get(`${API_URL}/student/get_joined_classes.php?student_id=${user.user_id}`);
+            const studentId = user?.user_id || user?.id;
+            const response = await axios.get(`${API_URL}/student/get_joined_classes.php?student_id=${studentId}`);
             if (response.data && response.data.status === 'success') {
                 const classes = response.data.data;
                 setJoinedClasses(classes);
@@ -206,8 +207,9 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
 
         setJoining(true);
         try {
+            const studentId = user?.user_id || user?.id;
             const response = await axios.post(`${API_URL}/student/join_classroom.php`, {
-                student_id: user.user_id,
+                student_id: studentId,
                 class_code: joinCode
             });
             const result = response.data;

@@ -58,7 +58,7 @@ try {
 
     $query = "
         SELECT 
-            cu.id as notification_id,
+            cu.update_id as notification_id,
             cu.teacher_id,
             cu.class_id,
             cu.school_name,

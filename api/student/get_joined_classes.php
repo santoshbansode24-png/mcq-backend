@@ -9,7 +9,7 @@ if ($student_id === 0) {
 }
 
 try {
-    // Return unique joined classrooms for this student with aggregated GROUP BY to comply with MySQL ONLY_FULL_GROUP_BY / DISTINCT standards
+    // Return unique joined classrooms for this student with MAX(joined_at) in SELECT list for MySQL 3065 compliance
     $query = "
         SELECT 
             c.class_id, 

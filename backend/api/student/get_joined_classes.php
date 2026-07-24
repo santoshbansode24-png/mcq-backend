@@ -9,20 +9,22 @@ if ($student_id === 0) {
 }
 
 try {
-    // Return unique joined classrooms for this student (supporting both classroom primary key and generic class level mappings)
+    // Return unique joined classrooms for this student with aggregated GROUP BY to comply with MySQL ONLY_FULL_GROUP_BY / DISTINCT standards
     $query = "
-        SELECT DISTINCT
+        SELECT 
             c.class_id, 
             c.class_name, 
             c.class_code, 
             c.board, 
             c.medium, 
-            COALESCE(u.name, 'Teacher') as teacher_name
+            COALESCE(u.name, 'Teacher') as teacher_name,
+            MAX(scm.joined_at) as joined_at
         FROM student_class_mapping scm
         JOIN classrooms c ON (scm.class_id = c.class_id OR scm.class_id = c.class_level)
         LEFT JOIN users u ON c.teacher_id = u.user_id
         WHERE scm.student_id = ?
-        ORDER BY scm.joined_at DESC
+        GROUP BY c.class_id, c.class_name, c.class_code, c.board, c.medium, u.name
+        ORDER BY joined_at DESC
     ";
     
     $stmt = $pdo->prepare($query);

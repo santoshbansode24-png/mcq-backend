@@ -4,649 +4,749 @@
         "question": "To finish something successfully is to...",
         "options": [
             "Fail",
-            "Accomplish",
+            "Achieve",
             "Lose",
             "Drop"
         ],
-        "correct_answer": "Accomplish",
+        "correct_answer": "Achieve",
         "explanation_english": "Achieve or complete successfully.",
-        "explanation_marathi": "यशस्वीरित्या पूर्ण करणे (साध्य करणे)."
+        "explanation_marathi": "यशस्वीरित्या पूर्ण करणे (साध्य करणे).",
+        "definition": "Achieve or complete successfully.",
+        "definition_marathi": "यशस्वीरित्या पूर्ण करणे (साध्य करणे)."
     },
     {
         "word": "Adapt",
         "question": "To change in order to suit a new situation is to...",
         "options": [
             "Stay",
-            "Adapt",
+            "Adjust",
             "Refuse",
             "Ignore"
         ],
-        "correct_answer": "Adapt",
+        "correct_answer": "Adjust",
         "explanation_english": "Make something suitable for a new use or purpose; modify.",
-        "explanation_marathi": "जुळवून घेणे किंवा परिस्थितीनुसार बदलणे."
+        "explanation_marathi": "जुळवून घेणे किंवा परिस्थितीनुसार बदलणे.",
+        "definition": "Make something suitable for a new use or purpose; modify.",
+        "definition_marathi": "जुळवून घेणे किंवा परिस्थितीनुसार बदलणे."
     },
     {
         "word": "Adequate",
         "question": "Something that is enough for a need is...",
         "options": [
             "Scarce",
-            "Adequate",
+            "Sufficient",
             "Insufficient",
             "Empty"
         ],
-        "correct_answer": "Adequate",
+        "correct_answer": "Sufficient",
         "explanation_english": "Satisfactory or acceptable in quality or quantity.",
-        "explanation_marathi": "पुरेसे किंवा योग्य."
+        "explanation_marathi": "पुरेसे किंवा योग्य.",
+        "definition": "Satisfactory or acceptable in quality or quantity.",
+        "definition_marathi": "पुरेसे किंवा योग्य."
     },
     {
         "word": "Admire",
         "question": "To look at something with pleasure is to...",
         "options": [
             "Hate",
-            "Admire",
+            "Praise",
             "Dislike",
             "Break"
         ],
-        "correct_answer": "Admire",
+        "correct_answer": "Praise",
         "explanation_english": "Regard with respect or warm approval.",
-        "explanation_marathi": "कौतुक करणे किंवा प्रशंसा करणे."
+        "explanation_marathi": "कौतुक करणे किंवा प्रशंसा करणे.",
+        "definition": "Regard with respect or warm approval.",
+        "definition_marathi": "कौतुक करणे किंवा प्रशंसा करणे."
     },
     {
         "word": "Admit",
         "question": "To confess something to be true is to...",
         "options": [
             "Deny",
-            "Admit",
+            "Confess",
             "Hide",
             "Lie"
         ],
-        "correct_answer": "Admit",
+        "correct_answer": "Confess",
         "explanation_english": "Confess to be true or to be the case.",
-        "explanation_marathi": "कबूल करणे."
+        "explanation_marathi": "कबूल करणे.",
+        "definition": "Confess to be true or to be the case.",
+        "definition_marathi": "कबूल करणे."
     },
     {
         "word": "Adopt",
         "question": "To legally take another's child as one's own is to...",
         "options": [
             "Abandon",
-            "Adopt",
+            "Embrace",
             "Reject",
             "Sell"
         ],
-        "correct_answer": "Adopt",
+        "correct_answer": "Embrace",
         "explanation_english": "Legally take another's child and bring it up as one's own.",
-        "explanation_marathi": "दत्तक घेणे."
+        "explanation_marathi": "दत्तक घेणे.",
+        "definition": "Legally take another's child and bring it up as one's own.",
+        "definition_marathi": "दत्तक घेणे."
     },
     {
         "word": "Advantage",
         "question": "A condition or circumstance that puts one in a favorable position is an...",
         "options": [
             "Obstacle",
-            "Advantage",
+            "Benefit",
             "Disadvantage",
             "Problem"
         ],
-        "correct_answer": "Advantage",
+        "correct_answer": "Benefit",
         "explanation_english": "A condition or circumstance that puts one in a favorable or superior position.",
-        "explanation_marathi": "फायदा किंवा लाभ."
+        "explanation_marathi": "फायदा किंवा लाभ.",
+        "definition": "A condition or circumstance that puts one in a favorable or superior position.",
+        "definition_marathi": "फायदा किंवा लाभ."
     },
     {
         "word": "Advertise",
         "question": "To describe a product publicly to promote sales is to...",
         "options": [
             "Hide",
-            "Advertise",
+            "Promote",
             "Buy",
             "Steal"
         ],
-        "correct_answer": "Advertise",
+        "correct_answer": "Promote",
         "explanation_english": "Describe or draw attention to (a product, service, or event) in a public medium in order to promote sales or attendance.",
-        "explanation_marathi": "जाहिरात करणे."
+        "explanation_marathi": "जाहिरात करणे.",
+        "definition": "Describe or draw attention to (a product, service, or event) in a public medium in order to promote sales or attendance.",
+        "definition_marathi": "जाहिरात करणे."
     },
     {
         "word": "Affect",
         "question": "To make a difference to something is to...",
         "options": [
             "Ignore",
-            "Affect",
+            "Influence",
             "Sleep",
             "Wait"
         ],
-        "correct_answer": "Affect",
+        "correct_answer": "Influence",
         "explanation_english": "Have an effect on; make a difference to.",
-        "explanation_marathi": "परिणाम करणे."
+        "explanation_marathi": "परिणाम करणे.",
+        "definition": "Have an effect on; make a difference to.",
+        "definition_marathi": "परिणाम करणे."
     },
     {
         "word": "Afford",
         "question": "To have enough money to pay for something is to...",
         "options": [
             "Steal",
-            "Afford",
+            "Pay for",
             "Borrow",
             "Owe"
         ],
-        "correct_answer": "Afford",
+        "correct_answer": "Pay for",
         "explanation_english": "Have enough money to pay for.",
-        "explanation_marathi": "परवडणे."
+        "explanation_marathi": "परवडणे.",
+        "definition": "Have enough money to pay for.",
+        "definition_marathi": "परवडणे."
     },
     {
         "word": "Agency",
         "question": "A business or organization providing a specific service is an...",
         "options": [
             "Home",
-            "Agency",
+            "Organization",
             "Park",
             "Street"
         ],
-        "correct_answer": "Agency",
+        "correct_answer": "Organization",
         "explanation_english": "A business or organization establishing to provide a particular service.",
-        "explanation_marathi": "संस्था किंवा एजन्सी."
+        "explanation_marathi": "संस्था किंवा एजन्सी.",
+        "definition": "A business or organization establishing to provide a particular service.",
+        "definition_marathi": "संस्था किंवा एजन्सी."
     },
     {
         "word": "Agent",
         "question": "A person who acts on behalf of another is an...",
         "options": [
             "Enemy",
-            "Agent",
+            "Representative",
             "Boss",
             "Stranger"
         ],
-        "correct_answer": "Agent",
+        "correct_answer": "Representative",
         "explanation_english": "A person who acts on behalf of another person or group.",
-        "explanation_marathi": "प्रतिनिधी (एजंट)."
+        "explanation_marathi": "प्रतिनिधी (एजंट).",
+        "definition": "A person who acts on behalf of another person or group.",
+        "definition_marathi": "प्रतिनिधी (एजंट)."
     },
     {
         "word": "Aggressive",
         "question": "Ready or likely to attack or confront represents being...",
         "options": [
             "Calm",
-            "Aggressive",
+            "Synonym of Aggressive",
             "Shy",
             "Peaceful"
         ],
-        "correct_answer": "Aggressive",
+        "correct_answer": "Synonym of Aggressive",
         "explanation_english": "Ready or likely to attack or confront; characterized by or resulting from aggression.",
-        "explanation_marathi": "आक्रमक."
+        "explanation_marathi": "आक्रमक.",
+        "definition": "Ready or likely to attack or confront; characterized by or resulting from aggression.",
+        "definition_marathi": "आक्रमक."
     },
     {
         "word": "Agriculture",
         "question": "The science or practice of farming is...",
         "options": [
             "Industry",
-            "Agriculture",
+            "Synonym of Agriculture",
             "Mining",
             "Fishing"
         ],
-        "correct_answer": "Agriculture",
+        "correct_answer": "Synonym of Agriculture",
         "explanation_english": "The science or practice of farming, including cultivation of the soil for the growing of crops and the rearing of animals.",
-        "explanation_marathi": "शेती किंवा कृषी."
+        "explanation_marathi": "शेती किंवा कृषी.",
+        "definition": "The science or practice of farming, including cultivation of the soil for the growing of crops and the rearing of animals.",
+        "definition_marathi": "शेती किंवा कृषी."
     },
     {
         "word": "Aid",
         "question": "To help or support is to...",
         "options": [
             "Hinder",
-            "Aid",
+            "Synonym of Aid",
             "Stop",
             "Block"
         ],
-        "correct_answer": "Aid",
+        "correct_answer": "Synonym of Aid",
         "explanation_english": "Help, typically of a practical nature.",
-        "explanation_marathi": "मदत किंवा सहाय्य."
+        "explanation_marathi": "मदत किंवा सहाय्य.",
+        "definition": "Help, typically of a practical nature.",
+        "definition_marathi": "मदत किंवा सहाय्य."
     },
     {
         "word": "Alarm",
         "question": "An anxious awareness of danger is...",
         "options": [
             "Calm",
-            "Alarm",
+            "Synonym of Alarm",
             "Joy",
             "Silence"
         ],
-        "correct_answer": "Alarm",
+        "correct_answer": "Synonym of Alarm",
         "explanation_english": "An anxious awareness of danger.",
-        "explanation_marathi": "धोक्याची सूचना किंवा इशारा."
+        "explanation_marathi": "धोक्याची सूचना किंवा इशारा.",
+        "definition": "An anxious awareness of danger.",
+        "definition_marathi": "धोक्याची सूचना किंवा इशारा."
     },
     {
         "word": "Alter",
         "question": "To change slightly is to...",
         "options": [
             "Keep",
-            "Alter",
+            "Synonym of Alter",
             "Fix",
             "Stay"
         ],
-        "correct_answer": "Alter",
+        "correct_answer": "Synonym of Alter",
         "explanation_english": "Change or cause to change in character or composition, typically in a comparatively small but significant way.",
-        "explanation_marathi": "बदल करणे."
+        "explanation_marathi": "बदल करणे.",
+        "definition": "Change or cause to change in character or composition, typically in a comparatively small but significant way.",
+        "definition_marathi": "बदल करणे."
     },
     {
         "word": "Alternative",
         "question": "One of two or more available possibilities is an...",
         "options": [
             "Choice",
-            "Alternative",
+            "Synonym of Alternative",
             "Force",
             "Rule"
         ],
-        "correct_answer": "Alternative",
+        "correct_answer": "Synonym of Alternative",
         "explanation_english": "One of two or more available possibilities.",
-        "explanation_marathi": "पर्याय."
+        "explanation_marathi": "पर्याय.",
+        "definition": "One of two or more available possibilities.",
+        "definition_marathi": "पर्याय."
     },
     {
         "word": "Amaze",
         "question": "To surprise someone greatly is to...",
         "options": [
             "Bore",
-            "Amaze",
+            "Surprise (someone) greatly",
             "Calm",
             "Tire"
         ],
-        "correct_answer": "Amaze",
+        "correct_answer": "Surprise (someone) greatly",
         "explanation_english": "Surprise (someone) greatly; fill with astonishment.",
-        "explanation_marathi": "आश्चर्यचकित करणे."
+        "explanation_marathi": "आश्चर्यचकित करणे.",
+        "definition": "Surprise (someone) greatly; fill with astonishment.",
+        "definition_marathi": "आश्चर्यचकित करणे."
     },
     {
         "word": "Ambition",
         "question": "A strong desire to do or to achieve something is...",
         "options": [
             "Laziness",
-            "Ambition",
+            "Synonym of Ambition",
             "Fear",
             "Doubt"
         ],
-        "correct_answer": "Ambition",
+        "correct_answer": "Synonym of Ambition",
         "explanation_english": "A strong desire to do or to achieve something, typically requiring determination and hard work.",
-        "explanation_marathi": "महत्वाकांक्षा."
+        "explanation_marathi": "महत्वाकांक्षा.",
+        "definition": "A strong desire to do or to achieve something, typically requiring determination and hard work.",
+        "definition_marathi": "महत्वाकांक्षा."
     },
     {
         "word": "Analyze",
         "question": "To examine methodically and in detail is to...",
         "options": [
             "Guess",
-            "Analyze",
+            "Synonym of Analyze",
             "Ignore",
             "Forget"
         ],
-        "correct_answer": "Analyze",
+        "correct_answer": "Synonym of Analyze",
         "explanation_english": "Examine methodically and in detail the constitution or structure of (something, especially information).",
-        "explanation_marathi": "विश्लेषण करणे."
+        "explanation_marathi": "विश्लेषण करणे.",
+        "definition": "Examine methodically and in detail the constitution or structure of (something, especially information).",
+        "definition_marathi": "विश्लेषण करणे."
     },
     {
         "word": "Ancient",
         "question": "Belonging to the very distant past is...",
         "options": [
             "Modern",
-            "Ancient",
+            "Very old",
             "New",
             "Future"
         ],
-        "correct_answer": "Ancient",
+        "correct_answer": "Very old",
         "explanation_english": "Belonging to the very distant past and no longer in existence.",
-        "explanation_marathi": "प्राचीन."
+        "explanation_marathi": "प्राचीन.",
+        "definition": "Belonging to the very distant past and no longer in existence.",
+        "definition_marathi": "प्राचीन."
     },
     {
         "word": "Anger",
         "question": "A strong feeling of annoyance or hostility is...",
         "options": [
             "Happiness",
-            "Anger",
+            "Rage",
             "Love",
             "Peace"
         ],
-        "correct_answer": "Anger",
+        "correct_answer": "Rage",
         "explanation_english": "A strong feeling of annoyance, displeasure, or hostility.",
-        "explanation_marathi": "राग किंवा क्रोध."
+        "explanation_marathi": "राग किंवा क्रोध.",
+        "definition": "A strong feeling of annoyance, displeasure, or hostility.",
+        "definition_marathi": "राग किंवा क्रोध."
     },
     {
         "word": "Anniversary",
         "question": "The date on which an event took place in a previous year is an...",
         "options": [
             "Birthday",
-            "Anniversary",
+            "Synonym of Anniversary",
             "Week",
             "Today"
         ],
-        "correct_answer": "Anniversary",
+        "correct_answer": "Synonym of Anniversary",
         "explanation_english": "The date on which an event took place in a previous year.",
-        "explanation_marathi": "वर्धापन दिन."
+        "explanation_marathi": "वर्धापन दिन.",
+        "definition": "The date on which an event took place in a previous year.",
+        "definition_marathi": "वर्धापन दिन."
     },
     {
         "word": "Announce",
         "question": "To make a public and official declaration is to...",
         "options": [
             "Whisper",
-            "Announce",
+            "Declare",
             "Hide",
             "Keep"
         ],
-        "correct_answer": "Announce",
+        "correct_answer": "Declare",
         "explanation_english": "Make a public and typically formal declaration about a fact, occurrence, or intention.",
-        "explanation_marathi": "जाहीर करणे."
+        "explanation_marathi": "जाहीर करणे.",
+        "definition": "Make a public and typically formal declaration about a fact, occurrence, or intention.",
+        "definition_marathi": "जाहीर करणे."
     },
     {
         "word": "Annoy",
         "question": "To make someone a little angry is to...",
         "options": [
             "Please",
-            "Annoy",
+            "Irritate",
             "Help",
             "Calm"
         ],
-        "correct_answer": "Annoy",
+        "correct_answer": "Irritate",
         "explanation_english": "Irritate (someone); make (someone) a little angry.",
-        "explanation_marathi": "त्रास देणे किंवा चिडवणे."
+        "explanation_marathi": "त्रास देणे किंवा चिडवणे.",
+        "definition": "Irritate (someone); make (someone) a little angry.",
+        "definition_marathi": "त्रास देणे किंवा चिडवणे."
     },
     {
         "word": "Annual",
         "question": "Occurring once every year is...",
         "options": [
             "Daily",
-            "Annual",
+            "Occurring once every year.",
             "Weekly",
             "Monthly"
         ],
-        "correct_answer": "Annual",
+        "correct_answer": "Occurring once every year.",
         "explanation_english": "Occurring once every year.",
-        "explanation_marathi": "वार्षिक."
+        "explanation_marathi": "वार्षिक.",
+        "definition": "Occurring once every year.",
+        "definition_marathi": "वार्षिक."
     },
     {
         "word": "Anticipate",
         "question": "To regard as probable or expect is to...",
         "options": [
             "Doubt",
-            "Anticipate",
+            "Regard as probable",
             "Ignore",
             "Miss"
         ],
-        "correct_answer": "Anticipate",
+        "correct_answer": "Regard as probable",
         "explanation_english": "Regard as probable; expect or predict.",
-        "explanation_marathi": "अपेक्षा करणे किंवा अंदाज वर्तवणे."
+        "explanation_marathi": "अपेक्षा करणे किंवा अंदाज वर्तवणे.",
+        "definition": "Regard as probable; expect or predict.",
+        "definition_marathi": "अपेक्षा करणे किंवा अंदाज वर्तवणे."
     },
     {
         "word": "Anxiety",
         "question": "A feeling of worry, nervousness, or unease is...",
         "options": [
             "Calm",
-            "Anxiety",
+            "Synonym of Anxiety",
             "Confidence",
             "Joy"
         ],
-        "correct_answer": "Anxiety",
+        "correct_answer": "Synonym of Anxiety",
         "explanation_english": "A feeling of worry, nervousness, or unease, typically about an imminent event or something with an uncertain outcome.",
-        "explanation_marathi": "चिंता किंवा अस्वस्थता."
+        "explanation_marathi": "चिंता किंवा अस्वस्थता.",
+        "definition": "A feeling of worry, nervousness, or unease, typically about an imminent event or something with an uncertain outcome.",
+        "definition_marathi": "चिंता किंवा अस्वस्थता."
     },
     {
         "word": "Apologize",
         "question": "To express regret for something that one has done is to...",
         "options": [
             "Celebrate",
-            "Apologize",
+            "Synonym of Apologize",
             "Boast",
             "Laugh"
         ],
-        "correct_answer": "Apologize",
+        "correct_answer": "Synonym of Apologize",
         "explanation_english": "Express regret for something that one has done wrong.",
-        "explanation_marathi": "माफी मागणे."
+        "explanation_marathi": "माफी मागणे.",
+        "definition": "Express regret for something that one has done wrong.",
+        "definition_marathi": "माफी मागणे."
     },
     {
         "word": "Appeal",
         "question": "To make a serious or urgent request is to...",
         "options": [
             "Command",
-            "Appeal",
+            "Synonym of Appeal",
             "Force",
             "Take"
         ],
-        "correct_answer": "Appeal",
+        "correct_answer": "Synonym of Appeal",
         "explanation_english": "Make a serious or urgent request, typically to the public.",
-        "explanation_marathi": "आवाहन करणे किंवा विनंती करणे."
+        "explanation_marathi": "आवाहन करणे किंवा विनंती करणे.",
+        "definition": "Make a serious or urgent request, typically to the public.",
+        "definition_marathi": "आवाहन करणे किंवा विनंती करणे."
     },
     {
         "word": "Appear",
         "question": "To come into sight represents to...",
         "options": [
             "Vanish",
-            "Appear",
+            "Seem",
             "Hide",
             "Leave"
         ],
-        "correct_answer": "Appear",
+        "correct_answer": "Seem",
         "explanation_english": "Come into sight; become visible or noticeable.",
-        "explanation_marathi": "दिसणे किंवा प्रकट होणे."
+        "explanation_marathi": "दिसणे किंवा प्रकट होणे.",
+        "definition": "Come into sight; become visible or noticeable.",
+        "definition_marathi": "दिसणे किंवा प्रकट होणे."
     },
     {
         "word": "Applause",
         "question": "Approval or praise expressed by clapping is...",
         "options": [
             "Booing",
-            "Applause",
+            "Synonym of Applause",
             "Silence",
             "Noise"
         ],
-        "correct_answer": "Applause",
+        "correct_answer": "Synonym of Applause",
         "explanation_english": "Approval or praise expressed by clapping.",
-        "explanation_marathi": "टाळ्यांचा कडकडाट."
+        "explanation_marathi": "टाळ्यांचा कडकडाट.",
+        "definition": "Approval or praise expressed by clapping.",
+        "definition_marathi": "टाळ्यांचा कडकडाट."
     },
     {
         "word": "Appreciate",
         "question": "To recognize the full worth of something is to...",
         "options": [
             "Ignore",
-            "Appreciate",
+            "Recognize the full worth of.",
             "Scorn",
             "Hate"
         ],
-        "correct_answer": "Appreciate",
+        "correct_answer": "Recognize the full worth of.",
         "explanation_english": "Recognize the full worth of.",
-        "explanation_marathi": "कौतुक करणे किंवा कदर करणे."
+        "explanation_marathi": "कौतुक करणे किंवा कदर करणे.",
+        "definition": "Recognize the full worth of.",
+        "definition_marathi": "कौतुक करणे किंवा कदर करणे."
     },
     {
         "word": "Approach",
         "question": "To come near or nearer to something is to...",
         "options": [
             "Leave",
-            "Approach",
+            "Come near",
             "Retreat",
             "Avoid"
         ],
-        "correct_answer": "Approach",
+        "correct_answer": "Come near",
         "explanation_english": "Come near or nearer to (someone or something) in distance or time.",
-        "explanation_marathi": "जवळ जाणे किंवा दृष्टिकोन."
+        "explanation_marathi": "जवळ जाणे किंवा दृष्टिकोन.",
+        "definition": "Come near or nearer to (someone or something) in distance or time.",
+        "definition_marathi": "जवळ जाणे किंवा दृष्टिकोन."
     },
     {
         "word": "Approve",
         "question": "To believe that something is good or acceptable is to...",
         "options": [
             "Reject",
-            "Approve",
+            "Accept",
             "Dislike",
             "Deny"
         ],
-        "correct_answer": "Approve",
+        "correct_answer": "Accept",
         "explanation_english": "Officially agree to or accept as satisfactory.",
-        "explanation_marathi": "मंजूर करणे किंवा संमती देणे."
+        "explanation_marathi": "मंजूर करणे किंवा संमती देणे.",
+        "definition": "Officially agree to or accept as satisfactory.",
+        "definition_marathi": "मंजूर करणे किंवा संमती देणे."
     },
     {
         "word": "Approximate",
         "question": "Close to the actual, but not completely accurate is...",
         "options": [
             "Exact",
-            "Approximate",
+            "Synonym of Approximate",
             "Wrong",
             "Far"
         ],
-        "correct_answer": "Approximate",
+        "correct_answer": "Synonym of Approximate",
         "explanation_english": "Close to the actual, but not completely accurate or exact.",
-        "explanation_marathi": "अंदाजे."
+        "explanation_marathi": "अंदाजे.",
+        "definition": "Close to the actual, but not completely accurate or exact.",
+        "definition_marathi": "अंदाजे."
     },
     {
         "word": "Architect",
         "question": "A person who designs buildings is an...",
         "options": [
             "Doctor",
-            "Architect",
+            "Synonym of Architect",
             "Teacher",
             "Driver"
         ],
-        "correct_answer": "Architect",
+        "correct_answer": "Synonym of Architect",
         "explanation_english": "A person who designs buildings and in many cases also supervises their construction.",
-        "explanation_marathi": "वास्तुविशारद (आर्किटेक्ट)."
+        "explanation_marathi": "वास्तुविशारद (आर्किटेक्ट).",
+        "definition": "A person who designs buildings and in many cases also supervises their construction.",
+        "definition_marathi": "वास्तुविशारद (आर्किटेक्ट)."
     },
     {
         "word": "Argue",
         "question": "To exchange opposing views angrily is to...",
         "options": [
             "Agree",
-            "Argue",
+            "Synonym of Argue",
             "Hug",
             "Sleep"
         ],
-        "correct_answer": "Argue",
+        "correct_answer": "Synonym of Argue",
         "explanation_english": "Give reasons or cite evidence in support of an idea, action, or theory, typically with the aim of persuading others to share one's view.",
-        "explanation_marathi": "वाद घालणे."
+        "explanation_marathi": "वाद घालणे.",
+        "definition": "Give reasons or cite evidence in support of an idea, action, or theory, typically with the aim of persuading others to share one's view.",
+        "definition_marathi": "वाद घालणे."
     },
     {
         "word": "Arrest",
         "question": "To seize someone by legal authority is to...",
         "options": [
             "Free",
-            "Arrest",
+            "Synonym of Arrest",
             "Help",
             "Run"
         ],
-        "correct_answer": "Arrest",
+        "correct_answer": "Synonym of Arrest",
         "explanation_english": "Seize (someone) by legal authority and take into custody.",
-        "explanation_marathi": "अटक करणे."
+        "explanation_marathi": "अटक करणे.",
+        "definition": "Seize (someone) by legal authority and take into custody.",
+        "definition_marathi": "अटक करणे."
     },
     {
         "word": "Artificial",
         "question": "Made by human beings rather than occurring naturally is...",
         "options": [
             "Natural",
-            "Artificial",
+            "Synonym of Artificial",
             "Real",
             "Organic"
         ],
-        "correct_answer": "Artificial",
+        "correct_answer": "Synonym of Artificial",
         "explanation_english": "Made or produced by human beings rather than occurring naturally, typically as a copy of something natural.",
-        "explanation_marathi": "कृत्रिम किंवा बनावट."
+        "explanation_marathi": "कृत्रिम किंवा बनावट.",
+        "definition": "Made or produced by human beings rather than occurring naturally, typically as a copy of something natural.",
+        "definition_marathi": "कृत्रिम किंवा बनावट."
     },
     {
         "word": "Ashamed",
         "question": "Feeling embarrassed or guilty is being...",
         "options": [
             "Proud",
-            "Ashamed",
+            "Embarrassed",
             "Happy",
             "Confident"
         ],
-        "correct_answer": "Ashamed",
+        "correct_answer": "Embarrassed",
         "explanation_english": "Embarrassed or guilty because of one's actions, characteristics, or associations.",
-        "explanation_marathi": "लज्जित."
+        "explanation_marathi": "लज्जित.",
+        "definition": "Embarrassed or guilty because of one's actions, characteristics, or associations.",
+        "definition_marathi": "लज्जित."
     },
     {
         "word": "Aspect",
         "question": "A particular part or feature of something is an...",
         "options": [
             "Whole",
-            "Aspect",
+            "Synonym of Aspect",
             "Total",
             "All"
         ],
-        "correct_answer": "Aspect",
+        "correct_answer": "Synonym of Aspect",
         "explanation_english": "A particular part or feature of something.",
-        "explanation_marathi": "पैलू किंवा बाजू."
+        "explanation_marathi": "पैलू किंवा बाजू.",
+        "definition": "A particular part or feature of something.",
+        "definition_marathi": "पैलू किंवा बाजू."
     },
     {
         "word": "Assemble",
         "question": "To gather together in one place is to...",
         "options": [
             "Scatter",
-            "Assemble",
+            "Synonym of Assemble",
             "Disperse",
             "Lose"
         ],
-        "correct_answer": "Assemble",
+        "correct_answer": "Synonym of Assemble",
         "explanation_english": "(of people) gather together in one place for a common purpose.",
-        "explanation_marathi": "गोळा होणे किंवा एकत्र करणे."
+        "explanation_marathi": "गोळा होणे किंवा एकत्र करणे.",
+        "definition": "(of people) gather together in one place for a common purpose.",
+        "definition_marathi": "गोळा होणे किंवा एकत्र करणे."
     },
     {
         "word": "Assess",
         "question": "To evaluate or estimate the nature of something is to...",
         "options": [
             "Ignore",
-            "Assess",
+            "Synonym of Assess",
             "Guess",
             "Miss"
         ],
-        "correct_answer": "Assess",
+        "correct_answer": "Synonym of Assess",
         "explanation_english": "Evaluate or estimate the nature, ability, or quality of.",
-        "explanation_marathi": "मूल्यांकन करणे."
+        "explanation_marathi": "मूल्यांकन करणे.",
+        "definition": "Evaluate or estimate the nature, ability, or quality of.",
+        "definition_marathi": "मूल्यांकन करणे."
     },
     {
         "word": "Assign",
         "question": "To allocate a job or duty is to...",
         "options": [
             "Keep",
-            "Assign",
+            "Allocate (a job or duty).",
             "Take",
             "Refuse"
         ],
-        "correct_answer": "Assign",
+        "correct_answer": "Allocate (a job or duty).",
         "explanation_english": "Allocate (a job or duty).",
-        "explanation_marathi": "नेमून देणे किंवा सोपवणे."
+        "explanation_marathi": "नेमून देणे किंवा सोपवणे.",
+        "definition": "Allocate (a job or duty).",
+        "definition_marathi": "नेमून देणे किंवा सोपवणे."
     },
     {
         "word": "Assist",
         "question": "To help someone is to...",
         "options": [
             "Hinder",
-            "Assist",
+            "Help",
             "Stop",
             "Block"
         ],
-        "correct_answer": "Assist",
+        "correct_answer": "Help",
         "explanation_english": "Help (someone), typically by doing a share of the work.",
-        "explanation_marathi": "सहाय्य करणे."
+        "explanation_marathi": "सहाय्य करणे.",
+        "definition": "Help (someone), typically by doing a share of the work.",
+        "definition_marathi": "सहाय्य करणे."
     },
     {
         "word": "Associate",
         "question": "To connect with something else in the mind is to...",
         "options": [
             "Separate",
-            "Associate",
+            "Synonym of Associate",
             "Divide",
             "Cut"
         ],
-        "correct_answer": "Associate",
+        "correct_answer": "Synonym of Associate",
         "explanation_english": "Connect (someone or something) with something else in one's mind.",
-        "explanation_marathi": "संबंधित करणे किंवा जोडणे."
+        "explanation_marathi": "संबंधित करणे किंवा जोडणे.",
+        "definition": "Connect (someone or something) with something else in one's mind.",
+        "definition_marathi": "संबंधित करणे किंवा जोडणे."
     },
     {
         "word": "Assume",
         "question": "To suppose to be the case without proof is to...",
         "options": [
             "Know",
-            "Assume",
+            "Suppose",
             "Prove",
             "Show"
         ],
-        "correct_answer": "Assume",
+        "correct_answer": "Suppose",
         "explanation_english": "Suppose to be the case, without proof.",
-        "explanation_marathi": "गृहीत धरणे."
+        "explanation_marathi": "गृहीत धरणे.",
+        "definition": "Suppose to be the case, without proof.",
+        "definition_marathi": "गृहीत धरणे."
     },
     {
         "word": "Atmosphere",
         "question": "The envelope of gases surrounding the earth is the...",
         "options": [
             "Ground",
-            "Atmosphere",
+            "Synonym of Atmosphere",
             "Water",
             "Core"
         ],
-        "correct_answer": "Atmosphere",
+        "correct_answer": "Synonym of Atmosphere",
         "explanation_english": "The envelope of gases surrounding the earth or another planet.",
-        "explanation_marathi": "वातावरण."
+        "explanation_marathi": "वातावरण.",
+        "definition": "The envelope of gases surrounding the earth or another planet.",
+        "definition_marathi": "वातावरण."
     }
 ]

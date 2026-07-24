@@ -1,11 +1,10 @@
 <?php
 /**
  * Get Vocab Set API
- * Returns 25 words for a specific set with user progress
- * * Endpoint: GET /api/vocab_get_set.php?user_id=X&set_number=1
+ * Returns words for a specific set with user progress
+ * Endpoint: GET /api/vocab_get_set.php?user_id=X&set_number=1
  */
 
-// 1. Optimization: Start Output Buffering to prevent whitespace corruption
 ob_start();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -15,12 +14,11 @@ header('Access-Control-Allow-Methods: GET');
 require_once '../config/db.php';
 
 try {
-    // 2. Optimization: Cleaner Input Validation
-    $userId = filter_input(INPUT_GET, 'user_id', FILTER_VALIDATE_INT);
-    $setNumber = filter_input(INPUT_GET, 'set_number', FILTER_VALIDATE_INT);
+    $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+    $setNumber = isset($_GET['set_number']) ? (int)$_GET['set_number'] : 0;
     
-    if (!$userId) {
-        http_response_code(400); // Bad Request
+    if ($userId <= 0) {
+        http_response_code(400);
         throw new Exception('Valid user_id is required');
     }
     
@@ -34,7 +32,6 @@ try {
     
     // Initialize if no stats exist
     if (!$userStats) {
-        // Optimization: Use INSERT IGNORE to prevent race conditions
         $sql = "INSERT IGNORE INTO user_vocab_stats (user_id, current_set, highest_set_unlocked) 
                 VALUES (:user_id, 1, 1)";
         $stmt = $pdo->prepare($sql);
@@ -44,11 +41,10 @@ try {
     }
     
     // Default to current set if not specified
-    if (!$setNumber || $setNumber <= 0) {
-        $setNumber = $userStats['current_set'];
+    if ($setNumber <= 0) {
+        $setNumber = (int)$userStats['current_set'];
     }
     
-    // 3. Optimization: COALESCE handles nulls in SQL directly
     $sql = "SELECT 
                 vw.word_id,
                 vw.word,
@@ -70,7 +66,7 @@ try {
             LEFT JOIN user_vocab_progress uvp ON uvp.word_id = vw.word_id AND uvp.user_id = :user_id
             WHERE vw.set_number = :set_number
             ORDER BY vw.word_id ASC
-            LIMIT 25"; // Fixed: Updated to 25 to match docblock
+            LIMIT 50";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
@@ -79,7 +75,6 @@ try {
     ]);
     $words = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Process words
     $totalWords = count($words);
     $masteredWords = 0;
     $reviewedWords = 0;
@@ -92,7 +87,6 @@ try {
             $reviewedWords++;
         }
         
-        // Decode options safely
         if (!empty($word['options']) && is_string($word['options'])) {
             $decoded = json_decode($word['options'], true);
             if (json_last_error() === JSON_ERROR_NONE) {
@@ -100,11 +94,10 @@ try {
             }
         }
     }
-    unset($word); // Break reference
+    unset($word);
     
     $completionPercentage = $totalWords > 0 ? round(($masteredWords / $totalWords) * 100) : 0;
     
-    // Prepare Response
     $response = [
         'status' => 'success',
         'data' => [
@@ -120,18 +113,17 @@ try {
                 'current_set' => (int)$userStats['current_set'],
                 'sets_completed' => (int)$userStats['sets_completed'],
                 'highest_set_unlocked' => (int)$userStats['highest_set_unlocked'],
-                'total_sets' => 200
+                'total_sets' => 33
             ]
         ]
     ];
 
-    // 4. Output: Clean buffer and output with numeric check
     ob_clean();
     echo json_encode($response, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
     
 } catch (Exception $e) {
     ob_clean();
-    http_response_code(500); // Server Error
+    http_response_code(500);
     echo json_encode([
         'status' => 'error',
         'message' => 'Failed to fetch set: ' . $e->getMessage()

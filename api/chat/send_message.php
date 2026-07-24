@@ -16,7 +16,7 @@ if (!$input) {
 
 $sender_id = isset($input['sender_id']) ? (int)$input['sender_id'] : 0;
 $class_code = isset($input['class_code']) ? $input['class_code'] : null;
-$message_text = isset($input['message_text']) ? $input['message_text'] : '';
+$message_text = isset($input['message_text']) ? $input['message_text'] : (isset($input['message']) ? $input['message'] : '');
 $receiver_id = isset($input['receiver_id']) && $input['receiver_id'] !== '' ? (int)$input['receiver_id'] : null;
 
 if ($sender_id === 0 || empty($message_text)) {

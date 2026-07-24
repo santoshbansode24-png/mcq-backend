@@ -25,6 +25,7 @@ try {
         $joined_ids = [intval($class_id)];
     }
 
+    // Automatically fetch and merge student's joined classrooms
     if ($student_id > 0) {
         $stmt_mapping = $pdo->prepare("SELECT class_id FROM student_class_mapping WHERE student_id = ?");
         $stmt_mapping->execute([$student_id]);
@@ -36,6 +37,7 @@ try {
 
     $joined_ids = array_unique(array_map('intval', $joined_ids));
 
+    // Resolve standards (class_levels) for legacy notifications support
     $class_levels = [];
     if (!empty($joined_ids)) {
         $placeholders = implode(',', array_fill(0, count($joined_ids), '?'));
@@ -48,6 +50,7 @@ try {
         $class_levels = $stmt_resolve->fetchAll(PDO::FETCH_COLUMN);
     }
 
+    // Fallback if no classrooms found
     if (empty($class_levels)) {
         $class_levels = $joined_ids;
     }
@@ -61,13 +64,13 @@ try {
             cu.update_id as notification_id,
             cu.teacher_id,
             cu.class_id,
-            cu.school_name,
-            cu.title,
-            cu.message,
-            cu.update_type,
-            cu.payload,
+            CONVERT(cu.school_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as school_name,
+            CONVERT(cu.title USING utf8mb4) COLLATE utf8mb4_unicode_ci as title,
+            CONVERT(cu.message USING utf8mb4) COLLATE utf8mb4_unicode_ci as message,
+            CONVERT(cu.update_type USING utf8mb4) COLLATE utf8mb4_unicode_ci as update_type,
+            CONVERT(cu.payload USING utf8mb4) COLLATE utf8mb4_unicode_ci as payload,
             cu.created_at,
-            COALESCE(u.name, 'Teacher') as teacher_name 
+            CONVERT(COALESCE(u.name, 'Teacher') USING utf8mb4) COLLATE utf8mb4_unicode_ci as teacher_name 
         FROM class_updates cu
         LEFT JOIN users u ON cu.teacher_id = u.user_id
         WHERE cu.class_id IN ($inQueryClassrooms)
@@ -80,12 +83,12 @@ try {
             n.teacher_id,
             n.class_id,
             NULL as school_name,
-            n.title,
-            n.message,
+            CONVERT(n.title USING utf8mb4) COLLATE utf8mb4_unicode_ci as title,
+            CONVERT(n.message USING utf8mb4) COLLATE utf8mb4_unicode_ci as message,
             'announcement' as update_type,
             NULL as payload,
             n.created_at,
-            COALESCE(u.name, 'Teacher') as teacher_name 
+            CONVERT(COALESCE(u.name, 'Teacher') USING utf8mb4) COLLATE utf8mb4_unicode_ci as teacher_name 
         FROM notifications n
         LEFT JOIN users u ON n.teacher_id = u.user_id
         WHERE n.class_id IN ($inQueryStandards)

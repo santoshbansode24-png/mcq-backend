@@ -1,29 +1,24 @@
 <?php
 /**
- * Join Class by Code API (Student)
+ * Join Classroom API (Student App)
+ * Mirror file for /api/student/join_classroom.php
  */
-
-require_once 'cors_middleware.php';
 require_once '../config/db.php';
+require_once 'cors_middleware.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendResponse('error', 'Only POST requests are allowed', null, 405);
-}
+$data = getJsonInput();
 
-$input = getJsonInput();
-
-$required = ['user_id', 'class_code'];
-$missing = validateRequired($input, $required);
-
+// Required Fields
+$missing = validateRequired($data, ['student_id', 'class_code']);
 if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
 }
 
-$user_id = filter_var($input['user_id'], FILTER_VALIDATE_INT);
-$class_code = strtoupper(trim(sanitizeInput($input['class_code'] ?? '')));
+$student_id = intval($data['student_id'] ?? 0);
+$class_code = strtoupper(trim(sanitizeInput($data['class_code'] ?? '')));
 
-if ($user_id <= 0) {
-    sendResponse('error', 'Valid user_id is required', null, 400);
+if ($student_id <= 0) {
+    sendResponse('error', 'Valid student_id is required', null, 400);
 }
 
 if (empty($class_code)) {
@@ -31,7 +26,7 @@ if (empty($class_code)) {
 }
 
 try {
-    // 1. Find the class and teacher based on the code (LEFT JOIN)
+    // 1. Look up the class_code in classrooms table
     $stmt = $pdo->prepare("
         SELECT c.class_id, c.teacher_id, c.class_name, c.board, c.medium, c.class_level, u.school_name, u.name as teacher_name
         FROM classrooms c
@@ -39,9 +34,9 @@ try {
         WHERE UPPER(TRIM(c.class_code)) = ?
     ");
     $stmt->execute([$class_code]);
-    $classInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+    $classroom = $stmt->fetch();
 
-    if (!$classInfo) {
+    if (!$classroom) {
         // Try fallback search in teacher_classes table
         $stmt_tc = $pdo->prepare("
             SELECT tc.class_id as generic_class_id, tc.teacher_id, c.class_name, u.board_type as board, u.medium, u.school_name, u.name as teacher_name
@@ -51,7 +46,7 @@ try {
             WHERE UPPER(TRIM(tc.class_code)) = ?
         ");
         $stmt_tc->execute([$class_code]);
-        $fallback = $stmt_tc->fetch(PDO::FETCH_ASSOC);
+        $fallback = $stmt_tc->fetch();
         
         if ($fallback) {
             $class_level = $fallback['generic_class_id'] ?: 10;
@@ -62,7 +57,7 @@ try {
             if (!in_array($medium_val, ['Marathi', 'Semi-English', 'English'])) {
                 $medium_val = 'Marathi';
             }
-
+            
             try {
                 $stmt_ins = $pdo->prepare("
                     INSERT INTO classrooms (teacher_id, class_code, class_name, board, medium, class_level) 
@@ -82,10 +77,10 @@ try {
             
             // Re-fetch
             $stmt->execute([$class_code]);
-            $classInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+            $classroom = $stmt->fetch();
 
-            if (!$classInfo) {
-                $classInfo = [
+            if (!$classroom) {
+                $classroom = [
                     'class_id' => $class_level,
                     'teacher_id' => $fallback['teacher_id'],
                     'class_name' => $class_name,
@@ -99,26 +94,26 @@ try {
         }
     }
 
-    if (!$classInfo) {
+    if (!$classroom) {
         sendResponse('error', 'Invalid Class Code. Please check and try again.', null, 404);
     }
-    
-    // Check & insert student_class_mapping
+
+    $class_id = $classroom['class_id'];
+    $teacher_id = $classroom['teacher_id'];
+
+    // 2. Insert into student_class_mapping
     try {
-        $checkMap = $pdo->prepare("SELECT mapping_id FROM student_class_mapping WHERE student_id = ? AND class_id = ?");
-        $checkMap->execute([$user_id, $classInfo['class_id']]);
-        
-        if (!$checkMap->fetch()) {
-            $insertMap = $pdo->prepare("INSERT INTO student_class_mapping (student_id, class_id) VALUES (?, ?)");
-            $insertMap->execute([$user_id, $classInfo['class_id']]);
+        $mapStmt = $pdo->prepare("INSERT INTO student_class_mapping (student_id, class_id) VALUES (?, ?)");
+        $mapStmt->execute([$student_id, $class_id]);
+    } catch (PDOException $e) {
+        if ($e->getCode() != '23000' && strpos($e->getMessage(), 'Duplicate entry') === false) {
+            error_log("student_class_mapping insert notice: " . $e->getMessage());
         }
-    } catch (PDOException $mapErr) {
-        error_log("student_class_mapping insert notice: " . $mapErr->getMessage());
     }
 
-    // 2. Update the student's record
-    $board_val = $classInfo['board'] ?? 'State Board';
-    $medium_val = $classInfo['medium'] ?? 'Marathi';
+    // 3. Sync student profile
+    $board_val = $classroom['board'] ?? 'State Board';
+    $medium_val = $classroom['medium'] ?? 'Marathi';
 
     $board_type_val = 'STATE_MARATHI';
     if ($board_val === 'CBSE') {
@@ -129,34 +124,36 @@ try {
         $board_type_val = 'STATE_MARATHI';
     }
 
-    $school_name_val = !empty($classInfo['school_name']) ? $classInfo['school_name'] : 'Your School';
-    $teacher_name_val = !empty($classInfo['teacher_name']) ? $classInfo['teacher_name'] : 'Teacher';
+    $school_name_val = !empty($classroom['school_name']) ? $classroom['school_name'] : 'Your School';
+    $teacher_name_val = !empty($classroom['teacher_name']) ? $classroom['teacher_name'] : 'Teacher';
 
     $updateStmt = $pdo->prepare("
         UPDATE users 
-        SET school_name = ?, 
-            class_id = ?,
+        SET class_id = ?, 
+            school_name = ?,
             board_type = ?,
             board = ?
         WHERE user_id = ?
     ");
+    
     $updateStmt->execute([
-        $school_name_val, 
-        $classInfo['class_level'],
+        $classroom['class_level'],
+        $school_name_val,
         $board_type_val,
         $board_val,
-        $user_id
+        $student_id
     ]);
 
-    sendResponse('success', 'Successfully joined Class ' . $classInfo['class_name'] . ' at ' . $school_name_val, [
+    sendResponse('success', 'Successfully joined the classroom!', [
         'school_name' => $school_name_val,
         'teacher_name' => $teacher_name_val,
-        'class_id' => $classInfo['class_level'],
-        'class_name' => $classInfo['class_name'],
+        'class_name' => $classroom['class_name'],
+        'class_id' => $classroom['class_level'],
         'board_type' => $board_type_val
-    ], 200);
+    ]);
 
 } catch (PDOException $e) {
+    error_log("Join Classroom Error: " . $e->getMessage());
     sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
 }
 ?>

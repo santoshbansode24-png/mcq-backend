@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { 
     View, Text, StyleSheet, SectionList, ActivityIndicator, 
     TouchableOpacity, Linking, Image, TextInput, Alert,
@@ -139,17 +140,19 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     const [joinedClasses, setJoinedClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('all');
 
-    useEffect(() => {
-        if (user?.user_id || user?.id) {
-            loadJoinedClasses();
-        } else {
-            setLoading(false);
-        }
-    }, [user?.user_id, user?.id]);
+    useFocusEffect(
+        useCallback(() => {
+            if (user?.user_id || user?.id || user?.student_id) {
+                loadJoinedClasses();
+            } else {
+                setLoading(false);
+            }
+        }, [user?.user_id, user?.id, user?.student_id])
+    );
 
     const loadJoinedClasses = async () => {
         try {
-            const studentId = user?.user_id || user?.id;
+            const studentId = user?.user_id || user?.id || user?.student_id;
             const response = await axios.get(`${API_URL}/student/get_joined_classes.php?student_id=${studentId}`);
             if (response.data && response.data.status === 'success') {
                 const classes = response.data.data;
@@ -200,23 +203,25 @@ const ClassUpdatesScreen = ({ user, onUserUpdate, navigation }) => {
     };
 
     const handleJoinClass = async () => {
-        if (joinCode.length < 4) {
-            Alert.alert("Invalid Code", "Please enter a valid 6-digit class code.");
+        const sanitizedCode = (joinCode || '').trim().toUpperCase();
+        if (sanitizedCode.length !== 6) {
+            Alert.alert("Invalid Code", "Please enter a valid 6-character class code.");
             return;
         }
 
         setJoining(true);
         try {
-            const studentId = user?.user_id || user?.id;
+            const studentId = user?.user_id || user?.id || user?.student_id;
             const response = await axios.post(`${API_URL}/student/join_classroom.php`, {
                 student_id: studentId,
-                class_code: joinCode
+                class_code: sanitizedCode
             });
             const result = response.data;
 
             if (result.status === 'success') {
                 Alert.alert("Success 🎉", result.message);
                 setShowJoinForm(false);
+                setJoinCode('');
                 
                 // Refresh the joined classes list to include the newly joined class
                 await loadJoinedClasses();

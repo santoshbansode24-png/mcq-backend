@@ -1,6 +1,6 @@
 <?php
-require_once '../../config/db.php';
-require_once '../cors_middleware.php';
+require_once '../config/db.php';
+require_once 'cors_middleware.php';
 
 $student_id = isset($_GET['student_id']) ? (int)$_GET['student_id'] : 0;
 

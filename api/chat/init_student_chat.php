@@ -12,10 +12,10 @@ if ($student_id === 0) {
 try {
     // Find the classroom the student belongs to
     $query = "
-        SELECT c.class_code, c.teacher_id, u.name as teacher_name 
+        SELECT c.class_code, c.teacher_id, COALESCE(u.name, 'Teacher') as teacher_name 
         FROM student_class_mapping scm
         JOIN classrooms c ON scm.class_id = c.class_id
-        JOIN users u ON c.teacher_id = u.user_id
+        LEFT JOIN users u ON c.teacher_id = u.user_id
         WHERE scm.student_id = ?
         ORDER BY scm.joined_at DESC
         LIMIT 1

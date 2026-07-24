@@ -17,7 +17,7 @@ if (!$class_id && !$class_ids && $student_id <= 0) {
 }
 
 try {
-    // Resolve classroom IDs (Option A Safe server-side translation safeguard - Optimized 1-query lookup)
+    // Resolve classroom IDs
     $joined_ids = [];
     if ($class_ids) {
         $joined_ids = array_map('intval', explode(',', $class_ids));
@@ -25,7 +25,7 @@ try {
         $joined_ids = [intval($class_id)];
     }
 
-    // Future-proof / Optimized: If student_id is provided, automatically fetch and merge their joined classrooms
+    // Automatically fetch and merge student's joined classrooms
     if ($student_id > 0) {
         $stmt_mapping = $pdo->prepare("SELECT class_id FROM student_class_mapping WHERE student_id = ?");
         $stmt_mapping->execute([$student_id]);
@@ -56,8 +56,8 @@ try {
     }
     $class_levels = array_unique(array_map('intval', $class_levels));
 
-    $inQueryClassrooms = implode(',', array_fill(0, count($joined_ids), '?'));
-    $inQueryStandards = implode(',', array_fill(0, count($class_levels), '?'));
+    $inQueryClassrooms = !empty($joined_ids) ? implode(',', array_fill(0, count($joined_ids), '?')) : '0';
+    $inQueryStandards = !empty($class_levels) ? implode(',', array_fill(0, count($class_levels), '?')) : '0';
 
     $query = "
         SELECT 
@@ -70,9 +70,9 @@ try {
             cu.update_type,
             cu.payload,
             cu.created_at,
-            u.name as teacher_name 
+            COALESCE(u.name, 'Teacher') as teacher_name 
         FROM class_updates cu
-        JOIN users u ON cu.teacher_id = u.user_id
+        LEFT JOIN users u ON cu.teacher_id = u.user_id
         WHERE cu.class_id IN ($inQueryClassrooms)
           AND cu.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         
@@ -88,9 +88,9 @@ try {
             'announcement' as update_type,
             NULL as payload,
             n.created_at,
-            u.name as teacher_name 
+            COALESCE(u.name, 'Teacher') as teacher_name 
         FROM notifications n
-        JOIN users u ON n.teacher_id = u.user_id
+        LEFT JOIN users u ON n.teacher_id = u.user_id
         WHERE n.class_id IN ($inQueryStandards)
           AND n.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         
@@ -98,13 +98,11 @@ try {
         LIMIT 100
     ";
     
-    // Merge parameters in order: first classrooms, then standards
     $params = array_merge($joined_ids, $class_levels);
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Parse JSON payload server-side (saves client from double-parsing)
     foreach ($notifications as $key => $n) {
         if (!empty($n['payload'])) {
             $notifications[$key]['payload'] = json_decode($n['payload'], true);

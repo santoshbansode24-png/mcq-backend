@@ -1,194 +1,157 @@
 <?php
-/**
- * Upload Class Material API (Teacher)
- * Veeru
- */
-
 require_once '../../config/db.php';
 require_once '../cors_middleware.php';
 require_once '../../config/push_notifications.php';
 
-// Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendResponse('error', 'Only POST requests are allowed', null, 405);
+    sendResponse('error', 'Only POST requests allowed', null, 405);
 }
 
+// Ensure the uploads directory exists
+$uploadDir = '../../uploads/class_materials/';
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
+}
+
+$input = getJsonInput();
+$teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : (isset($input['teacher_id']) ? intval($input['teacher_id']) : 0);
+$class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : (isset($input['class_id']) ? intval($input['class_id']) : 0);
+$update_type = isset($_POST['update_type']) ? $_POST['update_type'] : (isset($input['update_type']) ? $input['update_type'] : 'announcement');
+$title = isset($_POST['title']) ? trim($_POST['title']) : (isset($input['title']) ? trim($input['title']) : '');
+$message = isset($_POST['message']) ? trim($_POST['message']) : (isset($input['message']) ? trim($input['message']) : '');
+
+if ($teacher_id <= 0 || $class_id <= 0 || empty($title)) {
+    sendResponse('error', 'Teacher ID, Class ID, and Title are required.', null, 400);
+}
+
+// Fetch teacher school name for isolation
 try {
-    $teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : 0;
-    $class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : 0;
-    $title = isset($_POST['title']) ? sanitizeInput($_POST['title']) : '';
-    $raw_message = isset($_POST['message']) ? trim($_POST['message']) : '';
-    $message = sanitizeInput($raw_message);
-    $update_type = isset($_POST['update_type']) ? sanitizeInput($_POST['update_type']) : 'homework';
-
-    if ($teacher_id <= 0 || $class_id <= 0) {
-        sendResponse('error', 'Invalid teacher_id or class_id', null, 400);
-    }
-
-    // Verify teacher exists
-    $teacherStmt = $pdo->prepare("SELECT user_id, school_name FROM users WHERE user_id = ? AND user_type = 'teacher'");
-    $teacherStmt->execute([$teacher_id]);
-    $teacher = $teacherStmt->fetch(PDO::FETCH_ASSOC);
-    if (!$teacher) {
-        sendResponse('error', 'Invalid teacher ID', null, 403);
-    }
-    $school_name = $teacher['school_name'] ?? '';
+    $tStmt = $pdo->prepare("SELECT school_name FROM users WHERE user_id = ?");
+    $tStmt->execute([$teacher_id]);
+    $teacherInfo = $tStmt->fetch(PDO::FETCH_ASSOC);
     
-    // Verify class exists
-    $classStmt = $pdo->prepare("SELECT class_id FROM classrooms WHERE class_id = ?");
-    $classStmt->execute([$class_id]);
-    if (!$classStmt->fetch()) {
-        sendResponse('error', 'Invalid class ID', null, 400);
+    if (!$teacherInfo) {
+        sendResponse('error', 'Invalid teacher ID', null, 404);
+    }
+    $school_name = $teacherInfo['school_name'] ?? 'Unknown';
+} catch (PDOException $e) {
+    sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+}
+
+$rawPayload = $_POST['payload'] ?? $input['payload'] ?? [];
+$payload = is_array($rawPayload) ? $rawPayload : json_decode($rawPayload, true);
+if (!is_array($payload)) $payload = [];
+
+// 2. Handle File Upload if present
+if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+    $fileTmpPath = $_FILES['file']['tmp_name'];
+    $fileName = $_FILES['file']['name'];
+    $fileSize = $_FILES['file']['size'];
+    
+    if ($fileSize > 15 * 1024 * 1024) {
+        sendResponse('error', 'File size exceeds 15MB limit.', null, 400);
     }
 
-    $attachment_url = null;
+    $fileNameCmps = explode(".", $fileName);
+    $fileExtension = strtolower(end($fileNameCmps));
+    
+    $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif'];
+    if (!in_array($fileExtension, $allowedExtensions)) {
+        sendResponse('error', 'Invalid file type. Only PDF and images are allowed.', null, 400);
+    }
 
-    // Handle file upload if present
-    if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = __DIR__ . '/../../uploads/materials/';
+    $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
+    
+    require_once '../../config/aws-config.php';
+    
+    $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+    $s3_url = false;
+
+    if ($is_aws_configured) {
+        $s3_key = "class_materials/" . $newFileName;
+        $s3_url = uploadToS3($fileTmpPath, $s3_key);
+    }
+
+    if ($s3_url) {
+        $payload['file_url'] = $s3_url;
+        $payload['file_name'] = $fileName;
         
-        // Create directory if it doesn't exist
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+        if ($update_type === 'announcement' || $update_type === 'material') {
+            $update_type = ($fileExtension === 'pdf') ? 'pdf' : 'photo';
         }
-
-        // Validate file size (Max 50MB)
-        $max_size = 50 * 1024 * 1024;
-        if ($_FILES['file']['size'] > $max_size || $_FILES['file']['size'] == 0) {
-            sendResponse('error', 'File size exceeds the 50MB limit or is empty.', null, 400);
-        }
-
-        // Strict MIME type validation using Fileinfo
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $_FILES['file']['tmp_name']);
-        finfo_close($finfo);
-
-        $allowedMimeTypes = [
-            'application/pdf' => 'pdf',
-            'application/msword' => 'doc',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png'
-        ];
-        
-        if (!array_key_exists($mimeType, $allowedMimeTypes)) {
-            sendResponse('error', 'Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG', null, 400);
-        }
-
-        // Generate unique filename securely
-        $trusted_ext = $allowedMimeTypes[$mimeType];
-        $fileName = 'material_' . bin2hex(random_bytes(16)) . '.' . $trusted_ext;
-        
-        // AWS S3 UPLOAD LOGIC with Fallback
-        require_once '../../backend/config/aws-config.php';
-        
-        $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
-        $s3_url = false;
-
-        if ($is_aws_configured) {
-            // Define S3 Key (Path in bucket)
-            $s3_key = "materials/" . $fileName;
+    } else {
+        $destPath = $uploadDir . $newFileName;
+        if (move_uploaded_file($fileTmpPath, $destPath)) {
+            $payload['file_url'] = 'uploads/class_materials/' . $newFileName;
+            $payload['file_name'] = $fileName;
             
-            // Upload directly from temp location to S3
-            $s3_url = uploadToS3($_FILES['file']['tmp_name'], $s3_key);
-        }
-
-        if ($s3_url) {
-            $attachment_url = $s3_url;
-        } else {
-            // FALLBACK: Local Upload
-            $targetPath = $uploadDir . $fileName;
-            if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
-                $attachment_url = 'uploads/materials/' . $fileName;
-            } else {
-                $error = error_get_last();
-                sendResponse('error', 'Failed to save uploaded file (AWS and local fallback failed): ' . ($error['message'] ?? 'Unknown error'), null, 500);
-            }
-        }
-    }
-
-    // Process payload
-    $payloadData = [];
-    if ($attachment_url) {
-        $payloadData['attachment_url'] = $attachment_url;
-        $payloadData['file_url'] = $attachment_url; // Required by student app
-        $payloadData['url'] = $attachment_url;      // Fallback for student app
-    }
-
-    // Extract JSON_PAYLOAD from message if present to prevent truncation in TEXT column
-    if (strpos($raw_message, 'JSON_PAYLOAD:') !== false) {
-        $payloadMarker = 'JSON_PAYLOAD:';
-        $markerPos = strpos($raw_message, $payloadMarker);
-        $jsonStart = strpos($raw_message, '{', $markerPos);
-        if ($jsonStart !== false) {
-            $jsonStr = substr($raw_message, $jsonStart);
-            $parsedJson = json_decode($jsonStr, true);
-            if ($parsedJson) {
-                // Merge into payloadData
-                $payloadData = array_merge($payloadData, $parsedJson);
-            }
-            // Clear message or set to a fallback
-            $message = "New Worksheet Available";
-        }
-    }
-
-    // Support direct payload array from POST (new method)
-    $postPayload = isset($_POST['payload']) ? json_decode($_POST['payload'], true) : null;
-    if (is_array($postPayload)) {
-        $payloadData = array_merge($payloadData, $postPayload);
-    }
-
-    $payload = json_encode($payloadData);
-    
-    try {
-        $stmt = $pdo->prepare("
-            INSERT INTO class_updates (class_id, teacher_id, school_name, title, message, payload, update_type, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-        ");
-        
-        $stmt->execute([$class_id, $teacher_id, $school_name, $title, $message, $payload, $update_type]);
-        $update_id = $pdo->lastInsertId();
-
-        // Trigger push notification to students in this class
-        sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
-            'type' => 'worksheet',
-            'update_id' => $update_id,
-            'screen' => 'ClassUpdates'
-        ]);
-        
-        sendResponse('success', 'Material uploaded successfully', ['id' => $update_id], 201);
-    } catch (PDOException $e) {
-        // If strict mode rejects 'worksheet', fallback to 'material' instead of altering table
-        if (strpos($e->getMessage(), 'update_type') !== false || strpos($e->getMessage(), 'ENUM') !== false || strpos($e->getMessage(), 'Data truncated') !== false) {
-            try {
-                $update_type = 'material'; // Fallback to 'material' instead of 'pdf' so it shows up in worksheets tab
-                $stmt = $pdo->prepare("
-                    INSERT INTO class_updates (class_id, teacher_id, school_name, title, message, payload, update_type, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-                ");
-                $stmt->execute([$class_id, $teacher_id, $school_name, $title, $message, $payload, $update_type]);
-                $update_id = $pdo->lastInsertId();
-
-                // Trigger push notification to students in this class
-                sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
-                    'type' => 'worksheet',
-                    'update_id' => $update_id,
-                    'screen' => 'ClassUpdates'
-                ]);
-
-                sendResponse('success', 'Material uploaded successfully', ['id' => $update_id], 201);
-            } catch (PDOException $retryEx) {
-                file_put_contents('../../debug_log.txt', "PDOException Retry: " . $retryEx->getMessage() . "\n", FILE_APPEND);
-                sendResponse('error', 'Database error occurred: ' . $retryEx->getMessage(), ['error' => $retryEx->getMessage()], 500);
+            if ($update_type === 'announcement' || $update_type === 'material') {
+                $update_type = ($fileExtension === 'pdf') ? 'pdf' : 'photo';
             }
         } else {
-            file_put_contents('../../debug_log.txt', "PDOException: " . $e->getMessage() . "\n", FILE_APPEND);
-            sendResponse('error', 'Database error occurred: ' . $e->getMessage(), ['error' => $e->getMessage()], 500);
+            sendResponse('error', 'Error moving the uploaded file (AWS and local fallback failed).', null, 500);
         }
     }
+} else if ($update_type === 'pdf' || $update_type === 'photo') {
+    sendResponse('error', 'File is required for ' . $update_type . ' updates.', null, 400);
+}
+
+// 3. Insert into database
+try {
+    $stmt = $pdo->prepare("
+        INSERT INTO class_updates (teacher_id, school_name, class_id, update_type, title, message, payload)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ");
     
-} catch (Throwable $e) {
-    file_put_contents('../../debug_log.txt', "Throwable: " . $e->getMessage() . "\n", FILE_APPEND);
-    sendResponse('error', 'Server error occurred: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), null, 500);
+    $payloadJson = empty($payload) ? null : json_encode($payload);
+    
+    $stmt->execute([
+        $teacher_id,
+        $school_name,
+        $class_id,
+        $update_type,
+        $title,
+        $message,
+        $payloadJson
+    ]);
+    $update_id = $pdo->lastInsertId();
+
+    sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
+        'type' => 'worksheet',
+        'update_id' => $update_id,
+        'screen' => 'ClassUpdates'
+    ]);
+    
+    sendResponse('success', 'Material uploaded successfully!', null, 200);
+} catch (PDOException $e) {
+    if (strpos($e->getMessage(), 'update_type') !== false || strpos($e->getMessage(), 'ENUM') !== false || strpos($e->getMessage(), 'Data truncated') !== false) {
+        try {
+            $update_type = 'material';
+            $stmt->execute([
+                $teacher_id,
+                $school_name,
+                $class_id,
+                $update_type,
+                $title,
+                $message,
+                $payloadJson
+            ]);
+            $update_id = $pdo->lastInsertId();
+
+            sendClassPushNotifications($pdo, $class_id, "New Worksheet/Material: " . $title, $message, [
+                'type' => 'worksheet',
+                'update_id' => $update_id,
+                'screen' => 'ClassUpdates'
+            ]);
+
+            sendResponse('success', 'Material uploaded successfully!', null, 200);
+        } catch (PDOException $retryEx) {
+            error_log("Error saving class update after retry: " . $retryEx->getMessage());
+            sendResponse('error', 'Database error occurred: ' . $retryEx->getMessage(), ['error' => $retryEx->getMessage()], 500);
+        }
+    } else {
+        error_log("Error saving class update: " . $e->getMessage());
+        sendResponse('error', 'Database error occurred: ' . $e->getMessage(), ['error' => $e->getMessage()], 500);
+    }
 }
 ?>

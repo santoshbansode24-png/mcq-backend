@@ -13,12 +13,12 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
-// 1. Validate required text fields
-$teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : 0;
-$class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : 0;
-$update_type = isset($_POST['update_type']) ? $_POST['update_type'] : 'announcement';
-$title = isset($_POST['title']) ? trim($_POST['title']) : '';
-$message = isset($_POST['message']) ? trim($_POST['message']) : '';
+$input = getJsonInput();
+$teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : (isset($input['teacher_id']) ? intval($input['teacher_id']) : 0);
+$class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : (isset($input['class_id']) ? intval($input['class_id']) : 0);
+$update_type = isset($_POST['update_type']) ? $_POST['update_type'] : (isset($input['update_type']) ? $input['update_type'] : 'announcement');
+$title = isset($_POST['title']) ? trim($_POST['title']) : (isset($input['title']) ? trim($input['title']) : '');
+$message = isset($_POST['message']) ? trim($_POST['message']) : (isset($input['message']) ? trim($input['message']) : '');
 
 if ($teacher_id <= 0 || $class_id <= 0 || empty($title)) {
     sendResponse('error', 'Teacher ID, Class ID, and Title are required.', null, 400);
@@ -38,7 +38,8 @@ try {
     sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
 }
 
-$payload = isset($_POST['payload']) ? json_decode($_POST['payload'], true) : [];
+$rawPayload = $_POST['payload'] ?? $input['payload'] ?? [];
+$payload = is_array($rawPayload) ? $rawPayload : json_decode($rawPayload, true);
 if (!is_array($payload)) $payload = [];
 
 // 2. Handle File Upload if present

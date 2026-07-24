@@ -50,66 +50,77 @@ try {
         $class_levels = $stmt_resolve->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    // Fallback if no classrooms found
     if (empty($class_levels)) {
         $class_levels = $joined_ids;
     }
     $class_levels = array_unique(array_map('intval', $class_levels));
 
-    $inQueryClassrooms = !empty($joined_ids) ? implode(',', array_fill(0, count($joined_ids), '?')) : '0';
-    $inQueryStandards = !empty($class_levels) ? implode(',', array_fill(0, count($class_levels), '?')) : '0';
+    $notifications = [];
 
-    $query = "
-        SELECT 
-            cu.update_id as notification_id,
-            cu.teacher_id,
-            cu.class_id,
-            CONVERT(cu.school_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as school_name,
-            CONVERT(cu.title USING utf8mb4) COLLATE utf8mb4_unicode_ci as title,
-            CONVERT(cu.message USING utf8mb4) COLLATE utf8mb4_unicode_ci as message,
-            CONVERT(cu.update_type USING utf8mb4) COLLATE utf8mb4_unicode_ci as update_type,
-            CONVERT(cu.payload USING utf8mb4) COLLATE utf8mb4_unicode_ci as payload,
-            cu.created_at,
-            CONVERT(COALESCE(u.name, 'Teacher') USING utf8mb4) COLLATE utf8mb4_unicode_ci as teacher_name 
-        FROM class_updates cu
-        LEFT JOIN users u ON cu.teacher_id = u.user_id
-        WHERE cu.class_id IN ($inQueryClassrooms)
-          AND cu.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        
-        UNION ALL
-        
-        SELECT 
-            n.notification_id,
-            n.teacher_id,
-            n.class_id,
-            NULL as school_name,
-            CONVERT(n.title USING utf8mb4) COLLATE utf8mb4_unicode_ci as title,
-            CONVERT(n.message USING utf8mb4) COLLATE utf8mb4_unicode_ci as message,
-            'announcement' as update_type,
-            NULL as payload,
-            n.created_at,
-            CONVERT(COALESCE(u.name, 'Teacher') USING utf8mb4) COLLATE utf8mb4_unicode_ci as teacher_name 
-        FROM notifications n
-        LEFT JOIN users u ON n.teacher_id = u.user_id
-        WHERE n.class_id IN ($inQueryStandards)
-          AND n.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        
-        ORDER BY created_at DESC
-        LIMIT 100
-    ";
-    
-    $params = array_merge($joined_ids, $class_levels);
-    $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
-    $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Query 1: Fetch class_updates
+    if (!empty($joined_ids)) {
+        $inQueryClassrooms = implode(',', array_fill(0, count($joined_ids), '?'));
+        $stmt1 = $pdo->prepare("
+            SELECT 
+                cu.update_id as notification_id,
+                cu.teacher_id,
+                cu.class_id,
+                cu.school_name,
+                cu.title,
+                cu.message,
+                cu.update_type,
+                cu.payload,
+                cu.created_at,
+                COALESCE(u.name, 'Teacher') as teacher_name 
+            FROM class_updates cu
+            LEFT JOIN users u ON cu.teacher_id = u.user_id
+            WHERE cu.class_id IN ($inQueryClassrooms)
+              AND cu.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            ORDER BY cu.created_at DESC
+            LIMIT 50
+        ");
+        $stmt1->execute($joined_ids);
+        $notifications = array_merge($notifications, $stmt1->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    // Query 2: Fetch legacy notifications
+    if (!empty($class_levels)) {
+        $inQueryStandards = implode(',', array_fill(0, count($class_levels), '?'));
+        $stmt2 = $pdo->prepare("
+            SELECT 
+                n.notification_id,
+                n.teacher_id,
+                n.class_id,
+                NULL as school_name,
+                n.title,
+                n.message,
+                'announcement' as update_type,
+                NULL as payload,
+                n.created_at,
+                COALESCE(u.name, 'Teacher') as teacher_name 
+            FROM notifications n
+            LEFT JOIN users u ON n.teacher_id = u.user_id
+            WHERE n.class_id IN ($inQueryStandards)
+              AND n.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            ORDER BY n.created_at DESC
+            LIMIT 50
+        ");
+        $stmt2->execute($class_levels);
+        $notifications = array_merge($notifications, $stmt2->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    // Sort merged list by created_at DESC in PHP
+    usort($notifications, function ($a, $b) {
+        return strtotime($b['created_at']) - strtotime($a['created_at']);
+    });
 
     foreach ($notifications as $key => $n) {
-        if (!empty($n['payload'])) {
+        if (!empty($n['payload']) && is_string($n['payload'])) {
             $notifications[$key]['payload'] = json_decode($n['payload'], true);
         }
     }
     
-    sendResponse('success', 'Notifications fetched successfully', $notifications, 200);
+    sendResponse('success', 'Notifications fetched successfully', array_values($notifications), 200);
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);
 }

@@ -13,7 +13,10 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
-$input = getJsonInput();
+$rawInput = file_get_contents('php://input');
+$input = !empty($rawInput) ? json_decode($rawInput, true) : [];
+if (!is_array($input)) $input = [];
+
 $teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : (isset($input['teacher_id']) ? intval($input['teacher_id']) : 0);
 $class_id = isset($_POST['class_id']) ? intval($_POST['class_id']) : (isset($input['class_id']) ? intval($input['class_id']) : 0);
 $update_type = isset($_POST['update_type']) ? $_POST['update_type'] : (isset($input['update_type']) ? $input['update_type'] : 'announcement');

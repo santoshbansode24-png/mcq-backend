@@ -4,6 +4,7 @@
  * Veeru
  */
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: text/event-stream");
 header("Cache-Control: no-cache");
 header("Connection: keep-alive");
@@ -19,14 +20,14 @@ if (!checkRateLimit(15, 60)) {
 
 function sendChunk($data) {
     echo "data: " . json_encode($data) . "\n\n";
-    if (ob_get_level() > 0) {
-        @ob_flush();
+    while (ob_get_level() > 0) {
+        @ob_end_flush();
     }
     @flush();
 }
 
-$jsonInput = [];
 $rawInput = file_get_contents('php://input');
+$jsonInput = [];
 if (!empty($rawInput)) {
     $decoded = json_decode($rawInput, true);
     if (is_array($decoded)) {
@@ -35,9 +36,9 @@ if (!empty($rawInput)) {
 }
 
 $file = $_FILES['image'] ?? null;
-$userText = $_POST['user_text'] ?? ($jsonInput['user_text'] ?? ($jsonInput['text'] ?? ($jsonInput['question'] ?? '')));
+$userText = $_POST['user_text'] ?? ($_POST['text'] ?? ($_POST['question'] ?? ($jsonInput['user_text'] ?? ($jsonInput['text'] ?? ($jsonInput['question'] ?? ($jsonInput['prompt'] ?? ''))))));
 $language = $_POST['language'] ?? ($jsonInput['language'] ?? 'English');
-$imageBase64 = $_POST['image_base64'] ?? ($jsonInput['image_base64'] ?? ($jsonInput['image'] ?? null));
+$imageBase64 = $_POST['image_base64'] ?? ($_POST['image'] ?? ($jsonInput['image_base64'] ?? ($jsonInput['image'] ?? ($jsonInput['imageData'] ?? null))));
 
 if (!$file && empty($userText) && empty($imageBase64)) {
     sendChunk(['status' => 'error', 'message' => 'Please provide an image or question text.']);

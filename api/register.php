@@ -94,10 +94,16 @@ try {
     $subscription_status = 'active'; // Default to active for now
     $subscription_expiry = date('Y-m-d', strtotime('+30 days')); // 30 days trial/active
     
+    // Optional security_pin
+    $security_pin = isset($input['security_pin']) ? trim($input['security_pin']) : null;
+    if (!empty($security_pin) && !preg_match('/^\d{4}$/', $security_pin)) {
+        sendResponse('error', 'Security PIN must be exactly 4 digits', null, 400);
+    }
+
     // Insert new user
     $insertStmt = $pdo->prepare("
-        INSERT INTO users (name, email, mobile, password, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO users (name, email, mobile, password, security_pin, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
 
     $insertStmt->execute([
@@ -105,6 +111,7 @@ try {
         $email,
         $mobile,
         $hashed_password, 
+        $security_pin,
         $user_type, 
         $subscription_status, 
         $subscription_expiry,

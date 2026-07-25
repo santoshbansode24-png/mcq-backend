@@ -27,6 +27,19 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
+// Handle Admin Password & PIN Reset
+if (isset($_GET['reset_pass'])) {
+    $id = intval($_GET['reset_pass']);
+    $temp_pass = 'Student@123';
+    $temp_pin = '1234';
+    $hashed = password_hash($temp_pass, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("UPDATE users SET password = ?, security_pin = ? WHERE user_id = ? AND user_type != 'admin'");
+    $stmt->execute([$hashed, $temp_pin, $id]);
+    $_SESSION['admin_msg'] = "Password reset successfully for User #$id! Temp Password: $temp_pass | Security PIN: $temp_pin";
+    header('Location: users.php');
+    exit();
+}
+
 // Handle Add User
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -194,6 +207,12 @@ $classes = $classes_query->fetchAll();
             </form>
         </div>
 
+        <?php if (isset($_SESSION['admin_msg'])): ?>
+            <div class="alert" style="background: #d1e7dd; color: #0f5132; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: bold;">
+                <?php echo htmlspecialchars($_SESSION['admin_msg']); unset($_SESSION['admin_msg']); ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Users List -->
         <div class="card">
             <h2>All Users (Updated)</h2>
@@ -203,6 +222,7 @@ $classes = $classes_query->fetchAll();
                         <th>Name</th>
                         <th>Email</th>
                         <th>Phone</th>
+                        <th>Security PIN</th>
                         <th>Type</th>
                         <th>Class</th>
                         <th>Joined</th>
@@ -215,6 +235,7 @@ $classes = $classes_query->fetchAll();
                         <td><?php echo htmlspecialchars($user['name']); ?></td>
                         <td><?php echo htmlspecialchars($user['email']); ?></td>
                         <td><?php echo htmlspecialchars($user['mobile'] ?? '-'); ?></td>
+                        <td><strong><?php echo htmlspecialchars($user['security_pin'] ?? 'Not Set'); ?></strong></td>
                         <td>
                             <span class="badge badge-<?php echo $user['user_type']; ?>">
                                 <?php echo ucfirst($user['user_type']); ?>
@@ -223,6 +244,7 @@ $classes = $classes_query->fetchAll();
                         <td><?php echo $user['class_name'] ?? '-'; ?></td>
                         <td><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
                         <td>
+                            <a href="?reset_pass=<?php echo $user['user_id']; ?>" style="color: #0284c7; text-decoration: none; font-weight: bold; margin-right: 10px;" onclick="return confirm('Reset password for <?php echo htmlspecialchars($user['name']); ?> to Student@123 and PIN to 1234?')">🔑 Reset Pass</a>
                             <a href="?delete=<?php echo $user['user_id']; ?>" class="btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
                         </td>
                     </tr>

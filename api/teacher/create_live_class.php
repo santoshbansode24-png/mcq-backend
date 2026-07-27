@@ -4,7 +4,7 @@
  * Veeru
  * 
  * Endpoint: POST /api/teacher/create_live_class.php
- * Purpose: Authenticates with Admin's YouTube Refresh Token and creates a Live Broadcast and Stream
+ * Purpose: Creates a Live Class session using YouTube Video ID, URL, or Permanent Channel Handle (Method 1: Zero Cost, Zero Server Storage)
  */
 
 require_once '../../config/db.php';
@@ -12,29 +12,6 @@ if (file_exists(__DIR__ . '/../../config/secrets.php')) {
     require_once __DIR__ . '/../../config/secrets.php';
 }
 require_once '../cors_middleware.php';
-
-if (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
-    require_once __DIR__ . '/../../vendor/autoload.php';
-} elseif (file_exists(__DIR__ . '/../../../vendor/autoload.php')) {
-    require_once __DIR__ . '/../../../vendor/autoload.php';
-} else {
-    sendResponse('error', 'Autoloader not found. Please contact the administrator.', null, 500);
-}
-
-if (!defined('GOOGLE_CLIENT_ID')) {
-    $cid1 = '1047709706514';
-    $cid2 = 'o46ho477qi3em7o1jncubheu59qe1tk2.apps.googleusercontent.com';
-    define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: ($cid1 . '-' . $cid2));
-}
-if (!defined('GOOGLE_CLIENT_SECRET')) {
-    $sec1 = 'GOCSPX';
-    $sec2 = 'CbWxa50MpHvSyYGK5T_RdnhZz8iZ';
-    define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: ($sec1 . '-' . $sec2));
-}
-if (!defined('YOUTUBE_REFRESH_TOKEN')) {
-    define('YOUTUBE_REFRESH_TOKEN', getenv('YOUTUBE_REFRESH_TOKEN') ?: '');
-}
-
 require_once '../../config/push_notifications.php';
 
 // Only allow POST requests
@@ -57,88 +34,37 @@ $class_id = (int)$input['class_id'];
 $title = substr($input['title'], 0, 100);
 $scheduled_time = $input['scheduled_time'] ?? date('Y-m-d\TH:i:sP'); // default to now
 $message = $input['message'] ?? '';
+$youtube_input = $input['youtube_id'] ?? $input['youtube_url'] ?? $input['youtube_link'] ?? $input['youtube_handle'] ?? '';
 
-// Load refresh token dynamically from database for the teacher, fallback to global constant
-$refresh_token = '';
-if (isset($pdo) && $teacher_id > 0) {
-    try {
-        $stmt = $pdo->prepare("SELECT youtube_refresh_token FROM users WHERE user_id = ? AND user_type = 'teacher'");
-        $stmt->execute([$teacher_id]);
-        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($teacher && !empty($teacher['youtube_refresh_token'])) {
-            $refresh_token = $teacher['youtube_refresh_token'];
-        }
-    } catch (PDOException $e) {
-        error_log("Failed to load teacher YouTube token: " . $e->getMessage());
+/**
+ * Helper function to extract 11-character YouTube Video ID or Handle
+ */
+function parseYouTubeInput($urlOrId) {
+    if (empty($urlOrId)) return ['type' => 'empty', 'val' => ''];
+    $urlOrId = trim($urlOrId);
+    
+    // Check if 11-character raw Video ID
+    if (preg_match('/^[a-zA-Z0-9_-]{11}$/', $urlOrId)) {
+        return ['type' => 'video_id', 'val' => $urlOrId];
     }
+    
+    // Check for standard YouTube Video URLs
+    if (preg_match('/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/))([\w-]{11})/', $urlOrId, $matches)) {
+        return ['type' => 'video_id', 'val' => $matches[1]];
+    }
+
+    // Check for Channel Handle URL (e.g. youtube.com/@ChannelHandle or @ChannelHandle)
+    if (preg_match('/(?:youtube\.com\/)?(@[\w\.-]+)/', $urlOrId, $handleMatches)) {
+        return ['type' => 'handle', 'val' => $handleMatches[1]];
+    }
+
+    return ['type' => 'raw', 'val' => $urlOrId];
 }
 
-if (empty($refresh_token)) {
-    $refresh_token = YOUTUBE_REFRESH_TOKEN;
-}
-
-if (empty($refresh_token)) {
-    sendResponse('error', 'YouTube account is not linked. Please connect your YouTube account first.', null, 400);
-}
+$parsed = parseYouTubeInput($youtube_input);
 
 try {
-    // 1. Initialize Google Client
-    $client = new Google\Client();
-    $client->setClientId(GOOGLE_CLIENT_ID);
-    $client->setClientSecret(GOOGLE_CLIENT_SECRET);
-    $client->addScope(Google_Service_YouTube::YOUTUBE);
-    $client->refreshToken($refresh_token);
-
-    $youtube = new Google_Service_YouTube($client);
-
-    // 2. Create a Live Broadcast
-    $broadcastSnippet = new Google_Service_YouTube_LiveBroadcastSnippet();
-    $broadcastSnippet->setTitle($title . " - Veeru Live Class");
-    $broadcastSnippet->setScheduledStartTime($scheduled_time);
-
-    $broadcastStatus = new Google_Service_YouTube_LiveBroadcastStatus();
-    $broadcastStatus->setPrivacyStatus('unlisted'); // 'unlisted' so it only plays inside the app
-
-    $broadcastInsert = new Google_Service_YouTube_LiveBroadcast();
-    $broadcastInsert->setSnippet($broadcastSnippet);
-    $broadcastInsert->setStatus($broadcastStatus);
-    
-    // Sometimes Google requires 'contentDetails' setup
-    $broadcastDetails = new Google_Service_YouTube_LiveBroadcastContentDetails();
-    $broadcastDetails->setEnableAutoStart(true);
-    $broadcastDetails->setEnableAutoStop(true);
-    $broadcastInsert->setContentDetails($broadcastDetails);
-
-    $broadcastsResponse = $youtube->liveBroadcasts->insert('snippet,status,contentDetails', $broadcastInsert);
-    $videoId = $broadcastsResponse->getId();
-
-    // 3. Create a Live Stream
-    $streamSnippet = new Google_Service_YouTube_LiveStreamSnippet();
-    $streamSnippet->setTitle("Stream for " . $title);
-
-    $cdn = new Google_Service_YouTube_CdnSettings();
-    $cdn->setFormat("720p");
-    $cdn->setIngestionType("rtmp");
-
-    $streamInsert = new Google_Service_YouTube_LiveStream();
-    $streamInsert->setSnippet($streamSnippet);
-    $streamInsert->setCdn($cdn);
-
-    $streamsResponse = $youtube->liveStreams->insert('snippet,cdn', $streamInsert);
-    $streamId = $streamsResponse->getId();
-
-    // The RTMP URL and Stream Key that the Teacher App needs
-    $rtmpUrl = $streamsResponse->getCdn()->getIngestionInfo()->getIngestionAddress();
-    $streamName = $streamsResponse->getCdn()->getIngestionInfo()->getStreamName();
-
-    // 4. Bind Broadcast to Stream
-    $bindResponse = $youtube->liveBroadcasts->bind(
-        $videoId,
-        'id,contentDetails',
-        ['streamId' => $streamId]
-    );
-
-    // Self-healing: Ensure live class tables exist and update_type ENUM is expanded
+    // 1. Self-healing DB setup: Ensure columns and live class tables exist
     try {
         $pdo->exec("
         CREATE TABLE IF NOT EXISTS live_class_attendance (
@@ -171,62 +97,94 @@ try {
             KEY idx_class_update (class_update_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         ");
-        // Expand update_type ENUM for class_updates
+        // Ensure youtube_channel_handle column exists in users table
+        $checkCol = $pdo->query("SHOW COLUMNS FROM users LIKE 'youtube_channel_handle'")->fetch();
+        if (!$checkCol) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN youtube_channel_handle VARCHAR(100) DEFAULT NULL");
+        }
+        // Expand update_type ENUM for class_updates if needed
         $pdo->exec("ALTER TABLE class_updates MODIFY COLUMN update_type ENUM('announcement', 'homework', 'exam', 'material', 'worksheet', 'photo', 'pdf', 'live_class', 'live_exam') DEFAULT 'announcement'");
     } catch (PDOException $dbEx) {
-        error_log("Self-healing live class DB setup failed: " . $dbEx->getMessage());
+        error_log("Self-healing live class DB setup notice: " . $dbEx->getMessage());
     }
 
-    // 5. Save the live class record in the database
-    // Get teacher's school_name
-    $teacherStmt = $pdo->prepare("SELECT school_name FROM users WHERE user_id = ? AND user_type = 'teacher'");
+    // 2. Fetch teacher's school_name, youtube_channel_handle, and youtube_channel_id
+    $teacherStmt = $pdo->prepare("SELECT school_name, youtube_channel_id, youtube_channel_handle FROM users WHERE user_id = ? AND user_type = 'teacher'");
     $teacherStmt->execute([$teacher_id]);
     $teacher = $teacherStmt->fetch(PDO::FETCH_ASSOC);
     $school_name = ($teacher && !empty($teacher['school_name'])) ? $teacher['school_name'] : '';
 
-    // Construct payload JSON string matching student app expectations
+    $videoId = '';
+    $youtubeUrl = '';
+    $channelHandle = '';
+    $channelId = '';
+
+    if ($parsed['type'] === 'video_id') {
+        $videoId = $parsed['val'];
+        $youtubeUrl = "https://www.youtube.com/watch?v=" . $videoId;
+    } elseif ($parsed['type'] === 'handle') {
+        $channelHandle = $parsed['val'];
+        $youtubeUrl = "https://www.youtube.com/" . $channelHandle . "/live";
+    } else {
+        // Fallback to teacher's saved channel handle or channel ID if no input link was provided
+        if (!empty($teacher['youtube_channel_handle'])) {
+            $channelHandle = $teacher['youtube_channel_handle'];
+            $youtubeUrl = "https://www.youtube.com/" . $channelHandle . "/live";
+        } elseif (!empty($teacher['youtube_channel_id'])) {
+            $channelId = $teacher['youtube_channel_id'];
+            $youtubeUrl = "https://www.youtube.com/embed/live_stream?channel=" . $channelId;
+        } else {
+            $youtubeUrl = $parsed['val'];
+        }
+    }
+
+    // 3. Construct JSON payload for student player & live activity
     $payload = json_encode([
         'youtube_id' => $videoId,
+        'youtube_url' => $youtubeUrl,
+        'channel_handle' => $channelHandle,
+        'channel_id' => $channelId,
+        'status' => 'live',
         'scheduled_time' => date('Y-m-d H:i:s', strtotime($scheduled_time))
     ]);
 
-    // Insert into class_updates table
+    // 4. Save live class update into class_updates table
     $stmt = $pdo->prepare("
         INSERT INTO class_updates (teacher_id, school_name, class_id, update_type, title, message, payload, created_at) 
         VALUES (?, ?, ?, 'live_class', ?, ?, ?, NOW())
     ");
     $stmt->execute([$teacher_id, $school_name, $class_id, $title, $message, $payload]);
+    $class_update_id = $pdo->lastInsertId();
 
-    // Trigger instant push notification to all students in the class
-    sendClassPushNotifications(
-        $pdo,
-        $class_id,
-        "🔴 LIVE CLASS STARTED: " . $title,
-        !empty($message) ? $message : "Your teacher has started a live video class. Join now!",
-        [
-            'type' => 'announcement',
-            'screen' => 'ClassUpdates'
-        ]
-    );
+    // 5. Send instant push notifications to all enrolled students in the class
+    try {
+        sendClassPushNotifications(
+            $pdo,
+            $class_id,
+            "🔴 LIVE CLASS STARTED: " . $title,
+            !empty($message) ? $message : "Your teacher has started a live video class. Join now to watch!",
+            [
+                'type' => 'live_class',
+                'screen' => 'ClassUpdates',
+                'class_update_id' => (int)$class_update_id,
+                'youtube_id' => $videoId,
+                'youtube_url' => $youtubeUrl
+            ]
+        );
+    } catch (Exception $pushEx) {
+        error_log("Push Notification Notice: " . $pushEx->getMessage());
+    }
 
-    sendResponse('success', 'Live Class created on YouTube successfully', [
+    sendResponse('success', 'Live Class session started successfully', [
+        'class_update_id' => (int)$class_update_id,
         'youtube_id' => $videoId,
-        'rtmp_url' => $rtmpUrl,
-        'stream_key' => $streamName,
-        'broadcast_id' => $videoId,
-        'stream_id' => $streamId
+        'youtube_url' => $youtubeUrl,
+        'channel_handle' => $channelHandle,
+        'status' => 'live'
     ], 200);
 
-} catch (Google_Service_Exception $e) {
-    error_log("YouTube API Error: " . $e->getMessage());
-    $errorObj = json_decode($e->getMessage());
-    $errorMessage = $errorObj->error->message ?? $e->getMessage();
-    sendResponse('error', 'YouTube API Error: ' . $errorMessage, null, 500);
-} catch (Google_Exception $e) {
-    error_log("Google Client Error: " . $e->getMessage());
-    sendResponse('error', 'Google Client Error', null, 500);
 } catch (PDOException $e) {
-    error_log("Database Error: " . $e->getMessage());
-    sendResponse('error', 'Database error occurred', null, 500);
+    error_log("Database Error in create_live_class: " . $e->getMessage());
+    sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
 }
 ?>

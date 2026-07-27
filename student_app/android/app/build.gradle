@@ -92,8 +92,8 @@ android {
         applicationId 'com.veeru.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 45
-        versionName "1.0.45"
+        versionCode 55
+        versionName "1.0.55"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -105,7 +105,7 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('../../../scratch/keystore_three/@virajbansode__mcq-student-app-keystore.bak.jks')
+            storeFile file('upload-release-key.jks')
             storePassword '8b57c1018b1e321a85cdfe919a10baf6'
             keyAlias '374d462d84eeefca6271287f763bd8f3'
             keyPassword 'e72b4175874f9d6b88083f8c2cec7686'

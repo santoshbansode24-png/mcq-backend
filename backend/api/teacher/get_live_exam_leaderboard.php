@@ -40,7 +40,59 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
     
-    // Query actual submissions from class_exam_results
+    // Calculate overall class rankings for all students in this class
+    $stmt_cr = $pdo->prepare("SELECT COUNT(*) FROM classrooms WHERE class_id = ?");
+    $stmt_cr->execute([$class_id]);
+    $is_classroom = $stmt_cr->fetchColumn() > 0;
+
+    if ($is_classroom) {
+        $overallQuery = "SELECT 
+                            u.user_id, 
+                            COALESCE(SUM(ms.mcq_score), 0) as overall_score
+                          FROM users u
+                          JOIN student_class_mapping scm ON u.user_id = scm.student_id
+                          LEFT JOIN student_progress ms ON u.user_id = ms.user_id
+                          WHERE scm.class_id = ? AND u.user_type = 'student'
+                          GROUP BY u.user_id
+                          ORDER BY overall_score DESC";
+    } else {
+        $overallQuery = "SELECT 
+                            u.user_id, 
+                            COALESCE(SUM(ms.mcq_score), 0) as overall_score
+                          FROM users u
+                          LEFT JOIN student_progress ms ON u.user_id = ms.user_id
+                          WHERE u.class_id = ? AND u.user_type = 'student'
+                          GROUP BY u.user_id
+                          ORDER BY overall_score DESC";
+    }
+    
+    $overallStmt = $pdo->prepare($overallQuery);
+    $overallStmt->execute([$class_id]);
+    $overallResults = $overallStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $overallRankMap = [];
+    $overallScoreMap = [];
+    $oRank = 1;
+    foreach ($overallResults as $oRow) {
+        $uId = (int)$oRow['user_id'];
+        $overallRankMap[$uId] = $oRank++;
+        $overallScoreMap[$uId] = (int)$oRow['overall_score'];
+    }
+
+    // Find all potential matching update_ids (either live_exams.id or class_updates.update_id)
+    $updateIdsToMatch = [$live_exam_id];
+    try {
+        $cuStmt = $pdo->prepare("SELECT update_id FROM class_updates WHERE update_type = 'live_exam' AND (payload LIKE ? OR payload LIKE ?)");
+        $cuStmt->execute(['%"exam_id":' . $live_exam_id . '%', '%"exam_id": "' . $live_exam_id . '"%']);
+        $cuIds = $cuStmt->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($cuIds as $cId) {
+            $updateIdsToMatch[] = (int)$cId;
+        }
+    } catch (Throwable $t) {}
+
+    $placeholders = implode(',', array_fill(0, count($updateIdsToMatch), '?'));
+
+    // Query actual submissions from class_exam_results for this live exam
     $query = "SELECT 
                 u.user_id as id, 
                 u.name as full_name, 
@@ -52,14 +104,13 @@ try {
                 CASE WHEN r.total > 0 THEN ROUND((r.correct / r.total * 100), 2) ELSE 0.0 END as percentage
               FROM users u
               JOIN class_exam_results r ON u.user_id = r.user_id
-              WHERE r.update_id = ?
-                AND u.class_id = ? 
+              WHERE r.update_id IN ($placeholders)
                 AND u.user_type = 'student'
               ORDER BY total_score DESC, percentage DESC, r.time_seconds ASC
               LIMIT 50";
               
     $stmt = $pdo->prepare($query);
-    $stmt->execute([$live_exam_id, $class_id]);
+    $stmt->execute($updateIdsToMatch);
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $leaderboard = [];
@@ -67,7 +118,11 @@ try {
 
     if ($result) {
         foreach ($result as $row) {
-            $row['rank'] = $rank++;
+            $uId = (int)$row['id'];
+            $row['rank'] = $rank;
+            $row['exam_rank'] = $rank++;
+            $row['overall_rank'] = $overallRankMap[$uId] ?? null;
+            $row['overall_score'] = $overallScoreMap[$uId] ?? 0;
             $row['total_score'] = (int)$row['total_score'];
             $row['incorrect'] = (int)($row['incorrect'] ?? 0);
             $row['unanswered'] = (int)($row['unanswered'] ?? 0);

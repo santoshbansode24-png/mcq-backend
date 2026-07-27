@@ -3,229 +3,197 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
-import { API_URL } from '../api/config';
+import { API_URL, BASE_URL } from '../api/config';
 import { useTheme } from '../context/ThemeContext';
 
 const ForgotPasswordScreen = ({ navigation }) => {
     const { theme } = useTheme();
-    const [step, setStep] = useState(1); // 1: Send OTP, 2: Verify & Reset
     const [email, setEmail] = useState('');
-    const [otp, setOtp] = useState('');
+    const [mobile, setMobile] = useState('');
+    const [pin, setPin] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSendOTP = async () => {
+    const handleResetPassword = async () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email || !emailRegex.test(email.trim())) {
-            Alert.alert('Invalid Email Address', 'Please enter a valid email address');
+            Alert.alert('Invalid Email Address', 'Please enter a valid email address.');
             return;
         }
 
-        setLoading(true);
-        try {
-            const response = await axios.post(`${API_URL}/send_otp.php`, {
-                email: email.trim()
-            });
-
-            if (response.data.status === 'success') {
-                Alert.alert('OTP Sent', response.data.message);
-                setStep(2);
-            } else {
-                Alert.alert('Error', response.data.message || 'Failed to send OTP');
-            }
-        } catch (error) {
-            console.log("OTP Send Error:", error.response?.data || error.message);
-            if (error.response) {
-                Alert.alert('Error', error.response.data.message || 'Failed to send OTP');
-            } else {
-                Alert.alert('Error', 'Network error. Please check your connection.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleResetPassword = async () => {
-        if (!otp || otp.length < 6) {
-            Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP');
+        if (!mobile || mobile.trim().length !== 10) {
+            Alert.alert('Invalid Mobile Number', 'Please enter a 10-digit mobile number.');
             return;
         }
+
+        if (!pin || pin.trim().length !== 4) {
+            Alert.alert('Invalid PIN', 'Security PIN must be exactly 4 digits.');
+            return;
+        }
+
         if (!newPassword || newPassword.length < 6) {
-            Alert.alert('Invalid Password', 'Password must be at least 6 characters');
+            Alert.alert('Invalid Password', 'Password must be at least 6 characters.');
             return;
         }
+
         if (newPassword !== confirmPassword) {
-            Alert.alert('Mismatch', 'Passwords do not match');
+            Alert.alert('Mismatch', 'New password and confirm password do not match.');
             return;
         }
 
         setLoading(true);
         try {
-            // Step 1: Verify OTP
-            const verifyResponse = await axios.post(`${API_URL}/verify_otp.php`, {
+            // Target the root or API forgot password endpoint
+            const endpoint = `${API_URL}/forgot_password.php`;
+            const response = await axios.post(endpoint, {
                 email: email.trim(),
-                otp_code: otp
-            });
-
-            if (verifyResponse.data.status !== 'success') {
-                Alert.alert('Error', verifyResponse.data.message || 'Invalid OTP');
-                setLoading(false);
-                return;
-            }
-
-            // Step 2: Reset Password
-            // NOTE: sendResponse() wraps data inside a 'data' key: { status, message, data: { user_id, ... } }
-            const resetResponse = await axios.post(`${API_URL}/reset_password.php`, {
-                user_id: verifyResponse.data.data?.user_id,
-                reset_token: verifyResponse.data.data?.reset_token,
+                mobile: mobile.trim(),
+                security_pin: pin.trim(),
                 new_password: newPassword
             });
 
-            if (resetResponse.data.status === 'success') {
-                Alert.alert('Success', 'Password has been reset successfully!', [
+            if (response.data && response.data.status === 'success') {
+                Alert.alert('Password Reset Success 🎉', 'Your password has been reset successfully! You can now log in with your new password.', [
                     { text: 'Login Now', onPress: () => navigation.navigate('Login') }
                 ]);
             } else {
-                Alert.alert('Error', resetResponse.data.message || 'Failed to reset password');
+                Alert.alert('Reset Failed', response.data?.message || 'Failed to reset password. Please check your details.');
             }
         } catch (error) {
-            console.log("OTP Verify Error:", error.response?.data || error.message);
-            if (error.response) {
-                Alert.alert('Error', error.response.data.message || 'Failed to reset password');
-            } else {
-                Alert.alert('Error', 'Network error. Please check your connection.');
-            }
+            console.log("Forgot Password Error:", error.response?.data || error.message);
+            const msg = error.response?.data?.message || 'Failed to reset password. If you forgot your PIN, please ask your Teacher or Admin.';
+            Alert.alert('Reset Error', msg);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
+        <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            style={[styles.container, { backgroundColor: theme.colors.background }]}
         >
-            <LinearGradient
-                colors={['#4f46e5', '#3b82f6', '#f8fafc']}
-                locations={[0, 0.4, 1]}
-                style={styles.backgroundGradient}
-            />
-
-            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="white" />
-                </TouchableOpacity>
-
-                <View style={styles.headerContainer}>
-                    <Text style={styles.title}>FORGOT PASSWORD</Text>
-                    <Text style={styles.subtitle}>
-                        {step === 1 ? 'Enter your registered email address' : 'Enter OTP and new password'}
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Header Section */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+                    </TouchableOpacity>
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="key-outline" size={40} color="#4F46E5" />
+                    </View>
+                    <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Forgot Password?</Text>
+                    <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                        Enter your Registered Email, Mobile Number, and 4-Digit Security PIN to reset your password.
                     </Text>
                 </View>
 
-                <View style={styles.formContainer}>
-                    {step === 1 ? (
-                        <>
-                            <View style={styles.inputWrapper}>
-                                <Text style={styles.label}>EMAIL ADDRESS</Text>
-                                <View style={styles.inputContainer}>
-                                    <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter your registered email"
-                                        placeholderTextColor="#94a3b8"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                    />
-                                </View>
-                            </View>
+                {/* Form Section */}
+                <View style={[styles.card, { backgroundColor: theme.colors.cardBackground, borderColor: theme.colors.border }]}>
+                    <View style={styles.inputContainer}>
+                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Registered Email ID</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
+                            <Ionicons name="mail-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                placeholder="student@example.com"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+                        </View>
+                    </View>
 
-                            <TouchableOpacity
-                                style={styles.buttonShadow}
-                                activeOpacity={0.8}
-                                onPress={handleSendOTP}
-                                disabled={loading}
-                            >
-                                <LinearGradient
-                                    colors={['#4f46e5', '#6366f1']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.actionButton}
-                                >
-                                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>SEND OTP</Text>}
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <>
-                            <View style={styles.inputWrapper}>
-                                <Text style={styles.label}>ENTER OTP</Text>
-                                <View style={styles.inputContainer}>
-                                    <Ionicons name="key-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="6-digit OTP"
-                                        placeholderTextColor="#94a3b8"
-                                        keyboardType="number-pad"
-                                        maxLength={6}
-                                        value={otp}
-                                        onChangeText={setOtp}
-                                    />
-                                </View>
-                            </View>
+                    <View style={styles.inputContainer}>
+                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Registered Mobile Number</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
+                            <Ionicons name="call-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                placeholder="10-digit mobile number"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={mobile}
+                                onChangeText={setMobile}
+                                keyboardType="phone-pad"
+                                maxLength={10}
+                            />
+                        </View>
+                    </View>
 
-                            <View style={styles.inputWrapper}>
-                                <Text style={styles.label}>NEW PASSWORD</Text>
-                                <View style={styles.inputContainer}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="New Password"
-                                        placeholderTextColor="#94a3b8"
-                                        secureTextEntry
-                                        value={newPassword}
-                                        onChangeText={setNewPassword}
-                                    />
-                                </View>
-                            </View>
+                    <View style={styles.inputContainer}>
+                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>4-Digit Security PIN</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
+                            <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                placeholder="e.g. 1234"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={pin}
+                                onChangeText={setPin}
+                                keyboardType="number-pad"
+                                maxLength={4}
+                                secureTextEntry={true}
+                            />
+                        </View>
+                    </View>
 
-                            <View style={styles.inputWrapper}>
-                                <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
-                                <View style={styles.inputContainer}>
-                                    <Ionicons name="shield-checkmark-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Confirm Password"
-                                        placeholderTextColor="#94a3b8"
-                                        secureTextEntry
-                                        value={confirmPassword}
-                                        onChangeText={setConfirmPassword}
-                                    />
-                                </View>
-                            </View>
+                    <View style={styles.inputContainer}>
+                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>New Password</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
+                            <Ionicons name="lock-closed-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                placeholder="Minimum 6 characters"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={newPassword}
+                                onChangeText={setNewPassword}
+                                secureTextEntry={true}
+                            />
+                        </View>
+                    </View>
 
-                            <TouchableOpacity
-                                style={styles.buttonShadow}
-                                activeOpacity={0.8}
-                                onPress={handleResetPassword}
-                                disabled={loading}
-                            >
-                                <LinearGradient
-                                    colors={['#4f46e5', '#6366f1']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.actionButton}
-                                >
-                                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>RESET PASSWORD</Text>}
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </>
-                    )}
+                    <View style={styles.inputContainer}>
+                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Confirm New Password</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
+                            <Ionicons name="lock-closed-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                placeholder="Re-enter new password"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry={true}
+                            />
+                        </View>
+                    </View>
+
+                    <TouchableOpacity 
+                        style={[styles.submitButton, loading && styles.disabledButton]} 
+                        onPress={handleResetPassword}
+                        disabled={loading}
+                    >
+                        <LinearGradient
+                            colors={['#4F46E5', '#3730A3']}
+                            style={styles.gradientButton}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#FFFFFF" size="small" />
+                            ) : (
+                                <Text style={styles.submitButtonText}>Reset Password Now</Text>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
                 </View>
+
+                {/* Back to Login Link */}
+                <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.backToLogin}>
+                    <Text style={[styles.backToLoginText, { color: '#4F46E5' }]}>
+                        Remember your password? <Text style={{ fontWeight: 'bold' }}>Login</Text>
+                    </Text>
+                </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -234,115 +202,99 @@ const ForgotPasswordScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: Platform.OS === 'ios' ? 400 : 350,
     },
     scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 80,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 150,
+        padding: 24,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    },
+    header: {
+        alignItems: 'center',
+        marginBottom: 24,
     },
     backButton: {
         position: 'absolute',
-        top: Platform.OS === 'ios' ? 60 : 40,
-        left: 20,
-        zIndex: 10,
-        width: 40,
-        height: 40,
+        left: 0,
+        top: 0,
+        padding: 8,
+    },
+    iconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#EEF2FF',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 20,
-    },
-    headerContainer: {
-        alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 16,
         marginTop: 20,
     },
     title: {
-        fontSize: 28,
-        color: '#fff',
-        fontFamily: 'NotoSans-Bold',
-        marginBottom: 5,
-        textShadowColor: 'rgba(0, 0, 0, 0.1)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
-        textAlign: 'center',
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
-        fontFamily: 'NotoSans-Regular',
+        fontSize: 14,
         textAlign: 'center',
+        lineHeight: 20,
+        paddingHorizontal: 12,
     },
-    formContainer: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 15 },
-        shadowOpacity: 0.1,
-        shadowRadius: 30,
-        elevation: 8,
-    },
-    inputWrapper: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 12,
-        color: '#64748b',
-        fontFamily: 'NotoSans-Bold',
-        marginBottom: 8,
-        marginLeft: 4,
-        letterSpacing: 0.5,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f1f5f9',
+    card: {
+        padding: 20,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        paddingHorizontal: 16,
-        height: 56,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    inputContainer: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 6,
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 48,
     },
     inputIcon: {
-        marginRight: 10,
+        marginRight: 8,
     },
     input: {
         flex: 1,
-        fontSize: 16,
-        color: '#0f172a',
-        fontFamily: 'NotoSans-Regular',
-        height: '100%',
+        fontSize: 15,
     },
-    buttonShadow: {
-        shadowColor: '#4f46e5',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
-        marginTop: 10,
+    submitButton: {
+        marginTop: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
     },
-    actionButton: {
-        height: 56,
-        borderRadius: 16,
+    gradientButton: {
+        height: 50,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    actionButtonText: {
-        color: '#ffffff',
+    submitButtonText: {
+        color: '#FFFFFF',
         fontSize: 16,
-        fontFamily: 'NotoSans-Bold',
-        letterSpacing: 1,
+        fontWeight: 'bold',
+    },
+    disabledButton: {
+        opacity: 0.6,
+    },
+    backToLogin: {
+        marginTop: 24,
+        alignItems: 'center',
+    },
+    backToLoginText: {
+        fontSize: 14,
     },
 });
 

@@ -281,7 +281,38 @@ const MyExamTestScreen = ({ navigation, route }) => {
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [showExplanation, setShowExplanation] = useState({});
     const [showResults, setShowResults] = useState(false);
+    const [liveExamRanks, setLiveExamRanks] = useState(null);
     const finalTimeRef = useRef(0);
+
+    // Fetch dual rankings if this was a live exam
+    useEffect(() => {
+        if (showResults && route.params?.update_id) {
+            const fetchRankings = async () => {
+                try {
+                    const userDataStr = await AsyncStorage.getItem('user_data');
+                    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+                    const userId = userData?.user_id || userData?.id;
+
+                    const res = await axios.get(`${API_URL}/teacher/get_live_exam_leaderboard.php?live_exam_id=${route.params.update_id}`);
+                    if (res.data && res.data.status === 'success' && res.data.data) {
+                        const leaderboard = res.data.data;
+                        const myEntry = leaderboard.find(st => Number(st.id) === Number(userId));
+                        if (myEntry) {
+                            setLiveExamRanks({
+                                examRank: myEntry.rank || myEntry.exam_rank,
+                                overallRank: myEntry.overall_rank,
+                                totalStudents: leaderboard.length,
+                                overallScore: myEntry.overall_score
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.log('[Exam] Error fetching live exam ranks:', err);
+                }
+            };
+            fetchRankings();
+        }
+    }, [showResults, route.params?.update_id]);
 
     // Back button guard
     useEffect(() => {
@@ -439,6 +470,22 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     <Text style={styles.resultsScore}>{correct} / {questions.length}</Text>
                     <Text style={styles.resultsPercentage}>You scored {percentage}%</Text>
                 </View>
+
+                {liveExamRanks && (
+                    <View style={{backgroundColor: '#1E293B', padding: 16, borderRadius: 16, marginBottom: 16, marginHorizontal: 16, borderWidth: 1, borderColor: '#334155'}}>
+                        <Text style={{fontSize: 16, fontWeight: 'bold', color: '#F8FAFC', textAlign: 'center', marginBottom: 12}}>🏆 Your Live Exam Rankings</Text>
+                        <View style={{flexDirection: 'row', gap: 12}}>
+                            <View style={{flex: 1, backgroundColor: 'rgba(56, 189, 248, 0.15)', padding: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#38BDF8'}}>
+                                <Text style={{fontSize: 22, fontWeight: '900', color: '#38BDF8'}}>#{liveExamRanks.examRank || '1'}</Text>
+                                <Text style={{fontSize: 12, color: '#94A3B8', marginTop: 2, fontWeight: '600'}}>🎯 Live Exam Rank</Text>
+                            </View>
+                            <View style={{flex: 1, backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#F59E0B'}}>
+                                <Text style={{fontSize: 22, fontWeight: '900', color: '#F59E0B'}}>#{liveExamRanks.overallRank || 'N/A'}</Text>
+                                <Text style={{fontSize: 12, color: '#94A3B8', marginTop: 2, fontWeight: '600'}}>👑 Overall Class Rank</Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
 
                 <View style={styles.statsGrid}>
                     <View style={[styles.statCard, { backgroundColor: '#dcfce7', borderColor: '#bbf7d0', borderWidth: 1 }]}>

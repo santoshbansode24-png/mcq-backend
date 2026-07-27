@@ -577,28 +577,7 @@ const RegisterScreen = ({ navigation, route }) => {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* OR Separator */}
-          <View style={styles.separatorContainer}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>OR CONTINUE WITH</Text>
-            <View style={styles.separatorLine} />
-          </View>
 
-          {/* Google Login Button */}
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#4f46e5" />
-            ) : (
-              <View style={styles.googleButtonContent}>
-                <Ionicons name="logo-google" size={20} color="#EA4335" />
-                <Text style={styles.googleButtonText}>Sign up with Google</Text>
-              </View>
-            )}
-          </TouchableOpacity>
 
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>

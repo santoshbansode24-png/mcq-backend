@@ -104,3 +104,21 @@ export const fetchBookmarks = async (userId, forceRefresh = false) => {
         throw error.response ? error.response.data : new Error('Network Error');
     }
 };
+
+export const fetchLiveExamsList = async (classId) => {
+    try {
+        const response = await axios.get(`${API_URL}/teacher/get_live_exams_list.php?class_id=${classId}`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Network Error');
+    }
+};
+
+export const fetchLiveExamLeaderboard = async (liveExamId) => {
+    try {
+        const response = await axios.get(`${API_URL}/teacher/get_live_exam_leaderboard.php?live_exam_id=${liveExamId}`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Network Error');
+    }
+};

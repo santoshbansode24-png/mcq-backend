@@ -11,12 +11,13 @@ header("Connection: keep-alive");
 header("X-Accel-Buffering: no");
 
 require_once __DIR__ . '/../config/ai_config.php';
-require_once __DIR__ . '/rate_limiter.php';
 
-if (!checkRateLimit(15, 60)) {
-    sendChunk(['status' => 'error', 'message' => 'Rate limit exceeded. Please wait a minute before asking another question.']);
-    echo "data: [DONE]\n\n";
-    exit;
+if (file_exists(__DIR__ . '/rate_limiter.php')) {
+    require_once __DIR__ . '/rate_limiter.php';
+} elseif (file_exists(__DIR__ . '/../rate_limiter.php')) {
+    require_once __DIR__ . '/../rate_limiter.php';
+} elseif (file_exists(__DIR__ . '/../../api/rate_limiter.php')) {
+    require_once __DIR__ . '/../../api/rate_limiter.php';
 }
 
 function sendChunk($data) {
@@ -25,6 +26,12 @@ function sendChunk($data) {
         @ob_end_flush();
     }
     @flush();
+}
+
+if (function_exists('checkRateLimit') && !checkRateLimit(25, 60)) {
+    sendChunk(['status' => 'error', 'message' => 'Rate limit exceeded. Please wait a minute before asking another question.']);
+    echo "data: [DONE]\n\n";
+    exit;
 }
 
 /**

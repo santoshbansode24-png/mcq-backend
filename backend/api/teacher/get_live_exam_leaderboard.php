@@ -4,10 +4,19 @@ require_once '../../config/db.php';
 require_once '../cors_middleware.php';
 
 try {
-    $live_exam_id = isset($_GET['live_exam_id']) ? (int)$_GET['live_exam_id'] : 0;
+    $live_exam_id = 0;
+    if (isset($_GET['live_exam_id'])) {
+        $live_exam_id = (int)$_GET['live_exam_id'];
+    } elseif (isset($_GET['exam_id'])) {
+        $live_exam_id = (int)$_GET['exam_id'];
+    } elseif (isset($_GET['id'])) {
+        $live_exam_id = (int)$_GET['id'];
+    } elseif (isset($_GET['update_id'])) {
+        $live_exam_id = (int)$_GET['update_id'];
+    }
     
     if ($live_exam_id === 0) {
-        echo json_encode(['status' => 'error', 'message' => 'Invalid live_exam_id']);
+        echo json_encode(['status' => 'success', 'data' => []]);
         exit;
     }
     
@@ -17,7 +26,25 @@ try {
     $exam = $examStmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$exam) {
-        echo json_encode(['status' => 'error', 'message' => 'Live exam not found']);
+        // Fallback: check if live_exam_id is a class_update ID containing an exam_id in payload
+        $cuStmt = $pdo->prepare("SELECT payload FROM class_updates WHERE update_id = ?");
+        $cuStmt->execute([$live_exam_id]);
+        $cuRow = $cuStmt->fetch(PDO::FETCH_ASSOC);
+        if ($cuRow && !empty($cuRow['payload'])) {
+            $payloadData = json_decode($cuRow['payload'], true);
+            $realExamId = (int)($payloadData['exam_id'] ?? 0);
+            if ($realExamId > 0) {
+                $examStmt->execute([$realExamId]);
+                $exam = $examStmt->fetch(PDO::FETCH_ASSOC);
+                if ($exam) {
+                    $live_exam_id = $realExamId;
+                }
+            }
+        }
+    }
+    
+    if (!$exam) {
+        echo json_encode(['status' => 'success', 'data' => []]);
         exit;
     }
     

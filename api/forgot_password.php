@@ -1,14 +1,9 @@
 <?php
 /**
- * Forgot Password API (Pin-Based Self Reset)
+ * Forgot Password API (Pin-Based Self Reset with Rate Limiting & Audit Logging)
  * Veeru
  * 
  * Endpoint: POST /api/forgot_password.php
- * Accepts JSON or POST fields:
- * - mobile / phone
- * - email
- * - security_pin (4 digits)
- * - new_password
  */
 
 require_once 'cors_middleware.php';
@@ -26,6 +21,22 @@ $email = isset($input['email']) ? trim($input['email']) : '';
 $mobile = isset($input['mobile']) ? trim($input['mobile']) : (isset($input['phone']) ? trim($input['phone']) : (isset($input['phone_number']) ? trim($input['phone_number']) : ''));
 $security_pin = isset($input['security_pin']) ? trim($input['security_pin']) : '';
 $new_password = isset($input['new_password']) ? trim($input['new_password']) : '';
+
+$ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+// Helper function to log reset attempts
+function logResetAttempt($pdo, $user_id, $email, $mobile, $ip_address, $user_agent, $status, $message) {
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO password_reset_logs (user_id, email, mobile, ip_address, user_agent, status, message, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([$user_id, $email, $mobile, $ip_address, $user_agent, $status, $message]);
+    } catch (Exception $e) {
+        error_log("Failed to insert password_reset_logs: " . $e->getMessage());
+    }
+}
 
 // Validation
 if (empty($email) || empty($mobile) || empty($security_pin) || empty($new_password)) {
@@ -45,35 +56,71 @@ if (strlen($new_password) < 6) {
 }
 
 try {
+    // Rate Limiting: Max 5 failed attempts per IP or Email in the last hour
+    $rateLimitStmt = $pdo->prepare("
+        SELECT COUNT(*) FROM password_reset_logs 
+        WHERE (ip_address = ? OR LOWER(email) = LOWER(?)) 
+          AND status IN ('failed_pin', 'failed_user') 
+          AND created_at >= NOW() - INTERVAL 1 HOUR
+    ");
+    $rateLimitStmt->execute([$ip_address, $email]);
+    $failedAttempts = $rateLimitStmt->fetchColumn();
+
+    if ($failedAttempts >= 5) {
+        logResetAttempt($pdo, null, $email, $mobile, $ip_address, $user_agent, 'rate_limited', 'Rate limit exceeded: too many failed attempts.');
+        sendResponse('error', 'Too many failed password reset attempts. Please wait 1 hour before trying again or contact your Admin.', null, 429);
+    }
+
     // 1. Verify user identity against Mobile, Email, and 4-Digit Security PIN
+    // Allow matching if mobile matches OR if user mobile is empty/null
     $stmt = $pdo->prepare("
-        SELECT user_id, name, security_pin 
+        SELECT user_id, name, security_pin, mobile, phone 
         FROM users 
         WHERE LOWER(email) = LOWER(?) 
-          AND (mobile = ? OR phone = ? OR phone_number = ?)
+          AND (
+            RIGHT(mobile, 10) = RIGHT(?, 10) 
+            OR RIGHT(phone, 10) = RIGHT(?, 10) 
+            OR RIGHT(phone_number, 10) = RIGHT(?, 10)
+            OR mobile IS NULL OR mobile = ''
+          )
     ");
     $stmt->execute([$email, $mobile, $mobile, $mobile]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
+        logResetAttempt($pdo, null, $email, $mobile, $ip_address, $user_agent, 'failed_user', 'No account found matching Mobile and Email.');
         sendResponse('error', 'No account found matching this Mobile Number and Email ID.', null, 404);
     }
 
     // 2. Verify Security PIN
     if (empty($user['security_pin'])) {
+        logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'failed_pin', 'No security PIN configured for user.');
         sendResponse('error', 'No Security PIN is set for your account yet. Please contact your Teacher or Admin to reset your password.', [
             'requires_admin_reset' => true
         ], 403);
     }
 
     if ($user['security_pin'] !== $security_pin) {
+        logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'failed_pin', 'Incorrect 4-digit Security PIN.');
         sendResponse('error', 'Incorrect 4-digit Security PIN. If you forgot your PIN, please contact your Teacher or Admin.', null, 401);
     }
 
-    // 3. Update Password
+    // 3. Update Password & Timestamps (and populate mobile if it was previously empty)
     $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
-    $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
-    $updateStmt->execute([$hashed_password, $user['user_id']]);
+    $userMobile = !empty($user['mobile']) ? $user['mobile'] : $mobile;
+
+    $updateStmt = $pdo->prepare("
+        UPDATE users 
+        SET password = ?, 
+            mobile = ?, 
+            password_changed_at = NOW(), 
+            updated_at = NOW() 
+        WHERE user_id = ?
+    ");
+    $updateStmt->execute([$hashed_password, $userMobile, $user['user_id']]);
+
+    // Log Success
+    logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'success', 'Password reset successfully.');
 
     sendResponse('success', 'Password updated successfully! You can now log in with your new password.', [
         'user_id' => $user['user_id']

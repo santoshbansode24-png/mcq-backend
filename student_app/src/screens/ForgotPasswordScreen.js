@@ -8,6 +8,14 @@ import { useTheme } from '../context/ThemeContext';
 
 const ForgotPasswordScreen = ({ navigation }) => {
     const { theme } = useTheme();
+    const colors = {
+        background: theme?.background || theme?.colors?.background || '#F8FAFC',
+        textPrimary: theme?.text || theme?.colors?.textPrimary || '#0F172A',
+        textSecondary: theme?.textSecondary || theme?.colors?.textSecondary || '#475569',
+        cardBackground: theme?.card || theme?.colors?.cardBackground || '#FFFFFF',
+        inputBg: theme?.background || theme?.colors?.inputBg || '#F8FAFC',
+        border: theme?.border || theme?.colors?.border || '#E2E8F0',
+    };
     const [email, setEmail] = useState('');
     const [mobile, setMobile] = useState('');
     const [pin, setPin] = useState('');
@@ -72,33 +80,33 @@ const ForgotPasswordScreen = ({ navigation }) => {
     return (
         <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-            style={[styles.container, { backgroundColor: theme.colors.background }]}
+            style={[styles.container, { backgroundColor: colors.background }]}
         >
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Header Section */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+                        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <View style={styles.iconContainer}>
                         <Ionicons name="key-outline" size={40} color="#4F46E5" />
                     </View>
-                    <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Forgot Password?</Text>
-                    <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                    <Text style={[styles.title, { color: colors.textPrimary }]}>Forgot Password?</Text>
+                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                         Enter your Registered Email, Mobile Number, and 4-Digit Security PIN to reset your password.
                     </Text>
                 </View>
 
                 {/* Form Section */}
-                <View style={[styles.card, { backgroundColor: theme.colors.cardBackground, borderColor: theme.colors.border }]}>
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Registered Email ID</Text>
-                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
-                            <Ionicons name="mail-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>Registered Email ID</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                             <TextInput
-                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                style={[styles.input, { color: colors.textPrimary }]}
                                 placeholder="student@example.com"
-                                placeholderTextColor={theme.colors.textSecondary}
+                                placeholderTextColor={colors.textSecondary}
                                 value={email}
                                 onChangeText={setEmail}
                                 keyboardType="email-address"
@@ -108,13 +116,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Registered Mobile Number</Text>
-                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
-                            <Ionicons name="call-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>Registered Mobile Number</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                            <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                             <TextInput
-                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                style={[styles.input, { color: colors.textPrimary }]}
                                 placeholder="10-digit mobile number"
-                                placeholderTextColor={theme.colors.textSecondary}
+                                placeholderTextColor={colors.textSecondary}
                                 value={mobile}
                                 onChangeText={setMobile}
                                 keyboardType="phone-pad"
@@ -124,13 +132,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>4-Digit Security PIN</Text>
-                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
-                            <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>4-Digit Security PIN</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                            <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                             <TextInput
-                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                style={[styles.input, { color: colors.textPrimary }]}
                                 placeholder="e.g. 1234"
-                                placeholderTextColor={theme.colors.textSecondary}
+                                placeholderTextColor={colors.textSecondary}
                                 value={pin}
                                 onChangeText={setPin}
                                 keyboardType="number-pad"
@@ -141,13 +149,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>New Password</Text>
-                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
-                            <Ionicons name="lock-closed-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>New Password</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                            <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                             <TextInput
-                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                style={[styles.input, { color: colors.textPrimary }]}
                                 placeholder="Minimum 6 characters"
-                                placeholderTextColor={theme.colors.textSecondary}
+                                placeholderTextColor={colors.textSecondary}
                                 value={newPassword}
                                 onChangeText={setNewPassword}
                                 secureTextEntry={true}
@@ -156,13 +164,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Confirm New Password</Text>
-                        <View style={[styles.inputWrapper, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border }]}>
-                            <Ionicons name="lock-closed-outline" size={20} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>Confirm New Password</Text>
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                            <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                             <TextInput
-                                style={[styles.input, { color: theme.colors.textPrimary }]}
+                                style={[styles.input, { color: colors.textPrimary }]}
                                 placeholder="Re-enter new password"
-                                placeholderTextColor={theme.colors.textSecondary}
+                                placeholderTextColor={colors.textSecondary}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
                                 secureTextEntry={true}

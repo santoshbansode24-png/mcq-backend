@@ -100,18 +100,27 @@ try {
     $subscription_status = 'active'; 
     $subscription_expiry = date('Y-m-d', strtotime('+30 days')); 
     
+    // Optional security_pin (Default to last 4 digits of mobile if not provided)
+    $security_pin = isset($input['security_pin']) ? trim($input['security_pin']) : null;
+    if (!empty($security_pin) && !preg_match('/^\d{4}$/', $security_pin)) {
+        sendResponse('error', 'Security PIN must be exactly 4 digits', null, 400);
+    }
+    if (empty($security_pin) && strlen($mobile) >= 4) {
+        $security_pin = substr($mobile, -4);
+    }
+
     // Insert new user
     $insertStmt = $pdo->prepare("
         INSERT INTO users (
             name, email, mobile, 
-            password, google_id, profile_picture,
+            password, security_pin, google_id, profile_picture,
             user_type, 
             subscription_status, subscription_expiry, 
             school_name, class_id, 
             board_type,
-            created_at
+            created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     ");
 
     $insertStmt->execute([
@@ -119,6 +128,7 @@ try {
         $email,
         $mobile, 
         $hashed_password,
+        $security_pin,
         $google_id,
         $profile_picture,
         $user_type, 

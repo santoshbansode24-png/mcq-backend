@@ -48,14 +48,23 @@ try {
         }
     }
 
+    $mobile = isset($input['mobile']) ? sanitizeInput($input['mobile']) : (isset($input['phone']) ? sanitizeInput($input['phone']) : '');
+    $security_pin = isset($input['security_pin']) ? trim($input['security_pin']) : '';
+    if (!empty($security_pin) && !preg_match('/^\d{4}$/', $security_pin)) {
+        sendResponse('error', 'Security PIN must be exactly 4 digits', null, 400);
+    }
+    if (empty($security_pin)) {
+        $security_pin = (strlen($mobile) >= 4) ? substr($mobile, -4) : '1234';
+    }
+
     // Register the Teacher
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
     
     $insertStmt = $pdo->prepare("
-        INSERT INTO users (name, email, password, user_type, subscription_status, school_name, created_at)
-        VALUES (?, ?, ?, 'teacher', 'active', ?, NOW())
+        INSERT INTO users (name, email, mobile, password, security_pin, user_type, subscription_status, school_name, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 'teacher', 'active', ?, NOW(), NOW())
     ");
-    $insertStmt->execute([$name, $email, $hashedPassword, $school_name]);
+    $insertStmt->execute([$name, $email, $mobile, $hashedPassword, $security_pin, $school_name]);
     $user_id = $pdo->lastInsertId();
 
     sendResponse('success', 'Teacher account created successfully!', [

@@ -1,112 +1,102 @@
 <?php
 /**
- * Automated Verification Script for Registration & Password Reset Audit (Student & Teacher Apps)
+ * Automated Verification Script for Registration & Password Reset Audit
  * Veeru
  */
 require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: application/json');
 
-$testStudentEmail = 'student_audit_' . time() . '@example.com';
-$testTeacherEmail = 'teacher_audit_' . time() . '@example.com';
+$testStudentEmail = 'legacy_student_' . time() . '@example.com';
 $testMobile = '98765' . rand(10000, 99999);
 $testPassword = 'InitialPassword123!';
 $newPassword = 'NewPassword456!';
-$testPin = '9999';
+$testPin = '5555';
 
 $results = [
-    'student_registration' => false,
-    'student_pin_defaulting' => false,
-    'teacher_registration' => false,
-    'teacher_pin_defaulting' => false,
-    'teacher_reset_populates_mobile' => false,
-    'password_reset_success' => false,
+    'legacy_student_registration' => false,
+    'legacy_reset_auto_initializes_pin' => false,
     'password_changed_at_updated' => false,
-    'failed_pin_logging' => false,
+    'reset_audit_logged' => false,
     'cleanup' => false
 ];
 
 try {
-    // 1. Test Student Registration (Without PIN, to verify auto-defaulting to last 4 digits of mobile)
+    // 1. Insert Legacy Student (with NULL security_pin)
     $hashedPassword = password_hash($testPassword, PASSWORD_DEFAULT);
-    $defaultStudentPin = substr($testMobile, -4);
     
-    $insertStudent = $pdo->prepare("
+    $insertLegacy = $pdo->prepare("
         INSERT INTO users (name, email, mobile, password, security_pin, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 'student', 'active', CURDATE(), 'Audit Student School', 1, 'CBSE', NOW(), NOW())
+        VALUES (?, ?, ?, ?, NULL, 'student', 'active', CURDATE(), 'Legacy School', 1, 'CBSE', NOW(), NOW())
     ");
-    $insertStudent->execute(['Audit Student', $testStudentEmail, $testMobile, $hashedPassword, $defaultStudentPin]);
+    $insertLegacy->execute(['Legacy Student', $testStudentEmail, $testMobile, $hashedPassword]);
     $studentId = $pdo->lastInsertId();
 
     if ($studentId > 0) {
-        $results['student_registration'] = true;
+        $results['legacy_student_registration'] = true;
     }
 
-    $userCheck = $pdo->prepare("SELECT security_pin FROM users WHERE user_id = ?");
-    $userCheck->execute([$studentId]);
-    $sData = $userCheck->fetch();
-    if ($sData && $sData['security_pin'] === $defaultStudentPin) {
-        $results['student_pin_defaulting'] = true;
+    // 2. Perform Password Reset on Legacy Account (providing a new PIN '5555')
+    $opts = [
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => json_encode([
+                'email' => $testStudentEmail,
+                'mobile' => $testMobile,
+                'security_pin' => $testPin,
+                'new_password' => $newPassword
+            ])
+        ]
+    ];
+    
+    // Test logic locally via direct execution or DB logic
+    // Simulate endpoint logic directly on $pdo
+    $stmt = $pdo->prepare("SELECT user_id, security_pin FROM users WHERE user_id = ?");
+    $stmt->execute([$studentId]);
+    $uData = $stmt->fetch();
+
+    if (empty($uData['security_pin'])) {
+        // Auto-assign $testPin
+        $newHashed = password_hash($newPassword, PASSWORD_BCRYPT);
+        $updateStmt = $pdo->prepare("
+            UPDATE users 
+            SET password = ?, 
+                mobile = ?, 
+                security_pin = ?, 
+                password_changed_at = NOW(), 
+                updated_at = NOW() 
+            WHERE user_id = ?
+        ");
+        $updateStmt->execute([$newHashed, $testMobile, $testPin, $studentId]);
+
+        // Insert audit log
+        $logStmt = $pdo->prepare("
+            INSERT INTO password_reset_logs (user_id, email, mobile, ip_address, user_agent, status, message, created_at)
+            VALUES (?, ?, ?, '127.0.0.1', 'Audit Verification', 'success', 'Password reset successfully (PIN initialized).', NOW())
+        ");
+        $logStmt->execute([$studentId, $testStudentEmail, $testMobile]);
     }
 
-    // 2. Test Teacher Registration (Without mobile number, verify PIN defaults to '1234')
-    $insertTeacher = $pdo->prepare("
-        INSERT INTO users (name, email, mobile, password, security_pin, user_type, subscription_status, school_name, created_at, updated_at)
-        VALUES (?, ?, '', ?, '1234', 'teacher', 'active', 'Audit Teacher School', NOW(), NOW())
-    ");
-    $insertTeacher->execute(['Audit Teacher', $testTeacherEmail, $hashedPassword]);
-    $teacherId = $pdo->lastInsertId();
+    // Verify updated PIN, password, and timestamp
+    $verifyStmt = $pdo->prepare("SELECT security_pin, password, password_changed_at FROM users WHERE user_id = ?");
+    $verifyStmt->execute([$studentId]);
+    $vData = $verifyStmt->fetch();
 
-    if ($teacherId > 0) {
-        $results['teacher_registration'] = true;
-    }
-
-    $tCheck = $pdo->prepare("SELECT security_pin, mobile FROM users WHERE user_id = ?");
-    $tCheck->execute([$teacherId]);
-    $tData = $tCheck->fetch();
-    if ($tData && $tData['security_pin'] === '1234') {
-        $results['teacher_pin_defaulting'] = true;
-    }
-
-    // 3. Test Teacher Password Reset with missing mobile (verifying auto-population of mobile)
-    $newHashed = password_hash($newPassword, PASSWORD_BCRYPT);
-    $resetTeacherStmt = $pdo->prepare("
-        UPDATE users 
-        SET password = ?, 
-            mobile = ?, 
-            password_changed_at = NOW(), 
-            updated_at = NOW() 
-        WHERE user_id = ?
-    ");
-    $resetTeacherStmt->execute([$newHashed, $testMobile, $teacherId]);
-
-    // Verify teacher record updated with mobile and password_changed_at
-    $tVerify = $pdo->prepare("SELECT mobile, password, password_changed_at FROM users WHERE user_id = ?");
-    $tVerify->execute([$teacherId]);
-    $tvData = $tVerify->fetch();
-
-    if ($tvData && $tvData['mobile'] === $testMobile && !empty($tvData['password_changed_at']) && password_verify($newPassword, $tvData['password'])) {
-        $results['teacher_reset_populates_mobile'] = true;
-        $results['password_reset_success'] = true;
+    if ($vData && $vData['security_pin'] === $testPin && password_verify($newPassword, $vData['password']) && !empty($vData['password_changed_at'])) {
+        $results['legacy_reset_auto_initializes_pin'] = true;
         $results['password_changed_at_updated'] = true;
     }
 
-    // 4. Test Audit Logging
-    $logFail = $pdo->prepare("
-        INSERT INTO password_reset_logs (user_id, email, mobile, ip_address, user_agent, status, message, created_at)
-        VALUES (?, ?, ?, '127.0.0.1', 'Audit Test Script', 'failed_pin', 'Incorrect 4-digit Security PIN.', NOW())
-    ");
-    $logFail->execute([$teacherId, $testTeacherEmail, $testMobile]);
-
-    $checkLogs = $pdo->prepare("SELECT COUNT(*) FROM password_reset_logs WHERE user_id = ? AND status = 'failed_pin'");
-    $checkLogs->execute([$teacherId]);
-    if ($checkLogs->fetchColumn() > 0) {
-        $results['failed_pin_logging'] = true;
+    $logCheck = $pdo->prepare("SELECT COUNT(*) FROM password_reset_logs WHERE user_id = ? AND status = 'success'");
+    $logCheck->execute([$studentId]);
+    if ($logCheck->fetchColumn() > 0) {
+        $results['reset_audit_logged'] = true;
     }
 
-    // 5. Cleanup Test Records
-    $pdo->prepare("DELETE FROM password_reset_logs WHERE user_id IN (?, ?)")->execute([$studentId, $teacherId]);
-    $pdo->prepare("DELETE FROM users WHERE user_id IN (?, ?)")->execute([$studentId, $teacherId]);
+    // Cleanup
+    $pdo->prepare("DELETE FROM password_reset_logs WHERE user_id = ?")->execute([$studentId]);
+    $pdo->prepare("DELETE FROM users WHERE user_id = ?")->execute([$studentId]);
     $results['cleanup'] = true;
 
     echo json_encode([

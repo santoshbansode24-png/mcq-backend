@@ -86,10 +86,7 @@ try {
     }
 
     if (empty($user['security_pin'])) {
-        logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'failed_pin', 'No security PIN configured for user.');
-        sendResponse('error', 'No Security PIN is set for your account yet. Please contact your Teacher or Admin to reset your password.', [
-            'requires_admin_reset' => true
-        ], 403);
+        $user['security_pin'] = $security_pin;
     }
 
     if ($user['security_pin'] !== $security_pin) {
@@ -104,11 +101,12 @@ try {
         UPDATE users 
         SET password = ?, 
             mobile = ?, 
+            security_pin = ?,
             password_changed_at = NOW(), 
             updated_at = NOW() 
         WHERE user_id = ?
     ");
-    $updateStmt->execute([$hashed_password, $userMobile, $user['user_id']]);
+    $updateStmt->execute([$hashed_password, $userMobile, $security_pin, $user['user_id']]);
 
     logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'success', 'Password reset successfully.');
 

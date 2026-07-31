@@ -71,8 +71,7 @@ try {
         sendResponse('error', 'Too many failed password reset attempts. Please wait 1 hour before trying again or contact your Admin.', null, 429);
     }
 
-    // 1. Verify user identity against Mobile, Email, and 4-Digit Security PIN
-    // Allow matching if mobile matches OR if user mobile is empty/null
+    // 1. Verify user identity against Mobile and Email
     $stmt = $pdo->prepare("
         SELECT user_id, name, security_pin, mobile, phone 
         FROM users 
@@ -92,12 +91,10 @@ try {
         sendResponse('error', 'No account found matching this Mobile Number and Email ID.', null, 404);
     }
 
-    // 2. Verify Security PIN
+    // 2. Verify Security PIN (Auto-initialize PIN if user had no PIN configured previously)
     if (empty($user['security_pin'])) {
-        logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'failed_pin', 'No security PIN configured for user.');
-        sendResponse('error', 'No Security PIN is set for your account yet. Please contact your Teacher or Admin to reset your password.', [
-            'requires_admin_reset' => true
-        ], 403);
+        // Legacy user with no PIN set: auto-assign the PIN provided in this reset request
+        $user['security_pin'] = $security_pin;
     }
 
     if ($user['security_pin'] !== $security_pin) {
@@ -105,7 +102,7 @@ try {
         sendResponse('error', 'Incorrect 4-digit Security PIN. If you forgot your PIN, please contact your Teacher or Admin.', null, 401);
     }
 
-    // 3. Update Password & Timestamps (and populate mobile if it was previously empty)
+    // 3. Update Password, Security PIN & Timestamps
     $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
     $userMobile = !empty($user['mobile']) ? $user['mobile'] : $mobile;
 
@@ -113,11 +110,12 @@ try {
         UPDATE users 
         SET password = ?, 
             mobile = ?, 
+            security_pin = ?,
             password_changed_at = NOW(), 
             updated_at = NOW() 
         WHERE user_id = ?
     ");
-    $updateStmt->execute([$hashed_password, $userMobile, $user['user_id']]);
+    $updateStmt->execute([$hashed_password, $userMobile, $security_pin, $user['user_id']]);
 
     // Log Success
     logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'success', 'Password reset successfully.');

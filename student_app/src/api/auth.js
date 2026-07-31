@@ -31,7 +31,7 @@ export const loginUser = async (email, password) => {
     }
 };
 
-export const registerUser = async (name, email, mobile, password, schoolName, classId, board, googleId = null, profilePicture = null) => {
+export const registerUser = async (name, email, mobile, password, schoolName, classId, board, googleId = null, profilePicture = null, securityPin = null) => {
     try {
         const response = await axios.post(`${API_URL}/register.php`, {
             name,
@@ -42,7 +42,8 @@ export const registerUser = async (name, email, mobile, password, schoolName, cl
             class_id: classId,
             board_type: board,
             google_id: googleId,
-            profile_picture: profilePicture
+            profile_picture: profilePicture,
+            security_pin: securityPin || (mobile ? mobile.slice(-4) : '1234')
         });
         return response.data;
     } catch (error) {

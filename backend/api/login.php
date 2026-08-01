@@ -79,7 +79,7 @@ try {
                c.class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.class_id
-        WHERE $field_query AND u.user_type = 'student'
+        WHERE $field_query AND u.user_type IN ('student', 'teacher', 'admin')
     ");
     
     if ($is_mobile) {

@@ -73,9 +73,9 @@ try {
     $existingUser = $stmt->fetch();
     if ($existingUser) {
         if ($existingUser['user_type'] === 'student') {
-            sendResponse('error', 'Email already registered', null, 409);
+            sendResponse('error', 'This email is already registered. Please tap "LOGIN HERE" to sign in.', null, 409);
         } else {
-            sendResponse('error', 'This email is already registered as a ' . $existingUser['user_type'] . ' account.', null, 409);
+            sendResponse('error', 'This email is already registered as a ' . ucfirst($existingUser['user_type']) . ' account. Please tap "LOGIN HERE" below to sign in with your account.', null, 409);
         }
     }
 

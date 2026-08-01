@@ -55,7 +55,7 @@ try {
         SELECT user_id, name, email, password, user_type, class_id, 
                subscription_status, subscription_expiry 
         FROM users 
-        WHERE $field_query AND user_type = 'student'
+        WHERE $field_query AND user_type IN ('student', 'teacher', 'admin')
     ");
     
     if ($is_mobile) {

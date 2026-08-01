@@ -20,6 +20,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
     const [pin, setPin] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleResetPassword = async () => {
@@ -134,8 +136,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
                                 placeholderTextColor={colors.textSecondary}
                                 value={newPassword}
                                 onChangeText={setNewPassword}
-                                secureTextEntry={true}
+                                secureTextEntry={!showNewPassword}
                             />
+                            <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={styles.eyeIconContainer}>
+                                <Ionicons name={showNewPassword ? "eye" : "eye-off"} size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -149,8 +154,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
                                 placeholderTextColor={colors.textSecondary}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
-                                secureTextEntry={true}
+                                secureTextEntry={!showConfirmPassword}
                             />
+                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIconContainer}>
+                                <Ionicons name={showConfirmPassword ? "eye" : "eye-off"} size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -263,6 +271,10 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    eyeIconContainer: {
+        padding: 6,
+        marginLeft: 8,
     },
 });
 

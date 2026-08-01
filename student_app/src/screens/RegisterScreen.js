@@ -379,6 +379,30 @@ const RegisterScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.inputWrapper}>
+            <Text style={styles.label}>
+              4-DIGIT SECURITY PIN <Text style={{ color: "#ef4444" }}>*</Text>
+            </Text>
+            <View style={styles.inputContainer}>
+              <Ionicons
+                name="key-outline"
+                size={20}
+                color="#94a3b8"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Set 4-digit PIN (for password reset)"
+                placeholderTextColor="#94a3b8"
+                value={securityPin}
+                onChangeText={setSecurityPin}
+                keyboardType="number-pad"
+                maxLength={4}
+                secureTextEntry
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputWrapper}>
             <Text style={styles.label}>SCHOOL NAME</Text>
             <View style={styles.inputContainer}>
               <Ionicons
@@ -546,28 +570,6 @@ const RegisterScreen = ({ navigation, route }) => {
               </View>
             </>
           )}
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>4-DIGIT SECURITY PIN (OPTIONAL)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="key-outline"
-                size={20}
-                color="#94a3b8"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="4-digit PIN (Defaults to last 4 digits of mobile)"
-                placeholderTextColor="#94a3b8"
-                value={securityPin}
-                onChangeText={setSecurityPin}
-                keyboardType="number-pad"
-                maxLength={4}
-                secureTextEntry
-              />
-            </View>
-          </View>
 
           {errorMsg ? (
             <Text style={{

@@ -1,6 +1,6 @@
 <?php
 /**
- * Forgot Password API (Pin-Based Self Reset with Rate Limiting & Audit Logging)
+ * Forgot Password API (Option A: Mobile OR Email + 4-Digit Security PIN)
  * Veeru
  * 
  * Endpoint: POST /forgot_password.php
@@ -15,8 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = getJsonInput() ?: $_POST;
 
-$email = isset($input['email']) ? trim($input['email']) : '';
-$mobile = isset($input['mobile']) ? trim($input['mobile']) : (isset($input['phone']) ? trim($input['phone']) : (isset($input['phone_number']) ? trim($input['phone_number']) : ''));
+$identifier = isset($input['identifier']) ? trim($input['identifier']) : (isset($input['email']) ? trim($input['email']) : (isset($input['mobile']) ? trim($input['mobile']) : ''));
 $security_pin = isset($input['security_pin']) ? trim($input['security_pin']) : '';
 $new_password = isset($input['new_password']) ? trim($input['new_password']) : '';
 
@@ -35,12 +34,8 @@ function logResetAttempt($pdo, $user_id, $email, $mobile, $ip_address, $user_age
     }
 }
 
-if (empty($email) || empty($mobile) || empty($security_pin) || empty($new_password)) {
-    sendResponse('error', 'All fields are required: email, mobile, 4-digit security_pin, and new_password.', null, 400);
-}
-
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    sendResponse('error', 'Invalid email address format.', null, 400);
+if (empty($identifier) || empty($security_pin) || empty($new_password)) {
+    sendResponse('error', 'All fields are required: Mobile Number or Email ID, 4-digit Security PIN, and New Password.', null, 400);
 }
 
 if (!preg_match('/^\d{4}$/', $security_pin)) {
@@ -54,35 +49,39 @@ if (strlen($new_password) < 6) {
 try {
     $rateLimitStmt = $pdo->prepare("
         SELECT COUNT(*) FROM password_reset_logs 
-        WHERE (ip_address = ? OR LOWER(email) = LOWER(?)) 
+        WHERE (ip_address = ? OR LOWER(email) = LOWER(?) OR mobile = ?) 
           AND status IN ('failed_pin', 'failed_user') 
           AND created_at >= NOW() - INTERVAL 1 HOUR
     ");
-    $rateLimitStmt->execute([$ip_address, $email]);
+    $rateLimitStmt->execute([$ip_address, $identifier, $identifier]);
     $failedAttempts = $rateLimitStmt->fetchColumn();
 
     if ($failedAttempts >= 5) {
-        logResetAttempt($pdo, null, $email, $mobile, $ip_address, $user_agent, 'rate_limited', 'Rate limit exceeded: too many failed attempts.');
+        logResetAttempt($pdo, null, $identifier, $identifier, $ip_address, $user_agent, 'rate_limited', 'Rate limit exceeded: too many failed attempts.');
         sendResponse('error', 'Too many failed password reset attempts. Please wait 1 hour before trying again or contact your Admin.', null, 429);
     }
 
-    $stmt = $pdo->prepare("
-        SELECT user_id, name, security_pin, mobile, phone 
-        FROM users 
-        WHERE LOWER(email) = LOWER(?) 
-          AND (
-            RIGHT(mobile, 10) = RIGHT(?, 10) 
-            OR RIGHT(phone, 10) = RIGHT(?, 10) 
-            OR RIGHT(phone_number, 10) = RIGHT(?, 10)
-            OR mobile IS NULL OR mobile = ''
-          )
-    ");
-    $stmt->execute([$email, $mobile, $mobile, $mobile]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = null;
+    if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+        $stmt = $pdo->prepare("SELECT user_id, name, email, mobile, security_pin FROM users WHERE LOWER(email) = LOWER(?)");
+        $stmt->execute([$identifier]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $cleanedMobile = preg_replace('/[^0-9]/', '', $identifier);
+        $stmt = $pdo->prepare("
+            SELECT user_id, name, email, mobile, security_pin 
+            FROM users 
+            WHERE RIGHT(mobile, 10) = RIGHT(?, 10) 
+               OR RIGHT(phone, 10) = RIGHT(?, 10) 
+               OR RIGHT(phone_number, 10) = RIGHT(?, 10)
+        ");
+        $stmt->execute([$cleanedMobile, $cleanedMobile, $cleanedMobile]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 
     if (!$user) {
-        logResetAttempt($pdo, null, $email, $mobile, $ip_address, $user_agent, 'failed_user', 'No account found matching Mobile and Email.');
-        sendResponse('error', 'No account found matching this Mobile Number and Email ID.', null, 404);
+        logResetAttempt($pdo, null, $identifier, $identifier, $ip_address, $user_agent, 'failed_user', 'No account found matching given Email or Mobile Number.');
+        sendResponse('error', 'No account found matching this Email ID or Mobile Number.', null, 404);
     }
 
     if (empty($user['security_pin'])) {
@@ -90,25 +89,23 @@ try {
     }
 
     if ($user['security_pin'] !== $security_pin) {
-        logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'failed_pin', 'Incorrect 4-digit Security PIN.');
+        logResetAttempt($pdo, $user['user_id'], $user['email'], $user['mobile'], $ip_address, $user_agent, 'failed_pin', 'Incorrect 4-digit Security PIN.');
         sendResponse('error', 'Incorrect 4-digit Security PIN. If you forgot your PIN, please contact your Teacher or Admin.', null, 401);
     }
 
     $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
-    $userMobile = !empty($user['mobile']) ? $user['mobile'] : $mobile;
 
     $updateStmt = $pdo->prepare("
         UPDATE users 
         SET password = ?, 
-            mobile = ?, 
             security_pin = ?,
             password_changed_at = NOW(), 
             updated_at = NOW() 
         WHERE user_id = ?
     ");
-    $updateStmt->execute([$hashed_password, $userMobile, $security_pin, $user['user_id']]);
+    $updateStmt->execute([$hashed_password, $security_pin, $user['user_id']]);
 
-    logResetAttempt($pdo, $user['user_id'], $email, $mobile, $ip_address, $user_agent, 'success', 'Password reset successfully.');
+    logResetAttempt($pdo, $user['user_id'], $user['email'], $user['mobile'], $ip_address, $user_agent, 'success', 'Password reset successfully.');
 
     sendResponse('success', 'Password updated successfully! You can now log in with your new password.', [
         'user_id' => $user['user_id']

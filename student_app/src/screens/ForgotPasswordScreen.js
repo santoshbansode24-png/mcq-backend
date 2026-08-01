@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
-import { API_URL, BASE_URL } from '../api/config';
+import { API_URL } from '../api/config';
 import { useTheme } from '../context/ThemeContext';
 
 const ForgotPasswordScreen = ({ navigation }) => {
@@ -16,22 +16,16 @@ const ForgotPasswordScreen = ({ navigation }) => {
         inputBg: theme?.background || theme?.colors?.inputBg || '#F8FAFC',
         border: theme?.border || theme?.colors?.border || '#E2E8F0',
     };
-    const [email, setEmail] = useState('');
-    const [mobile, setMobile] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [pin, setPin] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleResetPassword = async () => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || !emailRegex.test(email.trim())) {
-            Alert.alert('Invalid Email Address', 'Please enter a valid email address.');
-            return;
-        }
-
-        if (!mobile || mobile.trim().length !== 10) {
-            Alert.alert('Invalid Mobile Number', 'Please enter a 10-digit mobile number.');
+        const trimmedIdentifier = identifier.trim();
+        if (!trimmedIdentifier) {
+            Alert.alert('Required Field', 'Please enter your registered Mobile Number or Email ID.');
             return;
         }
 
@@ -52,11 +46,9 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            // Target the root or API forgot password endpoint
             const endpoint = `${API_URL}/forgot_password.php`;
             const response = await axios.post(endpoint, {
-                email: email.trim(),
-                mobile: mobile.trim(),
+                identifier: trimmedIdentifier,
                 security_pin: pin.trim(),
                 new_password: newPassword
             });
@@ -70,7 +62,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             }
         } catch (error) {
             console.log("Forgot Password Error:", error.response?.data || error.message);
-            const msg = error.response?.data?.message || 'Failed to reset password. If you forgot your PIN, please ask your Teacher or Admin.';
+            const msg = error.response?.data?.message || 'Failed to reset password. Please check your details.';
             Alert.alert('Reset Error', msg);
         } finally {
             setLoading(false);
@@ -93,40 +85,24 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     </View>
                     <Text style={[styles.title, { color: colors.textPrimary }]}>Forgot Password?</Text>
                     <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                        Enter your Registered Email, Mobile Number, and 4-Digit Security PIN to reset your password.
+                        Enter your Registered Mobile Number or Email ID and 4-Digit Security PIN to reset your password.
                     </Text>
                 </View>
 
                 {/* Form Section */}
                 <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: colors.textPrimary }]}>Registered Email ID</Text>
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number or Email ID</Text>
                         <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                            <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                             <TextInput
                                 style={[styles.input, { color: colors.textPrimary }]}
-                                placeholder="student@example.com"
+                                placeholder="Enter mobile no or email id"
                                 placeholderTextColor={colors.textSecondary}
-                                value={email}
-                                onChangeText={setEmail}
-                                keyboardType="email-address"
+                                value={identifier}
+                                onChangeText={setIdentifier}
                                 autoCapitalize="none"
-                            />
-                        </View>
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: colors.textPrimary }]}>Registered Mobile Number</Text>
-                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                            <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                            <TextInput
-                                style={[styles.input, { color: colors.textPrimary }]}
-                                placeholder="10-digit mobile number"
-                                placeholderTextColor={colors.textSecondary}
-                                value={mobile}
-                                onChangeText={setMobile}
-                                keyboardType="phone-pad"
-                                maxLength={10}
+                                autoCorrect={false}
                             />
                         </View>
                     </View>
@@ -190,18 +166,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
                             {loading ? (
                                 <ActivityIndicator color="#FFFFFF" size="small" />
                             ) : (
-                                <Text style={styles.submitButtonText}>Reset Password Now</Text>
+                                <Text style={styles.submitButtonText}>Reset Password</Text>
                             )}
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
-
-                {/* Back to Login Link */}
-                <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.backToLogin}>
-                    <Text style={[styles.backToLoginText, { color: '#4F46E5' }]}>
-                        Remember your password? <Text style={{ fontWeight: 'bold' }}>Login</Text>
-                    </Text>
-                </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -212,80 +181,81 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 60,
+        paddingBottom: 40,
     },
     header: {
-        alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 32,
+        alignItems: 'flex-start',
     },
     backButton: {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        padding: 8,
+        marginBottom: 20,
+        padding: 4,
     },
     iconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#EEF2FF',
-        justifyContent: 'center',
+        width: 64,
+        height: 64,
+        borderRadius: 20,
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+        justify: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        marginTop: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         marginBottom: 8,
     },
     subtitle: {
-        fontSize: 14,
-        textAlign: 'center',
-        lineHeight: 20,
-        paddingHorizontal: 12,
+        fontSize: 15,
+        lineHeight: 22,
     },
     card: {
-        padding: 20,
-        borderRadius: 16,
+        borderRadius: 24,
+        padding: 24,
         borderWidth: 1,
-        elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 2,
     },
     inputContainer: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        marginBottom: 6,
+        marginBottom: 8,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 48,
+        borderWidth: 1,
+        paddingHorizontal: 16,
+        height: 52,
     },
     inputIcon: {
-        marginRight: 8,
+        marginRight: 12,
     },
     input: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 16,
+        height: '100%',
     },
     submitButton: {
-        marginTop: 8,
-        borderRadius: 12,
+        marginTop: 12,
+        borderRadius: 14,
         overflow: 'hidden',
     },
+    disabledButton: {
+        opacity: 0.7,
+    },
     gradientButton: {
-        height: 50,
+        height: 54,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -293,16 +263,6 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    disabledButton: {
-        opacity: 0.6,
-    },
-    backToLogin: {
-        marginTop: 24,
-        alignItems: 'center',
-    },
-    backToLoginText: {
-        fontSize: 14,
     },
 });
 

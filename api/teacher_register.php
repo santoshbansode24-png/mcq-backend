@@ -37,15 +37,10 @@ if (strlen($password) < 6) {
 
 try {
     // Check if email already exists
-    $emailStmt = $pdo->prepare("SELECT user_id, user_type FROM users WHERE email = ?");
+    $emailStmt = $pdo->prepare("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) AND user_type = 'teacher'");
     $emailStmt->execute([$email]);
-    $existingUser = $emailStmt->fetch();
-    if ($existingUser) {
-        if ($existingUser['user_type'] === 'teacher') {
-            sendResponse('error', 'Email is already registered.', null, 409);
-        } else {
-            sendResponse('error', 'This email is already registered as a ' . $existingUser['user_type'] . ' account.', null, 409);
-        }
+    if ($emailStmt->fetch()) {
+        sendResponse('error', 'This email is already registered as a teacher account. Please login.', null, 409);
     }
 
     $mobile = isset($input['mobile']) ? sanitizeInput($input['mobile']) : (isset($input['phone']) ? sanitizeInput($input['phone']) : '');

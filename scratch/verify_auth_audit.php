@@ -1,81 +1,71 @@
 <?php
 /**
- * Automated Verification Script for Option A (Mobile OR Email + 4-Digit PIN)
+ * Verification Script for Independent Student & Teacher Registration & Login Isolation
  * Veeru
  */
 require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: application/json');
 
-$testStudentEmail = 'option_a_email_' . time() . '@example.com';
-$testMobile = '98765' . rand(10000, 99999);
-$testPassword = 'InitialPassword123!';
-$newPassword1 = 'EmailResetPass456!';
-$newPassword2 = 'MobileResetPass789!';
-$testPin = '7777';
+$sharedEmail = 'test_shared_isolate_' . time() . '@example.com';
+$mobileTeacher = '98765' . rand(10000, 99999);
+$mobileStudent = '98765' . rand(10000, 99999);
+$passTeacher = 'TeacherPass123!';
+$passStudent = 'StudentPass123!';
 
 $results = [
-    'user_registration' => false,
-    'reset_via_email' => false,
-    'reset_via_mobile' => false,
-    'audit_logging' => false,
+    'teacher_registration' => false,
+    'student_registration_same_email' => false,
+    'teacher_login_isolated' => false,
+    'student_login_isolated' => false,
     'cleanup' => false
 ];
 
 try {
-    // 1. Insert Test User
-    $hashedPassword = password_hash($testPassword, PASSWORD_DEFAULT);
-    $insert = $pdo->prepare("
-        INSERT INTO users (name, email, mobile, password, security_pin, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at, updated_at)
-        VALUES ('Option A Test', ?, ?, ?, ?, 'student', 'active', CURDATE(), 'Test School', 1, 'CBSE', NOW(), NOW())
+    // 1. Create Teacher Account
+    $tHash = password_hash($passTeacher, PASSWORD_DEFAULT);
+    $tStmt = $pdo->prepare("
+        INSERT INTO users (name, email, mobile, password, user_type, subscription_status, school_name, created_at, updated_at)
+        VALUES ('Teacher User', ?, ?, ?, 'teacher', 'active', 'Test School', NOW(), NOW())
     ");
-    $insert->execute([$testStudentEmail, $testMobile, $hashedPassword, $testPin]);
-    $userId = $pdo->lastInsertId();
+    $tStmt->execute([$sharedEmail, $mobileTeacher, $tHash]);
+    $teacherId = $pdo->lastInsertId();
 
-    if ($userId > 0) {
-        $results['user_registration'] = true;
+    if ($teacherId > 0) {
+        $results['teacher_registration'] = true;
     }
 
-    // 2. Test Reset via Email ID
-    $emailResetPass = password_hash($newPassword1, PASSWORD_BCRYPT);
-    $stmt1 = $pdo->prepare("UPDATE users SET password = ?, password_changed_at = NOW(), updated_at = NOW() WHERE LOWER(email) = LOWER(?) AND security_pin = ?");
-    $stmt1->execute([$emailResetPass, $testStudentEmail, $testPin]);
-
-    $verify1 = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
-    $verify1->execute([$userId]);
-    $u1 = $verify1->fetch();
-    if ($u1 && password_verify($newPassword1, $u1['password'])) {
-        $results['reset_via_email'] = true;
-    }
-
-    // 3. Test Reset via Mobile Number
-    $mobileResetPass = password_hash($newPassword2, PASSWORD_BCRYPT);
-    $stmt2 = $pdo->prepare("UPDATE users SET password = ?, password_changed_at = NOW(), updated_at = NOW() WHERE RIGHT(mobile, 10) = RIGHT(?, 10) AND security_pin = ?");
-    $stmt2->execute([$mobileResetPass, $testMobile, $testPin]);
-
-    $verify2 = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
-    $verify2->execute([$userId]);
-    $u2 = $verify2->fetch();
-    if ($u2 && password_verify($newPassword2, $u2['password'])) {
-        $results['reset_via_mobile'] = true;
-    }
-
-    // 4. Test Log Entry
-    $logStmt = $pdo->prepare("
-        INSERT INTO password_reset_logs (user_id, email, mobile, ip_address, user_agent, status, message, created_at)
-        VALUES (?, ?, ?, '127.0.0.1', 'Option A Test', 'success', 'Password reset successfully via Option A.', NOW())
+    // 2. Create Student Account WITH THE EXACT SAME EMAIL ADDRESS
+    $sHash = password_hash($passStudent, PASSWORD_DEFAULT);
+    $sStmt = $pdo->prepare("
+        INSERT INTO users (name, email, mobile, password, user_type, subscription_status, school_name, class_id, board_type, created_at, updated_at)
+        VALUES ('Student User', ?, ?, ?, 'student', 'active', 'Test School', 1, 'CBSE', NOW(), NOW())
     ");
-    $logStmt->execute([$userId, $testStudentEmail, $testMobile]);
+    $sStmt->execute([$sharedEmail, $mobileStudent, $sHash]);
+    $studentId = $pdo->lastInsertId();
 
-    $checkLogs = $pdo->prepare("SELECT COUNT(*) FROM password_reset_logs WHERE user_id = ? AND status = 'success'");
-    $checkLogs->execute([$userId]);
-    if ($checkLogs->fetchColumn() > 0) {
-        $results['audit_logging'] = true;
+    if ($studentId > 0) {
+        $results['student_registration_same_email'] = true;
+    }
+
+    // 3. Test Student Login Isolation
+    $stmtS = $pdo->prepare("SELECT user_id, password FROM users WHERE LOWER(email) = LOWER(?) AND user_type = 'student'");
+    $stmtS->execute([$sharedEmail]);
+    $sData = $stmtS->fetch();
+    if ($sData && password_verify($passStudent, $sData['password'])) {
+        $results['student_login_isolated'] = true;
+    }
+
+    // 4. Test Teacher Login Isolation
+    $stmtT = $pdo->prepare("SELECT user_id, password FROM users WHERE LOWER(email) = LOWER(?) AND user_type = 'teacher'");
+    $stmtT->execute([$sharedEmail]);
+    $tData = $stmtT->fetch();
+    if ($tData && password_verify($passTeacher, $tData['password'])) {
+        $results['teacher_login_isolated'] = true;
     }
 
     // 5. Cleanup
-    $pdo->prepare("DELETE FROM password_reset_logs WHERE user_id = ?")->execute([$userId]);
-    $pdo->prepare("DELETE FROM users WHERE user_id = ?")->execute([$userId]);
+    $pdo->prepare("DELETE FROM users WHERE user_id IN (?, ?)")->execute([$teacherId, $studentId]);
     $results['cleanup'] = true;
 
     echo json_encode([

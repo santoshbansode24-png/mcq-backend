@@ -32,17 +32,12 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 try {
     $pdo->beginTransaction();
 
-    // Check if email already exists
-    $stmt = $pdo->prepare("SELECT user_id, user_type FROM users WHERE email = ?");
+    // Check if email already exists as a teacher
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) AND user_type = 'teacher'");
     $stmt->execute([$email]);
-    $existingUser = $stmt->fetch();
-    if ($existingUser) {
+    if ($stmt->fetch()) {
         $pdo->rollBack();
-        if ($existingUser['user_type'] === 'teacher') {
-            sendResponse('error', 'Email already registered. Please login or use a different email.', null, 409);
-        } else {
-            sendResponse('error', 'This email is already registered as a ' . $existingUser['user_type'] . ' account.', null, 409);
-        }
+        sendResponse('error', 'This email is already registered as a teacher account. Please login.', null, 409);
     }
 
     $mobile = isset($input['mobile']) ? sanitizeInput($input['mobile']) : (isset($input['phone']) ? sanitizeInput($input['phone']) : '');

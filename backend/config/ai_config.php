@@ -109,7 +109,9 @@ if (!function_exists('callGeminiAPI')) {
  * Call Gemini with Native PDF Support
  */
 if (!function_exists('callGeminiPDF')) {
-    define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+    if (!defined('WORKER_SECRET')) {
+        define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+    }
 
     function callGeminiPDF($prompt, $base64PDF, $options = []) {
         if (empty(GEMINI_API_KEY)) throw new Exception("GEMINI_API_KEY missing.");

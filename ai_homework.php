@@ -192,7 +192,7 @@ $success = false;
 $lastErrorMessage = 'AI Service Connection Failed. Please try again.';
 
 foreach ($models as $model) {
-    $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:streamGenerateContent?key=" . $apiKey;
+    $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:streamGenerateContent?alt=sse&key=" . $apiKey;
 
     $ch = curl_init($apiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);

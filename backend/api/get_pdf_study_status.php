@@ -39,6 +39,33 @@ try {
             throw new Exception("Study session not found.");
         }
 
+        // --- SELF-HEALING AUTO-RECOVERY FOR 5% STUCK JOBS ---
+        // If status is 'pending' or stuck in 'processing' without updates for > 15s,
+        // trigger worker in-line to process this job immediately!
+        $updatedTs = !empty($job['updated_at']) ? strtotime($job['updated_at']) : 0;
+        $isPending = ($job['status'] === 'pending');
+        $isStuckProcessing = ($job['status'] === 'processing' && (time() - $updatedTs) > 15);
+
+        if ($isPending || $isStuckProcessing) {
+            if (!defined('WORKER_SECRET')) {
+                define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+            }
+            $_GET['key'] = WORKER_SECRET;
+            $_GET['force_job_id'] = $job_id;
+
+            ob_start();
+            try {
+                include __DIR__ . '/pdf_worker_ai.php';
+            } catch (Throwable $t) {
+                error_log("[Veeru Self-Healing Worker Error]: " . $t->getMessage());
+            }
+            ob_end_clean();
+
+            // Re-fetch updated job from DB
+            $stmt->execute([$job_id, $user_id]);
+            $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
         // Only fetch and decode JSON if the job is finished
         if ($job['status'] === 'completed') {
             $stmtContent = $pdo->prepare("SELECT study_pack_json FROM pdf_study_content WHERE job_id = ?");

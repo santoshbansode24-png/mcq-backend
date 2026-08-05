@@ -4,6 +4,10 @@
  * Optimized for Stability and Speed
  */
 
+if (!defined('WORKER_SECRET')) {
+    define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+}
+
 // 1. Define API Key (Prevent re-definition errors)
 if (!defined('GEMINI_API_KEY')) {
     // 1. Try loading from secrets.php (Ignored by Git)

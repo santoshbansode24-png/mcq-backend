@@ -160,7 +160,7 @@ if ($file && !empty($file['tmp_name']) && file_exists($file['tmp_name'])) {
     $inlineData = compressAndResizeImage($rawBytes, 1024, 82);
 }
 
-$models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+$models = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.6-flash'];
 $apiKey = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : getenv('GEMINI_API_KEY');
 
 if (empty($apiKey)) {
@@ -237,8 +237,13 @@ foreach ($models as $model) {
     } else {
         if (!empty($curlErr)) {
             $lastErrorMessage = "Network Error: " . $curlErr;
+        } elseif ($httpCode === 400 || $httpCode === 403) {
+            $lastErrorMessage = "Invalid or expired Gemini API key. Please update GEMINI_API_KEY in server variables.";
+            break; // Stop retrying if the API key itself is invalid
+        } elseif ($httpCode === 429) {
+            $lastErrorMessage = "AI Rate limit reached (HTTP 429). Please try again in a few moments.";
         } elseif ($httpCode !== 200) {
-            $lastErrorMessage = "AI Service Busy (HTTP $httpCode). Trying fallback model...";
+            $lastErrorMessage = "AI Service Error (HTTP $httpCode).";
         }
     }
 }

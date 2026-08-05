@@ -4,24 +4,28 @@
  * Optimized for Stability and Speed
  */
 
+if (!defined('WORKER_SECRET')) {
+    define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+}
+
 // 1. Define API Key (Prevent re-definition errors)
 // 1. Define API Key (Prioritize Server Environment Variables)
 if (!defined('GEMINI_API_KEY')) {
-    // A. Check for Railway / Server Environment Variable (BEST PRACTICE)
-    $envKey = getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? ($_SERVER['GEMINI_API_KEY'] ?? ''));
+    // A. Fallback to local secrets.php (ONLY for local XAMPP dev)
+    if (file_exists(__DIR__ . '/secrets.php')) {
+        require_once __DIR__ . '/secrets.php';
+    }
     
-    if ($envKey) {
-        define('GEMINI_API_KEY', trim($envKey));
-    } else {
-        // B. Fallback to local secrets.php (ONLY for local XAMPP dev)
-        if (file_exists(__DIR__ . '/secrets.php')) {
-            require_once __DIR__ . '/secrets.php';
+    // B. Check for Railway / Server Environment Variable
+    if (!defined('GEMINI_API_KEY') || empty(GEMINI_API_KEY)) {
+        $envKey = getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? ($_SERVER['GEMINI_API_KEY'] ?? ''));
+        if ($envKey) {
+            define('GEMINI_API_KEY', trim($envKey));
         }
-        
-        // Final Safety: Define as empty if still not found to prevent PHP Fatal Errors
-        if (!defined('GEMINI_API_KEY')) {
-            define('GEMINI_API_KEY', '');
-        }
+    }
+    
+    if (!defined('GEMINI_API_KEY')) {
+        define('GEMINI_API_KEY', '');
     }
 }
 

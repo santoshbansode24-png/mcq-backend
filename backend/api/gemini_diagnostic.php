@@ -13,7 +13,7 @@ echo "API KEY STATUS: " . (empty(GEMINI_API_KEY) ? "❌ MISSING" : "✅ LOADED (
 echo "API URL: " . GEMINI_API_URL . "\n";
 
 // TEST 1: Simple Connectivity
-echo "\n🧪 TESTING CONNECTIVITY (GEMINI 2.0 FLASH)...\n";
+echo "\n🧪 TESTING CONNECTIVITY (GEMINI 2.5 FLASH)...\n";
 try {
     $prompt = "Hello, are you online? Respond with exactly one word: ONLINE";
     $response = callGeminiAPI($prompt);
@@ -21,10 +21,8 @@ try {
 } catch (Exception $e) {
     echo "❌ FAILED: " . $e->getMessage() . "\n";
     
-    echo "\n🔄 ATTEMPTING FALLBACK (GEMINI 1.5 FLASH)...\n";
-    // If 2.0 fails, maybe the account doesn't have access yet.
-    // We try 1.5-flash on v1 API
-    $fallbackUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+    echo "\n🔄 ATTEMPTING FALLBACK (GEMINI FLASH LATEST)...\n";
+    $fallbackUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
     $ch = curl_init($fallbackUrl . '?key=' . GEMINI_API_KEY);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -37,10 +35,9 @@ try {
     curl_close($ch);
     
     if ($code === 200) {
-        echo "✅ SUCCESS: Gemini 1.5 Flash is working on this key.\n";
-        echo "💡 RECOMMENDATION: Update ai_config.php to use Gemini 1.5 Flash.\n";
+        echo "✅ SUCCESS: Gemini Flash Latest is working on this key.\n";
     } else {
-        echo "❌ FAILED: Gemini 1.5 Flash also failed with code $code. Check API Key restrictions.\n";
+        echo "❌ FAILED: Gemini Flash Latest also failed with code $code. Check API Key restrictions.\n";
     }
 }
 ?>

@@ -10,19 +10,7 @@
     php_value max_input_time 600
     php_value memory_limit 512M
 </IfModule>
-<IfModule mod_php7.c>
-    php_value upload_max_filesize 25M
-    php_value post_max_size 30M
-    php_value max_execution_time 600
-    php_value max_input_time 600
-    php_value memory_limit 512M
-</IfModule>
-<IfModule mod_php5.c>
-    php_value upload_max_filesize 25M
-    php_value post_max_size 30M
-    php_value max_execution_time 600
-    php_value max_input_time 600
-    php_value memory_limit 512M
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f

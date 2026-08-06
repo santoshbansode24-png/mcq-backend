@@ -26,7 +26,7 @@ ini_set('display_errors', 0); // Disable display to prevent JSON corruption
 // Database Credentials (Hardcoded for Production Stability)
 // Database Credentials
 // 1. Check for Environment Variables (Cloud)
-$db_host = getenv('DB_HOST') ?: 'localhost';
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
 $db_name = getenv('DB_NAME') ?: 'veeru_db';
 $db_user = getenv('DB_USER') ?: 'root';
 $db_pass = getenv('DB_PASSWORD');
@@ -45,6 +45,8 @@ try {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_TIMEOUT            => 5, // Fast-fail after 5 seconds to prevent 502 Bad Gateway
+        PDO::ATTR_PERSISTENT         => true, // Phase 2 Optimization: Huge latency reduction via connection pooling
     ];
 
     // SSL options removed to fix Railway internal network connection
@@ -58,12 +60,35 @@ try {
 
     // Force MySQL connection session to use UTC
     $pdo->exec("SET time_zone = '+00:00'");
+
+    // Auto-verify claim_token column on pdf_study_jobs
+    try {
+        $pdo->exec("ALTER TABLE `pdf_study_jobs` ADD COLUMN `claim_token` VARCHAR(64) NULL AFTER `progress` ");
+    } catch (Throwable $e) {
+        // Ignored if column already exists
+    }
     
-    // Fix for "Illegal mix of collations" error (utf8mb4_unicode_ci vs utf8mb4_0900_ai_ci)
-    // Synchronize connection collation with database collation
-    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+    // session-based packet size increase for PDF handling (if user lacks global PERMISSION)
+    try {
+        $pdo->exec("SET SESSION max_allowed_packet = 104857600"); // 100MB
+    } catch (Exception $e) {
+        // Silently fail if not supported, but log it
+        error_log("DB session packet size increase failed: " . $e->getMessage());
+    }
     
 } catch (PDOException $e) {   
+    // Inject CORS headers to prevent clients blocking error response
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Max-Age: 86400');
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Allow-Private-Network: true");
+
     // Return unified JSON error if connection fails
     header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
@@ -74,6 +99,18 @@ try {
  * Helper function to send JSON response
  */
 function sendResponse($status, $message, $data = null, $httpCode = 200) {
+    // Inject CORS headers to prevent clients blocking error/success responses
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Max-Age: 86400');
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Allow-Private-Network: true");
+
     http_response_code($httpCode);
     header("Content-Type: application/json; charset=UTF-8");
     echo json_encode([
@@ -85,6 +122,28 @@ function sendResponse($status, $message, $data = null, $httpCode = 200) {
 }
 
 /**
+ * Helper function to get JSON input
+ */
+function getJsonInput() {
+    $input = file_get_contents('php://input');
+    return json_decode($input, true);
+}
+
+/**
+ * Helper function to validate required fields
+ */
+function validateRequired($data, $requiredFields) {
+    $missing = [];
+    foreach ($requiredFields as $field) {
+        if (!isset($data[$field]) || empty(trim($data[$field]))) {
+            $missing[] = $field;
+        }
+    }
+    return $missing;
+}
+
+/**
+ * Helper function to convert encoding to UTF-8
  * Handles Windows-1252 (common in Excel CSVs) to UTF-8
  */
 function convertUtf8($data) {
@@ -106,26 +165,5 @@ function convertUtf8($data) {
  */
 function sanitizeInput($data) {
     return strip_tags(trim($data ?? ''));
-}
-
-/**
- * Helper function to get JSON input
- */
-function getJsonInput() {
-    $input = file_get_contents('php://input');
-    return json_decode($input, true);
-}
-
-/**
- * Helper function to validate required fields
- */
-function validateRequired($data, $requiredFields) {
-    $missing = [];
-    foreach ($requiredFields as $field) {
-        if (!isset($data[$field]) || empty(trim($data[$field] ?? ''))) {
-            $missing[] = $field;
-        }
-    }
-    return $missing;
 }
 ?>

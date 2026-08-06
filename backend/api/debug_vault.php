@@ -43,14 +43,14 @@ try {
 // Step 3: Check Recent Jobs
 echo "3. RECENT JOBS (Last 5):\n";
 try {
-    $stmt = $pdo->query("SELECT job_id, file_name, status, progress, error_message, created_at FROM pdf_study_jobs ORDER BY job_id DESC LIMIT 5");
+    $stmt = $pdo->query("SELECT job_id, user_id, file_name, status, progress, LENGTH(pdf_base64) as base64_len, file_path, error_message, created_at FROM pdf_study_jobs ORDER BY job_id DESC LIMIT 5");
     $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (empty($jobs)) {
         echo "   No jobs in database\n\n";
     } else {
         foreach ($jobs as $j) {
-            echo "   Job #{$j['job_id']}: {$j['file_name']}\n";
-            echo "   Time: {$j['created_at']}\n";
+            echo "   Job #{$j['job_id']} (User {$j['user_id']}): {$j['file_name']}\n";
+            echo "   Time: {$j['created_at']} | Base64 Length: {$j['base64_len']} bytes\n";
             echo "   Status={$j['status']} | Progress={$j['progress']}%\n";
             if ($j['error_message']) echo "   ERROR: {$j['error_message']}\n";
             echo "   -----------------------------------\n";

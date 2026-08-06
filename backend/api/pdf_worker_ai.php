@@ -49,26 +49,24 @@ foreach ($jobs as $job) {
     try {
         // Status is already marked as 'processing' during claim
 
-        // --- 1. PDF RETRIEVAL LOGIC (Railway-Proof) ---
         $pdfBase64 = '';
         $extractedText = $job['extracted_text'] ?? '';
         $dbData    = $job['pdf_base64'] ?? '';
-        $isTruncated = (!empty($dbData) && strlen($dbData) < 10000); 
 
-        if (!empty($dbData) && !$isTruncated) {
+        if (!empty($dbData)) {
             $pdfBase64 = $dbData;
         } else {
             // FALLBACK 1: Disk
-            $filePath = $job['file_path'];
-            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
-                $baseDir = dirname(__DIR__);
-                $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . $filePath;
-            }
+            $filePath = $job['file_path'] ?? '';
+            if (!empty($filePath)) {
+                if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+                    $baseDir = dirname(__DIR__);
+                    $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . basename($filePath);
+                }
 
-            if (file_exists($filePath)) {
-                $pdfBase64 = base64_encode(file_get_contents($filePath));
-            } elseif (!empty($dbData)) {
-                $pdfBase64 = $dbData;
+                if (file_exists($filePath)) {
+                    $pdfBase64 = base64_encode(file_get_contents($filePath));
+                }
             }
         }
 

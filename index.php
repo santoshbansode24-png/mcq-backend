@@ -19,17 +19,20 @@ if (preg_match('/uploads\/notes\/([^\/]+\.pdf)/i', $request_uri, $matches)) {
 }
 
 // Smart API Route Dispatcher for Railway Nginx / Apache environment
-if (preg_match('#/([^/\?]+\.php)#i', $request_uri, $matches)) {
-    $endpoint = $matches[1];
-    $targetPath = __DIR__ . '/backend/api/' . $endpoint;
-    if (file_exists($targetPath)) {
-        require $targetPath;
-        exit();
-    }
-    $targetPathRoot = __DIR__ . '/' . $endpoint;
-    if (file_exists($targetPathRoot) && $endpoint !== 'index.php') {
-        require $targetPathRoot;
-        exit();
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+if (!empty($path) && $path !== '/' && $path !== '/index.php') {
+    $cleanPath = ltrim($path, '/');
+    $possibleFiles = [
+        __DIR__ . '/' . $cleanPath,
+        __DIR__ . '/backend/api/' . basename($cleanPath),
+        __DIR__ . '/api/' . basename($cleanPath),
+        __DIR__ . '/' . basename($cleanPath)
+    ];
+    foreach ($possibleFiles as $f) {
+        if (file_exists($f) && is_file($f) && basename($f) !== 'index.php') {
+            require $f;
+            exit();
+        }
     }
 }
 

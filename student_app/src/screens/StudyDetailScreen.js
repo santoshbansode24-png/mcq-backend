@@ -358,12 +358,48 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         </View>
                     </View>
 
+                    {/* DEDICATED SPECIAL ACTION BUTTONS */}
+                    <View style={styles.quickActionRow}>
+                        <TouchableOpacity 
+                            style={styles.quickActionBtn} 
+                            activeOpacity={0.8}
+                            onPress={() => getCounts().mcqs > 0 ? startStudy('quiz', 0) : Alert.alert('MCQ Quiz', 'Processing MCQs...')}
+                        >
+                            <LinearGradient colors={['#38bdf8', '#0284c7']} style={styles.quickActionGradient}>
+                                <MaterialCommunityIcons name="format-list-checks" size={22} color="white" />
+                                <Text style={styles.quickActionText}>MCQ Quiz</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.quickActionBtn} 
+                            activeOpacity={0.8}
+                            onPress={() => getCounts().flashcards > 0 ? startStudy('cards', 0) : Alert.alert('Flashcards', 'Processing Flashcards...')}
+                        >
+                            <LinearGradient colors={['#a855f7', '#7e22ce']} style={styles.quickActionGradient}>
+                                <MaterialCommunityIcons name="cards-outline" size={22} color="white" />
+                                <Text style={styles.quickActionText}>Flashcards</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.quickActionBtn} 
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name, jobId: job.job_id })}
+                        >
+                            <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.quickActionGradient}>
+                                <MaterialCommunityIcons name="file-pdf-box" size={22} color="white" />
+                                <Text style={styles.quickActionText}>PDF Notes</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+
                     {/* SMART NOTES SECTION */}
                     {getCounts().notes > 0 && (
                         <TouchableOpacity 
                             style={[styles.glassCard, { marginBottom: 20 }]} 
                             activeOpacity={0.8}
-                            onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name })}
+                            onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name, jobId: job.job_id })}
                         >
                             <LinearGradient colors={['#f59e0b15', '#d9770605']} style={styles.cardHeader}>
                                 <View style={styles.cardHeaderLeft}>
@@ -473,13 +509,17 @@ const styles = StyleSheet.create({
     loadingText: { color: '#e2e8f0', fontSize: 16, fontWeight: '700' },
     loadingSubtext: { color: '#64748b', fontSize: 13, marginTop: 5 },
     body: { padding: 20, paddingBottom: 50 },
-    heroStats: { flexDirection: 'row', marginBottom: 25, gap: 10 },
+    heroStats: { flexDirection: 'row', marginBottom: 15, gap: 10 },
     statPill: { 
         flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', 
         paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, 
         borderWidth: 1, borderColor: '#334155' 
     },
     statPillText: { color: '#cbd5e1', fontSize: 13, fontWeight: '600', marginLeft: 6 },
+    quickActionRow: { flexDirection: 'row', marginBottom: 25, gap: 8, justifyContent: 'space-between' },
+    quickActionBtn: { flex: 1 },
+    quickActionGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 14, gap: 6 },
+    quickActionText: { color: 'white', fontSize: 13, fontWeight: '800' },
     glassCard: { 
         backgroundColor: '#1e293b60', borderRadius: 24, 
         borderWidth: 1, borderColor: '#334155', overflow: 'hidden' 

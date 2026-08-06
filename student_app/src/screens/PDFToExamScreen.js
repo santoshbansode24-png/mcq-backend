@@ -246,18 +246,23 @@ const PDFToExamScreen = ({ user, navigation }) => {
     // --- Actions: Rename & Delete ---
 
     const handleJobOptions = (job) => {
+        const options = [];
+        
+        if (job.status === 'completed') {
+            options.push({ text: "📖 Open Study Hub (MCQs, Cards, Notes)", onPress: () => navigation.navigate('StudyDetail', { job }) });
+        }
+        options.push({ text: "Rename", onPress: () => {
+            setSelectedJob(job);
+            setNewFileName(job.file_name);
+            setRenameModalVisible(true);
+        }});
+        options.push({ text: "Delete", onPress: () => confirmDelete(job), style: "destructive" });
+        options.push({ text: "Cancel", style: "cancel" });
+
         Alert.alert(
             "Document Options",
             job.file_name,
-            [
-                { text: "Rename", onPress: () => {
-                    setSelectedJob(job);
-                    setNewFileName(job.file_name);
-                    setRenameModalVisible(true);
-                }},
-                { text: "Delete", onPress: () => confirmDelete(job), style: "destructive" },
-                { text: "Cancel", style: "cancel" }
-            ]
+            options
         );
     };
 

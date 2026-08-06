@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { API_URL } from '../api/config';
 
 const NotesSection = ({ title, icon, color, items, delay = 0 }) => {
     const slideAnim = useRef(new Animated.Value(30)).current;
@@ -41,7 +42,16 @@ const NotesSection = ({ title, icon, color, items, delay = 0 }) => {
 };
 
 const AIPdfNotesScreen = ({ route, navigation }) => {
-    const { notes, subjectName } = route.params || {};
+    const { notes, subjectName, jobId } = route.params || {};
+
+    const handleDownloadPdf = () => {
+        if (!jobId) {
+            alert('PDF Notes download unavailable for this set.');
+            return;
+        }
+        const exportUrl = `${API_URL}/export_pdf_notes.php?job_id=${jobId}`;
+        Linking.openURL(exportUrl).catch(err => console.error("Could not open export URL", err));
+    };
 
     if (!notes) {
         return (
@@ -61,7 +71,6 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
 
     const n = notes || {};
     const getItems = (key) => {
-        // If the AI somehow returned an array instead of an object, try to extract relevant items
         if (Array.isArray(n)) {
             return n.filter(item => {
                 if (typeof item === 'string') return item.toLowerCase().includes(key.replace('_', ' '));
@@ -73,7 +82,6 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
             }).map(item => typeof item === 'string' ? item : Object.values(item)[0]);
         }
         
-        // Typical object handling: Try exact, then capitalized, then lowercase
         return n[key] || n[key.charAt(0).toUpperCase() + key.slice(1)] || n[key.toLowerCase()] || n['smart_' + key] || n['Smart' + key] || [];
     };
 
@@ -89,6 +97,14 @@ const AIPdfNotesScreen = ({ route, navigation }) => {
                     <Text style={styles.title} numberOfLines={1}>{subjectName || 'Study Material'}</Text>
                     <Text style={styles.subtitle}>Veeru Lens</Text>
                 </View>
+                {jobId ? (
+                    <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadPdf}>
+                        <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.downloadGradient}>
+                            <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
+                            <Text style={styles.downloadText}>Download PDF</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                ) : null}
             </SafeAreaView>
 
             <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -138,6 +154,9 @@ const styles = StyleSheet.create({
     titleContainer: { flex: 1, marginLeft: 15 },
     title: { color: 'white', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
     subtitle: { color: '#10b981', fontSize: 12, fontWeight: '600', marginTop: 2 },
+    downloadBtn: { marginLeft: 8 },
+    downloadGradient: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 5 },
+    downloadText: { color: 'white', fontSize: 13, fontWeight: '700' },
     body: { padding: 20 },
     emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     

@@ -12,11 +12,23 @@ echo "=== RAILWAY VAULT DIAGNOSTIC ===\n\n";
 require_once dirname(__DIR__) . '/config/db.php';
 require_once dirname(__DIR__) . '/config/ai_config.php';
 
-// Step 1: Check Database
-echo "1. CHECKING DB CONNECTION:\n";
+// Step 1: Check Database & Auto-Repair Schema
+echo "1. CHECKING DB CONNECTION & SCHEMA:\n";
 try {
     $pdo->query("SELECT 1");
-    echo "   ✅ OK - Database connected\n\n";
+    echo "   ✅ OK - Database connected\n";
+
+    // Auto-repair missing columns if any
+    try {
+        $pdo->exec("ALTER TABLE `pdf_study_jobs` ADD COLUMN `claim_token` VARCHAR(64) NULL AFTER `progress` ");
+        echo "   🛠️ Auto-Repaired: Added 'claim_token' column to pdf_study_jobs!\n\n";
+    } catch (Exception $e) {
+        if (strpos($e->getMessage(), 'Duplicate column name') !== false) {
+            echo "   ✅ Schema verified ('claim_token' column exists)\n\n";
+        } else {
+            echo "   ⚠️ Schema notice: " . $e->getMessage() . "\n\n";
+        }
+    }
 } catch (Exception $e) {
     echo "   ❌ ERROR: " . $e->getMessage() . "\n\n";
 }

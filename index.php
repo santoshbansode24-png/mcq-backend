@@ -21,20 +21,22 @@ if (preg_match('/uploads\/notes\/([^\/]+\.pdf)/i', $request_uri, $matches)) {
 // Smart API Route Dispatcher for Railway Nginx / Apache environment
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 if (!empty($path) && $path !== '/' && $path !== '/index.php') {
-    $filename = basename($path);
-    if (substr($filename, -4) === '.php') {
-        $searchDirs = [
-            __DIR__ . '/backend/api/',
-            __DIR__ . '/api/',
-            __DIR__ . '/',
-            dirname(__DIR__) . '/backend/api/',
-            dirname(__DIR__) . '/api/'
-        ];
-        foreach ($searchDirs as $dir) {
-            $candidate = $dir . $filename;
-            if (file_exists($candidate) && is_file($candidate) && $filename !== 'index.php') {
-                require $candidate;
-                exit();
+    if (preg_match('/([a-zA-Z0-9_\-]+\.php)$/i', $path, $m)) {
+        $file = $m[1];
+        if ($file !== 'index.php') {
+            $locations = [
+                __DIR__ . '/backend/api/' . $file,
+                __DIR__ . '/api/' . $file,
+                __DIR__ . '/' . $file,
+                '/app/backend/api/' . $file,
+                '/app/api/' . $file,
+                '/app/' . $file
+            ];
+            foreach ($locations as $loc) {
+                if (file_exists($loc) && is_file($loc)) {
+                    require $loc;
+                    exit();
+                }
             }
         }
     }

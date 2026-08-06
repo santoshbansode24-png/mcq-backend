@@ -5,6 +5,17 @@
 
 // Redirect /teacher to the teacher portal subdirectory
 $request_uri = $_SERVER['REQUEST_URI'];
+if (isset($_GET['debug_route'])) {
+    header('Content-Type: text/plain');
+    echo "DIR: " . __DIR__ . "\n";
+    echo "CWD: " . getcwd() . "\n";
+    echo "REQ: " . $request_uri . "\n";
+    echo "FILES IN __DIR__:\n";
+    print_r(glob(__DIR__ . '/*'));
+    echo "FILES IN backend/api:\n";
+    print_r(glob(__DIR__ . '/backend/api/*'));
+    exit();
+}
 if ($request_uri == '/teacher' || $request_uri == '/teacher/') {
     header("Location: /teacher/index.php");
     exit();

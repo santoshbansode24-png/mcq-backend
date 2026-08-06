@@ -8,7 +8,7 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Cache-Control: no-store, no-cache, must-revalidate'); // Prevent stale status
 
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 // Inputs
 $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;

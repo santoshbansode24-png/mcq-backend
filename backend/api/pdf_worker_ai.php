@@ -6,8 +6,8 @@
 set_time_limit(600); // Increased to 10 mins for dense PDFs
 ignore_user_abort(true);
 
-require_once '../config/db.php';
-require_once '../config/ai_config.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/ai_config.php';
 
 // Security Check: Only allow authorized triggers (App or Cron)
 $workerKey = $_GET['key'] ?? ($_POST['key'] ?? '');

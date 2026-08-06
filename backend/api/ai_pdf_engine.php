@@ -9,7 +9,11 @@ header("Connection: keep-alive");
 header("X-Accel-Buffering: no");
 header("Access-Control-Allow-Origin: *");
 
-require_once __DIR__ . '/../config/db.php';
+if (file_exists(__DIR__ . '/config/db.php')) {
+    require_once __DIR__ . '/config/db.php';
+} else {
+    require_once __DIR__ . '/../config/db.php';
+}
 require_once __DIR__ . '/../config/ai_config.php';
 
 // Helper to send progress chunks

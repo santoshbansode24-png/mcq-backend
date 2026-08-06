@@ -6,7 +6,11 @@
 set_time_limit(600); // Increased to 10 mins for dense PDFs
 ignore_user_abort(true);
 
-require_once __DIR__ . '/../config/db.php';
+if (file_exists(__DIR__ . '/config/db.php')) {
+    require_once __DIR__ . '/config/db.php';
+} else {
+    require_once __DIR__ . '/../config/db.php';
+}
 require_once __DIR__ . '/../config/ai_config.php';
 
 // Security Check: Only allow authorized triggers (App or Cron)

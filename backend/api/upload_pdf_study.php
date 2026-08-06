@@ -14,7 +14,11 @@ require_once 'cors_middleware.php'; // Handles CORS, error reporting, and JSON h
 set_time_limit(300);
 ini_set('memory_limit', '512M');
 
-require_once __DIR__ . '/../config/db.php';
+if (file_exists(__DIR__ . '/config/db.php')) {
+    require_once __DIR__ . '/config/db.php';
+} else {
+    require_once __DIR__ . '/../config/db.php';
+}
 require_once __DIR__ . '/../config/ai_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }

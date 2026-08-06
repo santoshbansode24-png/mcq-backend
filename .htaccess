@@ -23,4 +23,9 @@
     php_value max_execution_time 600
     php_value max_input_time 600
     php_value memory_limit 512M
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^api/(.*)$ backend/api/$1 [L,QSA]
 </IfModule>

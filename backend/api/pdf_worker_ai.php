@@ -23,37 +23,19 @@ if ($workerKey !== WORKER_SECRET) {
 
 // --- Job Selection with Atomic Claiming ---
 $forceJobId = isset($_GET['force_job_id']) ? intval($_GET['force_job_id']) : 0;
-$claimToken = bin2hex(random_bytes(8)); // Unique token for this worker instance
 
-try {
-    if ($forceJobId > 0) {
-        $stmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10, claim_token = ? WHERE job_id = ?");
-        $stmt->execute([$claimToken, $forceJobId]);
-        
-        $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
-        $stmt->execute([$forceJobId]);
-    } else {
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10, claim_token = ? 
-                       WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1")
-            ->execute([$claimToken]);
-        
-        $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'processing' AND claim_token = ? LIMIT 1");
-        $stmt->execute([$claimToken]);
-    }
-} catch (Exception $e) {
-    if ($forceJobId > 0) {
-        $stmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?");
-        $stmt->execute([$forceJobId]);
-        
-        $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
-        $stmt->execute([$forceJobId]);
-    } else {
-        $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1")
-            ->execute();
-        
-        $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'processing' ORDER BY updated_at DESC LIMIT 1");
-        $stmt->execute();
-    }
+if ($forceJobId > 0) {
+    $stmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?");
+    $stmt->execute([$forceJobId]);
+    
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
+    $stmt->execute([$forceJobId]);
+} else {
+    $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1")
+        ->execute();
+    
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE status = 'processing' ORDER BY updated_at DESC LIMIT 1");
+    $stmt->execute();
 }
 $jobs = $stmt->fetchAll();
 

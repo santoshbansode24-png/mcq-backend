@@ -5,9 +5,14 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once '../config/db.php';
-require_once '../config/ai_config.php';
-require_once dirname(__DIR__) . '/vendor/autoload.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/ai_config.php';
+
+if (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
+    require_once __DIR__ . '/../../vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
 
 use Smalot\PdfParser\Parser;
 

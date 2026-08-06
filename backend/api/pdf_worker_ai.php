@@ -14,7 +14,7 @@ $workerKey = $_GET['key'] ?? ($_POST['key'] ?? '');
 if ($workerKey !== WORKER_SECRET) {
     header('Content-Type: application/json', true, 403);
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized worker trigger.']);
-    exit;
+    return;
 }
 
 // --- Job Selection with Atomic Claiming ---
@@ -42,7 +42,7 @@ $jobs = $stmt->fetchAll();
 if (empty($jobs)) {
     header('Content-Type: application/json');
     echo json_encode(['status' => 'idle', 'message' => 'No pending jobs or claim failed.']);
-    exit;
+    return;
 }
 
 foreach ($jobs as $job) {

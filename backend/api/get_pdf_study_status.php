@@ -108,6 +108,36 @@ try {
         $stmt->execute($params);
         $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // --- SELF-HEALING AUTO-RECOVERY FOR LIST VIEW ---
+        // Automatically process the first pending job inline when client polls status
+        $pendingJobId = 0;
+        foreach ($jobs as $j) {
+            if ($j['status'] === 'pending') {
+                $pendingJobId = intval($j['job_id']);
+                break;
+            }
+        }
+
+        if ($pendingJobId > 0) {
+            if (!defined('WORKER_SECRET')) {
+                define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+            }
+            $_GET['key'] = WORKER_SECRET;
+            $_GET['force_job_id'] = $pendingJobId;
+
+            ob_start();
+            try {
+                include __DIR__ . '/pdf_worker_ai.php';
+            } catch (Throwable $t) {
+                error_log("[Veeru Self-Healing Worker List Error]: " . $t->getMessage());
+            }
+            ob_end_clean();
+
+            // Re-fetch updated job list from DB
+            $stmt->execute($params);
+            $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
         echo json_encode([
             'status' => 'success',
             'count' => count($jobs),

@@ -111,13 +111,16 @@ foreach ($jobs as $job) {
         $difficultyStr = "Adapt difficulty based on the source text, ensuring a mix of foundational and advanced concepts.";
 
         // STEP 3: Generate Content for Chunk 0
-        $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality information extraction. Do not summarize; extract and transform.
+        $prompt = "Role: You are Veeru Lens, an Expert Educational Content Creator specializing in Active Recall, Spaced Repetition, and rigorous assessment. Your absolute priority is high-quality, reliable, 100% FACTUAL information extraction.
+
+        STRICT GROUND TRUTH DIRECTIVE: Every single MCQ, Flashcard, and Note MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided text below. Do NOT use outside knowledge, external facts, or hallucinate concepts not explicitly present in the source text.
         
         Objective: Analyze Section 1 of $totalChunks of this document text. Your goal is to convert factual, static, and conceptual data into BOTH MCQs AND 'Deep-Scan' Flashcards.
         
         SECTION 1: THE \"DEEP-SCAN\" FLASHCARD PROTOCOL (QUESTION & ANSWER FORMAT)
-        - Your ABSOLUTE priority is to create flashcards in a clear 'question' and 'answer' format.
+        - Your ABSOLUTE priority is to create flashcards in a clear, reliable 'question' and 'answer' format.
         - NO SINGLE WORD QUESTIONS: Never use a single word as a question. Every flashcard question MUST be a complete, grammatically correct sentence.
+        - RELIABILITY & ACCURACY: Ensure the flashcard question directly targets a specific fact from the text, and the answer is 100% accurate and verifiable in the source text.
         - STRICT DISTRIBUTION RATIO: You MUST maintain the following distribution in your output:
            1. 35% VERY SHORT ANSWER TYPE (Full questions requiring a precise 1-3 word answer).
            2. 35% SHORT ANSWER TYPE (Full questions needing a clear explanatory sentence).
@@ -127,34 +130,35 @@ foreach ($jobs as $job) {
            2. Static Data: Capture dates, names, formulas, and specific figures.
            3. Basic Details: Cover foundational 'What', 'Why', and 'How'.
         - ATOMIC CLARITY: Each card MUST cover exactly ONE single concept. Format: {\"question\": \"Full Question Sentence?\", \"answer\": \"Full Answer Sentence or Phrase\"}.
-        - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts that a student actually needs to learn.
+        - RELEVANCE FILTER: Do NOT create questions from page numbers, footers, headers, or irrelevant decorative text. Focus exclusively on core educational content and high-value facts.
         - QUALITY AND EXHAUSTIVE EXTRACTION: Do not generate 'filler' questions, but do NOT miss a single important fact. Generate a flashcard for EVERY SINGLE piece of information, concept, definition, and fact present in the text to ensure 100% coverage.        
         
         SECTION 2: CONTENT LOAD BALANCING & DIFFICULTY
-        - 1:1 BALANCE RATIO: Maintain a strict 1:1 balance between MCQs and Flashcards. For every concept or fact you convert into a Flashcard, you must also generate a corresponding high-quality MCQ. They must be generated at the exact same level of abundance.
+        - 1:1 BALANCE RATIO: Maintain a strict 1:1 balance between MCQs and Flashcards. For every concept or fact you convert into a Flashcard, you must also generate a corresponding high-quality MCQ.
         - All three categories (mcqs, flashcards, and notes) are strictly mandatory and MUST be fully populated. Do not leave notes or any other section empty.
         - {$difficultyStr}
         
         SECTION 3: HIGH-VOLUME MCQ GENERATION & QUALITY STANDARDS
-        - MAXIMIZE MCQ COUNT: You MUST generate as many relevant MCQs as possible from the provided text. Do not stop at just 5 or 10. Extract every single testable concept, fact, date, formula, and definition into a separate MCQ. Exhaustive coverage is your primary goal here.
+        - MAXIMIZE MCQ COUNT: You MUST generate as many relevant MCQs as possible from the provided text. Extract every single testable concept, fact, date, formula, and definition into a separate MCQ strictly grounded in the text.
         - Stem Length: Ensure question stems are meaningful and concise; avoid 'fluff' or irrelevant info.
         - Option Uniformity: All 4 options MUST be of roughly equal length. Never make the correct answer significantly longer than distractors.
         - Plausible Distractors: Distractors must be closely related to the topic and appear technically correct to non-experts. Avoid 'funny' or obviously wrong options.
-        - Academic Language: Use plain, easy-to-understand language. Avoid unnecessarily complex jargon or 'tricky' phrasing.
+        - Academic Language: Use plain, easy-to-understand language.
         - Grammatical Matching: All options must match the stem's grammar perfectly to avoid giving away the answer via grammatical clues.
-        - The explanation ('e') must concisely educate the student on WHY the correct answer is right and WHY distractors are incorrect.
+        - The explanation ('e') must concisely educate the student on WHY the correct answer is right based strictly on the text.
         
         SECTION 4: SMART NOTES
         - Extract short, highly scannable bullet points across three explicit categories:
-           1. definitions: Only core terminology and its meaning.
+           1. definitions: Only core terminology and its meaning from the text.
            2. key_facts: Essential dates, numbers, formulas, or unarguable static truths.
            3. core_concepts: Short explanations of 'how' or 'why' things work.
-        - EXHAUSTIVE EXTRACTION: Do not limit to 3-5 points. Generate as many bullet points as needed to capture 100% of the vital information in the text. Do not miss a single concept or fact.
+        - EXHAUSTIVE EXTRACTION: Generate as many bullet points as needed to capture 100% of the vital information in the text.
         
         CRITICAL RULES:
-        1. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output (questions, options, explanations, flashcards) MUST be in Marathi. If the PDF is English, output MUST be English.
-        2. FORMAT: Return ONLY a valid JSON object. No markdown.
-        3. CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. If necessary, infer logical educational concepts. NEVER return an empty array for any category.
+        1. STRICT PDF GROUND TRUTH: Zero external knowledge or hallucination. Everything must come directly from the source text.
+        2. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output MUST be in Marathi. If English, output MUST be English.
+        3. FORMAT: Return ONLY a valid JSON object. No markdown.
+        4. CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. Rely strictly on the text to extract these. NEVER return an empty array for any category.
         
         SCHEMA:
         {

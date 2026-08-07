@@ -3,7 +3,11 @@
  * On-Demand Specific Item Generation Endpoint
  * Generates ONLY Flashcards, ONLY MCQs, or ONLY Notes for a specific PDF job.
  */
-require_once __DIR__ . '/cors_middleware.php';
+if (file_exists(__DIR__ . '/cors_middleware.php')) {
+    require_once __DIR__ . '/cors_middleware.php';
+} elseif (file_exists(__DIR__ . '/backend/api/cors_middleware.php')) {
+    require_once __DIR__ . '/backend/api/cors_middleware.php';
+}
 set_time_limit(300);
 ini_set('memory_limit', '512M');
 

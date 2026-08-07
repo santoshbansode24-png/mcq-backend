@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, FlatList,
     ActivityIndicator, Alert, StatusBar, Dimensions,
-    ScrollView, Platform, RefreshControl, Modal, TextInput, BackHandler
+    ScrollView, Platform, RefreshControl, Modal, TextInput, BackHandler, Image
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL, WORKER_SECRET } from '../api/config';
@@ -29,18 +30,27 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredJobs, setFilteredJobs] = useState([]);
 
-    // Modal State
+    // Modals State
     const [renameModalVisible, setRenameModalVisible] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
     const [newFileName, setNewFileName] = useState('');
     const [createFolderModalVisible, setCreateFolderModalVisible] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     
+    // PDF Single File Upload Modal
     const [uploadModalVisible, setUploadModalVisible] = useState(false);
     const [pendingUploadFile, setPendingUploadFile] = useState(null);
     const [uploadFileName, setUploadFileName] = useState('');
     const [uploadDifficulty, setUploadDifficulty] = useState('mix');
     
+    // Chooser Modal (PDF vs Camera vs Gallery)
+    const [chooserModalVisible, setChooserModalVisible] = useState(false);
+
+    // Photo Studio State (Camera snaps & Multi-Image Gallery)
+    const [capturedPhotos, setCapturedPhotos] = useState([]);
+    const [photoStudioVisible, setPhotoStudioVisible] = useState(false);
+    const [photoPackTitle, setPhotoPackTitle] = useState('');
+
     const [renameFolderModalVisible, setRenameFolderModalVisible] = useState(false);
     const [selectedFolder, setSelectedFolder] = useState(null);
     const [editFolderName, setEditFolderName] = useState('');
@@ -69,10 +79,8 @@ const PDFToExamScreen = ({ user, navigation }) => {
         const activeJobs = jobs.filter(j => j.status === 'processing' || j.status === 'pending');
         
         if (activeJobs.length > 0) {
-            // Only nudge the worker if there is a 'pending' job (not already processing).
             const needsNudge = activeJobs.some(j => j.status === 'pending');
             if (needsNudge) {
-                // Fire and forget nudge. The PHP script uses ignore_user_abort(true)
                 triggerWorker();
             }
             interval = setInterval(() => loadData(true), 5000);
@@ -85,7 +93,6 @@ const PDFToExamScreen = ({ user, navigation }) => {
             const url = forceId 
                 ? `${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}&force_job_id=${forceId}`
                 : `${API_URL}/pdf_worker_ai.php?key=${WORKER_SECRET}`;
-            // Use 2-second timeout to prevent locking up all background Axios connections.
             await axios.get(url, { timeout: 2000 });
         } catch (e) {
             console.log("Worker Ping Background:", e.message);
@@ -106,16 +113,12 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
             if (fRes.data.status === 'success') setFolders(fRes.data.data);
             if (jRes.data.status === 'success') {
-                // Ensure we don't accidentally remove an 'uploading' optimistic job if loadData is called concurrently
                 setJobs(prevJobs => {
                     const uploadingJobs = prevJobs.filter(j => j.status === 'uploading');
                     const serverJobs = jRes.data.data;
-                    
-                    // Filter out any uploading jobs that have now appeared in the server response
                     const activeUploads = uploadingJobs.filter(uj => 
                         !serverJobs.some(sj => sj.file_name === uj.file_name && sj.status !== 'uploading')
                     );
-                    
                     return [...activeUploads, ...serverJobs];
                 });
             }
@@ -127,7 +130,6 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
     };
 
-    // Optimization: Filter jobs locally when search query changes
     useEffect(() => {
         if (!searchQuery.trim()) {
             setFilteredJobs(jobs);
@@ -141,23 +143,21 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
     }, [searchQuery, jobs]);
 
-    const handleUpload = async () => {
+    // 1. Pick PDF Document
+    const handlePickDocument = async () => {
+        setChooserModalVisible(false);
         try {
             const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: false });
             if (doc.canceled) return;
 
             const file = doc.assets[0];
-
-            // Enforce max 20 MB limit
             const MAX_SIZE = 20 * 1024 * 1024;
             if (file.size && file.size > MAX_SIZE) {
                 Alert.alert("File Too Large", "Please select a PDF document smaller than 20 MB.");
                 return;
             }
 
-            // Instead of uploading blindly, ask the user to confirm/fix the name
             let defaultName = file.name || 'document.pdf';
-            // Strip .pdf for editing convenience
             if (defaultName.toLowerCase().endsWith('.pdf')) {
                 defaultName = defaultName.substring(0, defaultName.length - 4);
             }
@@ -170,12 +170,75 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
     };
 
+    // 2. Camera Snap (Page by Page)
+    const handleSnapCamera = async () => {
+        setChooserModalVisible(false);
+        try {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
+                Alert.alert("Camera Permission Required", "Please grant camera permissions to snap textbook pages.");
+                return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                quality: 0.8,
+                allowsEditing: false
+            });
+
+            if (!result.canceled && result.assets?.[0]) {
+                const newPhoto = {
+                    id: Date.now().toString(),
+                    uri: result.assets[0].uri
+                };
+                setCapturedPhotos(prev => [...prev, newPhoto]);
+                if (!photoPackTitle) setPhotoPackTitle(`Photo Pack ${new Date().toLocaleDateString()}`);
+                setPhotoStudioVisible(true);
+            }
+        } catch (e) {
+            Alert.alert("Camera Error", e.message || "Failed to open camera.");
+        }
+    };
+
+    // 3. Pick Gallery Photos (Multi-Select)
+    const handlePickGallery = async () => {
+        setChooserModalVisible(false);
+        try {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permission.granted) {
+                Alert.alert("Permission Required", "Please grant gallery permissions to pick textbook photos.");
+                return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsMultipleSelection: true,
+                quality: 0.8
+            });
+
+            if (!result.canceled && result.assets?.length > 0) {
+                const newPhotos = result.assets.map((asset, i) => ({
+                    id: `${Date.now()}_${i}`,
+                    uri: asset.uri
+                }));
+                setCapturedPhotos(prev => [...prev, ...newPhotos]);
+                if (!photoPackTitle) setPhotoPackTitle(`Photo Pack ${new Date().toLocaleDateString()}`);
+                setPhotoStudioVisible(true);
+            }
+        } catch (e) {
+            Alert.alert("Gallery Error", e.message || "Failed to open gallery.");
+        }
+    };
+
+    const handleDeletePhoto = (id) => {
+        setCapturedPhotos(prev => prev.filter(p => p.id !== id));
+    };
+
+    // Execute PDF Document Upload
     const executeUpload = async () => {
         if (!pendingUploadFile || !uploadFileName.trim()) return;
         setUploadModalVisible(false);
 
         const file = pendingUploadFile;
-        // Ensure it ends with .pdf
         let finalName = uploadFileName.trim();
         if (!finalName.toLowerCase().endsWith('.pdf')) finalName += '.pdf';
 
@@ -186,12 +249,9 @@ const PDFToExamScreen = ({ user, navigation }) => {
             progress: 0
         };
         setJobs(prev => [optimisticJob, ...prev]);
-        
         setUploading(true);
 
-        let result;
         try {
-            
             const formData = new FormData();
             formData.append('pdf_file', {
                 uri: file.uri,
@@ -212,18 +272,18 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 },
             });
 
-            const text = await response.text(); // Read as text first to avoid JSON parse crash
+            const text = await response.text();
+            let result;
             try {
                 result = JSON.parse(text);
             } catch (parseErr) {
-                Alert.alert("Server Error", "Server returned an unexpected response:\n" + text.substring(0, 200));
+                Alert.alert("Server Error", "Unexpected response:\n" + text.substring(0, 200));
                 setJobs(prev => prev.filter(j => j.job_id !== optimisticJob.job_id));
                 setUploading(false);
                 return;
             }
 
             if (result && result.status === 'success') {
-                // The polling mechanism will naturally replace the uploading job with the real pending/processing job
                 setTimeout(() => loadData(true), 500); 
             } else {
                 setJobs(prev => prev.filter(j => j.status !== 'uploading'));
@@ -231,23 +291,82 @@ const PDFToExamScreen = ({ user, navigation }) => {
             }
         } catch (e) {
             setJobs(prev => prev.filter(j => j.status !== 'uploading'));
-            if (e.message && e.message.toLowerCase().includes('network')) {
-                Alert.alert("Connection Error", `Cannot reach server at:\n${API_URL}\n\nMake sure your phone is on WiFi (same as PC) and XAMPP Apache is running.`);
-            } else {
-                Alert.alert("Upload Error", e.message || "Unknown error occurred.");
-            }
-            console.log('Upload error:', e);
+            Alert.alert("Upload Error", e.message || "Unknown error occurred.");
         } finally {
             setUploading(false);
             setPendingUploadFile(null);
         }
     };
 
-    // --- Actions: Rename & Delete ---
+    // Execute Multi-Photo Pack Upload
+    const executePhotoStudioUpload = async () => {
+        if (capturedPhotos.length === 0) {
+            Alert.alert("No Photos", "Please snap or select at least 1 photo.");
+            return;
+        }
+
+        setPhotoStudioVisible(false);
+        let finalTitle = (photoPackTitle.trim() || 'Scanned Photo Set') + '.pdf';
+
+        const optimisticJob = {
+            job_id: 'upload_photo_' + Date.now(),
+            file_name: finalTitle,
+            status: 'uploading',
+            progress: 0
+        };
+        setJobs(prev => [optimisticJob, ...prev]);
+        setUploading(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('user_id', user?.user_id?.toString() || '0');
+            formData.append('custom_file_name', finalTitle);
+            formData.append('difficulty', uploadDifficulty);
+            if (currentFolderId !== 'root') formData.append('folder_id', currentFolderId.toString());
+
+            capturedPhotos.forEach((p, idx) => {
+                formData.append('image_files[]', {
+                    uri: p.uri,
+                    name: `page_${idx + 1}.jpg`,
+                    type: 'image/jpeg'
+                });
+            });
+
+            const response = await fetch(`${API_URL}/upload_pdf_study.php`, {
+                method: 'POST',
+                body: formData,
+                headers: { 'Accept': 'application/json' }
+            });
+
+            const text = await response.text();
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (err) {
+                Alert.alert("Server Error", text.substring(0, 200));
+                setJobs(prev => prev.filter(j => j.job_id !== optimisticJob.job_id));
+                setUploading(false);
+                return;
+            }
+
+            if (result && result.status === 'success') {
+                setCapturedPhotos([]);
+                setPhotoPackTitle('');
+                setTimeout(() => loadData(true), 500);
+            } else {
+                setJobs(prev => prev.filter(j => j.status !== 'uploading'));
+                Alert.alert("Upload Failed", result?.message || "Could not upload photo set.");
+            }
+        } catch (e) {
+            setJobs(prev => prev.filter(j => j.status !== 'uploading'));
+            Alert.alert("Upload Error", e.message || "Failed to upload photo set.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleJobOptions = (job) => {
         const options = [];
-        
         if (job.status === 'completed') {
             options.push({ text: "📖 Open Study Hub (MCQs, Cards, Notes)", onPress: () => navigation.navigate('StudyDetail', { job }) });
         }
@@ -259,17 +378,13 @@ const PDFToExamScreen = ({ user, navigation }) => {
         options.push({ text: "Delete", onPress: () => confirmDelete(job), style: "destructive" });
         options.push({ text: "Cancel", style: "cancel" });
 
-        Alert.alert(
-            "Document Options",
-            job.file_name,
-            options
-        );
+        Alert.alert("Document Options", job.file_name, options);
     };
 
     const confirmDelete = (job) => {
         Alert.alert(
             "Delete Document",
-            `Are you sure you want to delete "${job.file_name}"? This action cannot be undone.`,
+            `Are you sure you want to delete "${job.file_name}"?`,
             [
                 { text: "Cancel", style: "cancel" },
                 { text: "Delete", style: "destructive", onPress: () => executeDelete(job) }
@@ -285,15 +400,9 @@ const PDFToExamScreen = ({ user, navigation }) => {
             
             const response = await fetch(`${API_URL}/delete_pdf_job.php`, { method: 'POST', body: formData });
             const result = await response.json();
-            
-            if (result.status === 'success') {
-                loadData(true);
-            } else {
-                Alert.alert("Error", result.message || "Failed to delete");
-            }
+            if (result.status === 'success') loadData(true);
         } catch (e) {
             console.error(e);
-            Alert.alert("Error", "Check your connection");
         }
     };
 
@@ -312,15 +421,9 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
             const response = await fetch(`${API_URL}/rename_pdf_item.php`, { method: 'POST', body: formData });
             const result = await response.json();
-
-            if (result.status === 'success') {
-                loadData(true);
-            } else {
-                Alert.alert("Error", result.message || "Failed to rename");
-            }
+            if (result.status === 'success') loadData(true);
         } catch (e) {
             console.error(e);
-            Alert.alert("Error", "Check your connection");
         }
     };
 
@@ -350,16 +453,12 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
             const response = await fetch(`${API_URL}/create_pdf_folder.php`, { method: 'POST', body: formData });
             const result = await response.json();
-
             if (result.status === 'success') {
                 setNewFolderName('');
                 loadData(true);
-            } else {
-                Alert.alert("Error", result.message || "Failed to create folder");
             }
         } catch (e) {
             console.error(e);
-            Alert.alert("Error", "Check your connection");
         }
     };
 
@@ -382,7 +481,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
     const confirmFolderDelete = (folder) => {
         Alert.alert(
             "Delete Folder",
-            `Are you sure you want to delete "${folder.name}"? Documents inside will be safely moved back to the Main Vault.`,
+            `Are you sure you want to delete "${folder.name}"?`,
             [
                 { text: "Cancel", style: "cancel" },
                 { text: "Delete", style: "destructive", onPress: () => executeDeleteFolder(folder) }
@@ -398,15 +497,9 @@ const PDFToExamScreen = ({ user, navigation }) => {
             
             const response = await fetch(`${API_URL}/delete_pdf_folder.php`, { method: 'POST', body: formData });
             const result = await response.json();
-            
-            if (result.status === 'success') {
-                loadData(true);
-            } else {
-                Alert.alert("Error", result.message || "Failed to delete folder");
-            }
+            if (result.status === 'success') loadData(true);
         } catch (e) {
             console.error(e);
-            Alert.alert("Error", "Check your connection");
         }
     };
 
@@ -421,19 +514,11 @@ const PDFToExamScreen = ({ user, navigation }) => {
 
             const response = await fetch(`${API_URL}/rename_pdf_folder.php`, { method: 'POST', body: formData });
             const result = await response.json();
-
-            if (result.status === 'success') {
-                loadData(true);
-            } else {
-                Alert.alert("Error", result.message || "Failed to rename folder");
-            }
+            if (result.status === 'success') loadData(true);
         } catch (e) {
             console.error(e);
-            Alert.alert("Error", "Check your connection");
         }
     };
-
-    // --- Rendering ---
 
     const renderJobItem = ({ item }) => {
         const isReady = item.status === 'completed';
@@ -513,7 +598,6 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     <Text style={styles.headerSubtitle}>My Documents</Text>
                                 </View>
                                 <View style={styles.headerIcons}>
-                                    {/* Search Bar Implementation */}
                                     <View style={styles.searchContainer}>
                                         <MaterialCommunityIcons name="magnify" size={20} color="#94a3b8" style={styles.searchIcon} />
                                         <TextInput 
@@ -532,8 +616,8 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                 </View>
                             </View>
 
-                            {/* Main Upload Banner */}
-                            <TouchableOpacity activeOpacity={0.8} onPress={handleUpload} disabled={uploading}>
+                            {/* Main Upload Banner (Opens Chooser Modal) */}
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => setChooserModalVisible(true)} disabled={uploading}>
                                 <LinearGradient 
                                     colors={['#8b5cf6', '#d946ef', '#06b6d4']} 
                                     style={styles.bannerContainer}
@@ -545,10 +629,10 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     ) : (
                                         <>
                                             <View style={styles.bannerIconWrapper}>
-                                                <MaterialCommunityIcons name="file-document-plus-outline" size={32} color="#ffffff" />
+                                                <MaterialCommunityIcons name="camera-plus-outline" size={32} color="#ffffff" />
                                             </View>
-                                            <Text style={styles.bannerTitle}>Veeru Lens</Text>
-                                            <Text style={styles.bannerSubtitle}>Tap to select a document from your device</Text>
+                                            <Text style={styles.bannerTitle}>Veeru Lens Studio</Text>
+                                            <Text style={styles.bannerSubtitle}>Snap Photos Page-by-Page or Pick PDF / Gallery Images</Text>
                                         </>
                                     )}
                                 </LinearGradient>
@@ -561,12 +645,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     activeOpacity={0.8} 
                                     onPress={() => navigation.navigate('AIPdfWorksheet')}
                                 >
-                                    <LinearGradient 
-                                        colors={['#06b6d4', '#3b82f6']} 
-                                        style={styles.actionGradient} 
-                                        start={{ x: 0, y: 0 }} 
-                                        end={{ x: 1, y: 1 }}
-                                    >
+                                    <LinearGradient colors={['#06b6d4', '#3b82f6']} style={styles.actionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                                         <MaterialCommunityIcons name="file-document-edit-outline" size={28} color="#fff" style={styles.actionIcon} />
                                         <Text style={styles.actionTitle}>Worksheet</Text>
                                         <Text style={styles.actionSubtitle}>Combine PDFs</Text>
@@ -578,12 +657,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                     activeOpacity={0.8}
                                     onPress={() => navigation.navigate('AIPdfExam')}
                                 >
-                                    <LinearGradient 
-                                        colors={['#8b5cf6', '#a855f7']} 
-                                        style={styles.actionGradient} 
-                                        start={{ x: 0, y: 0 }} 
-                                        end={{ x: 1, y: 1 }}
-                                    >
+                                    <LinearGradient colors={['#8b5cf6', '#a855f7']} style={styles.actionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                                         <MaterialCommunityIcons name="file-check-outline" size={28} color="#fff" style={styles.actionIcon} />
                                         <Text style={styles.actionTitle}>Custom Exam</Text>
                                         <Text style={styles.actionSubtitle}>Combine PDFs</Text>
@@ -619,7 +693,6 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                 })}
                             </ScrollView>
 
-                            {/* My Study Materials Section */}
                             <Text style={[styles.sectionTitle, { marginTop: 5, marginBottom: 15 }]}>My Study Materials</Text>
                         </>
                     }
@@ -629,11 +702,112 @@ const PDFToExamScreen = ({ user, navigation }) => {
                                 <MaterialCommunityIcons name="file-document-outline" size={48} color="#64748b" />
                             </View>
                             <Text style={styles.emptyText}>Your vault is empty</Text>
-                            <Text style={styles.emptySubtext}>Tap the banner above to spark some magic!</Text>
+                            <Text style={styles.emptySubtext}>Tap the banner above to snap photos or upload!</Text>
                         </View>
                     }
                 />
             </SafeAreaView>
+
+            {/* 1. UPLOAD METHOD CHOOSER MODAL */}
+            <Modal visible={chooserModalVisible} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { padding: 24 }]}>
+                        <Text style={styles.modalTitle}>Veeru Lens Studio</Text>
+                        <Text style={[styles.modalSubTitle, { marginBottom: 20 }]}>Select how you want to add study material:</Text>
+
+                        {/* Option A: Snap Photos with Camera */}
+                        <TouchableOpacity style={styles.chooserBtn} activeOpacity={0.8} onPress={handleSnapCamera}>
+                            <LinearGradient colors={['#a855f7', '#7e22ce']} style={styles.chooserGradient}>
+                                <MaterialCommunityIcons name="camera" size={24} color="white" />
+                                <View style={{ marginLeft: 12 }}>
+                                    <Text style={styles.chooserTitle}>📸 Snap Photos (Page 1, 2, 3...)</Text>
+                                    <Text style={styles.chooserSub}>Click textbook pages one-by-one</Text>
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        {/* Option B: Pick Multiple Gallery Photos */}
+                        <TouchableOpacity style={[styles.chooserBtn, { marginTop: 10 }]} activeOpacity={0.8} onPress={handlePickGallery}>
+                            <LinearGradient colors={['#06b6d4', '#0284c7']} style={styles.chooserGradient}>
+                                <MaterialCommunityIcons name="image-multiple" size={24} color="white" />
+                                <View style={{ marginLeft: 12 }}>
+                                    <Text style={styles.chooserTitle}>🖼️ Multiple Gallery Photos</Text>
+                                    <Text style={styles.chooserSub}>Select multiple JPG/PNG images</Text>
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        {/* Option C: Single PDF Document */}
+                        <TouchableOpacity style={[styles.chooserBtn, { marginTop: 10 }]} activeOpacity={0.8} onPress={handlePickDocument}>
+                            <LinearGradient colors={['#3b82f6', '#1d4ed8']} style={styles.chooserGradient}>
+                                <MaterialCommunityIcons name="file-pdf-box" size={24} color="white" />
+                                <View style={{ marginLeft: 12 }}>
+                                    <Text style={styles.chooserTitle}>📄 Upload PDF Document</Text>
+                                    <Text style={styles.chooserSub}>Select a single PDF file</Text>
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.modalBtn, { marginTop: 20, alignSelf: 'center' }]} onPress={() => setChooserModalVisible(false)}>
+                            <Text style={styles.modalBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* 2. PHOTO STUDIO CAROUSEL & CONFIRM MODAL */}
+            <Modal visible={photoStudioVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { width: '92%', maxHeight: '85%' }]}>
+                        <Text style={styles.modalTitle}>📸 Photo Studio ({capturedPhotos.length} Pages)</Text>
+                        
+                        <TextInput
+                            style={styles.modalInput}
+                            value={photoPackTitle}
+                            onChangeText={setPhotoPackTitle}
+                            placeholder="Study Set Name (e.g. Chapter 4 Photos)"
+                            placeholderTextColor="#64748b"
+                        />
+
+                        {/* Thumbnail Carousel */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                            {capturedPhotos.map((photo, index) => (
+                                <View key={photo.id} style={styles.photoThumbCard}>
+                                    <Image source={{ uri: photo.uri }} style={styles.thumbImage} />
+                                    <View style={styles.pageBadge}>
+                                        <Text style={styles.pageBadgeText}>Page {index + 1}</Text>
+                                    </View>
+                                    <TouchableOpacity style={styles.deletePhotoBtn} onPress={() => handleDeletePhoto(photo.id)}>
+                                        <MaterialCommunityIcons name="close-circle" size={22} color="#ef4444" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>
+
+                        {/* Add More Photos Bar */}
+                        <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>
+                            <TouchableOpacity style={[styles.addMoreBtn, { flex: 1 }]} onPress={handleSnapCamera}>
+                                <MaterialCommunityIcons name="camera-plus" size={18} color="#a855f7" />
+                                <Text style={[styles.addMoreText, { color: '#a855f7' }]}>📸 Snap Next</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={[styles.addMoreBtn, { flex: 1 }]} onPress={handlePickGallery}>
+                                <MaterialCommunityIcons name="image-plus" size={18} color="#06b6d4" />
+                                <Text style={[styles.addMoreText, { color: '#06b6d4' }]}>🖼️ Add Gallery</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity style={styles.modalBtn} onPress={() => setPhotoStudioVisible(false)}>
+                                <Text style={styles.modalBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#a855f7' }]} onPress={executePhotoStudioUpload}>
+                                <Text style={styles.modalBtnTextPrimary}>🚀 Generate Study Pack</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Create Folder Modal */}
             <Modal visible={createFolderModalVisible} transparent animationType="fade">
@@ -660,7 +834,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 </View>
             </Modal>
 
-            {/* Confirm Upload Name Modal */}
+            {/* Confirm PDF Name Modal */}
             <Modal visible={uploadModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -699,7 +873,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
                 </View>
             </Modal>
 
-            {/* Rename Modal */}
+            {/* Rename Document Modal */}
             <Modal visible={renameModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -774,12 +948,11 @@ const styles = StyleSheet.create({
     },
     searchIcon: { marginRight: 8 },
     searchInput: { flex: 1, color: '#fff', fontSize: 14, fontWeight: '500', padding: 0 },
-    iconBtn: { marginLeft: 15, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
-
+    
     bannerContainer: { padding: 28, borderRadius: 24, alignItems: 'center', marginBottom: 24, elevation: 8, shadowColor: '#db2777', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
     bannerIconWrapper: { backgroundColor: 'rgba(255,255,255,0.15)', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
     bannerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 6 },
-    bannerSubtitle: { fontSize: 13, color: '#fbcfe8', opacity: 0.9, fontWeight: '500' },
+    bannerSubtitle: { fontSize: 13, color: '#fbcfe8', opacity: 0.9, fontWeight: '500', textAlign: 'center' },
 
     actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
     actionBlock: { flex: 1, height: 130, marginRight: 15, borderRadius: 20, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 4 } },
@@ -814,21 +987,36 @@ const styles = StyleSheet.create({
     emptySubtext: { color: '#94a3b8', fontSize: 14, marginTop: 6, fontWeight: '500' },
 
     // Modal Styles
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-    modalContent: { width: '85%', backgroundColor: '#1e293b', borderRadius: 16, padding: 20 },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', marginBottom: 15 },
-    modalInput: { backgroundColor: '#0f172a', color: '#fff', padding: 15, borderRadius: 10, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: '#334155' },
-    modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
-    modalBtn: { paddingVertical: 10, paddingHorizontal: 15, marginLeft: 10, borderRadius: 8 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
+    modalContent: { width: '88%', backgroundColor: '#1e293b', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#334155' },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', marginBottom: 6 },
+    modalInput: { backgroundColor: '#0f172a', color: '#fff', padding: 14, borderRadius: 12, fontSize: 15, marginBottom: 15, borderWidth: 1, borderColor: '#334155' },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15 },
+    modalBtn: { paddingVertical: 10, paddingHorizontal: 16, marginLeft: 10, borderRadius: 10 },
     modalBtnPrimary: { backgroundColor: '#3b82f6' },
-    modalBtnText: { color: '#94a3b8', fontSize: 16, fontWeight: '600' },
-    modalBtnTextPrimary: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    modalSubTitle: { fontSize: 14, color: '#94a3b8', marginBottom: 10, fontWeight: '600', marginTop: -5 },
-    difficultyContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+    modalBtnText: { color: '#94a3b8', fontSize: 15, fontWeight: '600' },
+    modalBtnTextPrimary: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+    modalSubTitle: { fontSize: 13, color: '#94a3b8', marginBottom: 10, fontWeight: '600' },
+    difficultyContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
     diffBtn: { flex: 1, paddingVertical: 8, marginHorizontal: 3, borderRadius: 8, backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', alignItems: 'center' },
     diffBtnSelected: { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' },
     diffBtnText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
-    diffBtnTextSelected: { color: '#fff' }
+    diffBtnTextSelected: { color: '#fff' },
+
+    // Chooser Modal Styles
+    chooserBtn: { borderRadius: 16, overflow: 'hidden' },
+    chooserGradient: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+    chooserTitle: { color: 'white', fontSize: 15, fontWeight: 'bold' },
+    chooserSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
+
+    // Photo Studio Styles
+    photoThumbCard: { width: 100, height: 130, borderRadius: 14, marginRight: 12, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155' },
+    thumbImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    pageBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(15,23,42,0.85)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+    pageBadgeText: { color: '#38bdf8', fontSize: 10, fontWeight: 'bold' },
+    deletePhotoBtn: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12 },
+    addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155' },
+    addMoreText: { fontSize: 13, fontWeight: 'bold', marginLeft: 6 }
 });
 
 export default PDFToExamScreen;

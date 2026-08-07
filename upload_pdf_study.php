@@ -77,9 +77,9 @@ function convertImagesToPdfBase64($tmpFiles) {
         $h = $img['height'];
         
         $offsets[$pageObjNum] = strlen($pdf);
-        $pdf .= "{$pageObjNum} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents {$contentObjNum} 0 R /Resources << /XObject << /Im{$i} {$imageObjNum} 0 R >> >> >>\nendobj\n";
+        $pdf .= "{$pageObjNum} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 $w $h] /Contents {$contentObjNum} 0 R /Resources << /XObject << /Im{$i} {$imageObjNum} 0 R >> >> >>\nendobj\n";
         
-        $stream = "q 612 0 0 792 0 0 cm /Im{$i} Do Q";
+        $stream = "q $w 0 0 $h 0 0 cm /Im{$i} Do Q";
         $offsets[$contentObjNum] = strlen($pdf);
         $pdf .= "{$contentObjNum} 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n";
         

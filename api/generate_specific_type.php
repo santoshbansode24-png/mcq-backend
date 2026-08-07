@@ -39,24 +39,37 @@ if ($jobId <= 0) {
 
 try {
     // 1. Fetch job from DB
-    $stmt = $pdo->prepare("SELECT job_id, file_name, pdf_base64, study_content FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT job_id, user_id, file_name, pdf_base64, extracted_text, study_content FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
     $stmt->execute([$jobId]);
     $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$job) {
-        throw new Exception("Study job not found");
+        throw new Exception("Study session not found for ID: $jobId");
     }
 
-    $existingContent = json_decode($job['study_content'] ?? '{}', true) ?: [];
-    if (!isset($existingContent['mcqs'])) $existingContent['mcqs'] = [];
-    if (!isset($existingContent['flashcards'])) $existingContent['flashcards'] = [];
-    if (!isset($existingContent['notes'])) $existingContent['notes'] = ['definitions' => [], 'key_facts' => [], 'core_concepts' => []];
+    // Read existing content from pdf_study_content (primary) or pdf_study_jobs (fallback)
+    $existingContent = [];
+    $stmtContent = $pdo->prepare("SELECT study_pack_json FROM pdf_study_content WHERE job_id = ? LIMIT 1");
+    $stmtContent->execute([$jobId]);
+    $contentRow = $stmtContent->fetch(PDO::FETCH_ASSOC);
+
+    if ($contentRow && !empty($contentRow['study_pack_json'])) {
+        $existingContent = json_decode($contentRow['study_pack_json'], true) ?: [];
+    } else if (!empty($job['study_content'])) {
+        $existingContent = json_decode($job['study_content'], true) ?: [];
+    }
+
+    if (!isset($existingContent['mcqs']) || !is_array($existingContent['mcqs'])) $existingContent['mcqs'] = [];
+    if (!isset($existingContent['flashcards']) || !is_array($existingContent['flashcards'])) $existingContent['flashcards'] = [];
+    if (!isset($existingContent['notes']) || !is_array($existingContent['notes'])) {
+        $existingContent['notes'] = ['definitions' => [], 'key_facts' => [], 'core_concepts' => []];
+    }
 
     $count = isset($_REQUEST['count']) ? intval($_REQUEST['count']) : 10;
     if ($count < 5) $count = 10;
     if ($count > 30) $count = 20;
 
-    // Build exclusion list of existing questions to guarantee zero duplicates
+    // Build exclusion list of existing items to guarantee zero duplicates
     $existingQuestions = [];
     if ($type === 'flashcards' && !empty($existingContent['flashcards'])) {
         foreach ($existingContent['flashcards'] as $card) {
@@ -83,13 +96,11 @@ try {
     }
 
     $pdfBase64 = $job['pdf_base64'] ?? '';
-    if (empty($pdfBase64)) {
-        throw new Exception("Document source content missing for this job.");
-    }
+    $extractedText = $job['extracted_text'] ?? '';
 
     if ($type === 'flashcards') {
         $prompt = "You are the Veeru Flashcard Generator.
-STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided PDF document. Do NOT use outside knowledge.
+STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document. Do NOT use outside knowledge.
 Generate $count high-quality, highly reliable NEW Flashcards from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -100,7 +111,7 @@ Output strict JSON format ONLY:
 }";
     } elseif ($type === 'mcqs') {
         $prompt = "You are the Veeru MCQ Quiz Generator.
-STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided PDF document. Do NOT use outside knowledge.
+STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document. Do NOT use outside knowledge.
 Generate $count challenging Multiple Choice Questions from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -116,7 +127,7 @@ Output strict JSON format ONLY:
 }";
     } else { // notes
         $prompt = "You are the Veeru Smart Revision Notes Engine.
-STRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided PDF document. Do NOT use outside knowledge.
+STRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document. Do NOT use outside knowledge.
 Generate comprehensive, highly scannable, expanded Revision Notes across definitions, key_facts, and core_concepts (extract at least 15 new key points).
 Output strict JSON format ONLY:
 {
@@ -128,23 +139,35 @@ Output strict JSON format ONLY:
 }";
     }
 
-    // 3. Call Gemini 2.5 Flash API with PDF base64
+    // 3. Build Gemini 2.5 Flash Request Parts
+    if (!empty($pdfBase64)) {
+        $parts = [
+            [
+                "inline_data" => [
+                    "mime_type" => "application/pdf",
+                    "data"      => $pdfBase64
+                ]
+            ],
+            [
+                "text" => $prompt
+            ]
+        ];
+    } elseif (!empty($extractedText)) {
+        $parts = [
+            [
+                "text" => "SOURCE TEXT DOCUMENT:\n" . substr($extractedText, 0, 30000) . "\n\nINSTRUCTION:\n" . $prompt
+            ]
+        ];
+    } else {
+        throw new Exception("Document source content is missing for this study pack.");
+    }
+
     $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $apiKey;
     
     $payload = [
         "contents" => [
             [
-                "parts" => [
-                    [
-                        "inline_data" => [
-                            "mime_type" => "application/pdf",
-                            "data"      => $pdfBase64
-                        ]
-                    ],
-                    [
-                        "text" => $prompt
-                    ]
-                ]
+                "parts" => $parts
             ]
         ],
         "generationConfig" => [
@@ -184,7 +207,7 @@ Output strict JSON format ONLY:
     $newItems = json_decode($aiText, true);
 
     if (!$newItems) {
-        throw new Exception("Failed to parse AI response as JSON");
+        throw new Exception("Failed to parse AI response as JSON.");
     }
 
     // 4. Merge new items cleanly into existing content
@@ -208,23 +231,32 @@ Output strict JSON format ONLY:
         throw new Exception("No new items generated by AI.");
     }
 
-    // 5. Save updated content back to MySQL
+    // 5. Save updated content back to MySQL DB
     $updatedJson = json_encode($existingContent, JSON_UNESCAPED_UNICODE);
-    $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET study_content = ? WHERE job_id = ?");
-    $updateStmt->execute([$updatedJson, $jobId]);
+
+    // Save into pdf_study_content (Primary)
+    $stmtSave = $pdo->prepare("REPLACE INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)");
+    $stmtSave->execute([$jobId, $job['user_id'] ?? 0, $updatedJson]);
+
+    // Save into pdf_study_jobs (Fallback)
+    try {
+        $updateStmt = $pdo->prepare("UPDATE pdf_study_jobs SET study_content = ? WHERE job_id = ?");
+        $updateStmt->execute([$updatedJson, $jobId]);
+    } catch (Throwable $t) {}
 
     echo json_encode([
         'status'  => 'success',
-        'message' => "Successfully generated $addedCount new $type!",
+        'message' => "Successfully generated expanded $type!",
         'type'    => $type,
         'added'   => $addedCount,
         'data'    => $existingContent
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
-    http_response_code(500);
+    http_response_code(400);
     echo json_encode([
         'status'  => 'error',
         'message' => $e->getMessage()
     ]);
 }
+?>

@@ -112,30 +112,32 @@ try {
 
     $pdfBase64 = '';
     $fileName  = 'Scanned Study Pack';
+    $totalPages = 1;
 
-    // --- 2. Check for Multi-Image Files Upload OR Single PDF File ---
+    // --- 2. Check for Multi-Image Files Upload OR Single PDF/Image File ---
     $imageTmpFiles = [];
     if (isset($_FILES['image_files'])) {
         $files = $_FILES['image_files'];
         if (is_array($files['tmp_name'])) {
             foreach ($files['tmp_name'] as $tmp) {
-                if (!empty($tmp) && file_exists($tmp)) {
+                if (!empty($tmp) && file_exists($tmp) && filesize($tmp) > 0) {
                     $imageTmpFiles[] = $tmp;
                 }
             }
-        } else if (!empty($files['tmp_name']) && file_exists($files['tmp_name'])) {
+        } else if (!empty($files['tmp_name']) && file_exists($files['tmp_name']) && filesize($files['tmp_name']) > 0) {
             $imageTmpFiles[] = $files['tmp_name'];
         }
     }
 
     if (!empty($imageTmpFiles)) {
-        // Multi-Image Upload Mode
+        // Multi-Image Upload Mode (Gallery / Camera Snaps)
         $count = count($imageTmpFiles);
         $customTitle = isset($_POST['custom_file_name']) && !empty($_POST['custom_file_name']) ? $_POST['custom_file_name'] : '';
         $fileName = $customTitle ?: "Photo Study Pack ($count Pages).pdf";
         $pdfBase64 = convertImagesToPdfBase64($imageTmpFiles);
+        $totalPages = $count;
     } elseif (isset($_FILES['pdf_file'])) {
-        // Single PDF Upload Mode
+        // Single File Upload Mode (could be a PDF document or a single gallery photo)
         $file = $_FILES['pdf_file'];
         $tmpPath = $file['tmp_name'];
 
@@ -151,11 +153,13 @@ try {
             ];
             throw new Exception($phpErrors[$file['error']] ?? "Upload error code: " . $file['error']);
         }
-        if ($file['size'] === 0) throw new Exception("File is empty (0 bytes). Check your device storage permissions.");
+        if (empty($tmpPath) || !file_exists($tmpPath) || filesize($tmpPath) === 0) {
+            throw new Exception("File is empty (0 bytes). Check your device storage permissions.");
+        }
 
         $headerName = isset($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) && !empty($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) ? urldecode($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) : '';
         $postName = isset($_POST['custom_file_name']) && !empty($_POST['custom_file_name']) ? $_POST['custom_file_name'] : '';
-        $rawName = $headerName ?: ($postName ?: $file['name']);
+        $rawName = $headerName ?: ($postName ?: ($file['name'] ?? 'study_material.pdf'));
         
         $decoded = rawurldecode($rawName);
         if (!mb_check_encoding($decoded, 'UTF-8')) {
@@ -165,21 +169,38 @@ try {
             $decoded = mb_convert_encoding($rawName, 'UTF-8', mb_detect_encoding($rawName));
         }
         $fileName = $decoded ?: $rawName;
-        $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        if ($ext !== 'pdf' && $ext !== 'jpg' && $ext !== 'jpeg' && $ext !== 'png') {
-            throw new Exception("Allowed file formats: PDF, JPG, PNG. Got: '$ext'");
+
+        // Content-based file type detection (robust against .tmp or missing extensions)
+        $fileBytes = file_get_contents($tmpPath);
+        if ($fileBytes === false || strlen($fileBytes) < 20) {
+            throw new Exception("Failed to read uploaded file contents.");
         }
 
-        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
-            $pdfBase64 = convertImagesToPdfBase64([$tmpPath]);
-            $fileName = pathinfo($fileName, PATHINFO_FILENAME) . '.pdf';
-        } else {
-            $pdfBytes = file_get_contents($tmpPath);
-            if ($pdfBytes === false || strlen($pdfBytes) < 100) {
-                throw new Exception("Failed to read uploaded PDF file.");
+        $isPdf = (substr($fileBytes, 0, 4) === '%PDF');
+        $isImage = false;
+
+        if (!$isPdf) {
+            $imgCheck = @imagecreatefromstring($fileBytes);
+            if ($imgCheck !== false) {
+                imagedestroy($imgCheck);
+                $isImage = true;
             }
-            $pdfBase64 = base64_encode($pdfBytes);
-            unset($pdfBytes);
+        }
+
+        if ($isPdf) {
+            $pdfBase64 = base64_encode($fileBytes);
+            unset($fileBytes);
+            // Rough count of PDF pages
+            $matchCount = preg_match_all('#/Type\s*/Page\b#', base64_decode(substr($pdfBase64, 0, 100000)), $m);
+            $totalPages = $matchCount > 0 ? $matchCount : 1;
+        } elseif ($isImage) {
+            $pdfBase64 = convertImagesToPdfBase64([$tmpPath]);
+            $totalPages = 1;
+            if (!preg_match('#\.pdf$#i', $fileName)) {
+                $fileName = pathinfo($fileName, PATHINFO_FILENAME) . '.pdf';
+            }
+        } else {
+            throw new Exception("Unsupported file format. Please upload a valid PDF document or clear photo (JPG, PNG, WebP).");
         }
     } else {
         throw new Exception("No PDF or Image files uploaded.");
@@ -189,8 +210,8 @@ try {
     $fileHash = md5($pdfBase64);
     $fileSize = strlen($pdfBase64);
 
-    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_hash, file_size, pdf_base64, difficulty, status, current_step) VALUES (?, ?, ?, ?, ?, ?, ?, 'processing', 'Queued for AI extraction')");
-    $stmt->execute([$user_id, $folder_id, $fileName, $fileHash, $fileSize, $pdfBase64, $difficulty]);
+    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_hash, file_size, pdf_base64, total_pages, difficulty, status, current_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'processing', 'Queued for AI extraction')");
+    $stmt->execute([$user_id, $folder_id, $fileName, $fileHash, $fileSize, $pdfBase64, $totalPages, $difficulty]);
     $job_id = $pdo->lastInsertId();
 
     // --- 4. Trigger Async AI Worker ---

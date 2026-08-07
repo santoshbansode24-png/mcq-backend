@@ -31,7 +31,7 @@ try {
          * Fetching metadata only first to see if status is 'completed'
          */
         $stmt = $pdo->prepare("
-            SELECT job_id, file_name, status, progress, error_message, updated_at 
+            SELECT job_id, file_name, status, progress, total_pages, error_message, updated_at 
             FROM pdf_study_jobs 
             WHERE job_id = ? AND user_id = ?
             LIMIT 1
@@ -102,7 +102,7 @@ try {
 
         $whereClause = implode(" AND ", $conditions);
 
-        $sql = "SELECT job_id, folder_id, file_name, status, progress, error_message, created_at 
+        $sql = "SELECT job_id, folder_id, file_name, status, progress, total_pages, error_message, created_at 
                 FROM pdf_study_jobs 
                 WHERE $whereClause
                 ORDER BY created_at DESC 

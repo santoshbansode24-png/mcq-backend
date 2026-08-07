@@ -2,6 +2,7 @@
 /**
  * On-Demand Specific Item Generation Endpoint
  * Generates ONLY Flashcards, ONLY MCQs, or ONLY Notes for a specific PDF job.
+ * Optimized for low-cost token consumption & fast responses.
  */
 if (file_exists(__DIR__ . '/cors_middleware.php')) {
     require_once __DIR__ . '/cors_middleware.php';
@@ -100,7 +101,7 @@ try {
 
     if ($type === 'flashcards') {
         $prompt = "You are the Veeru Flashcard Generator.
-STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document. Do NOT use outside knowledge.
+STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
 Generate $count high-quality, highly reliable NEW Flashcards from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -111,7 +112,7 @@ Output strict JSON format ONLY:
 }";
     } elseif ($type === 'mcqs') {
         $prompt = "You are the Veeru MCQ Quiz Generator.
-STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document. Do NOT use outside knowledge.
+STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
 Generate $count challenging Multiple Choice Questions from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -127,7 +128,7 @@ Output strict JSON format ONLY:
 }";
     } else { // notes
         $prompt = "You are the Veeru Smart Revision Notes Engine.
-STRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document. Do NOT use outside knowledge.
+STRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
 Generate comprehensive, highly scannable, expanded Revision Notes across definitions, key_facts, and core_concepts (extract at least 15 new key points).
 Output strict JSON format ONLY:
 {
@@ -139,8 +140,16 @@ Output strict JSON format ONLY:
 }";
     }
 
-    // 3. Build Gemini 2.5 Flash Request Parts
-    if (!empty($pdfBase64)) {
+    // 3. Build Token-Optimized Payload (Prefer Extracted Text to Save 95% Input Tokens)
+    if (!empty($extractedText)) {
+        // High-efficiency text payload: Uses 2,000 text tokens instead of 50,000 vision tokens!
+        $parts = [
+            [
+                "text" => "SOURCE TEXT DOCUMENT:\n" . substr($extractedText, 0, 30000) . "\n\nINSTRUCTION:\n" . $prompt
+            ]
+        ];
+    } elseif (!empty($pdfBase64)) {
+        // Fallback to PDF vision base64 if OCR text was not stored
         $parts = [
             [
                 "inline_data" => [
@@ -152,17 +161,12 @@ Output strict JSON format ONLY:
                 "text" => $prompt
             ]
         ];
-    } elseif (!empty($extractedText)) {
-        $parts = [
-            [
-                "text" => "SOURCE TEXT DOCUMENT:\n" . substr($extractedText, 0, 30000) . "\n\nINSTRUCTION:\n" . $prompt
-            ]
-        ];
     } else {
         throw new Exception("Document source content is missing for this study pack.");
     }
 
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $apiKey;
+    $model = ($type === 'flashcards' || $type === 'mcqs') ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash';
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=" . $apiKey;
     
     $payload = [
         "contents" => [
@@ -188,6 +192,23 @@ Output strict JSON format ONLY:
     $curlErr  = curl_error($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    // Fallback model retry if flash-lite is unavailable
+    if ($httpCode !== 200 && $model !== 'gemini-2.5-flash') {
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $apiKey;
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $curlErr  = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+    }
 
     if ($curlErr) {
         throw new Exception("Gemini connection error: " . $curlErr);

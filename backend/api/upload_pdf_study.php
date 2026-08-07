@@ -13,6 +13,7 @@ if (file_exists(__DIR__ . '/config/db.php')) {
     require_once __DIR__ . '/../config/db.php';
 }
 require_once __DIR__ . '/../config/ai_config.php';
+require_once __DIR__ . '/AiUsageManager.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -58,83 +59,80 @@ function convertImagesToPdfBase64($tmpFiles) {
     $offsets[1] = strlen($pdf);
     $pdf .= "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
     
-    // Object 2: Pages
-    $kids = "";
+    // Object 2: Pages tree
+    $pageKids = [];
     for ($i = 0; $i < $numPages; $i++) {
-        $pageObjNum = 3 + ($i * 3);
-        $kids .= "{$pageObjNum} 0 R ";
+        $pageKids[] = (3 + $i * 3) . " 0 R";
     }
     $offsets[2] = strlen($pdf);
-    $pdf .= "2 0 obj\n<< /Type /Pages /Kids [ $kids] /Count $numPages >>\nendobj\n";
+    $pdf .= "2 0 obj\n<< /Type /Pages /Kids [" . implode(' ', $pageKids) . "] /Count $numPages >>\nendobj\n";
     
+    // Build page objects & streams
     for ($i = 0; $i < $numPages; $i++) {
-        $pageObjNum = 3 + ($i * 3);
-        $contentObjNum = $pageObjNum + 1;
-        $imageObjNum = $pageObjNum + 2;
+        $pageObjId  = 3 + $i * 3;
+        $contObjId  = 4 + $i * 3;
+        $imageObjId = 5 + $i * 3;
+        $streamInfo = $jpegStreams[$i];
+        $w = $streamInfo['width'];
+        $h = $streamInfo['height'];
         
-        $img = $jpegStreams[$i];
-        $w = $img['width'];
-        $h = $img['height'];
+        // Page Object
+        $offsets[$pageObjId] = strlen($pdf);
+        $pdf .= "$pageObjId 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 $w $h] /Contents $contObjId 0 R /Resources << /XObject << /Im$i $imageObjId 0 R >> >> >>\nendobj\n";
         
-        $offsets[$pageObjNum] = strlen($pdf);
-        $pdf .= "{$pageObjNum} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 $w $h] /Contents {$contentObjNum} 0 R /Resources << /XObject << /Im{$i} {$imageObjNum} 0 R >> >> >>\nendobj\n";
+        // Content stream
+        $streamContent = "q $w 0 0 $h 0 0 cm /Im$i Do Q";
+        $offsets[$contObjId] = strlen($pdf);
+        $pdf .= "$contObjId 0 obj\n<< /Length " . strlen($streamContent) . " >>\nstream\n$streamContent\nendstream\nendobj\n";
         
-        $stream = "q $w 0 0 $h 0 0 cm /Im{$i} Do Q";
-        $offsets[$contentObjNum] = strlen($pdf);
-        $pdf .= "{$contentObjNum} 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n";
-        
-        $offsets[$imageObjNum] = strlen($pdf);
-        $pdf .= "{$imageObjNum} 0 obj\n<< /Type /XObject /Subtype /Image /Width $w /Height $h /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($img['bytes']) . " >>\nstream\n" . $img['bytes'] . "\nendstream\nendobj\n";
+        // Image object
+        $offsets[$imageObjId] = strlen($pdf);
+        $imgLen = strlen($streamInfo['bytes']);
+        $pdf .= "$imageObjId 0 obj\n<< /Type /XObject /Subtype /Image /Width $w /Height $h /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length $imgLen >>\nstream\n" . $streamInfo['bytes'] . "\nendstream\nendobj\n";
     }
     
-    $startXref = strlen($pdf);
-    $numObjects = 2 + ($numPages * 3);
-    $pdf .= "xref\n0 " . ($numObjects + 1) . "\n";
-    $pdf .= "0000000000 65535 f \n";
-    for ($i = 1; $i <= $numObjects; $i++) {
+    // Xref table
+    $xrefStart = strlen($pdf);
+    $numObjs = count($offsets);
+    $pdf .= "xref\n0 $numObjs\n0000000000 65535 f \n";
+    for ($i = 1; $i < $numObjs; $i++) {
         $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
     }
-    $pdf .= "trailer\n<< /Size " . ($numObjects + 1) . " /Root 1 0 R >>\nstartxref\n$startXref\n%%EOF";
+    $pdf .= "trailer\n<< /Size $numObjs /Root 1 0 R >>\nstartxref\n$xrefStart\n%%EOF";
     
     return base64_encode($pdf);
 }
 
-$job_id = null;
-
 try {
-    // --- 1. Validate Input ---
-    $user_id   = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
-    $folder_id = isset($_POST['folder_id']) && $_POST['folder_id'] !== '' ? intval($_POST['folder_id']) : null;
-    $difficulty= isset($_POST['difficulty']) ? $_POST['difficulty'] : 'mix';
-    
-    if (!in_array($difficulty, ['easy', 'moderate', 'hard', 'mix'])) $difficulty = 'mix';
-    if (!$user_id) throw new Exception("Unauthorized: user_id is required");
+    // --- 1. Check Parameters & Quota ---
+    $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+    $folder_id  = isset($_POST['folder_id']) ? intval($_POST['folder_id']) : null;
+    $difficulty = isset($_POST['difficulty']) ? trim($_POST['difficulty']) : 'medium';
 
-    $pdfBase64 = '';
-    $fileName  = 'Scanned Study Pack';
-    $totalPages = 1;
-
-    // --- 2. Check for Multi-Image Files Upload OR Single PDF/Image File ---
-    $imageTmpFiles = [];
-    if (isset($_FILES['image_files'])) {
-        $files = $_FILES['image_files'];
-        if (is_array($files['tmp_name'])) {
-            foreach ($files['tmp_name'] as $tmp) {
-                if (!empty($tmp) && file_exists($tmp) && filesize($tmp) > 0) {
-                    $imageTmpFiles[] = $tmp;
-                }
-            }
-        } else if (!empty($files['tmp_name']) && file_exists($files['tmp_name']) && filesize($files['tmp_name']) > 0) {
-            $imageTmpFiles[] = $files['tmp_name'];
+    if ($user_id > 0) {
+        $usageMgr = new AiUsageManager($user_id);
+        $checkUsage = $usageMgr->canMakeRequest();
+        if ($checkUsage !== true) {
+            http_response_code(403);
+            echo json_encode([
+                'status'  => 'error',
+                'message' => $checkUsage
+            ]);
+            exit();
         }
     }
 
-    if (!empty($imageTmpFiles)) {
-        // Multi-Image Upload Mode (Gallery / Camera Snaps)
-        $count = count($imageTmpFiles);
-        $customTitle = isset($_POST['custom_file_name']) && !empty($_POST['custom_file_name']) ? $_POST['custom_file_name'] : '';
-        $fileName = $customTitle ?: "Photo Study Pack ($count Pages).pdf";
-        $pdfBase64 = convertImagesToPdfBase64($imageTmpFiles);
+    $pdfBase64  = '';
+    $fileName   = '';
+    $totalPages = 1;
+
+    // --- 2. Process File Inputs (Multi-Photos OR Single PDF/Image) ---
+    if (isset($_FILES['photos']) && is_array($_FILES['photos']['name']) && count($_FILES['photos']['name']) > 0) {
+        // Multi-Photo Upload Mode (Camera Snaps / Photo Studio)
+        $tmpFiles = $_FILES['photos']['tmp_name'];
+        $count = count($tmpFiles);
+        $pdfBase64 = convertImagesToPdfBase64($tmpFiles);
+        $fileName = "Veeru_Lens_Studio_" . date('Ymd_His') . ".pdf";
         $totalPages = $count;
     } elseif (isset($_FILES['pdf_file'])) {
         // Single File Upload Mode (could be a PDF document or a single gallery photo)
@@ -214,6 +212,10 @@ try {
     $stmt->execute([$user_id, $folder_id, $fileName, $fileHash, $fileSize, $pdfBase64, $totalPages, $difficulty]);
     $job_id = $pdo->lastInsertId();
 
+    if ($user_id > 0 && isset($usageMgr)) {
+        $usageMgr->logUsage(100);
+    }
+
     // --- 4. Trigger Async AI Worker ---
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -241,3 +243,4 @@ try {
         'message' => $e->getMessage()
     ]);
 }
+?>

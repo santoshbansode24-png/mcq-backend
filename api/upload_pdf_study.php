@@ -126,17 +126,47 @@ try {
     $fileName   = '';
     $totalPages = 1;
 
-    // --- 2. Process File Inputs (Multi-Photos OR Single PDF/Image) ---
-    if (isset($_FILES['photos']) && is_array($_FILES['photos']['name']) && count($_FILES['photos']['name']) > 0) {
+    // --- 2. Robust Multi-Format & Multi-Key File Detection ---
+    $multiKey = null;
+    foreach (['photos', 'image_files', 'images', 'files'] as $key) {
+        if (isset($_FILES[$key]) && is_array($_FILES[$key]['name']) && count($_FILES[$key]['name']) > 0) {
+            $multiKey = $key;
+            break;
+        }
+    }
+
+    $singleFile = null;
+    if (!$multiKey) {
+        foreach (['pdf_file', 'file', 'document', 'photo', 'image'] as $key) {
+            if (isset($_FILES[$key]) && !empty($_FILES[$key]['tmp_name'])) {
+                $singleFile = $_FILES[$key];
+                break;
+            }
+        }
+        if (!$singleFile && !empty($_FILES)) {
+            // Fallback to the very first file entry in $_FILES array
+            $firstKey = array_key_first($_FILES);
+            if (!empty($_FILES[$firstKey]['tmp_name'])) {
+                $singleFile = $_FILES[$firstKey];
+            }
+        }
+    }
+
+    if ($multiKey) {
         // Multi-Photo Upload Mode (Camera Snaps / Photo Studio)
-        $tmpFiles = $_FILES['photos']['tmp_name'];
-        $count = count($tmpFiles);
-        $pdfBase64 = convertImagesToPdfBase64($tmpFiles);
-        $fileName = "Veeru_Lens_Studio_" . date('Ymd_His') . ".pdf";
-        $totalPages = $count;
-    } elseif (isset($_FILES['pdf_file'])) {
-        // Single File Upload Mode (could be a PDF document or a single gallery photo)
-        $file = $_FILES['pdf_file'];
+        $tmpFiles = $_FILES[$multiKey]['tmp_name'];
+        if (is_array($tmpFiles)) {
+            $validTmpFiles = array_filter($tmpFiles, function($t) { return !empty($t) && file_exists($t); });
+            $count = count($validTmpFiles);
+            if ($count > 0) {
+                $pdfBase64 = convertImagesToPdfBase64($validTmpFiles);
+                $fileName = "Veeru_Lens_Studio_" . date('Ymd_His') . ".pdf";
+                $totalPages = $count;
+            }
+        }
+    } elseif ($singleFile) {
+        // Single File Upload Mode (PDF document or single gallery photo)
+        $file = $singleFile;
         $tmpPath = $file['tmp_name'];
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -200,8 +230,10 @@ try {
         } else {
             throw new Exception("Unsupported file format. Please upload a valid PDF document or clear photo (JPG, PNG, WebP).");
         }
-    } else {
-        throw new Exception("No PDF or Image files uploaded.");
+    }
+
+    if (empty($pdfBase64)) {
+        throw new Exception("No valid PDF or image file received. Please check device permissions and try again.");
     }
 
     // --- 3. Save Record into MySQL DB ---

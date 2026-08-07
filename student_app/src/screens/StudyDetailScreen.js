@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, 
-    Alert, Animated 
+    Alert, Animated, Modal 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,7 +16,10 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
     const [loading, setLoading] = useState(true);
     const [studyData, setStudyData] = useState(null);
     const [syncMsg, setSyncMsg] = useState('Checking local storage...');
+    const [activeTab, setActiveTab] = useState('mcq'); // 'mcq' | 'flashcard' | 'notes'
     const [generatingMore, setGeneratingMore] = useState(false);
+    const [generatingSpecific, setGeneratingSpecific] = useState(false);
+    const [generatingType, setGeneratingType] = useState('');
     const [segmentIndex, setSegmentIndex] = useState(1);
     const [engineProgress, setEngineProgress] = useState('');
     
@@ -162,6 +165,36 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         };
     };
 
+    const handleGenerateSpecific = async (type) => {
+        if (generatingSpecific) return;
+        setGeneratingSpecific(true);
+        setGeneratingType(type);
+
+        try {
+            const formData = new FormData();
+            formData.append('job_id', job.job_id.toString());
+            formData.append('type', type);
+
+            const res = await axios.post(`${API_URL}/generate_specific_type.php`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.data.status === 'success' && res.data.data) {
+                const updated = res.data.data;
+                setStudyData(updated);
+                await AsyncStorage.setItem(getCacheKey(), JSON.stringify(updated));
+                Alert.alert("Success 🎉", res.data.message || `Generated new ${type}!`);
+            } else {
+                throw new Error(res.data.message || "Failed to generate content.");
+            }
+        } catch (e) {
+            Alert.alert("Generation Error", e.response?.data?.message || e.message || "Could not generate content.");
+        } finally {
+            setGeneratingSpecific(false);
+            setGeneratingType('');
+        }
+    };
+
     const generateMore = async () => {
         if (generatingMore) return;
         setGeneratingMore(true);
@@ -173,7 +206,6 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         streamFetch(
             url,
             { method: 'GET' },
-            // onChunk: handles progress + success events
             (chunk) => {
                 if (chunk.status === 'progress') {
                     setEngineProgress(chunk.message || 'Processing...');
@@ -182,7 +214,6 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                     setStudyData(prev => {
                         const updated = { ...prev };
 
-                        // O(N) deduplication with Set
                         const existingMcqSet = new Set((updated.mcqs || []).map(m => (m.q || m.question || '').trim().toLowerCase()));
                         const newMcqs = (newData.mcqs || []).filter(n => {
                             const key = (n.q || n.question || '').trim().toLowerCase();
@@ -199,7 +230,6 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         });
                         updated.flashcards = [...(updated.flashcards || []), ...newCards];
 
-                        // Merge Notes with deduplication
                         const incomingNotes = newData.notes || newData.Notes || newData.smart_notes || newData.SmartNotes;
                         if (incomingNotes) {
                             if (!updated.notes || typeof updated.notes !== 'object' || Array.isArray(updated.notes)) {
@@ -230,12 +260,10 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                     });
                 }
             },
-            // onDone
             () => {
                 setGeneratingMore(false);
                 setSegmentIndex(nextSegment);
             },
-            // onError
             (err) => {
                 setGeneratingMore(false);
                 Alert.alert('Engine Error', err?.message || 'Failed to generate more content.');
@@ -305,6 +333,24 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
 
     return (
         <LinearGradient colors={['#0f172a', '#020617']} style={styles.container}>
+            {/* GENERATING LOADING MODAL */}
+            <Modal visible={generatingSpecific} transparent animationType="fade">
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalCard}>
+                        <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.modalGradient}>
+                            <View style={styles.modalGlowRing}>
+                                <ActivityIndicator size="large" color="#38bdf8" />
+                            </View>
+                            <Text style={styles.modalTitle}>Veeru AI Engine</Text>
+                            <Text style={styles.modalSub}>
+                                Generating new <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{generatingType}</Text> from {job?.file_name}...
+                            </Text>
+                            <Text style={styles.modalHint}>Derived 100% strictly from your document text.</Text>
+                        </LinearGradient>
+                    </View>
+                </View>
+            </Modal>
+
             <SafeAreaView edges={['top']} style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <View style={styles.glassBtn}>
@@ -315,7 +361,6 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                     <Text style={styles.title} numberOfLines={1}>{job?.file_name}</Text>
                     <Text style={styles.subtitle}>Secure Local Study Pack</Text>
                 </View>
-                {/* Delete Button */}
                 {!loading && (
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                         <TouchableOpacity style={styles.backBtn} onPress={refreshLocalData}>
@@ -358,66 +403,53 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                         </View>
                     </View>
 
-                    {/* DEDICATED SPECIAL ACTION BUTTONS */}
-                    <View style={styles.quickActionRow}>
+                    {/* INTERACTIVE CATEGORY TAB SELECTOR */}
+                    <View style={styles.tabContainer}>
                         <TouchableOpacity 
-                            style={styles.quickActionBtn} 
+                            style={[styles.tabBtn, activeTab === 'mcq' && styles.activeTabBtn]} 
                             activeOpacity={0.8}
-                            onPress={() => getCounts().mcqs > 0 ? startStudy('quiz', 0) : Alert.alert('MCQ Quiz', 'Processing MCQs...')}
+                            onPress={() => setActiveTab('mcq')}
                         >
-                            <LinearGradient colors={['#38bdf8', '#0284c7']} style={styles.quickActionGradient}>
-                                <MaterialCommunityIcons name="format-list-checks" size={22} color="white" />
-                                <Text style={styles.quickActionText}>MCQ Quiz</Text>
+                            <LinearGradient 
+                                colors={activeTab === 'mcq' ? ['#38bdf8', '#0284c7'] : ['#1e293b', '#0f172a']} 
+                                style={styles.tabGradient}
+                            >
+                                <MaterialCommunityIcons name="format-list-checks" size={18} color="white" />
+                                <Text style={styles.tabText}>MCQ Quiz ({getCounts().mcqs})</Text>
                             </LinearGradient>
                         </TouchableOpacity>
 
                         <TouchableOpacity 
-                            style={styles.quickActionBtn} 
+                            style={[styles.tabBtn, activeTab === 'flashcard' && styles.activeTabBtn]} 
                             activeOpacity={0.8}
-                            onPress={() => getCounts().flashcards > 0 ? startStudy('cards', 0) : Alert.alert('Flashcards', 'Processing Flashcards...')}
+                            onPress={() => setActiveTab('flashcard')}
                         >
-                            <LinearGradient colors={['#a855f7', '#7e22ce']} style={styles.quickActionGradient}>
-                                <MaterialCommunityIcons name="cards-outline" size={22} color="white" />
-                                <Text style={styles.quickActionText}>Flashcards</Text>
+                            <LinearGradient 
+                                colors={activeTab === 'flashcard' ? ['#a855f7', '#7e22ce'] : ['#1e293b', '#0f172a']} 
+                                style={styles.tabGradient}
+                            >
+                                <MaterialCommunityIcons name="cards-outline" size={18} color="white" />
+                                <Text style={styles.tabText}>Flashcards ({getCounts().flashcards})</Text>
                             </LinearGradient>
                         </TouchableOpacity>
 
                         <TouchableOpacity 
-                            style={styles.quickActionBtn} 
+                            style={[styles.tabBtn, activeTab === 'notes' && styles.activeTabBtn]} 
                             activeOpacity={0.8}
-                            onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name, jobId: job.job_id })}
+                            onPress={() => setActiveTab('notes')}
                         >
-                            <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.quickActionGradient}>
-                                <MaterialCommunityIcons name="file-pdf-box" size={22} color="white" />
-                                <Text style={styles.quickActionText}>PDF Notes</Text>
+                            <LinearGradient 
+                                colors={activeTab === 'notes' ? ['#f59e0b', '#d97706'] : ['#1e293b', '#0f172a']} 
+                                style={styles.tabGradient}
+                            >
+                                <MaterialCommunityIcons name="file-pdf-box" size={18} color="white" />
+                                <Text style={styles.tabText}>PDF Notes</Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
 
-                    {/* SMART NOTES SECTION */}
-                    {getCounts().notes > 0 && (
-                        <TouchableOpacity 
-                            style={[styles.glassCard, { marginBottom: 20 }]} 
-                            activeOpacity={0.8}
-                            onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name, jobId: job.job_id })}
-                        >
-                            <LinearGradient colors={['#f59e0b15', '#d9770605']} style={styles.cardHeader}>
-                                <View style={styles.cardHeaderLeft}>
-                                    <View style={[styles.iconBox, { backgroundColor: '#f59e0b20' }]}>
-                                        <MaterialCommunityIcons name="lightning-bolt-circle" size={26} color="#fbbf24" />
-                                    </View>
-                                    <View>
-                                        <Text style={styles.cardTitle}>Smart Notes</Text>
-                                        <Text style={styles.cardSubtitle}>Tap to read key summaries</Text>
-                                    </View>
-                                </View>
-                                <MaterialCommunityIcons name="chevron-right-circle" size={26} color="#fbbf24" style={{marginLeft: 'auto'}} />
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    )}
-
-                    {/* MCQ SECTION */}
-                    {getCounts().mcqs > 0 && (
+                    {/* TAB CONTENT: MCQ QUIZZES */}
+                    {activeTab === 'mcq' && (
                         <View style={styles.glassCard}>
                             <LinearGradient colors={['#38bdf815', '#0ea5e905']} style={styles.cardHeader}>
                                 <View style={styles.cardHeaderLeft}>
@@ -426,19 +458,36 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                                     </View>
                                     <View>
                                         <Text style={styles.cardTitle}>MCQ Quizzes</Text>
-                                        <Text style={styles.cardSubtitle}>{getCounts().mcqs} Expert Questions</Text>
+                                        <Text style={styles.cardSubtitle}>{getCounts().mcqs} Questions Available</Text>
                                     </View>
                                 </View>
                             </LinearGradient>
+
                             <View style={styles.setsWrap}>
-                                {renderSets('quiz', ['#38bdf8', '#0284c7'])}
+                                {getCounts().mcqs > 0 ? (
+                                    renderSets('quiz', ['#38bdf8', '#0284c7'])
+                                ) : (
+                                    <Text style={styles.emptyText}>No MCQ Quizzes generated yet.</Text>
+                                )}
+
+                                {/* ON-DEMAND GENERATE MCQS BUTTON */}
+                                <TouchableOpacity 
+                                    style={[styles.generateMoreCardBtn, { marginTop: 12 }]} 
+                                    activeOpacity={0.85}
+                                    onPress={() => handleGenerateSpecific('mcqs')}
+                                >
+                                    <LinearGradient colors={['#38bdf8', '#0284c7']} style={styles.generateMoreGradient}>
+                                        <MaterialCommunityIcons name="plus-circle" size={20} color="white" />
+                                        <Text style={styles.generateMoreText}>⚡ Generate +10 More MCQs</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </View>
                         </View>
                     )}
 
-                    {/* FLASHCARD SECTION */}
-                    {getCounts().flashcards > 0 && (
-                        <View style={[styles.glassCard, { marginTop: 20 }]}>
+                    {/* TAB CONTENT: FLASHCARDS */}
+                    {activeTab === 'flashcard' && (
+                        <View style={styles.glassCard}>
                             <LinearGradient colors={['#a855f715', '#7e22ce05']} style={styles.cardHeader}>
                                 <View style={styles.cardHeaderLeft}>
                                     <View style={[styles.iconBox, { backgroundColor: '#a855f720' }]}>
@@ -446,17 +495,98 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                                     </View>
                                     <View>
                                         <Text style={styles.cardTitle}>Flashcards</Text>
-                                        <Text style={styles.cardSubtitle}>{getCounts().flashcards} Core Concepts</Text>
+                                        <Text style={styles.cardSubtitle}>{getCounts().flashcards} Flashcards Available</Text>
                                     </View>
                                 </View>
                             </LinearGradient>
+
                             <View style={styles.setsWrap}>
-                                {renderSets('flash', ['#c084fc', '#7e22ce'])}
+                                {getCounts().flashcards > 0 ? (
+                                    renderSets('flash', ['#c084fc', '#7e22ce'])
+                                ) : (
+                                    <Text style={styles.emptyText}>No Flashcards generated yet.</Text>
+                                )}
+
+                                {/* ON-DEMAND GENERATE FLASHCARDS BUTTON */}
+                                <TouchableOpacity 
+                                    style={[styles.generateMoreCardBtn, { marginTop: 12 }]} 
+                                    activeOpacity={0.85}
+                                    onPress={() => handleGenerateSpecific('flashcards')}
+                                >
+                                    <LinearGradient colors={['#a855f7', '#7e22ce']} style={styles.generateMoreGradient}>
+                                        <MaterialCommunityIcons name="plus-circle" size={20} color="white" />
+                                        <Text style={styles.generateMoreText}>⚡ Generate +10 More Flashcards</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </View>
                         </View>
                     )}
 
-                    {/* GENERATE MORE BUTTON */}
+                    {/* TAB CONTENT: PDF NOTES */}
+                    {activeTab === 'notes' && (
+                        <View style={styles.glassCard}>
+                            <LinearGradient colors={['#f59e0b15', '#d9770605']} style={styles.cardHeader}>
+                                <View style={styles.cardHeaderLeft}>
+                                    <View style={[styles.iconBox, { backgroundColor: '#f59e0b20' }]}>
+                                        <MaterialCommunityIcons name="lightning-bolt-circle" size={26} color="#fbbf24" />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.cardTitle}>Smart PDF Revision Notes</Text>
+                                        <Text style={styles.cardSubtitle}>Key definitions, facts & core concepts</Text>
+                                    </View>
+                                </View>
+                            </LinearGradient>
+
+                            <View style={styles.setsWrap}>
+                                {getCounts().notes > 0 ? (
+                                    <TouchableOpacity 
+                                        style={styles.setRow} 
+                                        activeOpacity={0.7}
+                                        onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name, jobId: job.job_id })}
+                                    >
+                                        <View style={styles.setRowLeft}>
+                                            <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.setBadge}>
+                                                <MaterialCommunityIcons name="book-open-page-variant" size={20} color="white" />
+                                            </LinearGradient>
+                                            <View>
+                                                <Text style={styles.setRowTitle}>View Revision Notes</Text>
+                                                <Text style={styles.setRowSub}>Tap to read or download as PDF</Text>
+                                            </View>
+                                        </View>
+                                        <MaterialCommunityIcons name="chevron-right-circle" size={26} color="#fbbf24" />
+                                    </TouchableOpacity>
+                                ) : (
+                                    <Text style={styles.emptyText}>No Smart Notes generated yet.</Text>
+                                )}
+
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                    <TouchableOpacity 
+                                        style={[styles.generateMoreCardBtn, { flex: 1 }]} 
+                                        activeOpacity={0.85}
+                                        onPress={() => handleGenerateSpecific('notes')}
+                                    >
+                                        <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.generateMoreGradient}>
+                                            <MaterialCommunityIcons name="sparkles" size={18} color="white" />
+                                            <Text style={styles.generateMoreText}>✨ Expand Notes</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={[styles.generateMoreCardBtn, { flex: 1 }]} 
+                                        activeOpacity={0.85}
+                                        onPress={() => navigation.navigate('AIPdfNotes', { notes: getNotesObject(), subjectName: job.file_name, jobId: job.job_id })}
+                                    >
+                                        <LinearGradient colors={['#10b981', '#059669']} style={styles.generateMoreGradient}>
+                                            <MaterialCommunityIcons name="download" size={18} color="white" />
+                                            <Text style={styles.generateMoreText}>📥 PDF Notes</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* SCAN NEXT SECTION (FULL PDF DEEP SCAN) */}
                     <View style={styles.engineContainer}>
                         {generatingMore ? (
                             <View style={styles.engineLoading}>
@@ -467,7 +597,7 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                             <TouchableOpacity style={styles.engineBtn} onPress={generateMore}>
                                 <LinearGradient colors={['#38bdf820', '#1e293b']} style={styles.engineGradient}>
                                     <MaterialCommunityIcons name="auto-fix" size={20} color="#38bdf8" />
-                                    <Text style={styles.engineBtnText}>Scan Next Section</Text>
+                                    <Text style={styles.engineBtnText}>Scan Next PDF Section</Text>
                                     <View style={styles.segmentBadge}>
                                         <Text style={styles.segmentText}>Part {segmentIndex + 1}</Text>
                                     </View>
@@ -475,7 +605,7 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                             </TouchableOpacity>
                         )}
                         <Text style={styles.engineHint}>
-                            Exhaustive extraction: Read deeper into the PDF for more facts.
+                            Deep Scan: Reads the next chapter to extract all MCQs, Flashcards & Notes.
                         </Text>
                     </View>
 
@@ -508,7 +638,7 @@ const styles = StyleSheet.create({
     },
     loadingText: { color: '#e2e8f0', fontSize: 16, fontWeight: '700' },
     loadingSubtext: { color: '#64748b', fontSize: 13, marginTop: 5 },
-    body: { padding: 20, paddingBottom: 50 },
+    body: { padding: 15, paddingBottom: 50 },
     heroStats: { flexDirection: 'row', marginBottom: 15, gap: 10 },
     statPill: { 
         flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', 
@@ -516,42 +646,53 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: '#334155' 
     },
     statPillText: { color: '#cbd5e1', fontSize: 13, fontWeight: '600', marginLeft: 6 },
-    quickActionRow: { flexDirection: 'row', marginBottom: 25, gap: 8, justifyContent: 'space-between' },
-    quickActionBtn: { flex: 1 },
-    quickActionGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 14, gap: 6 },
-    quickActionText: { color: 'white', fontSize: 13, fontWeight: '800' },
+    tabContainer: { flexDirection: 'row', gap: 6, marginBottom: 20 },
+    tabBtn: { flex: 1, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#334155' },
+    activeTabBtn: { borderColor: '#38bdf8', elevation: 4 },
+    tabGradient: { paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 },
+    tabText: { color: 'white', fontSize: 12, fontWeight: '800' },
     glassCard: { 
-        backgroundColor: '#1e293b60', borderRadius: 24, 
+        backgroundColor: '#1e293b60', borderRadius: 20, 
         borderWidth: 1, borderColor: '#334155', overflow: 'hidden' 
     },
-    cardHeader: { padding: 20, borderBottomWidth: 1, borderColor: '#33415560' },
+    cardHeader: { padding: 16, borderBottomWidth: 1, borderColor: '#33415560' },
     cardHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
-    iconBox: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    cardTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-    cardSubtitle: { color: '#94a3b8', fontSize: 13, marginTop: 2, fontWeight: '500' },
-    setsWrap: { padding: 10 },
+    iconBox: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    cardTitle: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+    cardSubtitle: { color: '#94a3b8', fontSize: 12, marginTop: 2, fontWeight: '500' },
+    setsWrap: { padding: 12 },
+    emptyText: { color: '#64748b', fontSize: 13, textAlign: 'center', marginVertical: 15 },
     setRow: { 
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
-        padding: 12, borderRadius: 16, backgroundColor: '#0f172a50', marginBottom: 8 
+        padding: 12, borderRadius: 14, backgroundColor: '#0f172a60', marginBottom: 8 
     },
     setRowLeft: { flexDirection: 'row', alignItems: 'center' },
     setBadge: { 
-        width: 40, height: 40, borderRadius: 12, 
-        alignItems: 'center', justifyContent: 'center', marginRight: 15,
-        shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 3
+        width: 38, height: 38, borderRadius: 10, 
+        alignItems: 'center', justifyContent: 'center', marginRight: 12
     },
-    setBadgeText: { color: 'white', fontWeight: '900', fontSize: 16 },
-    setRowTitle: { color: '#e2e8f0', fontSize: 16, fontWeight: '700' },
-    setRowSub: { color: '#64748b', fontSize: 12, marginTop: 3 },
-    engineContainer: { marginTop: 40, alignItems: 'center' },
-    engineBtn: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#38bdf840', width: '100%' },
-    engineGradient: { flexDirection: 'row', alignItems: 'center', padding: 18, justifyContent: 'center' },
-    engineBtnText: { color: '#38bdf8', fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
-    engineLoading: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b80', padding: 18, borderRadius: 20, width: '100%', justifyContent: 'center' },
-    engineLoadingText: { color: '#38bdf8', fontSize: 14, fontWeight: '600', marginLeft: 12 },
-    engineHint: { color: '#475569', fontSize: 12, marginTop: 12, textAlign: 'center' },
-    segmentBadge: { backgroundColor: '#38bdf8', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginLeft: 10 },
-    segmentText: { color: '#0f172a', fontSize: 10, fontWeight: 'bold' }
+    setBadgeText: { color: 'white', fontWeight: '900', fontSize: 15 },
+    setRowTitle: { color: '#e2e8f0', fontSize: 15, fontWeight: '700' },
+    setRowSub: { color: '#64748b', fontSize: 12, marginTop: 2 },
+    generateMoreCardBtn: { borderRadius: 12, overflow: 'hidden' },
+    generateMoreGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 12, gap: 6 },
+    generateMoreText: { color: 'white', fontSize: 13, fontWeight: '800' },
+    engineContainer: { marginTop: 30, alignItems: 'center' },
+    engineBtn: { borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#38bdf840', width: '100%' },
+    engineGradient: { flexDirection: 'row', alignItems: 'center', padding: 16, justifyContent: 'center' },
+    engineBtnText: { color: '#38bdf8', fontWeight: 'bold', fontSize: 15, marginLeft: 8 },
+    engineLoading: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b80', padding: 16, borderRadius: 18, width: '100%', justifyContent: 'center' },
+    engineLoadingText: { color: '#38bdf8', fontSize: 14, fontWeight: '600', marginLeft: 10 },
+    engineHint: { color: '#475569', fontSize: 12, marginTop: 10, textAlign: 'center' },
+    segmentBadge: { backgroundColor: '#38bdf8', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginLeft: 8 },
+    segmentText: { color: '#0f172a', fontSize: 10, fontWeight: 'bold' },
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalCard: { width: '90%', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#334155' },
+    modalGradient: { padding: 30, alignItems: 'center' },
+    modalGlowRing: { padding: 16, borderRadius: 40, backgroundColor: '#38bdf815', borderWidth: 1, borderColor: '#38bdf830', marginBottom: 15 },
+    modalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+    modalSub: { color: '#cbd5e1', fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 20 },
+    modalHint: { color: '#64748b', fontSize: 12, marginTop: 12, textAlign: 'center' }
 });
 
 export default StudyDetailScreen;

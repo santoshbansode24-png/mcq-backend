@@ -165,15 +165,16 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         };
     };
 
-    const handleGenerateSpecific = async (type) => {
+    const handleGenerateSpecific = async (type, count = 10) => {
         if (generatingSpecific) return;
         setGeneratingSpecific(true);
-        setGeneratingType(type);
+        setGeneratingType(`${count} new ${type}`);
 
         try {
             const formData = new FormData();
             formData.append('job_id', job.job_id.toString());
             formData.append('type', type);
+            formData.append('count', count.toString());
 
             const res = await axios.post(`${API_URL}/generate_specific_type.php`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -470,17 +471,30 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                                     <Text style={styles.emptyText}>No MCQ Quizzes generated yet.</Text>
                                 )}
 
-                                {/* ON-DEMAND GENERATE MCQS BUTTON */}
-                                <TouchableOpacity 
-                                    style={[styles.generateMoreCardBtn, { marginTop: 12 }]} 
-                                    activeOpacity={0.85}
-                                    onPress={() => handleGenerateSpecific('mcqs')}
-                                >
-                                    <LinearGradient colors={['#38bdf8', '#0284c7']} style={styles.generateMoreGradient}>
-                                        <MaterialCommunityIcons name="plus-circle" size={20} color="white" />
-                                        <Text style={styles.generateMoreText}>⚡ Generate +10 More MCQs</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
+                                {/* ON-DEMAND GENERATE MCQS BUTTONS (+10 & +20) */}
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                    <TouchableOpacity 
+                                        style={[styles.generateMoreCardBtn, { flex: 1 }]} 
+                                        activeOpacity={0.85}
+                                        onPress={() => handleGenerateSpecific('mcqs', 10)}
+                                    >
+                                        <LinearGradient colors={['#38bdf8', '#0284c7']} style={styles.generateMoreGradient}>
+                                            <MaterialCommunityIcons name="plus-circle" size={18} color="white" />
+                                            <Text style={styles.generateMoreText}>⚡ +10 MCQs</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={[styles.generateMoreCardBtn, { flex: 1 }]} 
+                                        activeOpacity={0.85}
+                                        onPress={() => handleGenerateSpecific('mcqs', 20)}
+                                    >
+                                        <LinearGradient colors={['#0284c7', '#0369a1']} style={styles.generateMoreGradient}>
+                                            <MaterialCommunityIcons name="lightning-bolt" size={18} color="white" />
+                                            <Text style={styles.generateMoreText}>⚡ +20 MCQs</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
                     )}
@@ -507,17 +521,30 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
                                     <Text style={styles.emptyText}>No Flashcards generated yet.</Text>
                                 )}
 
-                                {/* ON-DEMAND GENERATE FLASHCARDS BUTTON */}
-                                <TouchableOpacity 
-                                    style={[styles.generateMoreCardBtn, { marginTop: 12 }]} 
-                                    activeOpacity={0.85}
-                                    onPress={() => handleGenerateSpecific('flashcards')}
-                                >
-                                    <LinearGradient colors={['#a855f7', '#7e22ce']} style={styles.generateMoreGradient}>
-                                        <MaterialCommunityIcons name="plus-circle" size={20} color="white" />
-                                        <Text style={styles.generateMoreText}>⚡ Generate +10 More Flashcards</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
+                                {/* ON-DEMAND GENERATE FLASHCARDS BUTTONS (+10 & +20) */}
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                    <TouchableOpacity 
+                                        style={[styles.generateMoreCardBtn, { flex: 1 }]} 
+                                        activeOpacity={0.85}
+                                        onPress={() => handleGenerateSpecific('flashcards', 10)}
+                                    >
+                                        <LinearGradient colors={['#a855f7', '#7e22ce']} style={styles.generateMoreGradient}>
+                                            <MaterialCommunityIcons name="plus-circle" size={18} color="white" />
+                                            <Text style={styles.generateMoreText}>⚡ +10 Cards</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={[styles.generateMoreCardBtn, { flex: 1 }]} 
+                                        activeOpacity={0.85}
+                                        onPress={() => handleGenerateSpecific('flashcards', 20)}
+                                    >
+                                        <LinearGradient colors={['#7e22ce', '#6b21a8']} style={styles.generateMoreGradient}>
+                                            <MaterialCommunityIcons name="lightning-bolt" size={18} color="white" />
+                                            <Text style={styles.generateMoreText}>⚡ +20 Cards</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
                     )}

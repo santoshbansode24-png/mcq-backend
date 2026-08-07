@@ -52,6 +52,30 @@ try {
     if (!isset($existingContent['flashcards'])) $existingContent['flashcards'] = [];
     if (!isset($existingContent['notes'])) $existingContent['notes'] = ['definitions' => [], 'key_facts' => [], 'core_concepts' => []];
 
+    $count = isset($_REQUEST['count']) ? intval($_REQUEST['count']) : 10;
+    if ($count < 5) $count = 10;
+    if ($count > 30) $count = 20;
+
+    // Build exclusion list of existing questions to guarantee zero duplicates
+    $existingQuestions = [];
+    if ($type === 'flashcards' && !empty($existingContent['flashcards'])) {
+        foreach ($existingContent['flashcards'] as $card) {
+            $q = trim($card['q'] ?? $card['question'] ?? '');
+            if ($q) $existingQuestions[] = $q;
+        }
+    } elseif ($type === 'mcqs' && !empty($existingContent['mcqs'])) {
+        foreach ($existingContent['mcqs'] as $mcq) {
+            $q = trim($mcq['q'] ?? $mcq['question'] ?? '');
+            if ($q) $existingQuestions[] = $q;
+        }
+    }
+
+    $exclusionClause = "";
+    if (!empty($existingQuestions)) {
+        $recent = array_slice($existingQuestions, -30);
+        $exclusionClause = "\nDO NOT GENERATE ANY QUESTIONS DUPLICATING THESE EXISTING ITEMS:\n- " . implode("\n- ", $recent) . "\n";
+    }
+
     // 2. Prepare Gemini Prompt based on requested type
     $apiKey = getGeminiApiKey();
     if (empty($apiKey)) {
@@ -66,7 +90,8 @@ try {
     if ($type === 'flashcards') {
         $prompt = "You are the Veeru Flashcard Generator.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided PDF document. Do NOT use outside knowledge.
-Generate 10 high-quality, highly reliable Flashcards from the provided document.
+Generate $count high-quality, highly reliable NEW Flashcards from the provided document.
+$exclusionClause
 Output strict JSON format ONLY:
 {
   \"flashcards\": [
@@ -76,7 +101,8 @@ Output strict JSON format ONLY:
     } elseif ($type === 'mcqs') {
         $prompt = "You are the Veeru MCQ Quiz Generator.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided PDF document. Do NOT use outside knowledge.
-Generate 10 challenging Multiple Choice Questions from the provided document.
+Generate $count challenging Multiple Choice Questions from the provided document.
+$exclusionClause
 Output strict JSON format ONLY:
 {
   \"mcqs\": [
@@ -91,7 +117,7 @@ Output strict JSON format ONLY:
     } else { // notes
         $prompt = "You are the Veeru Smart Revision Notes Engine.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided PDF document. Do NOT use outside knowledge.
-Generate comprehensive, highly scannable Revision Notes across definitions, key_facts, and core_concepts.
+Generate comprehensive, highly scannable, expanded Revision Notes across definitions, key_facts, and core_concepts (extract at least 15 new key points).
 Output strict JSON format ONLY:
 {
   \"notes\": {

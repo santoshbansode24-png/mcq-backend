@@ -16,7 +16,8 @@ echo json_encode([
     'diagnostic' => [
         'boond_at_root' => $boond_exists ? 'YES' : 'NO',
         'boond_size' => $boond_exists ? filesize($boond) : 0,
-        'root_notes_dir' => is_dir("/app/uploads/notes") ? 'YES' : 'NO'
+        'root_notes_dir' => is_dir("/app/uploads/notes") ? 'YES' : 'NO',
+        'generate_specific_exists' => file_exists(__DIR__ . '/generate_specific_type.php') ? 'YES' : 'NO'
     ]
 ]);
 ?>

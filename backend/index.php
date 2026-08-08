@@ -30,12 +30,10 @@ if (!empty($path) && $path !== '/' && $path !== '/index.php') {
                 echo "DIR: " . __DIR__ . "\n";
                 echo "CWD: " . getcwd() . "\n";
                 echo "REQ: " . $request_uri . "\n";
-                echo "FILES IN __DIR__:\n";
-                print_r(glob(__DIR__ . '/*'));
-                echo "FILES IN api:\n";
-                print_r(glob(__DIR__ . '/api/*'));
-                echo "FILES IN backend/api:\n";
-                print_r(glob(__DIR__ . '/backend/api/*'));
+                echo "FILES IN /app/api:\n";
+                print_r(glob('/app/api/*'));
+                echo "FILES IN /app/backend/api:\n";
+                print_r(glob('/app/backend/api/*'));
                 exit();
             }
             $locations = [

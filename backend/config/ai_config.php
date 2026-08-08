@@ -126,9 +126,19 @@ if (!function_exists('callGeminiPDF')) {
             $genConfig['responseMimeType'] = 'application/json';
         }
 
+        $rawBytes = base64_decode(substr($base64PDF, 0, 100));
+        $mimeType = 'application/pdf';
+        if (substr($rawBytes, 0, 3) === "\xFF\xD8\xFF") {
+            $mimeType = 'image/jpeg';
+        } elseif (substr($rawBytes, 0, 4) === "\x89PNG") {
+            $mimeType = 'image/png';
+        } elseif (substr($rawBytes, 0, 4) === "RIFF" && substr($rawBytes, 8, 4) === "WEBP") {
+            $mimeType = 'image/webp';
+        }
+
         $payload = [
             'contents' => [
-                ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => 'application/pdf', 'data' => $base64PDF]]]]
+                ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => $mimeType, 'data' => $base64PDF]]]]
             ],
             'generationConfig' => $genConfig
         ];

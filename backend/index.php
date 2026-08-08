@@ -52,6 +52,17 @@ if (!empty($path) && $path !== '/' && $path !== '/index.php') {
                     exit();
                 }
             }
+            try {
+                $baseSearch = is_dir('/app') ? '/app' : __DIR__;
+                $dirIter = new RecursiveDirectoryIterator($baseSearch, RecursiveDirectoryIterator::SKIP_DOTS);
+                $iterator = new RecursiveIteratorIterator($dirIter);
+                foreach ($iterator as $f) {
+                    if ($f->isFile() && strcasecmp($f->getFilename(), $file) === 0) {
+                        require $f->getPathname();
+                        exit();
+                    }
+                }
+            } catch (Throwable $t) {}
         }
     }
 }

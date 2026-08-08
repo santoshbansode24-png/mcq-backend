@@ -29,8 +29,8 @@ if (preg_match('/uploads\/notes\/([^\/]+\.pdf)/i', $request_uri, $matches)) {
     exit();
 }
 
-// Smart API Route Dispatcher for Railway Nginx / Apache environment
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+// Smart API Route Dispatcher for Railway Nginx / Apache / PHP Built-in Server
+$path = parse_url($request_uri, PHP_URL_PATH);
 if (!empty($path) && $path !== '/' && $path !== '/index.php') {
     if (preg_match('/([a-zA-Z0-9_\-]+\.php)$/i', $path, $m)) {
         $file = $m[1];
@@ -51,6 +51,17 @@ if (!empty($path) && $path !== '/' && $path !== '/index.php') {
                     exit();
                 }
             }
+            try {
+                $baseSearch = is_dir('/app') ? '/app' : __DIR__;
+                $dirIter = new RecursiveDirectoryIterator($baseSearch, RecursiveDirectoryIterator::SKIP_DOTS);
+                $iterator = new RecursiveIteratorIterator($dirIter);
+                foreach ($iterator as $f) {
+                    if ($f->isFile() && strcasecmp($f->getFilename(), $file) === 0) {
+                        require $f->getPathname();
+                        exit();
+                    }
+                }
+            } catch (Throwable $t) {}
         }
     }
 }

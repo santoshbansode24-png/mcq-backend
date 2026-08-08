@@ -37,11 +37,9 @@ if (!empty($path) && $path !== '/' && $path !== '/index.php') {
                 exit();
             }
             $locations = [
-                __DIR__ . '/api/' . $file,
                 __DIR__ . '/backend/api/' . $file,
+                __DIR__ . '/api/' . $file,
                 __DIR__ . '/' . $file,
-                dirname(__DIR__) . '/api/' . $file,
-                dirname(__DIR__) . '/backend/api/' . $file,
                 '/app/backend/api/' . $file,
                 '/app/api/' . $file,
                 '/app/' . $file

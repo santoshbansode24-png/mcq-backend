@@ -116,6 +116,8 @@ if (!function_exists('callGeminiPDF')) {
     function callGeminiPDF($prompt, $base64PDF, $options = []) {
         if (empty(GEMINI_API_KEY)) throw new Exception("GEMINI_API_KEY missing.");
 
+        $cleanB64 = preg_replace('#^data:image/\w+;base64,#i', '', trim($base64PDF));
+
         $genConfig = [
             'temperature' => $options['temperature'] ?? 0.4,
             'maxOutputTokens' => $options['maxOutputTokens'] ?? 65536
@@ -127,28 +129,35 @@ if (!function_exists('callGeminiPDF')) {
         }
 
         $mimeType = 'application/pdf';
-        if (strpos($base64PDF, '/9j/') === 0) {
-            $mimeType = 'image/jpeg';
-        } elseif (strpos($base64PDF, 'iVBOR') === 0) {
-            $mimeType = 'image/png';
-        } elseif (strpos($base64PDF, 'UklGR') === 0) {
-            $mimeType = 'image/webp';
-        } else {
-            $rawDecoded = @base64_decode(substr($base64PDF, 0, 128));
-            if ($rawDecoded) {
-                if (substr($rawDecoded, 0, 3) === "\xFF\xD8\xFF") {
-                    $mimeType = 'image/jpeg';
-                } elseif (substr($rawDecoded, 0, 4) === "\x89PNG") {
-                    $mimeType = 'image/png';
-                } elseif (substr($rawDecoded, 0, 4) === "RIFF") {
-                    $mimeType = 'image/webp';
-                }
+        $prefixSample = substr($cleanB64, 0, 500);
+        $rawHeader = @base64_decode($prefixSample);
+        if ($rawHeader === false || strlen($rawHeader) < 4) {
+            $rawHeader = @base64_decode($prefixSample . '==');
+        }
+
+        if ($rawHeader && strlen($rawHeader) >= 3) {
+            if (substr($rawHeader, 0, 3) === "\xFF\xD8\xFF") {
+                $mimeType = 'image/jpeg';
+            } elseif (substr($rawHeader, 0, 4) === "\x89PNG") {
+                $mimeType = 'image/png';
+            } elseif (substr($rawHeader, 0, 4) === "RIFF" && substr($rawHeader, 8, 4) === "WEBP") {
+                $mimeType = 'image/webp';
+            } elseif (substr($rawHeader, 0, 4) === "%PDF") {
+                $mimeType = 'application/pdf';
+            }
+        }
+
+        if ($mimeType === 'application/pdf' && substr($rawHeader, 0, 4) !== "%PDF") {
+            if (strpos($cleanB64, '/9j/') === 0 || strpos($prefixSample, '/9j/') !== false) {
+                $mimeType = 'image/jpeg';
+            } elseif (strpos($cleanB64, 'iVBOR') === 0) {
+                $mimeType = 'image/png';
             }
         }
 
         $payload = [
             'contents' => [
-                ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => $mimeType, 'data' => $base64PDF]]]]
+                ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => $mimeType, 'data' => $cleanB64]]]]
             ],
             'generationConfig' => $genConfig
         ];

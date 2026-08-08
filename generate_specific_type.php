@@ -21,20 +21,40 @@ require_once __DIR__ . '/../config/ai_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
-$jobId = isset($_REQUEST['job_id']) ? intval($_REQUEST['job_id']) : 0;
-$type  = isset($_REQUEST['type']) ? strtolower(trim($_REQUEST['type'])) : '';
+$inputRaw = file_get_contents('php://input');
+$jsonInput = json_decode($inputRaw, true) ?: [];
 
-if (!in_array($type, ['flashcard', 'flashcards', 'mcq', 'mcqs', 'notes'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid type specified. Must be flashcards, mcqs, or notes.']);
-    exit();
+$jobId = 0;
+if (isset($_REQUEST['job_id']) && intval($_REQUEST['job_id']) > 0) {
+    $jobId = intval($_REQUEST['job_id']);
+} elseif (isset($jsonInput['job_id']) && intval($jsonInput['job_id']) > 0) {
+    $jobId = intval($jsonInput['job_id']);
+} elseif (preg_match('/name=["\']job_id["\']\s+([0-9]+)/i', $inputRaw, $m)) {
+    $jobId = intval($m[1]);
+}
+
+$type = '';
+if (isset($_REQUEST['type']) && !empty($_REQUEST['type'])) {
+    $type = strtolower(trim($_REQUEST['type']));
+} elseif (isset($jsonInput['type']) && !empty($jsonInput['type'])) {
+    $type = strtolower(trim($jsonInput['type']));
+} elseif (preg_match('/name=["\']type["\']\s+([a-zA-Z]+)/i', $inputRaw, $m)) {
+    $type = strtolower(trim($m[1]));
 }
 
 // Normalize type names
 if ($type === 'flashcard') $type = 'flashcards';
 if ($type === 'mcq') $type = 'mcqs';
 
+if (!in_array($type, ['flashcard', 'flashcards', 'mcq', 'mcqs', 'notes'])) {
+    http_response_code(200);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid type specified. Must be flashcards, mcqs, or notes.']);
+    exit();
+}
+
 if ($jobId <= 0) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid job_id']);
+    http_response_code(200);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid job_id provided.']);
     exit();
 }
 
@@ -236,7 +256,7 @@ Output strict JSON format ONLY:
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
-    http_response_code(400);
+    http_response_code(200);
     echo json_encode([
         'status'  => 'error',
         'message' => $e->getMessage()

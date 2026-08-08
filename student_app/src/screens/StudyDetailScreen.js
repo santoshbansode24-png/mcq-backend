@@ -171,13 +171,10 @@ const StudyDetailScreen = ({ route, navigation, user }) => {
         setGeneratingType(`${count} new ${type}`);
 
         try {
-            const formData = new FormData();
-            formData.append('job_id', job.job_id.toString());
-            formData.append('type', type);
-            formData.append('count', count.toString());
-
-            const res = await axios.post(`${API_URL}/generate_specific_type.php`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            const res = await axios.post(`${API_URL}/generate_specific_type.php`, {
+                job_id: job.job_id,
+                type: type,
+                count: count
             });
 
             if (res.data.status === 'success' && res.data.data) {

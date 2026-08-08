@@ -1,8 +1,8 @@
-[phases.setup]
-nixPkgs = ["php82", "php82Packages.composer", "php82Extensions.pdo_mysql", "php82Extensions.bcmath", "php82Extensions.gd", "php82Extensions.zip"]
+[variables]
+NIXPACKS_PHP_VERSION = '8.2.27'
+
+[phases.install]
+cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx", "cd backend && rm -f composer.lock", "cd backend && composer update --no-interaction --ignore-platform-reqs"]
 
 [phases.build]
-cmds = ["composer install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts"]
-
-[start]
-cmd = "php -S 0.0.0.0:$PORT"
+cmds = ["cd backend && composer update --no-interaction --prefer-dist --optimize-autoloader", "cp -rf api/* backend/api/ 2>/dev/null || true", "cp -rf config/* backend/config/ 2>/dev/null || true"]

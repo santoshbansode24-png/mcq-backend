@@ -126,14 +126,24 @@ if (!function_exists('callGeminiPDF')) {
             $genConfig['responseMimeType'] = 'application/json';
         }
 
-        $rawBytes = base64_decode(substr($base64PDF, 0, 100));
         $mimeType = 'application/pdf';
-        if (substr($rawBytes, 0, 3) === "\xFF\xD8\xFF") {
+        if (strpos($base64PDF, '/9j/') === 0) {
             $mimeType = 'image/jpeg';
-        } elseif (substr($rawBytes, 0, 4) === "\x89PNG") {
+        } elseif (strpos($base64PDF, 'iVBOR') === 0) {
             $mimeType = 'image/png';
-        } elseif (substr($rawBytes, 0, 4) === "RIFF" && substr($rawBytes, 8, 4) === "WEBP") {
+        } elseif (strpos($base64PDF, 'UklGR') === 0) {
             $mimeType = 'image/webp';
+        } else {
+            $rawDecoded = @base64_decode(substr($base64PDF, 0, 128));
+            if ($rawDecoded) {
+                if (substr($rawDecoded, 0, 3) === "\xFF\xD8\xFF") {
+                    $mimeType = 'image/jpeg';
+                } elseif (substr($rawDecoded, 0, 4) === "\x89PNG") {
+                    $mimeType = 'image/png';
+                } elseif (substr($rawDecoded, 0, 4) === "RIFF") {
+                    $mimeType = 'image/webp';
+                }
+            }
         }
 
         $payload = [

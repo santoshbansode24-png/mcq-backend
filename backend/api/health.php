@@ -17,7 +17,10 @@ echo json_encode([
         'boond_at_root' => $boond_exists ? 'YES' : 'NO',
         'boond_size' => $boond_exists ? filesize($boond) : 0,
         'root_notes_dir' => is_dir("/app/uploads/notes") ? 'YES' : 'NO',
-        'generate_specific_exists' => file_exists(__DIR__ . '/generate_specific_type.php') ? 'YES' : 'NO'
+        'generate_specific_exists' => file_exists(__DIR__ . '/generate_specific_type.php') ? 'YES' : 'NO',
+        'gd_loaded' => extension_loaded('gd') ? 'YES' : 'NO',
+        'imagecreatefromstring_exists' => function_exists('imagecreatefromstring') ? 'YES' : 'NO',
+        'getimagesize_exists' => function_exists('getimagesize') ? 'YES' : 'NO'
     ]
 ]);
 ?>

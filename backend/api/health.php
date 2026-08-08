@@ -20,7 +20,9 @@ echo json_encode([
         'generate_specific_exists' => file_exists(__DIR__ . '/generate_specific_type.php') ? 'YES' : 'NO',
         'gd_loaded' => extension_loaded('gd') ? 'YES' : 'NO',
         'imagecreatefromstring_exists' => function_exists('imagecreatefromstring') ? 'YES' : 'NO',
-        'getimagesize_exists' => function_exists('getimagesize') ? 'YES' : 'NO'
+        'getimagesize_exists' => function_exists('getimagesize') ? 'YES' : 'NO',
+        'ai_config_hash' => file_exists(__DIR__ . '/../config/ai_config.php') ? md5_file(__DIR__ . '/../config/ai_config.php') : 'MISSING',
+        'root_ai_config_hash' => file_exists('/app/config/ai_config.php') ? md5_file('/app/config/ai_config.php') : 'MISSING'
     ]
 ]);
 ?>

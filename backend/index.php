@@ -25,6 +25,19 @@ if (!empty($path) && $path !== '/' && $path !== '/index.php') {
     if (preg_match('/([a-zA-Z0-9_\-]+\.php)$/i', $path, $m)) {
         $file = $m[1];
         if ($file !== 'index.php') {
+            if (isset($_GET['debug_route'])) {
+                header('Content-Type: text/plain');
+                echo "DIR: " . __DIR__ . "\n";
+                echo "CWD: " . getcwd() . "\n";
+                echo "REQ: " . $request_uri . "\n";
+                echo "FILES IN __DIR__:\n";
+                print_r(glob(__DIR__ . '/*'));
+                echo "FILES IN api:\n";
+                print_r(glob(__DIR__ . '/api/*'));
+                echo "FILES IN backend/api:\n";
+                print_r(glob(__DIR__ . '/backend/api/*'));
+                exit();
+            }
             $locations = [
                 __DIR__ . '/api/' . $file,
                 __DIR__ . '/backend/api/' . $file,

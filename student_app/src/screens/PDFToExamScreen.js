@@ -143,21 +143,24 @@ const PDFToExamScreen = ({ user, navigation }) => {
         }
     }, [searchQuery, jobs]);
 
-    // 1. Pick PDF Document
+    // 1. Pick PDF Document or Image File
     const handlePickDocument = async () => {
         setChooserModalVisible(false);
         try {
-            const doc = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: false });
+            const doc = await DocumentPicker.getDocumentAsync({ 
+                type: ['application/pdf', 'image/*'], 
+                copyToCacheDirectory: true 
+            });
             if (doc.canceled) return;
 
             const file = doc.assets[0];
             const MAX_SIZE = 20 * 1024 * 1024;
             if (file.size && file.size > MAX_SIZE) {
-                Alert.alert("File Too Large", "Please select a PDF document smaller than 20 MB.");
+                Alert.alert("File Too Large", "Please select a document or image smaller than 20 MB.");
                 return;
             }
 
-            let defaultName = file.name || 'document.pdf';
+            let defaultName = file.name || 'study_material';
             if (defaultName.toLowerCase().endsWith('.pdf')) {
                 defaultName = defaultName.substring(0, defaultName.length - 4);
             }
@@ -252,11 +255,12 @@ const PDFToExamScreen = ({ user, navigation }) => {
         setUploading(true);
 
         try {
+            const mimeType = file.mimeType || file.type || (finalName.toLowerCase().endsWith('.jpg') || finalName.toLowerCase().endsWith('.jpeg') ? 'image/jpeg' : (finalName.toLowerCase().endsWith('.png') ? 'image/png' : 'application/pdf'));
             const formData = new FormData();
             formData.append('pdf_file', {
                 uri: file.uri,
-                name: finalName,
-                type: 'application/pdf',
+                name: file.name || finalName,
+                type: mimeType,
             });
             formData.append('user_id', user?.user_id?.toString());
             formData.append('custom_file_name', finalName);

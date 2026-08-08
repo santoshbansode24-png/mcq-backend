@@ -31,24 +31,44 @@ function convertImagesToPdfBase64($tmpFiles) {
         if (empty($tmpPath) || !file_exists($tmpPath) || filesize($tmpPath) === 0) continue;
         $imgData = file_get_contents($tmpPath);
         if (!$imgData) continue;
-        $im = @imagecreatefromstring($imgData);
-        if ($im !== false) {
-            if (function_exists('exif_read_data')) {
-                $exif = @exif_read_data($tmpPath);
-                if (!empty($exif['Orientation'])) {
-                    switch ($exif['Orientation']) {
-                        case 3: $im = imagerotate($im, 180, 0); break;
-                        case 6: $im = imagerotate($im, -90, 0); break;
-                        case 8: $im = imagerotate($im, 90, 0); break;
+
+        $w = 612;
+        $h = 792;
+        $sizeInfo = @getimagesize($tmpPath);
+        if ($sizeInfo && !empty($sizeInfo[0]) && !empty($sizeInfo[1])) {
+            $w = intval($sizeInfo[0]);
+            $h = intval($sizeInfo[1]);
+        }
+
+        $jpgBytes = null;
+        $isJpegMagic = (substr($imgData, 0, 3) === "\xFF\xD8\xFF");
+
+        if ($isJpegMagic) {
+            // Direct JPEG stream embedding into PDF (/DCTDecode) - Zero GD requirement, high speed & low RAM
+            $jpgBytes = $imgData;
+        } elseif (function_exists('imagecreatefromstring')) {
+            $im = @imagecreatefromstring($imgData);
+            if ($im !== false) {
+                if (function_exists('exif_read_data')) {
+                    $exif = @exif_read_data($tmpPath);
+                    if (!empty($exif['Orientation'])) {
+                        switch ($exif['Orientation']) {
+                            case 3: $im = imagerotate($im, 180, 0); break;
+                            case 6: $im = imagerotate($im, -90, 0); break;
+                            case 8: $im = imagerotate($im, 90, 0); break;
+                        }
                     }
                 }
+                $w = imagesx($im) ?: $w;
+                $h = imagesy($im) ?: $h;
+                ob_start();
+                imagejpeg($im, null, 85);
+                $jpgBytes = ob_get_clean();
+                imagedestroy($im);
             }
-            $w = imagesx($im) ?: 612;
-            $h = imagesy($im) ?: 792;
-            ob_start();
-            imagejpeg($im, null, 85);
-            $jpgBytes = ob_get_clean();
-            imagedestroy($im);
+        }
+
+        if ($jpgBytes) {
             $jpegStreams[] = [
                 'bytes'  => $jpgBytes,
                 'width'  => $w,
@@ -218,10 +238,19 @@ try {
         $isImage = false;
 
         if (!$isPdf) {
-            $imgCheck = @imagecreatefromstring($fileBytes);
-            if ($imgCheck !== false) {
-                imagedestroy($imgCheck);
+            $isJpegMagic = (substr($fileBytes, 0, 3) === "\xFF\xD8\xFF");
+            $isPngMagic  = (substr($fileBytes, 0, 4) === "\x89PNG");
+            $isWebpMagic = (substr($fileBytes, 0, 4) === "RIFF" && substr($fileBytes, 8, 4) === "WEBP");
+            $sizeInfo    = @getimagesize($tmpPath);
+
+            if ($isJpegMagic || $isPngMagic || $isWebpMagic || $sizeInfo !== false) {
                 $isImage = true;
+            } elseif (function_exists('imagecreatefromstring')) {
+                $imgCheck = @imagecreatefromstring($fileBytes);
+                if ($imgCheck !== false) {
+                    imagedestroy($imgCheck);
+                    $isImage = true;
+                }
             }
         }
 
@@ -281,7 +310,7 @@ try {
     ]);
 
 } catch (Exception $e) {
-    http_response_code(400);
+    http_response_code(200);
     echo json_encode([
         'status'  => 'error',
         'message' => $e->getMessage()

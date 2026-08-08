@@ -163,6 +163,10 @@ const PDFToExamScreen = ({ user, navigation }) => {
             let defaultName = file.name || 'study_material';
             if (defaultName.toLowerCase().endsWith('.pdf')) {
                 defaultName = defaultName.substring(0, defaultName.length - 4);
+            } else if (defaultName.toLowerCase().endsWith('.jpg') || defaultName.toLowerCase().endsWith('.png')) {
+                defaultName = defaultName.substring(0, defaultName.length - 4);
+            } else if (defaultName.toLowerCase().endsWith('.jpeg')) {
+                defaultName = defaultName.substring(0, defaultName.length - 5);
             }
             
             setPendingUploadFile(file);

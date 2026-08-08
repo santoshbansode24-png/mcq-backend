@@ -255,12 +255,11 @@ const PDFToExamScreen = ({ user, navigation }) => {
         setUploading(true);
 
         try {
-            const mimeType = file.mimeType || file.type || (finalName.toLowerCase().endsWith('.jpg') || finalName.toLowerCase().endsWith('.jpeg') ? 'image/jpeg' : (finalName.toLowerCase().endsWith('.png') ? 'image/png' : 'application/pdf'));
             const formData = new FormData();
             formData.append('pdf_file', {
                 uri: file.uri,
-                name: file.name || finalName,
-                type: mimeType,
+                name: finalName,
+                type: 'application/pdf',
             });
             formData.append('user_id', user?.user_id?.toString());
             formData.append('custom_file_name', finalName);
@@ -331,7 +330,7 @@ const PDFToExamScreen = ({ user, navigation }) => {
             capturedPhotos.forEach((p, idx) => {
                 formData.append('image_files[]', {
                     uri: p.uri,
-                    name: `page_${idx + 1}.jpg`,
+                    name: `page_${idx + 1}.pdf`,
                     type: 'image/jpeg'
                 });
             });

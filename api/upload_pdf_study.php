@@ -33,10 +33,20 @@ function convertImagesToPdfBase64($tmpFiles) {
         if (!$imgData) continue;
         $im = @imagecreatefromstring($imgData);
         if ($im !== false) {
+            if (function_exists('exif_read_data')) {
+                $exif = @exif_read_data($tmpPath);
+                if (!empty($exif['Orientation'])) {
+                    switch ($exif['Orientation']) {
+                        case 3: $im = imagerotate($im, 180, 0); break;
+                        case 6: $im = imagerotate($im, -90, 0); break;
+                        case 8: $im = imagerotate($im, 90, 0); break;
+                    }
+                }
+            }
             $w = imagesx($im) ?: 612;
             $h = imagesy($im) ?: 792;
             ob_start();
-            imagejpeg($im, null, 80);
+            imagejpeg($im, null, 85);
             $jpgBytes = ob_get_clean();
             imagedestroy($im);
             $jpegStreams[] = [
@@ -240,7 +250,7 @@ try {
     $fileHash = md5($pdfBase64);
     $fileSize = strlen($pdfBase64);
 
-    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_hash, file_size, pdf_base64, total_pages, difficulty, status, current_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'processing', 'Queued for AI extraction')");
+    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_hash, file_size, pdf_base64, total_pages, difficulty, status, current_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Queued for AI extraction')");
     $stmt->execute([$user_id, $folder_id, $fileName, $fileHash, $fileSize, $pdfBase64, $totalPages, $difficulty]);
     $job_id = $pdo->lastInsertId();
 
@@ -249,9 +259,11 @@ try {
     }
 
     // --- 4. Trigger Async AI Worker ---
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $workerUrl = "$scheme://$host/backend/api/pdf_worker_ai.php?job_id=$job_id";
+    $secretKey = defined('WORKER_SECRET') ? WORKER_SECRET : 'veeru_ai_worker_v2_secure_ping';
+    $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/backend/api'), '/\\');
+    $workerUrl = "$scheme://$host$scriptDir/pdf_worker_ai.php?key=$secretKey&force_job_id=$job_id";
 
     // Non-blocking cURL call
     $ch = curl_init($workerUrl);

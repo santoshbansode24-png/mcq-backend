@@ -48,7 +48,7 @@ try {
         // trigger worker in-line to process this job immediately!
         $updatedTs = !empty($job['updated_at']) ? strtotime($job['updated_at']) : 0;
         $isPending = ($job['status'] === 'pending');
-        $isStuckProcessing = ($job['status'] === 'processing' && (time() - $updatedTs) > 15);
+        $isStuckProcessing = ($job['status'] === 'processing' && (time() - $updatedTs) > 5);
 
         if ($isPending || $isStuckProcessing) {
             if (!defined('WORKER_SECRET')) {

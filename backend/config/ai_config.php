@@ -116,15 +116,21 @@ if (!function_exists('callGeminiPDF')) {
     function callGeminiPDF($prompt, $base64PDF, $options = []) {
         if (empty(GEMINI_API_KEY)) throw new Exception("GEMINI_API_KEY missing.");
 
+        $genConfig = [
+            'temperature' => $options['temperature'] ?? 0.4,
+            'maxOutputTokens' => $options['maxOutputTokens'] ?? 65536
+        ];
+        if (!empty($options['responseMimeType'])) {
+            $genConfig['responseMimeType'] = $options['responseMimeType'];
+        } else {
+            $genConfig['responseMimeType'] = 'application/json';
+        }
+
         $payload = [
             'contents' => [
                 ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => 'application/pdf', 'data' => $base64PDF]]]]
             ],
-            'generationConfig' => [
-                'temperature' => 0.4,
-                'maxOutputTokens' => 65536,
-                'responseMimeType' => 'application/json'
-            ]
+            'generationConfig' => $genConfig
         ];
         
         $maxRetries = 3;

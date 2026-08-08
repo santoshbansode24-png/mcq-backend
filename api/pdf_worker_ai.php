@@ -25,10 +25,10 @@ if ($workerKey !== WORKER_SECRET) {
 $forceJobId = isset($_GET['force_job_id']) ? intval($_GET['force_job_id']) : 0;
 
 if ($forceJobId > 0) {
-    $stmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ?");
+    $stmt = $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE job_id = ? AND status IN ('pending', 'processing', 'failed')");
     $stmt->execute([$forceJobId]);
     
-    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT * FROM pdf_study_jobs WHERE job_id = ? AND status = 'processing' LIMIT 1");
     $stmt->execute([$forceJobId]);
 } else {
     $pdo->prepare("UPDATE pdf_study_jobs SET status = 'processing', progress = 10 WHERE status = 'pending' ORDER BY job_id ASC LIMIT 1")
@@ -75,12 +75,35 @@ foreach ($jobs as $job) {
             $textExtractionPrompt = "You are an OCR expert. Extract the ENTIRE text from this document exactly as it is written. Do not summarize or generate questions. Output ONLY the raw extracted text in plain text format. Do not use JSON or any formatting.";
             
             try {
-                $textResponse = callGeminiPDF($textExtractionPrompt, $pdfBase64);
-                // Gemini sometimes wraps plain text in markdown block
-                $textResponse = trim(preg_replace('/^```(?:text)?|```$/mi', '', $textResponse));
+                $textResponse = callGeminiPDF($textExtractionPrompt, $pdfBase64, [
+                    'temperature' => 0.2,
+                    'responseMimeType' => 'text/plain'
+                ]);
                 
-                if (!empty($textResponse) && strlen($textResponse) > 50) {
-                    $extractedText = $textResponse;
+                // Clean response string
+                $textResponse = trim($textResponse);
+                $textResponse = preg_replace('/^```(?:text|json)?\s*/i', '', $textResponse);
+                $textResponse = preg_replace('/\s*```$/', '', $textResponse);
+                $textResponse = trim($textResponse);
+
+                // Fallback: If Gemini returned a JSON string object (e.g. {"text": "..."})
+                if (strpos($textResponse, '{') === 0 && strpos($textResponse, '}') !== false) {
+                    $parsed = @json_decode($textResponse, true);
+                    if (is_array($parsed)) {
+                        $parts = [];
+                        array_walk_recursive($parsed, function($val) use (&$parts) {
+                            if (is_string($val) && strlen(trim($val)) > 0) {
+                                $parts[] = trim($val);
+                            }
+                        });
+                        if (!empty($parts)) {
+                            $textResponse = implode("\n", $parts);
+                        }
+                    }
+                }
+                
+                if (!empty($textResponse) && strlen(trim($textResponse)) >= 10) {
+                    $extractedText = trim($textResponse);
                 }
             } catch (Exception $e) {
                 error_log("Worker PDF Text Extraction Failed: " . $e->getMessage());

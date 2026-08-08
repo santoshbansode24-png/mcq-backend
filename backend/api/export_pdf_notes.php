@@ -37,17 +37,59 @@ try {
     $fileName = htmlspecialchars($job['file_name'] ?? 'Study Notes');
     $contentRaw = $job['study_content'] ?? '';
 
+    // Primary Store Check: Fetch from pdf_study_content table
+    $stmtContent = $pdo->prepare("SELECT study_pack_json FROM pdf_study_content WHERE job_id = ? LIMIT 1");
+    $stmtContent->execute([$jobId]);
+    $contentRow = $stmtContent->fetch(PDO::FETCH_ASSOC);
+
+    if (!empty($contentRow['study_pack_json'])) {
+        $contentRaw = $contentRow['study_pack_json'];
+    }
+
     $notes = [];
     if (!empty($contentRaw)) {
         $decoded = json_decode($contentRaw, true);
         if (is_array($decoded)) {
-            $notes = $decoded['notes'] ?? ($decoded['Notes'] ?? ($decoded['smart_notes'] ?? []));
+            $notes = $decoded['notes'] ?? ($decoded['Notes'] ?? ($decoded['smart_notes'] ?? ($decoded['SmartNotes'] ?? [])));
         }
     }
 
-    $definitions = $notes['definitions'] ?? ($notes['Definitions'] ?? []);
-    $keyFacts = $notes['key_facts'] ?? ($notes['keyFacts'] ?? ($notes['Key_facts'] ?? []));
-    $coreConcepts = $notes['core_concepts'] ?? ($notes['coreConcepts'] ?? ($notes['Core_concepts'] ?? []));
+    $definitions = [];
+    $keyFacts = [];
+    $coreConcepts = [];
+
+    if (is_array($notes)) {
+        if (isset($notes['definitions']) || isset($notes['Definitions'])) {
+            $definitions = $notes['definitions'] ?? ($notes['Definitions'] ?? []);
+        }
+        if (isset($notes['key_facts']) || isset($notes['keyFacts']) || isset($notes['Key_facts'])) {
+            $keyFacts = $notes['key_facts'] ?? ($notes['keyFacts'] ?? ($notes['Key_facts'] ?? []));
+        }
+        if (isset($notes['core_concepts']) || isset($notes['coreConcepts']) || isset($notes['Core_concepts'])) {
+            $coreConcepts = $notes['core_concepts'] ?? ($notes['coreConcepts'] ?? ($notes['Core_concepts'] ?? []));
+        }
+
+        // Fallback for flat list or alternate object shapes
+        if (empty($definitions) && empty($keyFacts) && empty($coreConcepts)) {
+            foreach ($notes as $key => $val) {
+                if (is_string($val) && strlen(trim($val)) > 0) {
+                    $keyFacts[] = trim($val);
+                } elseif (is_array($val)) {
+                    foreach ($val as $subVal) {
+                        if (is_string($subVal) && strlen(trim($subVal)) > 0) {
+                            if (stripos((string)$key, 'def') !== false) {
+                                $definitions[] = trim($subVal);
+                            } elseif (stripos((string)$key, 'concept') !== false) {
+                                $coreConcepts[] = trim($subVal);
+                            } else {
+                                $keyFacts[] = trim($subVal);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 } catch (Exception $e) {
     die("Error retrieving notes: " . htmlspecialchars($e->getMessage()));

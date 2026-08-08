@@ -90,14 +90,22 @@ try {
         $exclusionClause = "\nDO NOT GENERATE ANY QUESTIONS DUPLICATING THESE EXISTING ITEMS:\n- " . implode("\n- ", $recent) . "\n";
     }
 
-    // 2. Prepare Gemini Prompt based on requested type
-    $apiKey = getGeminiApiKey();
-    if (empty($apiKey)) {
-        throw new Exception("Gemini API key is not configured.");
-    }
-
     $pdfBase64 = $job['pdf_base64'] ?? '';
     $extractedText = $job['extracted_text'] ?? '';
+
+    // If pdfBase64 is empty, check if physical disk file exists
+    if (empty($pdfBase64)) {
+        $filePath = $job['file_path'] ?? '';
+        if (!empty($filePath)) {
+            if (!preg_match('#^([a-zA-Z]:\\\\|/)#', $filePath)) {
+                $baseDir = dirname(__DIR__);
+                $filePath = $baseDir . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'pdf_study' . DIRECTORY_SEPARATOR . basename($filePath);
+            }
+            if (file_exists($filePath)) {
+                $pdfBase64 = base64_encode(file_get_contents($filePath));
+            }
+        }
+    }
 
     if ($type === 'flashcards') {
         $prompt = "You are the Veeru Flashcard Generator.
@@ -140,85 +148,24 @@ Output strict JSON format ONLY:
 }";
     }
 
-    // 3. Build Token-Optimized Payload (Prefer Extracted Text to Save 95% Input Tokens)
+    // 3. Call Gemini Helper Functions
+    $aiText = "";
     if (!empty($extractedText)) {
-        // High-efficiency text payload: Uses 2,000 text tokens instead of 50,000 vision tokens!
-        $parts = [
-            [
-                "text" => "SOURCE TEXT DOCUMENT:\n" . substr($extractedText, 0, 30000) . "\n\nINSTRUCTION:\n" . $prompt
-            ]
-        ];
+        $fullPrompt = "SOURCE TEXT DOCUMENT:\n" . substr($extractedText, 0, 35000) . "\n\nINSTRUCTION:\n" . $prompt;
+        $aiText = callGeminiAPI($fullPrompt, [
+            'temperature' => 0.2,
+            'maxOutputTokens' => 8192,
+            'responseMimeType' => 'application/json'
+        ]);
     } elseif (!empty($pdfBase64)) {
-        // Fallback to PDF vision base64 if OCR text was not stored
-        $parts = [
-            [
-                "inline_data" => [
-                    "mime_type" => "application/pdf",
-                    "data"      => $pdfBase64
-                ]
-            ],
-            [
-                "text" => $prompt
-            ]
-        ];
+        $aiText = callGeminiPDF($prompt, $pdfBase64, [
+            'temperature' => 0.2,
+            'maxOutputTokens' => 8192,
+            'responseMimeType' => 'application/json'
+        ]);
     } else {
         throw new Exception("Document source content is missing for this study pack.");
     }
-
-    $model = ($type === 'flashcards' || $type === 'mcqs') ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash';
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=" . $apiKey;
-    
-    $payload = [
-        "contents" => [
-            [
-                "parts" => $parts
-            ]
-        ],
-        "generationConfig" => [
-            "temperature"     => 0.2,
-            "responseMimeType"=> "application/json"
-        ]
-    ];
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-    $response = curl_exec($ch);
-    $curlErr  = curl_error($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    // Fallback model retry if flash-lite is unavailable
-    if ($httpCode !== 200 && $model !== 'gemini-2.5-flash') {
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $apiKey;
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-        $response = curl_exec($ch);
-        $curlErr  = curl_error($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-    }
-
-    if ($curlErr) {
-        throw new Exception("Gemini connection error: " . $curlErr);
-    }
-    if ($httpCode !== 200) {
-        throw new Exception("Gemini API error (HTTP $httpCode): " . substr($response, 0, 300));
-    }
-
-    $resData = json_decode($response, true);
-    $aiText  = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
     // Strip markdown code fences if present
     $aiText = preg_replace('/^```json\s*/i', '', trim($aiText));

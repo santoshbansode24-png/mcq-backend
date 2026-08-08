@@ -48,7 +48,8 @@ try {
     }
     
     if ($job['status'] === 'failed') {
-        throw new Exception("PDF analysis failed. Please re-upload the document.");
+        $err = !empty($job['error_message']) ? $job['error_message'] : "PDF analysis failed. Please re-upload the document.";
+        throw new Exception($err);
     }
 
     // PDF Retrieval (DB, Disk, or Master Knowledge Text)

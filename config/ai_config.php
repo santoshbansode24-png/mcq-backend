@@ -9,25 +9,39 @@ if (!defined('WORKER_SECRET')) {
 }
 
 // 1. Define API Key (Prevent re-definition errors)
+// 1. Define API Key (Prioritize Server Environment Variables)
 if (!defined('GEMINI_API_KEY')) {
-    // 1. Try loading from secrets.php (Ignored by Git)
+    // A. Fallback to local secrets.php (ONLY for local XAMPP dev)
     if (file_exists(__DIR__ . '/secrets.php')) {
         require_once __DIR__ . '/secrets.php';
     }
-
-    // 2. Try environment variable
-    if (!defined('GEMINI_API_KEY')) {
-        $envKey = getenv('GEMINI_API_KEY');
-        if ($envKey) define('GEMINI_API_KEY', $envKey);
+    
+    // B. Check for Railway / Server Environment Variable
+    if (!defined('GEMINI_API_KEY') || empty(GEMINI_API_KEY)) {
+        $envKey = getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? ($_SERVER['GEMINI_API_KEY'] ?? ''));
+        if ($envKey) {
+            define('GEMINI_API_KEY', trim($envKey));
+        }
     }
-
-    // 3. Fallback empty (will cause API error with clear message)
+    
     if (!defined('GEMINI_API_KEY')) {
         define('GEMINI_API_KEY', '');
     }
 }
 
-// 2. Define API URL - Using gemini-2.5-flash (confirmed available for this key)
+// 1.1. Define Google API Key (for TTS and other GCP services)
+if (!defined('GOOGLE_API_KEY')) {
+    $gEnvKey = getenv('GOOGLE_API_KEY') ?: ($_ENV['GOOGLE_API_KEY'] ?? ($_SERVER['GOOGLE_API_KEY'] ?? ''));
+    if ($gEnvKey) {
+        define('GOOGLE_API_KEY', trim($gEnvKey));
+    } elseif (defined('LOCAL_GOOGLE_API_KEY')) {
+        define('GOOGLE_API_KEY', LOCAL_GOOGLE_API_KEY);
+    } else {
+        define('GOOGLE_API_KEY', '');
+    }
+}
+
+// 2. Define API URL - Using gemini-2.5-flash for stability and full access
 if (!defined('GEMINI_API_URL')) {
     define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
 }
@@ -35,67 +49,128 @@ if (!defined('GEMINI_API_URL')) {
 /**
  * Helper function to call Gemini API
  * Throws Exceptions on error for cleaner handling in the main script.
- * * @param string $prompt The prompt to send
- * @param array $options Optional settings (temperature, maxOutputTokens)
- * @return string The AI response text
- * @throws Exception If the API call fails
  */
 if (!function_exists('callGeminiAPI')) {
     function callGeminiAPI($prompt, $options = []) {
+        $genConfig = [
+            'temperature' => $options['temperature'] ?? 0.7,
+            'maxOutputTokens' => $options['maxOutputTokens'] ?? 1024
+        ];
+        if (isset($options['responseMimeType'])) {
+            $genConfig['responseMimeType'] = $options['responseMimeType'];
+        }
         $payload = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
-            ],
-            'generationConfig' => [
-                // Default settings if not provided
-                'temperature' => isset($options['temperature']) ? $options['temperature'] : 0.7,
-                'maxOutputTokens' => isset($options['maxOutputTokens']) ? $options['maxOutputTokens'] : 800
-            ]
+            'contents' => [['parts' => [['text' => $prompt]]]],
+            'generationConfig' => $genConfig
         ];
         
-        $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        
-        // TIMEOUT: Prevent hanging forever (30 seconds)
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        
-        // SSL FIX: Crucial for XAMPP Localhost
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        
-        $response = curl_exec($ch);
-        $curlError = curl_error($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        
-        curl_close($ch);
-        
-        // Handle Connection Errors
-        if ($curlError) {
-            throw new Exception("cURL Connection Error: " . $curlError);
+        $maxRetries = 3;
+        $retryDelay = 5; // Start with 5s delay for 429s
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || in_array($host, ['localhost', '127.0.0.1', '::1']) || strpos($host, 'localhost:') === 0 || strpos($host, '127.0.0.1:') === 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 429 && $attempt < $maxRetries) {
+                sleep($retryDelay);
+                $retryDelay *= 2; 
+                continue;
+            }
+            
+            if ($httpCode !== 200) {
+                if ($httpCode === 429) {
+                    throw new Exception("AI BUSY (429): Free tier limit reached. Upgrade to Paid Tier in AI Studio for permanent solution.");
+                }
+                $errorDetails = json_decode($response, true);
+                $msg = $errorDetails['error']['message'] ?? "API Error $httpCode";
+                throw new Exception("Gemini API Error: " . $msg);
+            }
+            break;
         }
         
-        // Handle HTTP Errors (Like 404 Model Not Found or 400 Bad Request)
-        if ($httpCode !== 200) {
-            $errorDetails = json_decode($response, true);
-            $msg = isset($errorDetails['error']['message']) ? $errorDetails['error']['message'] : $response;
-            throw new Exception("Gemini API Error (HTTP $httpCode): " . $msg);
-        }
-        
-        // Parse Response
-        $decodedResponse = json_decode($response, true);
-        
-        if (isset($decodedResponse['candidates'][0]['content']['parts'][0]['text'])) {
-            return $decodedResponse['candidates'][0]['content']['parts'][0]['text'];
-        }
-        
-        throw new Exception("Invalid response format from AI.");
+        $decoded = json_decode($response, true);
+        return $decoded['candidates'][0]['content']['parts'][0]['text'] ?? throw new Exception("Invalid response format.");
     }
 }
-?>
+
+/**
+ * Call Gemini with Native PDF Support
+ */
+if (!function_exists('callGeminiPDF')) {
+    if (!defined('WORKER_SECRET')) {
+        define('WORKER_SECRET', 'veeru_ai_worker_v2_secure_ping');
+    }
+
+    function callGeminiPDF($prompt, $base64PDF, $options = []) {
+        if (empty(GEMINI_API_KEY)) throw new Exception("GEMINI_API_KEY missing.");
+
+        $genConfig = [
+            'temperature' => $options['temperature'] ?? 0.4,
+            'maxOutputTokens' => $options['maxOutputTokens'] ?? 65536
+        ];
+        if (!empty($options['responseMimeType'])) {
+            $genConfig['responseMimeType'] = $options['responseMimeType'];
+        } else {
+            $genConfig['responseMimeType'] = 'application/json';
+        }
+
+        $payload = [
+            'contents' => [
+                ['parts' => [['text' => $prompt], ['inlineData' => ['mimeType' => 'application/pdf', 'data' => $base64PDF]]]]
+            ],
+            'generationConfig' => $genConfig
+        ];
+        
+        $maxRetries = 3;
+        $retryDelay = 10; // 10s backoff for heavy PDF tasks
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init(GEMINI_API_URL . '?key=' . GEMINI_API_KEY);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 min
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || in_array($host, ['localhost', '127.0.0.1', '::1']) || strpos($host, 'localhost:') === 0 || strpos($host, '127.0.0.1:') === 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isLocal ? 0 : 2);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 429 && $attempt < $maxRetries) {
+                sleep($retryDelay);
+                $retryDelay *= 2;
+                continue;
+            }
+            
+            if ($httpCode !== 200) {
+                if ($httpCode === 429) {
+                    throw new Exception("VEERU LENS BUSY (429): Quota exhausted. Please upgrade to Paid Tier in Google AI Studio to handle large PDFs.");
+                }
+                $errorDetails = json_decode($response, true);
+                $msg = $errorDetails['error']['message'] ?? "Unknown Error";
+                throw new Exception("Gemini PDF Error ($httpCode): $msg");
+            }
+            break;
+        }
+        
+        $decoded = json_decode($response, true);
+        return $decoded['candidates'][0]['content']['parts'][0]['text'] ?? throw new Exception("Invalid PDF AI response.");
+    }
+}
+

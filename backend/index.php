@@ -11,11 +11,17 @@ if ($request_uri == '/teacher' || $request_uri == '/teacher/') {
     exit();
 }
 
-// Redirect old local notes requests (direct URLs) to Cloudflare R2 public bucket
-if (preg_match('/uploads\/notes\/([^\/]+\.pdf)/i', $request_uri, $matches)) {
-    $filename = $matches[1];
-    $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
-    header("Location: " . $r2_url, true, 302);
+// Redirect old local uploads requests (direct URLs) to Cloudflare R2 public bucket
+if (preg_match('/uploads\/notes\/([^\/]+)/i', $request_uri, $matches)) {
+    header("Location: https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $matches[1], true, 302);
+    exit();
+}
+if (preg_match('/uploads\/class_materials\/([^\/]+)/i', $request_uri, $matches)) {
+    header("Location: https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/class_materials/" . $matches[1], true, 302);
+    exit();
+}
+if (preg_match('/uploads\/class_documents\/([^\/]+)/i', $request_uri, $matches)) {
+    header("Location: https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/class_documents/" . $matches[1], true, 302);
     exit();
 }
 

@@ -24,9 +24,12 @@ try {
     // 3. Re-add as flexible VARCHAR
     $pdo->exec("ALTER TABLE study_tasks ADD COLUMN task_type VARCHAR(50) NOT NULL DEFAULT 'custom'");
     
-    // 4. Update pdf_study_jobs schema for Veeru Lens (Fixes "PDF data source missing" error)
+    // 4. Update pdf_study_jobs schema for Veeru Lens (Fixes missing columns error)
     $requiredCols = [
         'extracted_text' => "ALTER TABLE pdf_study_jobs ADD COLUMN extracted_text LONGTEXT DEFAULT NULL AFTER pdf_base64",
+        'file_hash'      => "ALTER TABLE pdf_study_jobs ADD COLUMN file_hash VARCHAR(64) DEFAULT NULL AFTER file_name",
+        'file_size'      => "ALTER TABLE pdf_study_jobs ADD COLUMN file_size BIGINT DEFAULT 0 AFTER file_hash",
+        'current_step'   => "ALTER TABLE pdf_study_jobs ADD COLUMN current_step VARCHAR(255) DEFAULT 'Queued for AI extraction' AFTER status",
         'difficulty'     => "ALTER TABLE pdf_study_jobs ADD COLUMN difficulty VARCHAR(32) DEFAULT 'mix' AFTER error_message",
         'total_chunks'   => "ALTER TABLE pdf_study_jobs ADD COLUMN total_chunks INT DEFAULT 1 AFTER difficulty",
         'last_processed_chunk' => "ALTER TABLE pdf_study_jobs ADD COLUMN last_processed_chunk INT DEFAULT 0 AFTER total_chunks"

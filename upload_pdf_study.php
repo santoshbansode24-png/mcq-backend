@@ -1,4 +1,15 @@
 <?php
+if (isset($_GET['debug_test'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'file' => __FILE__,
+        'dir' => __DIR__,
+        'time' => date('Y-m-d H:i:s'),
+        'files_keys' => array_keys($_FILES),
+        'post_keys' => array_keys($_POST)
+    ]);
+    exit();
+}
 /**
  * Root Upload PDF Study Job Forwarder
  */

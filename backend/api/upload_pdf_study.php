@@ -318,8 +318,10 @@ try {
     $fileHash = md5($pdfBase64);
     $fileSize = strlen($pdfBase64);
 
-    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_hash, file_size, pdf_base64, total_pages, difficulty, status, current_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Queued for AI extraction')");
-    $stmt->execute([$user_id, $folder_id, $fileName, $fileHash, $fileSize, $pdfBase64, $totalPages, $difficulty]);
+    $filePath = "memory://" . $fileName;
+
+    $stmt = $pdo->prepare("INSERT INTO pdf_study_jobs (user_id, folder_id, file_name, file_path, file_hash, file_size, pdf_base64, total_pages, difficulty, status, current_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Queued for AI extraction')");
+    $stmt->execute([$user_id, $folder_id, $fileName, $filePath, $fileHash, $fileSize, $pdfBase64, $totalPages, $difficulty]);
     $job_id = $pdo->lastInsertId();
 
     if ($user_id > 0 && isset($usageMgr)) {

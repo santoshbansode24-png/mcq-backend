@@ -7,6 +7,10 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config/db.php';
 
 try {
+    try {
+        $pdo->exec("ALTER TABLE pdf_study_jobs MODIFY COLUMN file_path VARCHAR(512) DEFAULT ''");
+    } catch (PDOException $e) {}
+
     $colsStmt = $pdo->query("SHOW COLUMNS FROM pdf_study_jobs");
     $actualCols = $colsStmt->fetchAll(PDO::FETCH_ASSOC);
 

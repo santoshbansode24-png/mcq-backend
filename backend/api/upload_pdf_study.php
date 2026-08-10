@@ -134,10 +134,14 @@ function convertImagesToPdfBase64($tmpFiles) {
 }
 
 try {
-    // --- 1. Check Parameters & Quota ---
-    $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
-    $folder_id  = isset($_POST['folder_id']) ? intval($_POST['folder_id']) : null;
-    $difficulty = isset($_POST['difficulty']) ? trim($_POST['difficulty']) : 'medium';
+    // --- 1. Parse JSON or POST Parameters ---
+    $rawInput  = file_get_contents('php://input');
+    $jsonInput = (!empty($rawInput) && strpos(trim($rawInput), '{') === 0) ? @json_decode($rawInput, true) : [];
+    if (!is_array($jsonInput)) $jsonInput = [];
+
+    $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : (isset($jsonInput['user_id']) ? intval($jsonInput['user_id']) : 0);
+    $folder_id  = isset($_POST['folder_id']) ? intval($_POST['folder_id']) : (isset($jsonInput['folder_id']) ? intval($jsonInput['folder_id']) : null);
+    $difficulty = isset($_POST['difficulty']) ? trim($_POST['difficulty']) : (isset($jsonInput['difficulty']) ? trim($jsonInput['difficulty']) : 'medium');
 
     if ($user_id > 0) {
         $usageMgr = new AiUsageManager($user_id);
@@ -156,118 +160,112 @@ try {
     $fileName   = '';
     $totalPages = 1;
 
-    // --- 2. Robust Multi-Format & Multi-Key File Detection ---
-    $multiKey = null;
-    foreach (['photos', 'image_files', 'images', 'files'] as $key) {
-        if (isset($_FILES[$key]) && is_array($_FILES[$key]['name']) && count($_FILES[$key]['name']) > 0) {
-            $multiKey = $key;
-            break;
-        }
-    }
+    // --- 2. Universal File & Base64 Harvester ---
+    $collectedTmpFiles = [];
+    $rawBase64Inputs   = [];
 
-    $singleFile = null;
-    if (!$multiKey) {
-        foreach (['pdf_file', 'file', 'document', 'photo', 'image'] as $key) {
-            if (isset($_FILES[$key]) && !empty($_FILES[$key]['tmp_name'])) {
-                $singleFile = $_FILES[$key];
-                break;
-            }
-        }
-        if (!$singleFile && !empty($_FILES)) {
-            // Fallback to the very first file entry in $_FILES array
-            $firstKey = array_key_first($_FILES);
-            if (!empty($_FILES[$firstKey]['tmp_name'])) {
-                $singleFile = $_FILES[$firstKey];
-            }
-        }
-    }
+    // Custom filename override
+    $headerName = isset($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) && !empty($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) ? urldecode($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) : '';
+    $postName   = isset($_POST['custom_file_name']) && !empty($_POST['custom_file_name']) ? $_POST['custom_file_name'] : (isset($jsonInput['custom_file_name']) ? $jsonInput['custom_file_name'] : '');
+    if (!empty($headerName)) $fileName = $headerName;
+    elseif (!empty($postName)) $fileName = $postName;
 
-    if ($multiKey) {
-        // Multi-Photo Upload Mode (Camera Snaps / Photo Studio)
-        $tmpFiles = $_FILES[$multiKey]['tmp_name'];
-        if (is_array($tmpFiles)) {
-            $validTmpFiles = array_filter($tmpFiles, function($t) { return !empty($t) && file_exists($t); });
-            $count = count($validTmpFiles);
-            if ($count > 0) {
-                $pdfBase64 = convertImagesToPdfBase64($validTmpFiles);
-                $fileName = "Veeru_Lens_Studio_" . date('Ymd_His') . ".pdf";
-                $totalPages = $count;
-            }
-        }
-    } elseif ($singleFile) {
-        // Single File Upload Mode (PDF document or single gallery photo)
-        $file = $singleFile;
-        $tmpPath = $file['tmp_name'];
+    // Harvester A: Harvest files from $_FILES (supports any key, single or array)
+    if (!empty($_FILES)) {
+        foreach ($_FILES as $key => $fileInfo) {
+            if (empty($fileInfo['name']) && empty($fileInfo['tmp_name'])) continue;
 
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $phpErrors = [
-                UPLOAD_ERR_INI_SIZE   => 'File too large (server limit). Max allowed is ' . ini_get('upload_max_filesize'),
-                UPLOAD_ERR_FORM_SIZE  => 'File too large (form limit)',
-                UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded',
-                UPLOAD_ERR_NO_FILE    => 'No file was uploaded',
-                UPLOAD_ERR_NO_TMP_DIR => 'Server has no temp directory',
-                UPLOAD_ERR_CANT_WRITE => 'Server cannot write file to disk',
-                UPLOAD_ERR_EXTENSION  => 'Upload blocked by server extension',
-            ];
-            throw new Exception($phpErrors[$file['error']] ?? "Upload error code: " . $file['error']);
-        }
-        if (empty($tmpPath) || !file_exists($tmpPath) || filesize($tmpPath) === 0) {
-            throw new Exception("File is empty (0 bytes). Check your device storage permissions.");
-        }
-
-        $headerName = isset($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) && !empty($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) ? urldecode($_SERVER['HTTP_X_CUSTOM_FILE_NAME']) : '';
-        $postName = isset($_POST['custom_file_name']) && !empty($_POST['custom_file_name']) ? $_POST['custom_file_name'] : '';
-        $rawName = $headerName ?: ($postName ?: ($file['name'] ?? 'study_material.pdf'));
-        
-        $decoded = rawurldecode($rawName);
-        if (!mb_check_encoding($decoded, 'UTF-8')) {
-            $decoded = urldecode($rawName);
-        }
-        if (!mb_check_encoding($decoded, 'UTF-8')) {
-            $decoded = mb_convert_encoding($rawName, 'UTF-8', mb_detect_encoding($rawName));
-        }
-        $fileName = $decoded ?: $rawName;
-
-        // Content-based file type detection (robust against .tmp or missing extensions)
-        $fileBytes = file_get_contents($tmpPath);
-        if ($fileBytes === false || strlen($fileBytes) < 20) {
-            throw new Exception("Failed to read uploaded file contents.");
-        }
-
-        $isPdf = (substr($fileBytes, 0, 4) === '%PDF');
-        $isImage = false;
-
-        if (!$isPdf) {
-            $isJpegMagic = (substr($fileBytes, 0, 3) === "\xFF\xD8\xFF");
-            $isPngMagic  = (substr($fileBytes, 0, 4) === "\x89PNG");
-            $isWebpMagic = (substr($fileBytes, 0, 4) === "RIFF" && substr($fileBytes, 8, 4) === "WEBP");
-            $sizeInfo    = @getimagesize($tmpPath);
-
-            if ($isJpegMagic || $isPngMagic || $isWebpMagic || $sizeInfo !== false) {
-                $isImage = true;
-            } elseif (function_exists('imagecreatefromstring')) {
-                $imgCheck = @imagecreatefromstring($fileBytes);
-                if ($imgCheck !== false) {
-                    imagedestroy($imgCheck);
-                    $isImage = true;
+            if (is_array($fileInfo['tmp_name'])) {
+                // Multi-file array format (e.g. photos[], files[])
+                foreach ($fileInfo['tmp_name'] as $idx => $tmpPath) {
+                    $err = is_array($fileInfo['error']) ? ($fileInfo['error'][$idx] ?? UPLOAD_ERR_OK) : UPLOAD_ERR_OK;
+                    if ($err === UPLOAD_ERR_OK && !empty($tmpPath) && file_exists($tmpPath) && filesize($tmpPath) > 0) {
+                        $collectedTmpFiles[] = $tmpPath;
+                        if (empty($fileName) && is_array($fileInfo['name']) && !empty($fileInfo['name'][$idx])) {
+                            $fileName = $fileInfo['name'][$idx];
+                        }
+                    }
+                }
+            } else {
+                // Single file format (e.g. photo, file, pdf_file)
+                $err = $fileInfo['error'] ?? UPLOAD_ERR_OK;
+                if ($err === UPLOAD_ERR_OK && !empty($fileInfo['tmp_name']) && file_exists($fileInfo['tmp_name']) && filesize($fileInfo['tmp_name']) > 0) {
+                    $collectedTmpFiles[] = $fileInfo['tmp_name'];
+                    if (empty($fileName) && !empty($fileInfo['name'])) {
+                        $fileName = $fileInfo['name'];
+                    }
                 }
             }
         }
+    }
 
-        if ($isPdf) {
-            $pdfBase64 = base64_encode($fileBytes);
-            unset($fileBytes);
-            // Rough count of PDF pages
-            $matchCount = preg_match_all('#/Type\s*/Page\b#', base64_decode(substr($pdfBase64, 0, 100000)), $m);
-            $totalPages = $matchCount > 0 ? $matchCount : 1;
-        } elseif ($isImage) {
-            $pdfBase64 = convertImagesToPdfBase64([$tmpPath]);
-            $totalPages = 1;
-            if (!preg_match('#\.pdf$#i', $fileName)) {
-                $fileName = pathinfo($fileName, PATHINFO_FILENAME) . '.pdf';
+    // Harvester B: Harvest Base64 from JSON / POST body if $_FILES produced no valid files
+    if (empty($collectedTmpFiles)) {
+        $b64Keys = ['pdf_base64', 'image_base64', 'photo_base64', 'base64', 'images_base64', 'photos_base64'];
+        foreach ($b64Keys as $bk) {
+            $val = $_POST[$bk] ?? ($jsonInput[$bk] ?? null);
+            if (!empty($val)) {
+                if (is_array($val)) {
+                    foreach ($val as $bItem) {
+                        if (is_string($bItem) && strlen(trim($bItem)) > 50) {
+                            $rawBase64Inputs[] = trim($bItem);
+                        }
+                    }
+                } elseif (is_string($val) && strlen(trim($val)) > 50) {
+                    $rawBase64Inputs[] = trim($val);
+                }
+            }
+        }
+    }
+
+    // --- 3. Process Harvested Content into Standard Base64 PDF ---
+    if (!empty($collectedTmpFiles)) {
+        if (count($collectedTmpFiles) === 1) {
+            $firstBytes = @file_get_contents($collectedTmpFiles[0]);
+            if ($firstBytes && substr($firstBytes, 0, 4) === '%PDF') {
+                // Direct PDF upload
+                $pdfBase64  = base64_encode($firstBytes);
+                $matchCount = preg_match_all('#/Type\s*/Page\b#', substr($firstBytes, 0, 100000), $m);
+                $totalPages = $matchCount > 0 ? $matchCount : 1;
+            } else {
+                // Single Image upload -> Convert to PDF
+                $pdfBase64  = convertImagesToPdfBase64($collectedTmpFiles);
+                $totalPages = 1;
+                if (!empty($fileName) && !preg_match('#\.pdf$#i', $fileName)) {
+                    $fileName = pathinfo($fileName, PATHINFO_FILENAME) . '.pdf';
+                }
             }
         } else {
-            throw new Exception("Unsupported file format. Please upload a valid PDF document or clear photo (JPG, PNG, WebP).");
+            // Multi-Photo Snaps -> Convert all to multi-page PDF
+            $pdfBase64  = convertImagesToPdfBase64($collectedTmpFiles);
+            $totalPages = count($collectedTmpFiles);
+            $fileName   = "Veeru_Lens_Studio_" . date('Ymd_His') . ".pdf";
+        }
+    } elseif (!empty($rawBase64Inputs)) {
+        // Convert Base64 inputs to temporary files if they are images
+        $tempFilesCreated = [];
+        $hasPdfBase64 = false;
+
+        foreach ($rawBase64Inputs as $b64Str) {
+            $cleanB64 = preg_replace('#^data:(?:image|application)/[\w\-]+;base64,#i', '', $b64Str);
+            $decoded  = base64_decode($cleanB64);
+            if (!$decoded || strlen($decoded) < 20) continue;
+
+            if (substr($decoded, 0, 4) === '%PDF') {
+                $pdfBase64    = base64_encode($decoded);
+                $hasPdfBase64 = true;
+                break;
+            } else {
+                $tPath = sys_get_temp_dir() . '/b64_snap_' . uniqid() . '.jpg';
+                file_put_contents($tPath, $decoded);
+                $tempFilesCreated[] = $tPath;
+            }
+        }
+
+        if (!$hasPdfBase64 && !empty($tempFilesCreated)) {
+            $pdfBase64  = convertImagesToPdfBase64($tempFilesCreated);
+            $totalPages = count($tempFilesCreated);
+            foreach ($tempFilesCreated as $tf) { @unlink($tf); }
         }
     }
 
@@ -275,7 +273,11 @@ try {
         throw new Exception("No valid PDF or image file received. Please check device permissions and try again.");
     }
 
-    // --- 3. Save Record into MySQL DB ---
+    if (empty($fileName)) {
+        $fileName = "Veeru_Lens_Job_" . date('Ymd_His') . ".pdf";
+    }
+
+    // --- 4. Save Record into MySQL DB ---
     $fileHash = md5($pdfBase64);
     $fileSize = strlen($pdfBase64);
 
@@ -287,7 +289,7 @@ try {
         $usageMgr->logUsage(100);
     }
 
-    // --- 4. Trigger Async AI Worker ---
+    // --- 5. Trigger Async AI Worker ---
     $secretKey = defined('WORKER_SECRET') ? WORKER_SECRET : 'veeru_ai_worker_v2_secure_ping';
     $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -303,9 +305,9 @@ try {
     curl_close($ch);
 
     echo json_encode([
-        'status'  => 'success',
-        'message' => 'Study job uploaded and queued successfully.',
-        'job_id'  => $job_id,
+        'status'    => 'success',
+        'message'   => 'Study job uploaded and queued successfully.',
+        'job_id'    => $job_id,
         'file_name' => $fileName
     ]);
 

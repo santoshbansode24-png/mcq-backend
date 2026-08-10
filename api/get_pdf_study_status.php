@@ -65,7 +65,8 @@ try {
             }
             ob_end_clean();
 
-            // Re-fetch updated job from DB
+            // Re-fetch updated job from DB cleanly
+            $stmt = $pdo->prepare("SELECT job_id, file_name, status, progress, total_pages, error_message, updated_at FROM pdf_study_jobs WHERE job_id = ? AND user_id = ? LIMIT 1");
             $stmt->execute([$job_id, $user_id]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
         }

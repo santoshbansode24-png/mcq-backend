@@ -3,32 +3,40 @@
  * PDF & Multi-Image Study Job Upload API
  * Handles single PDF files OR multiple photo uploads (camera snaps & gallery images)
  */
-require_once __DIR__ . '/cors_middleware.php';
 set_time_limit(300);
 ini_set('memory_limit', '512M');
+
+// Robust include resolution for CORS, DB, AI Config, and Usage Manager
+if (file_exists(__DIR__ . '/cors_middleware.php')) {
+    require_once __DIR__ . '/cors_middleware.php';
+} elseif (file_exists(__DIR__ . '/backend/api/cors_middleware.php')) {
+    require_once __DIR__ . '/backend/api/cors_middleware.php';
+} elseif (file_exists(__DIR__ . '/api/cors_middleware.php')) {
+    require_once __DIR__ . '/api/cors_middleware.php';
+}
 
 if (file_exists(__DIR__ . '/config/db.php')) {
     require_once __DIR__ . '/config/db.php';
 } elseif (file_exists(__DIR__ . '/backend/config/db.php')) {
     require_once __DIR__ . '/backend/config/db.php';
-} else {
-    require_once dirname(__DIR__) . '/config/db.php';
+} elseif (file_exists(__DIR__ . '/../config/db.php')) {
+    require_once __DIR__ . '/../config/db.php';
 }
 
 if (file_exists(__DIR__ . '/config/ai_config.php')) {
     require_once __DIR__ . '/config/ai_config.php';
 } elseif (file_exists(__DIR__ . '/backend/config/ai_config.php')) {
     require_once __DIR__ . '/backend/config/ai_config.php';
-} else {
-    require_once dirname(__DIR__) . '/config/ai_config.php';
+} elseif (file_exists(__DIR__ . '/../config/ai_config.php')) {
+    require_once __DIR__ . '/../config/ai_config.php';
 }
 
 if (file_exists(__DIR__ . '/AiUsageManager.php')) {
     require_once __DIR__ . '/AiUsageManager.php';
 } elseif (file_exists(__DIR__ . '/backend/api/AiUsageManager.php')) {
     require_once __DIR__ . '/backend/api/AiUsageManager.php';
-} else {
-    require_once dirname(__DIR__) . '/AiUsageManager.php';
+} elseif (file_exists(__DIR__ . '/api/AiUsageManager.php')) {
+    require_once __DIR__ . '/api/AiUsageManager.php';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }

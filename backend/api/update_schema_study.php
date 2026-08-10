@@ -8,8 +8,9 @@ require_once __DIR__ . '/../config/db.php';
 
 $res = [];
 try {
-    $pdo->exec("ALTER TABLE pdf_study_jobs MODIFY COLUMN file_path VARCHAR(512) DEFAULT ''");
-    $res['modify_file_path'] = 'SUCCESS';
+    $pdo->exec("ALTER TABLE pdf_study_jobs MODIFY COLUMN file_path VARCHAR(512) NULL DEFAULT ''");
+    $pdo->exec("ALTER TABLE pdf_study_jobs CHANGE COLUMN file_path file_path VARCHAR(512) NULL DEFAULT ''");
+    $res['modify_file_path'] = 'SUCCESS_NULLABLE';
 } catch (PDOException $e) {
     $res['modify_file_path'] = $e->getMessage();
 }

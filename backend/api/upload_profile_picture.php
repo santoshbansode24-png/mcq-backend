@@ -7,7 +7,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Check if file was uploaded
-if (!isset($_FILES['profile_picture']) || $_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+$targetFile = null;
+if (!empty($_FILES)) {
+    foreach (['profile_picture', 'file', 'photo', 'photos', 'image'] as $k) {
+        if (isset($_FILES[$k]) && $_FILES[$k]['error'] === UPLOAD_ERR_OK) {
+            $targetFile = $_FILES[$k];
+            break;
+        }
+    }
+    if (!$targetFile) {
+        $firstKey = array_key_first($_FILES);
+        if (isset($_FILES[$firstKey]) && $_FILES[$firstKey]['error'] === UPLOAD_ERR_OK) {
+            $targetFile = $_FILES[$firstKey];
+        }
+    }
+}
+
+if (!$targetFile) {
     sendResponse('error', 'No file uploaded or upload error', null, 400);
 }
 
@@ -17,7 +33,7 @@ if (!isset($_POST['user_id'])) {
 }
 
 $userId = $_POST['user_id'];
-$file = $_FILES['profile_picture'];
+$file = $targetFile;
 
 // Validate file type
 $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];

@@ -12,11 +12,37 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    if (!isset($_FILES['file'])) {
-        throw new Exception("No file uploaded");
+    $targetFile = null;
+    if (!empty($_FILES)) {
+        foreach (['file', 'photo', 'photos', 'image', 'document', 'pdf_file'] as $k) {
+            if (isset($_FILES[$k]) && !empty($_FILES[$k]['tmp_name'])) {
+                $targetFile = is_array($_FILES[$k]['name']) ? [
+                    'name' => $_FILES[$k]['name'][0],
+                    'tmp_name' => $_FILES[$k]['tmp_name'][0],
+                    'error' => $_FILES[$k]['error'][0] ?? 0,
+                    'type' => $_FILES[$k]['type'][0] ?? 'image/jpeg'
+                ] : $_FILES[$k];
+                break;
+            }
+        }
+        if (!$targetFile) {
+            $firstKey = array_key_first($_FILES);
+            if (!empty($_FILES[$firstKey]['tmp_name'])) {
+                $targetFile = is_array($_FILES[$firstKey]['name']) ? [
+                    'name' => $_FILES[$firstKey]['name'][0],
+                    'tmp_name' => $_FILES[$firstKey]['tmp_name'][0],
+                    'error' => $_FILES[$firstKey]['error'][0] ?? 0,
+                    'type' => $_FILES[$firstKey]['type'][0] ?? 'image/jpeg'
+                ] : $_FILES[$firstKey];
+            }
+        }
     }
 
-    $file = $_FILES['file'];
+    if (!$targetFile) {
+        throw new Exception("No file uploaded. Please select an image or document file.");
+    }
+
+    $file = $targetFile;
     
     if ($file['error'] !== UPLOAD_ERR_OK) {
         throw new Exception("Upload error code: " . $file['error']);

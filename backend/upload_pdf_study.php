@@ -342,7 +342,7 @@ try {
     http_response_code(200);
     echo json_encode([
         'status'  => 'error',
-        'message' => $e->getMessage()
+        'message' => $e->getMessage() . " [Executed File: " . __FILE__ . " Line: " . $e->getLine() . "]"
     ]);
 }
 ?>

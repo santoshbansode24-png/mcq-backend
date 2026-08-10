@@ -270,7 +270,9 @@ try {
     }
 
     if (empty($pdfBase64)) {
-        throw new Exception("No valid PDF or image file received. Please check device permissions and try again.");
+        $filesSummary = !empty($_FILES) ? json_encode(array_keys($_FILES)) : 'NONE';
+        $postSummary  = !empty($_POST) ? json_encode(array_keys($_POST)) : 'NONE';
+        throw new Exception("No valid PDF or image file received (Received FILES keys: $filesSummary, POST keys: $postSummary). Please check device permissions and try again.");
     }
 
     if (empty($fileName)) {

@@ -22,7 +22,9 @@ echo json_encode([
         'imagecreatefromstring_exists' => function_exists('imagecreatefromstring') ? 'YES' : 'NO',
         'getimagesize_exists' => function_exists('getimagesize') ? 'YES' : 'NO',
         'ai_config_hash' => file_exists(__DIR__ . '/../config/ai_config.php') ? md5_file(__DIR__ . '/../config/ai_config.php') : 'MISSING',
-        'root_ai_config_hash' => file_exists('/app/config/ai_config.php') ? md5_file('/app/config/ai_config.php') : 'MISSING'
+        'root_ai_config_hash' => file_exists('/app/config/ai_config.php') ? md5_file('/app/config/ai_config.php') : 'MISSING',
+        'upload_pdf_study_hash' => file_exists(__DIR__ . '/upload_pdf_study.php') ? md5_file(__DIR__ . '/upload_pdf_study.php') : 'MISSING',
+        'root_upload_pdf_study_hash' => file_exists('/app/upload_pdf_study.php') ? md5_file('/app/upload_pdf_study.php') : 'MISSING'
     ]
 ]);
 ?>

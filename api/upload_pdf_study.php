@@ -261,7 +261,7 @@ try {
             $matchCount = preg_match_all('#/Type\s*/Page\b#', base64_decode(substr($pdfBase64, 0, 100000)), $m);
             $totalPages = $matchCount > 0 ? $matchCount : 1;
         } elseif ($isImage) {
-            $pdfBase64 = base64_encode($fileBytes);
+            $pdfBase64 = convertImagesToPdfBase64([$tmpPath]);
             $totalPages = 1;
             if (!preg_match('#\.pdf$#i', $fileName)) {
                 $fileName = pathinfo($fileName, PATHINFO_FILENAME) . '.pdf';

@@ -116,7 +116,7 @@ if (!function_exists('callGeminiPDF')) {
     function callGeminiPDF($prompt, $base64PDF, $options = []) {
         if (empty(GEMINI_API_KEY)) throw new Exception("GEMINI_API_KEY missing.");
 
-        $cleanB64 = preg_replace('#^data:image/\w+;base64,#i', '', trim($base64PDF));
+        $cleanB64 = preg_replace('#^data:(?:image|application)/[\w\-]+;base64,#i', '', trim($base64PDF));
 
         $genConfig = [
             'temperature' => $options['temperature'] ?? 0.4,
@@ -129,11 +129,9 @@ if (!function_exists('callGeminiPDF')) {
         }
 
         $mimeType = 'application/pdf';
-        $prefixSample = substr($cleanB64, 0, 500);
+        $sampleLen = (int)(floor(min(1024, strlen($cleanB64)) / 4) * 4);
+        $prefixSample = substr($cleanB64, 0, max(4, $sampleLen));
         $rawHeader = @base64_decode($prefixSample);
-        if ($rawHeader === false || strlen($rawHeader) < 4) {
-            $rawHeader = @base64_decode($prefixSample . '==');
-        }
 
         if ($rawHeader && strlen($rawHeader) >= 3) {
             if (substr($rawHeader, 0, 3) === "\xFF\xD8\xFF") {

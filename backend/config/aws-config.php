@@ -48,6 +48,15 @@ if (!defined('AWS_BUCKET_NAME')) {
 }
 
 /**
+ * Check if Cloudflare R2 credentials are fully configured
+ * @return bool
+ */
+function isR2Configured() {
+    return !empty(R2_ACCESS_KEY_ID) && !empty(R2_SECRET_ACCESS_KEY);
+}
+
+
+/**
  * Get configured R2/S3 Client
  * @return S3Client
  */

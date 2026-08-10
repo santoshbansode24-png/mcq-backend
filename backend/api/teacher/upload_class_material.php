@@ -67,17 +67,17 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     // Generate unique name
     $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
     
-    // AWS S3 UPLOAD LOGIC with Fallback
+    // Cloudflare R2 Upload Logic with Fallback
     require_once '../../config/aws-config.php';
     
-    $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+    $is_aws_configured = isR2Configured();
     $s3_url = false;
 
     if ($is_aws_configured) {
         // Define S3 Key (Path in bucket)
         $s3_key = "class_materials/" . $newFileName;
         
-        // Upload directly from temp location to S3
+        // Upload directly from temp location to Cloudflare R2
         $s3_url = uploadToS3($fileTmpPath, $s3_key);
     }
 

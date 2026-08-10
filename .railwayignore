@@ -1,1 +1,18 @@
 # Force Railway to use Nixpacks instead of Railpack
+
+# Ignore heavy build artifacts and release binaries
+*.apk
+*.aab
+*.sql
+app-release.apk
+teacher-release.apk
+veeru_student_app_live.apk
+*.aab
+
+# Ignore upload directories
+uploads/
+backend/uploads/
+
+# Ignore node modules and git dirs
+node_modules/
+.git/

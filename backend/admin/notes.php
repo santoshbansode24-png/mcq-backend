@@ -101,17 +101,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
                 $new_filename = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $filename);
                 
-                // NEW: AWS S3 UPLOAD LOGIC with Fallback
+                // Cloudflare R2 Upload Logic with Fallback
                 require_once '../config/aws-config.php';
                 
-                $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+                $is_aws_configured = isR2Configured();
                 $s3_url = false;
 
                 if ($is_aws_configured) {
                     // Define S3 Key (Path in bucket)
                     $s3_key = "notes/" . $new_filename;
                     
-                    // Upload directly from temp location to S3
+                    // Upload directly from temp location to Cloudflare R2
                     $s3_url = uploadToS3($_FILES['pdf_file']['tmp_name'], $s3_key);
                 }
 

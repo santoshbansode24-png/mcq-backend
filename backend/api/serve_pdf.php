@@ -32,32 +32,54 @@ if (empty($file_param)) {
     die("Error: No file specified");
 }
 
-// Build full path
+// Handle full HTTP URLs
+if (strpos($file_param, 'http://') === 0 || strpos($file_param, 'https://') === 0) {
+    log_debug("Redirecting external URL: " . $file_param);
+    header("Location: " . $file_param, true, 302);
+    exit;
+}
+
+$filename = basename($file_param);
+
+// Always redirect uploads/notes/, uploads/class_materials/, uploads/class_documents/ to Cloudflare R2 CDN
+if (strpos($file_param, 'uploads/notes/') !== false || strpos($file_param, 'notes/') === 0) {
+    $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
+    log_debug("Redirecting to R2 notes: " . $r2_url);
+    header("Location: " . $r2_url, true, 302);
+    exit;
+}
+
+if (strpos($file_param, 'uploads/class_materials/') !== false || strpos($file_param, 'class_materials/') === 0) {
+    $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/class_materials/" . $filename;
+    log_debug("Redirecting to R2 class_materials: " . $r2_url);
+    header("Location: " . $r2_url, true, 302);
+    exit;
+}
+
+if (strpos($file_param, 'uploads/class_documents/') !== false || strpos($file_param, 'class_documents/') === 0) {
+    $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/class_documents/" . $filename;
+    log_debug("Redirecting to R2 class_documents: " . $r2_url);
+    header("Location: " . $r2_url, true, 302);
+    exit;
+}
+
+// Build full path for local fallback
 $base_dir = dirname(__DIR__); // /app/backend
-// Normalize slashes
 $base_dir = str_replace('\\', '/', $base_dir);
 $file_path = $base_dir . '/' . $file_param;
 
 log_debug("Base Dir: " . $base_dir);
 log_debug("Looking for Path: " . $file_path);
 
-// Check if file exists
+// Check if file exists locally
 if (!file_exists($file_path)) {
-    log_debug("Error: File not found locally. Attempting redirect to Cloudflare R2.");
-    
-    // Check if it's a note PDF
-    if (strpos($file_param, 'uploads/notes/') !== false && strtolower(pathinfo($file_param, PATHINFO_EXTENSION)) === 'pdf') {
-        $filename = basename($file_param);
-        $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
-        log_debug("Redirecting to R2: " . $r2_url);
-        header("Location: " . $r2_url, true, 302);
-        exit;
-    }
-    
-    http_response_code(404);
-    header("Content-Type: text/plain");
-    die("Error: File not found\nLooking for: $file_path");
+    // Default fallback to R2 notes bucket
+    $r2_url = "https://pub-30dbe31bca9f4e8d8f406dba53b733c3.r2.dev/notes/" . $filename;
+    log_debug("File missing locally. Redirecting to R2 fallback: " . $r2_url);
+    header("Location: " . $r2_url, true, 302);
+    exit;
 }
+
 
 // Security check - ensure file is in uploads directory
 $real_path = realpath($file_path);

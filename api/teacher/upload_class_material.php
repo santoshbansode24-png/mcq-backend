@@ -67,7 +67,7 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     
     require_once '../../config/aws-config.php';
     
-    $is_aws_configured = defined('AWS_ACCESS_KEY_ID') && AWS_ACCESS_KEY_ID !== 'YOUR_AWS_ACCESS_KEY_ID';
+    $is_aws_configured = isR2Configured();
     $s3_url = false;
 
     if ($is_aws_configured) {

@@ -35,19 +35,31 @@ try {
     }
 
     $safeName = time() . '_' . uniqid() . '.' . $ext;
-    $destPath = $uploadDir . $safeName;
 
-    if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-        throw new Exception("Failed to move uploaded file");
+    // Cloudflare R2 Upload Integration
+    require_once dirname(__DIR__) . '/config/aws-config.php';
+    $r2Url = false;
+    if (isR2Configured()) {
+        $s3_key = 'class_documents/' . $safeName;
+        $r2Url = uploadToS3($file['tmp_name'], $s3_key);
     }
 
-    // Determine the base URL
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-    $protocol = $isHttps ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'];
-    $baseUrl = $protocol . '://' . $host . dirname(dirname($_SERVER['SCRIPT_NAME'])); // points to backend/
+    if ($r2Url) {
+        $fileUrl = $r2Url;
+    } else {
+        $destPath = $uploadDir . $safeName;
+        if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+            throw new Exception("Failed to move uploaded file");
+        }
 
-    $fileUrl = $baseUrl . '/uploads/class_documents/' . $safeName;
+        // Determine the base URL
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $protocol = $isHttps ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'];
+        $baseUrl = $protocol . '://' . $host . dirname(dirname($_SERVER['SCRIPT_NAME'])); // points to backend/
+
+        $fileUrl = $baseUrl . '/uploads/class_documents/' . $safeName;
+    }
 
     echo json_encode([
         'status' => 'success',

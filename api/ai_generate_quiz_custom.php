@@ -78,6 +78,8 @@ try {
        - If there is enough information for 25+ questions, generate 25+. If the information is low, generate as few as 5.
        - Ensure every question is highly relevant and accurate.
     
+    CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the source text/document/image. If it is written in Marathi (मराठी), EVERY SINGLE question, option_a..d, and explanation MUST BE WRITTEN IN MARATHI (मराठी). Never translate Marathi input into English. If in Hindi, output in Hindi. If in English, output in English.
+    
     OUTPUT FORMAT (Strict JSON):
     [
         {

@@ -130,6 +130,7 @@ try {
     if ($type === 'flashcards') {
         $prompt = "You are the Veeru Flashcard Generator.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
+CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided document text. If the text is written in Marathi (मराठी), EVERY SINGLE question and answer MUST BE WRITTEN IN MARATHI (मराठी). Never translate Marathi content into English. If English, output in English. If Hindi, output in Hindi.
 Generate $count high-quality, highly reliable NEW Flashcards from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -141,6 +142,7 @@ Output strict JSON format ONLY:
     } elseif ($type === 'mcqs') {
         $prompt = "You are the Veeru MCQ Quiz Generator.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
+CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided document text. If the text is written in Marathi (मराठी), EVERY SINGLE question, option, and explanation MUST BE WRITTEN IN MARATHI (मराठी). Never translate Marathi content into English. If English, output in English. If Hindi, output in Hindi.
 Generate $count challenging Multiple Choice Questions from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -157,6 +159,7 @@ Output strict JSON format ONLY:
     } else { // notes
         $prompt = "You are the Veeru Smart Revision Notes Engine.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
+CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided document text. If the document text is written in Marathi (मराठी), EVERY SINGLE note entry (definitions, key_facts, core_concepts) MUST BE WRITTEN ENTIRELY IN MARATHI (मराठी). Never translate Marathi source text into English. If English, generate in English. If Hindi, generate in Hindi. Match the native language of the source text 100%.
 Generate comprehensive, highly scannable, expanded Revision Notes across definitions, key_facts, and core_concepts (extract at least 15 new key points).
 Output strict JSON format ONLY:
 {

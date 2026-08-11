@@ -176,10 +176,11 @@ foreach ($jobs as $job) {
            2. key_facts: Essential dates, numbers, formulas, or unarguable static truths.
            3. core_concepts: Short explanations of 'how' or 'why' things work.
         - EXHAUSTIVE EXTRACTION: Generate as many bullet points as needed to capture 100% of the vital information in the text.
+        - LANGUAGE REQUIREMENT: Write definitions, key_facts, and core_concepts in the exact same language as the source text (e.g. Marathi if source text is in Marathi).
         
         CRITICAL RULES:
         1. STRICT PDF GROUND TRUTH: Zero external knowledge or hallucination. Everything must come directly from the source text.
-        2. STRICT NATIVE LANGUAGE MATCH: If the PDF is written in Marathi, EVERY SINGLE output MUST be in Marathi. If English, output MUST be English.
+        2. CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the source text. If the source text is written in Marathi (मराठी), EVERY SINGLE generated MCQ (question, options, explanation), Flashcard (question, answer), and Note (definitions, key_facts, core_concepts) MUST BE 100% IN MARATHI (मराठी). Never translate Marathi into English. If source text is English, output MUST be English. If Hindi, output MUST be Hindi. Maintain 100% native language match.
         3. FORMAT: Return ONLY a valid JSON object. No markdown.
         4. CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. Rely strictly on the text to extract these. NEVER return an empty array for any category.
         

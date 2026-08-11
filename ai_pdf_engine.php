@@ -136,7 +136,7 @@ CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and
 Constraints:
 - Maintain a 'Line-by-Line' reading logic.
 - If content is technical/mathematical, show step-by-step logic in the notes.
-- STRICT NATIVE LANGUAGE MATCH: If the source text is in Marathi, you MUST answer/generate in Marathi. If the source text is in Hindi, answer/generate in Hindi. Otherwise, answer in $language.";
+- CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the source text. If the source text is in Marathi (मराठी), EVERY SINGLE generated MCQ, Flashcard, and Note (definitions, key_facts, core_concepts) MUST BE 100% IN MARATHI (मराठी). Never translate Marathi into English. If source text is Hindi, output in Hindi. If English, output in English. Maintain 100% native language match with source text.";
 
     $userPrompt = "Now, read the specific segment: $partStr ($rangeHint).
     Generate as many NEW MCQs, Flashcards, and Notes as possible from THIS specific $percentage% segment.

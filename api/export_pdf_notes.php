@@ -14,8 +14,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 if (file_exists(__DIR__ . '/config/db.php')) {
     require_once __DIR__ . '/config/db.php';
-} else {
+} elseif (file_exists(__DIR__ . '/../config/db.php')) {
     require_once __DIR__ . '/../config/db.php';
+} else {
+    require_once __DIR__ . '/../../config/db.php';
+}
+
+if (file_exists(__DIR__ . '/config/ai_config.php')) {
+    require_once __DIR__ . '/config/ai_config.php';
+} elseif (file_exists(__DIR__ . '/../config/ai_config.php')) {
+    require_once __DIR__ . '/../config/ai_config.php';
+} else {
+    require_once __DIR__ . '/../../config/ai_config.php';
 }
 
 $jobId = isset($_GET['job_id']) ? intval($_GET['job_id']) : 0;
@@ -25,8 +35,80 @@ if ($jobId <= 0) {
     die("Invalid Job ID");
 }
 
+function parseNotesStructure($inputData, &$definitions, &$keyFacts, &$coreConcepts) {
+    if (empty($inputData)) return;
+
+    if (is_string($inputData)) {
+        $clean = trim($inputData);
+        $clean = preg_replace('/^```(?:json)?\s*/i', '', $clean);
+        $clean = preg_replace('/\s*```$/', '', $clean);
+        $decoded = @json_decode($clean, true);
+        if (is_string($decoded)) {
+            $decoded = @json_decode($decoded, true);
+        }
+        if (is_array($decoded)) {
+            $inputData = $decoded;
+        }
+    }
+
+    if (!is_array($inputData)) return;
+
+    if (isset($inputData[0]) && is_array($inputData[0])) {
+        foreach ($inputData as $item) {
+            parseNotesStructure($item, $definitions, $keyFacts, $coreConcepts);
+        }
+        return;
+    }
+
+    $notesObj = $inputData['notes'] ?? ($inputData['Notes'] ?? ($inputData['smart_notes'] ?? ($inputData['SmartNotes'] ?? null)));
+    if ($notesObj && is_array($notesObj)) {
+        parseNotesStructure($notesObj, $definitions, $keyFacts, $coreConcepts);
+        return;
+    }
+
+    $defList = $inputData['definitions'] ?? ($inputData['Definitions'] ?? ($inputData['definitions_list'] ?? []));
+    $factList = $inputData['key_facts'] ?? ($inputData['keyFacts'] ?? ($inputData['Key_facts'] ?? ($inputData['key_points'] ?? [])));
+    $conceptList = $inputData['core_concepts'] ?? ($inputData['coreConcepts'] ?? ($inputData['Core_concepts'] ?? ($inputData['concepts'] ?? [])));
+
+    if (is_array($defList)) {
+        foreach ($defList as $d) {
+            if (is_string($d) && strlen(trim($d)) > 0) $definitions[] = trim($d);
+        }
+    }
+    if (is_array($factList)) {
+        foreach ($factList as $f) {
+            if (is_string($f) && strlen(trim($f)) > 0) $keyFacts[] = trim($f);
+        }
+    }
+    if (is_array($conceptList)) {
+        foreach ($conceptList as $c) {
+            if (is_string($c) && strlen(trim($c)) > 0) $coreConcepts[] = trim($c);
+        }
+    }
+
+    if (empty($definitions) && empty($keyFacts) && empty($coreConcepts)) {
+        foreach ($inputData as $k => $v) {
+            if (is_string($v) && strlen(trim($v)) > 0) {
+                $keyFacts[] = trim($v);
+            } elseif (is_array($v)) {
+                foreach ($v as $subV) {
+                    if (is_string($subV) && strlen(trim($subV)) > 0) {
+                        if (stripos((string)$k, 'def') !== false) {
+                            $definitions[] = trim($subV);
+                        } elseif (stripos((string)$k, 'concept') !== false) {
+                            $coreConcepts[] = trim($subV);
+                        } else {
+                            $keyFacts[] = trim($subV);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 try {
-    $stmt = $pdo->prepare("SELECT file_name, study_content FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT file_name, study_content, extracted_text, pdf_base64 FROM pdf_study_jobs WHERE job_id = ? LIMIT 1");
     $stmt->execute([$jobId]);
     $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -46,46 +128,50 @@ try {
         $contentRaw = $contentRow['study_pack_json'];
     }
 
-    $notes = [];
-    if (!empty($contentRaw)) {
-        $decoded = json_decode($contentRaw, true);
-        if (is_array($decoded)) {
-            $notes = $decoded['notes'] ?? ($decoded['Notes'] ?? ($decoded['smart_notes'] ?? ($decoded['SmartNotes'] ?? [])));
-        }
-    }
-
     $definitions = [];
     $keyFacts = [];
     $coreConcepts = [];
 
-    if (is_array($notes)) {
-        if (isset($notes['definitions']) || isset($notes['Definitions'])) {
-            $definitions = $notes['definitions'] ?? ($notes['Definitions'] ?? []);
-        }
-        if (isset($notes['key_facts']) || isset($notes['keyFacts']) || isset($notes['Key_facts'])) {
-            $keyFacts = $notes['key_facts'] ?? ($notes['keyFacts'] ?? ($notes['Key_facts'] ?? []));
-        }
-        if (isset($notes['core_concepts']) || isset($notes['coreConcepts']) || isset($notes['Core_concepts'])) {
-            $coreConcepts = $notes['core_concepts'] ?? ($notes['coreConcepts'] ?? ($notes['Core_concepts'] ?? []));
-        }
+    // Parse existing notes content
+    parseNotesStructure($contentRaw, $definitions, $keyFacts, $coreConcepts);
 
-        // Fallback for flat list or alternate object shapes
-        if (empty($definitions) && empty($keyFacts) && empty($coreConcepts)) {
-            foreach ($notes as $key => $val) {
-                if (is_string($val) && strlen(trim($val)) > 0) {
-                    $keyFacts[] = trim($val);
-                } elseif (is_array($val)) {
-                    foreach ($val as $subVal) {
-                        if (is_string($subVal) && strlen(trim($subVal)) > 0) {
-                            if (stripos((string)$key, 'def') !== false) {
-                                $definitions[] = trim($subVal);
-                            } elseif (stripos((string)$key, 'concept') !== false) {
-                                $coreConcepts[] = trim($subVal);
-                            } else {
-                                $keyFacts[] = trim($subVal);
-                            }
-                        }
-                    }
+    // Deduplicate
+    $definitions = array_values(array_unique($definitions));
+    $keyFacts = array_values(array_unique($keyFacts));
+    $coreConcepts = array_values(array_unique($coreConcepts));
+
+    // Dynamic On-The-Fly Fallback Generation if DB notes empty
+    if (empty($definitions) && empty($keyFacts) && empty($coreConcepts)) {
+        $extractedText = $job['extracted_text'] ?? '';
+        $pdfBase64 = $job['pdf_base64'] ?? '';
+
+        if (!empty($extractedText) || !empty($pdfBase64)) {
+            $prompt = "You are the Veeru Smart Revision Notes Engine.\nSTRICT PDF GROUND TRUTH DIRECTIVE: Every Note point MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text.\nCRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided document text. If written in Marathi (मराठी), EVERY SINGLE note entry (definitions, key_facts, core_concepts) MUST BE WRITTEN ENTIRELY IN MARATHI (मराठी). If English, generate in English. If Hindi, generate in Hindi. Match native language 100%.\nGenerate comprehensive, highly scannable Revision Notes across definitions, key_facts, and core_concepts.\nOutput strict JSON format ONLY:\n{\n  \"notes\": {\n    \"definitions\": [\"Term: Meaning\"],\n    \"key_facts\": [\"Fact statement\"],\n    \"core_concepts\": [\"Concept explanation\"]\n  }\n}";
+            $aiText = "";
+            if (!empty($extractedText) && function_exists('callGeminiAPI')) {
+                $fullPrompt = "SOURCE TEXT DOCUMENT:\n" . substr($extractedText, 0, 35000) . "\n\nINSTRUCTION:\n" . $prompt;
+                $aiText = callGeminiAPI($fullPrompt, ['temperature' => 0.2, 'maxOutputTokens' => 8192, 'responseMimeType' => 'application/json']);
+            } elseif (!empty($pdfBase64) && function_exists('callGeminiPDF')) {
+                $aiText = callGeminiPDF($prompt, $pdfBase64, ['temperature' => 0.2, 'maxOutputTokens' => 8192, 'responseMimeType' => 'application/json']);
+            }
+
+            if (!empty($aiText)) {
+                parseNotesStructure($aiText, $definitions, $keyFacts, $coreConcepts);
+                $definitions = array_values(array_unique($definitions));
+                $keyFacts = array_values(array_unique($keyFacts));
+                $coreConcepts = array_values(array_unique($coreConcepts));
+
+                if (!empty($definitions) || !empty($keyFacts) || !empty($coreConcepts)) {
+                    $saveData = [
+                        'notes' => [
+                            'definitions' => $definitions,
+                            'key_facts' => $keyFacts,
+                            'core_concepts' => $coreConcepts
+                        ]
+                    ];
+                    $saveJson = json_encode($saveData, JSON_UNESCAPED_UNICODE);
+                    $pdo->prepare("REPLACE INTO pdf_study_content (job_id, user_id, study_pack_json) VALUES (?, ?, ?)")
+                        ->execute([$jobId, $userId, $saveJson]);
                 }
             }
         }
@@ -179,56 +265,65 @@ try {
         }
 
         .section {
-            margin-bottom: 35px;
+            margin-bottom: 30px;
         }
 
         .section-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .section-header.blue { color: #0284c7; }
+        .section-header.blue { color: #2563eb; }
         .section-header.amber { color: #d97706; }
-        .section-header.purple { color: #7e22ce; }
+        .section-header.purple { color: #7c3aed; }
 
         .card-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .bullet-card {
-            background: #f8fafc;
-            border-left: 4px solid #cbd5e1;
             padding: 14px 18px;
-            border-radius: 0 10px 10px 0;
+            border-radius: 10px;
             font-size: 15px;
-            color: #334155;
-            font-weight: 500;
+            line-height: 1.6;
         }
 
-        .bullet-card.blue { border-left-color: #38bdf8; background: #f0f9ff; }
-        .bullet-card.amber { border-left-color: #f59e0b; background: #fffbeb; }
-        .bullet-card.purple { border-left-color: #a855f7; background: #faf5ff; }
+        .bullet-card.blue {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .bullet-card.amber {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .bullet-card.purple {
+            background: #f5f3ff;
+            border-left: 4px solid #8b5cf6;
+            color: #5b21b6;
+        }
 
         .footer {
             margin-top: 40px;
             padding-top: 20px;
             border-top: 1px solid #e2e8f0;
             text-align: center;
-            font-size: 13px;
+            font-size: 12px;
             color: #94a3b8;
         }
 
         @media print {
             body {
-                background: #ffffff;
+                background: white;
                 padding: 0;
             }
             .container {

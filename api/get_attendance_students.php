@@ -43,16 +43,16 @@ try {
     // 2. Fetch all students registered in this class/classroom
     $studentsStmt = $pdo->prepare("
         SELECT 
-            u.id as student_id,
-            u.full_name,
+            COALESCE(u.id, u.user_id) as student_id,
+            COALESCE(u.full_name, u.name) as full_name,
             u.email,
-            u.phone,
+            COALESCE(u.phone, u.mobile) as phone,
             u.roll_number,
             u.profile_picture
         FROM student_classroom_mapping scm
-        JOIN users u ON scm.student_id = u.id
+        JOIN users u ON scm.student_id = COALESCE(u.id, u.user_id)
         WHERE scm.class_id = ? AND scm.status = 'active'
-        ORDER BY CAST(COALESCE(u.roll_number, '999999') AS UNSIGNED) ASC, u.full_name ASC
+        ORDER BY CAST(COALESCE(u.roll_number, '999999') AS UNSIGNED) ASC, COALESCE(u.full_name, u.name) ASC
     ");
     $studentsStmt->execute([$classId]);
     $students = $studentsStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -60,10 +60,16 @@ try {
     // Fallback: If no students in mapping table, search users table directly by class_id
     if (empty($students)) {
         $fallbackStmt = $pdo->prepare("
-            SELECT id as student_id, full_name, email, phone, roll_number, profile_picture
+            SELECT 
+                COALESCE(id, user_id) as student_id,
+                COALESCE(full_name, name) as full_name,
+                email,
+                COALESCE(phone, mobile) as phone,
+                roll_number,
+                profile_picture
             FROM users
-            WHERE class_id = ? AND role = 'student'
-            ORDER BY CAST(COALESCE(roll_number, '999999') AS UNSIGNED) ASC, full_name ASC
+            WHERE class_id = ? AND (user_type = 'student' OR role = 'student')
+            ORDER BY CAST(COALESCE(roll_number, '999999') AS UNSIGNED) ASC, COALESCE(full_name, name) ASC
         ");
         $fallbackStmt->execute([$classId]);
         $students = $fallbackStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -100,6 +106,7 @@ try {
     ]);
 
 } catch (Exception $e) {
+    http_response_code(400);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()

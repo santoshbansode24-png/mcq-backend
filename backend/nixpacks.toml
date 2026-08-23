@@ -1,5 +1,5 @@
 [variables]
-NIXPACKS_PHP_VERSION = '8.2.27'
+NIXPACKS_PHP_VERSION = '8.2'
 
 [phases.install]
 cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx", "cd backend && rm -f composer.lock", "cd backend && composer update --no-interaction --ignore-platform-reqs"]

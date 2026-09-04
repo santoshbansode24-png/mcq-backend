@@ -1,5 +1,11 @@
 <?php
-require_once __DIR__ . '/../../vendor/autoload.php';
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
+    require_once __DIR__ . '/../../vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
 
 // Load local secrets if they exist (local development fallback)
 if (file_exists(__DIR__ . '/secrets.php')) {

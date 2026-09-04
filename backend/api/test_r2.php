@@ -1,6 +1,10 @@
 <?php
 // TEMPORARY TEST FILE - Remove after verification
-require_once '../config/aws-config.php';
+if (file_exists(__DIR__ . '/../config/aws-config.php')) {
+    require_once __DIR__ . '/../config/aws-config.php';
+} elseif (file_exists(__DIR__ . '/config/aws-config.php')) {
+    require_once __DIR__ . '/config/aws-config.php';
+}
 
 header('Content-Type: application/json');
 

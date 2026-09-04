@@ -34,6 +34,7 @@ dist/
 # Temporary files
 tmp/
 temp/
+scratch/
 
 # Uploads
 backend/uploads/

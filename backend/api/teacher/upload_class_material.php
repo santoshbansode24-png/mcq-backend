@@ -68,7 +68,13 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
     
     // Cloudflare R2 Upload Logic with Fallback
-    require_once '../../config/aws-config.php';
+    if (file_exists(__DIR__ . '/../../config/aws-config.php')) {
+        require_once __DIR__ . '/../../config/aws-config.php';
+    } elseif (file_exists(__DIR__ . '/../config/aws-config.php')) {
+        require_once __DIR__ . '/../config/aws-config.php';
+    } else {
+        require_once __DIR__ . '/../../config/aws-config.php';
+    }
     
     $is_aws_configured = isR2Configured();
     $s3_url = false;

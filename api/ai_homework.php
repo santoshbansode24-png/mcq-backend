@@ -133,7 +133,7 @@ Output Structure Template:
 
 📌 Key Concept: [1-sentence summary]
 
-CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided question/image/context. If the question/image is in Marathi (मराठी), answer ENTIRELY IN MARATHI (मराठी). Never translate Marathi input into English. If in Hindi, answer in Hindi. If in English, answer in English ($language preference).
+CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided question/image/context. If the question/image is in Marathi (मराठी), answer ENTIRELY IN MARATHI (मराठी). Never translate Marathi input into English. If in Hindi, answer in Hindi. If in English, answer in English ($language preference).\n";
 
 if (!empty($userText)) {
     $lowerText = strtolower($userText);

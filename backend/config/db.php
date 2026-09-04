@@ -60,13 +60,6 @@ try {
 
     // Force MySQL connection session to use UTC
     $pdo->exec("SET time_zone = '+00:00'");
-
-    // Auto-verify claim_token column on pdf_study_jobs
-    try {
-        $pdo->exec("ALTER TABLE `pdf_study_jobs` ADD COLUMN `claim_token` VARCHAR(64) NULL AFTER `progress` ");
-    } catch (Throwable $e) {
-        // Ignored if column already exists
-    }
     
     // session-based packet size increase for PDF handling (if user lacks global PERMISSION)
     try {

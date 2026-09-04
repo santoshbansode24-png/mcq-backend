@@ -55,9 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $correct = $_POST['correct_answer'];
     $explanation = sanitizeInput($_POST['explanation']);
     $difficulty = $_POST['difficulty'];
+    $medium = strtolower(trim($_POST['medium'] ?? ($selected_board === 'STATE_MARATHI' ? 'marathi' : 'english')));
+    if (!in_array($medium, ['english', 'marathi'])) $medium = 'english';
     try {
-        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty]);
+        $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$chapter_id, $question, $opt_a, $opt_b, $opt_c, $opt_d, $correct, $explanation, $difficulty, $medium]);
         $message = "✓ MCQ added successfully!"; $messageType = "success";
     } catch (PDOException $e) { $message = "❌ Error: " . $e->getMessage(); $messageType = "error"; }
 }
@@ -65,6 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 // Handle Bulk Upload
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'bulk_upload') {
     $chapter_id = intval($_POST['chapter_id']);
+    $medium = strtolower(trim($_POST['medium'] ?? ($selected_board === 'STATE_MARATHI' ? 'marathi' : 'english')));
+    if (!in_array($medium, ['english', 'marathi'])) $medium = 'english';
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
         $filename = $_FILES['csv_file']['name'];
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -76,11 +80,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $handle = fopen($file, "r");
             fgetcsv($handle); // Skip header
             $count = 0; $errors = 0;
-            $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
                 if (count($data) < 6) { $errors++; continue; }
                 try {
-                    $stmt->execute([$chapter_id, sanitizeInput($data[0]), sanitizeInput($data[1]), sanitizeInput($data[2]), sanitizeInput($data[3]), sanitizeInput($data[4]), strtolower(trim($data[5])), sanitizeInput($data[6] ?? ''), strtolower(trim($data[7] ?? 'medium'))]);
+                    $q_str = sanitizeInput(convertUtf8($data[0]));
+                    $oa = sanitizeInput(convertUtf8($data[1]));
+                    $ob = sanitizeInput(convertUtf8($data[2]));
+                    $oc = sanitizeInput(convertUtf8($data[3]));
+                    $od = sanitizeInput(convertUtf8($data[4]));
+                    $ans = strtolower(trim($data[5]));
+                    $exp = sanitizeInput(convertUtf8($data[6] ?? ''));
+                    $diff = strtolower(trim($data[7] ?? 'medium'));
+                    $stmt->execute([$chapter_id, $q_str, $oa, $ob, $oc, $od, $ans, $exp, $diff, $medium]);
                     $count++;
                 } catch (Exception $e) { $errors++; }
             }
@@ -186,7 +198,11 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
                         <select id="bulk_class_select" onchange="filterSubjects('bulk_')" required><option value="">Select Class</option><?php foreach($classes as $c): ?><option value="<?php echo $c['class_id']; ?>"><?php echo $c['class_name']; ?></option><?php endforeach; ?></select>
                         <select id="bulk_subject_select" onchange="filterChapters('bulk_')" required><option value="">Select Subject</option></select>
                         <select name="chapter_id" id="bulk_chapter_select" required><option value="">Select Chapter</option></select>
-                        <input type="file" name="csv_file" accept=".csv" required>
+                        <select name="medium" required>
+                            <option value="english" <?php echo $selected_board !== 'STATE_MARATHI' ? 'selected' : ''; ?>>English Medium</option>
+                            <option value="marathi" <?php echo $selected_board === 'STATE_MARATHI' ? 'selected' : ''; ?>>Marathi Medium (मराठी माध्यम)</option>
+                        </select>
+                        <input type="file" name="csv_file" accept=".csv" required style="grid-column: span 2;">
                     </div>
                     <button type="submit" class="btn-add">Upload CSV</button>
                 </form>
@@ -199,6 +215,10 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
                         <select id="single_class_select" onchange="filterSubjects('single_')" required><option value="">Select Class</option><?php foreach($classes as $c): ?><option value="<?php echo $c['class_id']; ?>"><?php echo $c['class_name']; ?></option><?php endforeach; ?></select>
                         <select id="single_subject_select" onchange="filterChapters('single_')" required><option value="">Select Subject</option></select>
                         <select name="chapter_id" id="single_chapter_select" required><option value="">Select Chapter</option></select>
+                        <select name="medium" required>
+                            <option value="english" <?php echo $selected_board !== 'STATE_MARATHI' ? 'selected' : ''; ?>>English Medium</option>
+                            <option value="marathi" <?php echo $selected_board === 'STATE_MARATHI' ? 'selected' : ''; ?>>Marathi Medium (मराठी माध्यम)</option>
+                        </select>
                         <textarea name="question" placeholder="Question" required style="grid-column: span 2; height: 80px;"></textarea>
                         <input type="text" name="option_a" placeholder="A" required><input type="text" name="option_b" placeholder="B" required>
                         <input type="text" name="option_c" placeholder="C" required><input type="text" name="option_d" placeholder="D" required>

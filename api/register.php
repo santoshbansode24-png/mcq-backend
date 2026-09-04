@@ -19,8 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Validate required fields
-// Validate required fields
-$required = ['name', 'email', 'mobile', 'password', 'school_name', 'class_id'];
+$required = ['name', 'email', 'mobile', 'school_name', 'class_id'];
+if (empty($input['google_id'])) {
+    $required[] = 'password';
+}
 $missing = validateRequired($input, $required);
 
 // Check board (accept board_type or board)
@@ -40,10 +42,14 @@ if (!empty($missing)) {
 $name = sanitizeInput($input['name']);
 $email = sanitizeInput($input['email']);
 $mobile = sanitizeInput($input['mobile']);
-$password = $input['password'];
+$password = $input['password'] ?? '';
 $school_name = sanitizeInput($input['school_name']);
 $class_id = filter_var($input['class_id'], FILTER_VALIDATE_INT);
 $board_type = sanitizeInput($input['board_type']);
+
+// Handle Google Login data
+$google_id = isset($input['google_id']) ? sanitizeInput($input['google_id']) : null;
+$profile_picture = isset($input['profile_picture']) ? sanitizeInput($input['profile_picture']) : null;
 
 // Validate Board
 if (!in_array($board_type, ['CBSE', 'STATE_MARATHI', 'STATE_SEMI'])) {
@@ -75,19 +81,19 @@ try {
     }
 
     // Check if mobile already registered as student (using right-most 10-digit match)
-    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE RIGHT(mobile, 10) = ? AND user_type = 'student'");
-    $stmt->execute([$mobile]);
+    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE (RIGHT(mobile, 10) = ? OR RIGHT(phone, 10) = ?) AND user_type = 'student'");
+    $stmt->execute([$mobile, $mobile]);
     if ($stmt->fetch()) {
         sendResponse('error', 'Mobile number already registered. Please use a different number.', null, 409);
     }
 
     // Hash password
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+    $hashed_password = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : '';
 
     // Default values
     $user_type = 'student';
-    $subscription_status = 'active'; // Default to active for now
-    $subscription_expiry = date('Y-m-d', strtotime('+30 days')); // 30 days trial/active
+    $subscription_status = 'active'; 
+    $subscription_expiry = date('Y-m-d', strtotime('+30 days')); 
     
     // Optional security_pin (Default to last 4 digits of mobile if not provided)
     $security_pin = isset($input['security_pin']) ? trim($input['security_pin']) : null;
@@ -100,16 +106,26 @@ try {
 
     // Insert new user
     $insertStmt = $pdo->prepare("
-        INSERT INTO users (name, email, mobile, password, security_pin, user_type, subscription_status, subscription_expiry, school_name, class_id, board_type, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        INSERT INTO users (
+            name, email, mobile, 
+            password, security_pin, google_id, profile_picture,
+            user_type, 
+            subscription_status, subscription_expiry, 
+            school_name, class_id, 
+            board_type,
+            created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     ");
 
     $insertStmt->execute([
         $name, 
         $email,
-        $mobile,
-        $hashed_password, 
+        $mobile, 
+        $hashed_password,
         $security_pin,
+        $google_id,
+        $profile_picture,
         $user_type, 
         $subscription_status, 
         $subscription_expiry,
@@ -120,8 +136,14 @@ try {
 
     $user_id = $pdo->lastInsertId();
 
-    // Fetch the newly created user to return (excluding password)
-    $userStmt = $pdo->prepare("SELECT user_id, name, email, user_type, subscription_status, class_id FROM users WHERE user_id = ?");
+    // Fetch the newly created user to return (including class name)
+    $userStmt = $pdo->prepare("
+        SELECT u.user_id, u.name, u.email, u.user_type, u.subscription_status, 
+               u.class_id, c.class_name, u.board_type, u.school_name, u.google_id 
+        FROM users u
+        LEFT JOIN classes c ON u.class_id = c.class_id
+        WHERE u.user_id = ?
+    ");
     $userStmt->execute([$user_id]);
     $newUser = $userStmt->fetch();
 

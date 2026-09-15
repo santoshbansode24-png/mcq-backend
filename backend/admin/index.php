@@ -394,13 +394,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         <form method="POST" action="">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email">Email Address / Username</label>
                 <div class="input-wrapper">
                     <input 
                         type="email" 
                         id="email" 
                         name="email" 
-                        placeholder="admin@example.com" 
+                        placeholder="Enter your admin email" 
                         required 
                         autofocus
                     >
@@ -418,7 +418,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         type="password" 
                         id="password" 
                         name="password" 
-                        placeholder="••••••••" 
+                        placeholder="Enter your password" 
                         required
                     >
                     <i class="fa-solid fa-lock input-icon"></i>
@@ -429,6 +429,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 Sign In to Portal <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left: 8px;"></i>
             </button>
         </form>
+
+        <div style="text-align: center; margin-top: 24px;">
+            <a href="register_admin.php" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color='#764ba2'" onmouseout="this.style.color='#667eea'">
+                <i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i>Need an Admin Account? Create Account
+            </a>
+        </div>
     </div>
 </body>
 </html>

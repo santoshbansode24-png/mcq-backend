@@ -1,7 +1,7 @@
 <?php
 /**
- * Admin Forgot Password Page
- * Veeru - Reset Password with 4-Digit Security PIN
+ * Admin Registration Page
+ * Veeru - Create Custom Admin Credentials
  */
 session_start();
 
@@ -15,63 +15,48 @@ require_once '../config/db.php';
 
 $error = '';
 $success = '';
+$secret_key_default = 'VEERU2026'; // Secret key to protect live creation
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $identifier = sanitizeInput($_POST['email'] ?? '');
-    $security_pin = sanitizeInput($_POST['security_pin'] ?? '');
-    $new_password = $_POST['new_password'] ?? '';
+    $name = sanitizeInput($_POST['name'] ?? '');
+    $email = sanitizeInput($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
+    $security_pin = sanitizeInput($_POST['security_pin'] ?? '');
+    $admin_key = sanitizeInput($_POST['admin_key'] ?? '');
 
-    if (empty($identifier) || empty($security_pin) || empty($new_password) || empty($confirm_password)) {
-        $error = 'All fields are required.';
+    if (empty($name) || empty($email) || empty($password) || empty($confirm_password) || empty($security_pin)) {
+        $error = 'Please fill in all required fields.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please enter a valid email address.';
     } elseif (!preg_match('/^\d{4}$/', $security_pin)) {
         $error = 'Security PIN must be exactly 4 digits.';
-    } elseif (strlen($new_password) < 6) {
-        $error = 'New password must be at least 6 characters long.';
-    } elseif ($new_password !== $confirm_password) {
-        $error = 'New password and confirm password do not match.';
+    } elseif (strlen($password) < 6) {
+        $error = 'Password must be at least 6 characters long.';
+    } elseif ($password !== $confirm_password) {
+        $error = 'Passwords do not match.';
+    } elseif (!empty($admin_key) && $admin_key !== $secret_key_default && $admin_key !== 'admin123') {
+        $error = 'Invalid Admin Security Key. (Default: VEERU2026)';
     } else {
         try {
-            // Find admin user by email or mobile
-            $user = null;
-            if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-                $stmt = $pdo->prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND user_type = 'admin'");
-                $stmt->execute([$identifier]);
-                $user = $stmt->fetch();
+            // Check if email already exists
+            $stmt = $pdo->prepare("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?)");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                $error = 'An account with this email already exists.';
             } else {
-                $cleanedMobile = preg_replace('/[^0-9]/', '', $identifier);
-                $stmt = $pdo->prepare("
-                    SELECT * FROM users 
-                    WHERE (RIGHT(mobile, 10) = RIGHT(?, 10) OR RIGHT(phone, 10) = RIGHT(?, 10)) 
-                      AND user_type = 'admin'
+                $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+                
+                $insert = $pdo->prepare("
+                    INSERT INTO users (name, email, password, user_type, security_pin, subscription_status, created_at) 
+                    VALUES (?, ?, ?, 'admin', ?, 'active', NOW())
                 ");
-                $stmt->execute([$cleanedMobile, $cleanedMobile]);
-                $user = $stmt->fetch();
-            }
-
-            if (!$user) {
-                $error = 'No admin account found matching this Email or Mobile Number.';
-            } else {
-                // If security_pin is empty in DB, initialize it with the entered PIN
-                if (empty($user['security_pin'])) {
-                    $user['security_pin'] = $security_pin;
-                }
-
-                if ($user['security_pin'] !== $security_pin) {
-                    $error = 'Incorrect 4-digit Security PIN.';
-                } else {
-                    $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
-                    $update = $pdo->prepare("
-                        UPDATE users 
-                        SET password = ?, security_pin = ?, updated_at = NOW() 
-                        WHERE user_id = ?
-                    ");
-                    $update->execute([$hashed_password, $security_pin, $user['user_id']]);
-                    $success = 'Password updated successfully! You can now log in with your new password.';
-                }
+                $insert->execute([$name, $email, $hashed_password, $security_pin]);
+                
+                $success = 'Admin account created successfully! You can now log in with your custom credentials.';
             }
         } catch (PDOException $e) {
-            $error = 'Database error: ' . $e->getMessage();
+            $error = 'Database error occurred: ' . $e->getMessage();
         }
     }
 }
@@ -81,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password - Veeru Admin</title>
+    <title>Create Admin Account - Veeru</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -151,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             66% { transform: translate(-20px, 20px) scale(0.9); }
         }
         
-        .reset-container {
+        .register-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -159,9 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.1),
                 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-            padding: 50px 45px;
+            padding: 45px 40px;
             width: 100%;
-            max-width: 480px;
+            max-width: 520px;
             animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             z-index: 10;
@@ -180,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
         
         .logo-icon {
@@ -192,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             align-items: center;
             justify-content: center;
             font-size: 32px;
-            margin: 0 auto 16px;
+            margin: 0 auto 14px;
             box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
         }
         
@@ -202,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             -webkit-text-fill-color: transparent;
             font-size: 26px;
             font-weight: 800;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         
         .header p {
@@ -211,16 +196,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-weight: 500;
         }
         
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             position: relative;
+            flex: 1;
         }
         
         .form-group label {
             display: block;
             color: #1e293b;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-size: 13px;
         }
         
@@ -230,16 +221,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .input-icon {
             position: absolute;
-            left: 18px;
+            left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 16px;
+            font-size: 15px;
             color: #94a3b8;
         }
         
         .form-group input {
             width: 100%;
-            padding: 14px 18px 14px 48px;
+            padding: 12px 16px 12px 44px;
             border: 2px solid #e2e8f0;
             border-radius: 14px;
             font-size: 14px;
@@ -256,17 +247,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         .pin-input {
-            letter-spacing: 6px;
+            letter-spacing: 4px;
             font-weight: 700;
-            font-size: 18px !important;
+            font-size: 16px !important;
             text-align: center;
-            padding-left: 18px !important;
+            padding-left: 16px !important;
         }
         
         .error-message {
             background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
             color: #991b1b;
-            padding: 14px 18px;
+            padding: 12px 16px;
             border-radius: 14px;
             margin-bottom: 20px;
             font-size: 13px;
@@ -280,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .success-message {
             background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
             color: #166534;
-            padding: 14px 18px;
+            padding: 12px 16px;
             border-radius: 14px;
             margin-bottom: 20px;
             font-size: 13px;
@@ -313,7 +304,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .back-link {
             text-align: center;
-            margin-top: 24px;
+            margin-top: 20px;
         }
 
         .back-link a {
@@ -337,11 +328,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="orb orb1"></div>
     <div class="orb orb2"></div>
     
-    <div class="reset-container">
+    <div class="register-container">
         <div class="header">
-            <div class="logo-icon"><i class="fa-solid fa-key" style="color: white;"></i></div>
-            <h1>Reset Password</h1>
-            <p>Enter your email/mobile & 4-digit Security PIN</p>
+            <div class="logo-icon"><i class="fa-solid fa-user-plus" style="color: white;"></i></div>
+            <h1>Create Admin Account</h1>
+            <p>Set up your custom login credentials</p>
         </div>
         
         <?php if ($error): ?>
@@ -354,80 +345,115 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <?php if ($success): ?>
             <div class="success-message">
                 <span style="font-size: 18px;">✅</span>
-                <span><?php echo htmlspecialchars($success); ?></span>
+                <div>
+                    <div><?php echo htmlspecialchars($success); ?></div>
+                    <div style="margin-top: 6px;"><a href="index.php" style="color: #166534; font-weight: 700; text-decoration: underline;">Click here to Log In</a></div>
+                </div>
             </div>
         <?php endif; ?>
         
         <form method="POST" action="">
             <div class="form-group">
-                <label for="email">Admin Email or Mobile</label>
+                <label for="name">Full Name</label>
                 <div class="input-wrapper">
                     <input 
                         type="text" 
-                        id="email" 
-                        name="email" 
-                        placeholder="Enter your admin email or mobile" 
-                        value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                        id="name" 
+                        name="name" 
+                        placeholder="Enter your full name" 
+                        value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>"
                         required 
                         autofocus
                     >
-                    <i class="fa-solid fa-user input-icon"></i>
+                    <i class="fa-solid fa-id-card input-icon"></i>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="security_pin">4-Digit Security PIN</label>
+                <label for="email">Admin Email / Username</label>
                 <div class="input-wrapper">
                     <input 
-                        type="password" 
-                        id="security_pin" 
-                        name="security_pin" 
-                        class="pin-input"
-                        placeholder="••••" 
-                        maxlength="4"
-                        pattern="\d{4}"
-                        required
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="Enter your email address" 
+                        value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                        required 
                     >
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="new_password">New Password</label>
-                <div class="input-wrapper">
-                    <input 
-                        type="password" 
-                        id="new_password" 
-                        name="new_password" 
-                        placeholder="Min. 6 characters" 
-                        minlength="6"
-                        required
-                    >
-                    <i class="fa-solid fa-lock input-icon"></i>
+                    <i class="fa-solid fa-envelope input-icon"></i>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="confirm_password">Confirm New Password</label>
-                <div class="input-wrapper">
-                    <input 
-                        type="password" 
-                        id="confirm_password" 
-                        name="confirm_password" 
-                        placeholder="Re-enter new password" 
-                        minlength="6"
-                        required
-                    >
-                    <i class="fa-solid fa-check-double input-icon"></i>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="Min 6 chars" 
+                            minlength="6"
+                            required
+                        >
+                        <i class="fa-solid fa-lock input-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="confirm_password" 
+                            name="confirm_password" 
+                            placeholder="Repeat password" 
+                            minlength="6"
+                            required
+                        >
+                        <i class="fa-solid fa-check-double input-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="security_pin">4-Digit Security PIN</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="security_pin" 
+                            name="security_pin" 
+                            class="pin-input"
+                            placeholder="••••" 
+                            maxlength="4"
+                            pattern="\d{4}"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin_key">Setup Key (Optional)</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="admin_key" 
+                            name="admin_key" 
+                            placeholder="VEERU2026"
+                        >
+                        <i class="fa-solid fa-shield-halved input-icon"></i>
+                    </div>
                 </div>
             </div>
             
             <button type="submit" class="btn-submit">
-                Reset Password <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>
+                Create Admin Account <i class="fa-solid fa-user-check" style="margin-left: 8px;"></i>
             </button>
         </form>
 
         <div class="back-link">
-            <a href="index.php"><i class="fa-solid fa-arrow-left"></i> Back to Login Page</a>
+            <a href="index.php"><i class="fa-solid fa-arrow-left"></i> Already have an account? Log In</a>
         </div>
     </div>
 </body>

@@ -409,7 +409,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             
             <div class="form-group">
-                <label for="password">Password</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label for="password" style="margin-bottom: 0;">Password</label>
+                    <a href="forgot_password.php" style="color: #667eea; text-decoration: none; font-size: 13px; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color='#764ba2'" onmouseout="this.style.color='#667eea'">Forgot Password?</a>
+                </div>
                 <div class="input-wrapper">
                     <input 
                         type="password" 

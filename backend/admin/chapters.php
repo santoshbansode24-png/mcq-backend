@@ -1,6 +1,6 @@
 <?php
 /**
- * Chapters Management
+ * Chapters Management (with Bulk Upload via PDF, Word, CSV, TXT, JSON)
  * Veeru
  */
 session_start();
@@ -18,7 +18,14 @@ $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
-require_once '../helpers/text_normalizer.php';
+if (file_exists('../helpers/text_normalizer.php')) {
+    require_once '../helpers/text_normalizer.php';
+}
+if (file_exists('../vendor/autoload.php')) {
+    require_once '../vendor/autoload.php';
+} elseif (file_exists('../../vendor/autoload.php')) {
+    require_once '../../vendor/autoload.php';
+}
 
 // Handle Delete
 if (isset($_GET['delete'])) {
@@ -40,32 +47,178 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Handle Add Chapter
+// Handle Add Chapter / Bulk Upload
 $message = '';
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $subject_id = intval($_POST['subject_id']);
-    $name = sanitizeInput($_POST['chapter_name']);
+$message_type = 'success';
 
-    $desc = sanitizeInput($_POST['description']);
-    $order = intval($_POST['chapter_order']);
-    
-    // Normalize chapter name to UPPERCASE
-    $normalized_name = normalizeChapterName($name);
-    
-    // Proper Duplicate Check
-    $check_dup = $pdo->prepare("SELECT COUNT(*) FROM chapters WHERE chapter_name = ? AND subject_id = ?");
-    $check_dup->execute([$normalized_name, $subject_id]);
-    
-    if ($check_dup->fetchColumn() > 0) {
-        $error = "⚠️ Duplicate Chapter: '$normalized_name' already exists in this subject!";
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $form_action = $_POST['form_action'] ?? 'add_single';
+
+    if ($form_action === 'bulk_upload') {
+        $subject_id = intval($_POST['bulk_subject_id'] ?? 0);
+        
+        if ($subject_id <= 0) {
+            $message = "Error: Please select a valid class and subject.";
+            $message_type = 'error';
+        } elseif (!isset($_FILES['chapter_file']) || $_FILES['chapter_file']['error'] !== UPLOAD_ERR_OK) {
+            $message = "Error: Please select a valid file to upload.";
+            $message_type = 'error';
+        } else {
+            $file = $_FILES['chapter_file'];
+            $filename = $file['name'];
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $tmp_path = $file['tmp_name'];
+            
+            $content = '';
+            $chapter_names = [];
+            
+            if ($ext === 'pdf') {
+                if (class_exists('\Smalot\PdfParser\Parser')) {
+                    try {
+                        $parser = new \Smalot\PdfParser\Parser();
+                        $pdf = $parser->parseFile($tmp_path);
+                        $content = $pdf->getText();
+                    } catch (\Exception $e) {
+                        $message = "Error reading PDF: " . $e->getMessage();
+                        $message_type = 'error';
+                    }
+                } else {
+                    $message = "Error: PDF parser library not found on server.";
+                    $message_type = 'error';
+                }
+            } elseif ($ext === 'docx') {
+                try {
+                    $zip = new ZipArchive();
+                    if ($zip->open($tmp_path) === true) {
+                        if (($index = $zip->locateName('word/document.xml')) !== false) {
+                            $xml = $zip->getFromIndex($index);
+                            $content = strip_tags(str_replace(['</w:p>', '<w:br/>', '<w:tr/>'], "\n", $xml));
+                        }
+                        $zip->close();
+                    }
+                } catch (\Exception $e) {
+                    $message = "Error reading DOCX: " . $e->getMessage();
+                    $message_type = 'error';
+                }
+            } elseif ($ext === 'csv' || $ext === 'txt') {
+                $content = file_get_contents($tmp_path);
+                $content = convertUtf8($content);
+            } elseif ($ext === 'json') {
+                $content = file_get_contents($tmp_path);
+                $content = convertUtf8($content);
+                $data = json_decode($content, true);
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        if (is_string($item) && !empty(trim($item))) {
+                            $chapter_names[] = trim($item);
+                        } elseif (is_array($item)) {
+                            $cname = $item['chapter_name'] ?? $item['name'] ?? $item['title'] ?? '';
+                            if (!empty(trim($cname))) {
+                                $chapter_names[] = trim($cname);
+                            }
+                        }
+                    }
+                }
+            } else {
+                $message = "Error: Unsupported file format (.{$ext}). Please upload a .pdf, .docx, .csv, .txt, or .json file.";
+                $message_type = 'error';
+            }
+            
+            // Extract lines for text-based formats (PDF, DOCX, CSV, TXT)
+            if (in_array($ext, ['pdf', 'docx', 'csv', 'txt']) && !empty($content)) {
+                $lines = preg_split("/\r\n|\n|\r/", $content);
+                foreach ($lines as $line) {
+                    $trimmed = trim($line);
+                    if (empty($trimmed)) continue;
+                    
+                    // If CSV with commas, take the first non-empty column or whole line if no comma
+                    if ($ext === 'csv' && strpos($trimmed, ',') !== false) {
+                        $parts = str_getcsv($trimmed);
+                        $col = trim($parts[0] ?? '');
+                        if (!empty($col)) {
+                            $trimmed = $col;
+                        }
+                    }
+                    
+                    // Ignore common header rows & junk lines
+                    $lower = strtolower($trimmed);
+                    if (in_array($lower, ['chapter_name', 'chapter name', 'chapters', 'title', 'subject', 'table of contents', 'contents'])) {
+                        continue;
+                    }
+                    
+                    // Skip lines that are just numbers or page numbers
+                    if (is_numeric($trimmed) || strlen($trimmed) < 2) {
+                        continue;
+                    }
+                    
+                    $chapter_names[] = $trimmed;
+                }
+            }
+
+            if (!empty($chapter_names)) {
+                // Get highest current chapter_order for subject
+                $stmt = $pdo->prepare("SELECT COALESCE(MAX(chapter_order), 0) FROM chapters WHERE subject_id = ?");
+                $stmt->execute([$subject_id]);
+                $max_order = (int)$stmt->fetchColumn();
+
+                // Fetch existing chapter names for duplicate check
+                $stmt = $pdo->prepare("SELECT LOWER(chapter_name) FROM chapters WHERE subject_id = ?");
+                $stmt->execute([$subject_id]);
+                $existing = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $existing_set = array_flip(array_map('strtolower', $existing));
+
+                $inserted = 0;
+                $skipped = 0;
+
+                $insert_stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
+                
+                foreach ($chapter_names as $cname) {
+                    $sanitized_name = sanitizeInput($cname);
+                    $lower_name = strtolower($sanitized_name);
+
+                    if (empty($sanitized_name)) continue;
+
+                    if (isset($existing_set[$lower_name])) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $max_order++;
+                    $insert_stmt->execute([$subject_id, $sanitized_name, '', $max_order]);
+                    $existing_set[$lower_name] = true;
+                    $inserted++;
+                }
+
+                $message = "🎉 Bulk Upload Successful! Added {$inserted} new chapter(s).";
+                if ($skipped > 0) {
+                    $message .= " ({$skipped} duplicate chapter(s) skipped).";
+                }
+                $message_type = 'success';
+            } elseif (empty($message)) {
+                $message = "Error: No valid chapter names found in the uploaded file.";
+                $message_type = 'error';
+            }
+        }
     } else {
-        try {
-            $stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$subject_id, $normalized_name, $desc, $order]);
-            $message = "✓ Chapter added successfully! ($normalized_name)";
-        } catch (PDOException $e) {
-            $error = "❌ Error: Database error occurred";
+        // Handle Single Add Chapter
+        $subject_id = intval($_POST['subject_id']);
+        $name = sanitizeInput($_POST['chapter_name']);
+        $desc = sanitizeInput($_POST['description']);
+        $order = intval($_POST['chapter_order']);
+        
+        if ($subject_id <= 0 || empty($name)) {
+            $message = "Error: Please select a subject and enter a chapter name.";
+            $message_type = 'error';
+        } else {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$subject_id, $name, $desc, $order]);
+                $message = "Chapter added successfully!";
+                $message_type = 'success';
+            } catch (PDOException $e) {
+                $message = "Error: Could not add chapter to database.";
+                $message_type = 'error';
+            }
         }
     }
 }
@@ -105,21 +258,151 @@ $chapters = $chapters_query->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Chapters - MCQ Admin</title>
-    <!-- Modern Admin CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin_theme.css?v=<?php echo time(); ?>">
+    <style>
+        /* Reusing Dashboard Styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; position: relative; }
+        .nav { background: white; padding: 0 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .nav ul { list-style: none; display: flex; gap: 5px; }
+        .nav li a { display: block; padding: 18px 25px; color: #666; text-decoration: none; font-weight: 500; border-bottom: 3px solid transparent; }
+        .nav li a:hover, .nav li a.active { color: #667eea; border-bottom-color: #667eea; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 40px; }
+        
+        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: #444; display: flex; align-items: center; gap: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { color: #666; font-weight: 600; background: #f9f9f9; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; }
+        
+        .center-actions {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .btn-switch-board {
+            background: #ff9f43;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-switch-board:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: #ffcd19;
+            color: #333;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        select, input[type="text"], input[type="number"], input[type="file"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        select:focus, input:focus {
+            border-color: #667eea;
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-add:hover {
+            opacity: 0.9;
+        }
+        .btn-bulk {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-bulk:hover {
+            opacity: 0.9;
+        }
+        .btn-delete {
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: #fdf2f2;
+        }
+        .btn-delete:hover {
+            background: #fde8e8;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .alert-success {
+            background: #e8f8f5;
+            color: #27ae60;
+            border: 1px solid #a3e4d7;
+        }
+        .alert-error {
+            background: #fdf2f2;
+            color: #c0392b;
+            border: 1px solid #f5b7b1;
+        }
+        .file-hint {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
     <script>
         const subjects = <?php echo json_encode($all_subjects); ?>;
-        function filterSubjects() {
-            const classId = document.getElementById('class_select').value;
-            const subjectSelect = document.getElementById('subject_select');
+
+        function filterSubjects(classSelectId, subjectSelectId) {
+            const classId = document.getElementById(classSelectId).value;
+            const subjectSelect = document.getElementById(subjectSelectId);
             
             subjectSelect.innerHTML = '<option value="">Select Subject</option>';
             
             subjects.forEach(subject => {
                 if (subject.class_id == classId) {
-                    let option = document.createElement('option');
+                    const option = document.createElement('option');
                     option.value = subject.subject_id;
                     option.textContent = subject.subject_name;
                     subjectSelect.appendChild(option);
@@ -133,12 +416,14 @@ $chapters = $chapters_query->fetchAll();
         <h1>🎓 MCQ Admin Panel</h1>
         
         <div class="center-actions">
-            <a href="select_board.php" class="btn-switch-board">🔁 Switch Board</a>
+            <a href="select_board.php" class="btn-switch-board">
+                🔁 Switch Board
+            </a>
         </div>
 
         <div class="header-right">
             <div class="admin-info">
-                <div class="name">
+                <div class="name" style="margin-bottom: 3px;">
                     <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 13px;">
                         <?php echo htmlspecialchars($board_name); ?>
                     </span>
@@ -152,90 +437,132 @@ $chapters = $chapters_query->fetchAll();
     
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
-            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
-            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
-            <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
-            <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
-            <li><a href="chapters.php" class="active"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
-            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
-            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
-            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
-            <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
-            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
-            <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
-            <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
-            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
+            <li><a href="dashboard.php">Dashboard</a></li>
+            <li><a href="users.php">Users</a></li>
+            <li><a href="classes.php">Classes</a></li>
+            <li><a href="subjects.php">Subjects</a></li>
+            <li><a href="chapters.php" class="active">Chapters</a></li>
+            <li><a href="mcqs.php">MCQs</a></li>
+            <li><a href="videos.php">Videos</a></li>
+            <li><a href="notes.php">Notes</a></li>
+            <li><a href="flashcards.php">Flashcards</a></li>
+            <li><a href="quick_revision.php">Quick Revision</a></li>
+            <li><a href="content_manager.php">Content Manager</a></li>
         </ul>
     </nav>
     
     <div class="container">
-        <div class="card" style="max-width: 600px;">
-            <h2><i class="fa-solid fa-plus-circle"></i> Add New Chapter</h2>
-            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Adding to: <strong><?php echo $board_name; ?></strong></p>
-            <?php if($message): ?><div class="alert success"><?php echo $message; ?></div><?php endif; ?>
-            <?php if($error): ?><div class="alert" style="background: #f8d7da; color: #721c24; border-color: #dc3545;"><?php echo $error; ?></div><?php endif; ?>
-            <form method="POST">
-                <div class="form-grid">
-                    <select id="class_select" onchange="filterSubjects()" required>
-                        <option value="">Select Class</option>
-                        <?php foreach($classes as $class): ?>
-                            <option value="<?php echo $class['class_id']; ?>">Class <?php echo htmlspecialchars($class['class_name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+        <?php if($message): ?>
+            <div class="alert alert-<?php echo $message_type; ?>"><?php echo $message; ?></div>
+        <?php endif; ?>
+
+        <div class="grid-2">
+            <!-- 📁 Bulk Upload Chapters via File -->
+            <div class="card">
+                <h2>📁 Bulk Upload Chapters (File)</h2>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="form_action" value="bulk_upload">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <!-- Select Class -->
+                        <select id="bulk_class_select" onchange="filterSubjects('bulk_class_select', 'bulk_subject_select')" required>
+                            <option value="">Select Class</option>
+                            <?php foreach($classes as $class): ?>
+                                <option value="<?php echo $class['class_id']; ?>">
+                                    <?php echo htmlspecialchars($class['class_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <!-- Select Subject (Filtered) -->
+                        <select name="bulk_subject_id" id="bulk_subject_select" required>
+                            <option value="">Select Subject (Choose Class First)</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#555;">Upload File (.pdf, .docx, .csv, .txt, .json):</label>
+                        <input type="file" name="chapter_file" accept=".pdf, .docx, .csv, .txt, .json" required>
+                        <div class="file-hint">
+                            📄 <strong>Supported Formats:</strong><br>
+                            • <code>.pdf</code> or <code>.docx</code>: PDF or Word document text extraction.<br>
+                            • <code>.txt</code> or <code>.csv</code>: Text/CSV chapter list (1 per line).<br>
+                            • <code>.json</code>: JSON list of chapter names.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-bulk">🚀 Upload & Extract Chapters</button>
+                </form>
+            </div>
+
+            <!-- ➕ Add Single Chapter -->
+            <div class="card">
+                <h2>➕ Add Single Chapter</h2>
+                <form method="POST">
+                    <input type="hidden" name="form_action" value="add_single">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <!-- Select Class -->
+                        <select id="single_class_select" onchange="filterSubjects('single_class_select', 'single_subject_select')" required>
+                            <option value="">Select Class</option>
+                            <?php foreach($classes as $class): ?>
+                                <option value="<?php echo $class['class_id']; ?>">
+                                    <?php echo htmlspecialchars($class['class_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <!-- Select Subject (Filtered) -->
+                        <select name="subject_id" id="single_subject_select" required>
+                            <option value="">Select Subject (Choose Class First)</option>
+                        </select>
+                    </div>
                     
-                    <select name="subject_id" id="subject_select" required>
-                        <option value="">Select Subject (Choose Class First)</option>
-                    </select>
-                    
-                    <input type="text" name="chapter_name" placeholder="Chapter Name" style="grid-column: span 2;" required>
-                    <input type="text" name="description" placeholder="Description (Optional)" style="grid-column: span 2;">
-                    
-                    <input type="number" name="chapter_order" placeholder="Chapter Order (e.g. 1)" value="1" required style="max-width: 200px;">
-                </div>
-                <button type="submit" class="btn-add" style="margin-top: 15px;">Add Chapter</button>
-            </form>
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" name="chapter_name" placeholder="Chapter Name" required style="margin-bottom:10px;">
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" name="chapter_order" placeholder="Order (e.g. 1)" value="1" required style="width: 120px;">
+                            <input type="text" name="description" placeholder="Description (Optional)" style="flex:1;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-add">Add Single Chapter</button>
+                </form>
+            </div>
         </div>
 
+        <!-- 📚 All Chapters List -->
         <div class="card">
-            <h2><i class="fa-solid fa-file-lines"></i> All Chapters (<?php echo $board_name; ?>)</h2>
+            <h2>📚 All Chapters (<?php echo htmlspecialchars($board_name); ?>)</h2>
             <table>
                 <thead>
                     <tr>
-                        <th><i class="fa-solid fa-layer-group"></i> Class</th>
-                        <th><i class="fa-solid fa-book"></i> Subject</th>
-                        <th><i class="fa-solid fa-hashtag"></i> No.</th>
-                        <th><i class="fa-solid fa-tag"></i> Chapter Name</th>
-                        <th><i class="fa-solid fa-chart-bar"></i> Content Stats</th>
-                        <th><i class="fa-solid fa-bolt"></i> Action</th>
+                        <th>Class & Subject</th>
+                        <th>Chapter Name</th>
+                        <th>Order</th>
+                        <th>Content</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(empty($chapters)): ?>
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #666; padding: 20px;">No chapters found for this board.</td>
+                        <td colspan="5" style="text-align:center; color:#888; padding:30px;">No chapters found for <?php echo htmlspecialchars($board_name); ?>. Select class & subject above to add chapters.</td>
                     </tr>
                     <?php else: ?>
-                        <?php foreach($chapters as $chapter): ?>
-                        <tr>
-                            <td><span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 13px;">Class <?php echo htmlspecialchars($chapter['class_name']); ?></span></td>
-                            <td><strong><?php echo htmlspecialchars($chapter['subject_name']); ?></strong></td>
-                            <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-weight: bold;"><?php echo $chapter['chapter_order']; ?></span></td>
-                            <td>
-                                <strong><?php echo htmlspecialchars($chapter['chapter_name']); ?></strong><br>
-                                <small style="color: #666;"><?php echo htmlspecialchars($chapter['description'] ?: ''); ?></small>
-                            </td>
-                            <td>
-                                <div style="display: flex; gap: 10px; font-size: 12px;">
-                                    <span style="background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 12px;"><?php echo $chapter['mcq_count']; ?> MCQs</span>
-                                    <span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 12px;"><?php echo $chapter['video_count']; ?> Videos</span>
-                                </div>
-                            </td>
-                            <td>
-                                <a href="?delete=<?php echo $chapter['chapter_id']; ?>" class="btn-delete" onclick="return confirm('Delete this chapter? All MCQs and contents will be deleted!')"><i class="fa-solid fa-trash"></i> Delete</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                    <?php foreach($chapters as $chapter): ?>
+                    <tr>
+                        <td>
+                            <small style="color: #666;"><?php echo htmlspecialchars($chapter['class_name']); ?></small><br>
+                            <strong><?php echo htmlspecialchars($chapter['subject_name']); ?></strong>
+                        </td>
+                        <td><?php echo htmlspecialchars($chapter['chapter_name']); ?></td>
+                        <td><?php echo $chapter['chapter_order']; ?></td>
+                        <td>
+                            <?php echo $chapter['mcq_count']; ?> MCQs<br>
+                            <?php echo $chapter['video_count']; ?> Videos
+                        </td>
+                        <td>
+                            <a href="?delete=<?php echo $chapter['chapter_id']; ?>" class="btn-delete" onclick="return confirm('Delete this chapter?')">Delete</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>

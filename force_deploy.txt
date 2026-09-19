@@ -1,1 +1,1 @@
-Force Railway build timestamp: 2026-09-19 15:35:00 - Trigger Railway redeploy for bulk upload chapters feature
+Force Railway build timestamp: 2026-09-19 15:38:00 - Force no-cache update

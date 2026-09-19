@@ -242,7 +242,7 @@ const TabSelector = React.memo(({ activeTab, onTabPress, theme, t }) => {
 const ChapterContentScreen = ({ navigation, route }) => {
     const isFocused = useIsFocused();
     const { theme, isDarkMode } = useTheme();
-    const { t } = useLanguage();
+    const { t, language, changeLanguage } = useLanguage();
     const { chapter, activeTask } = route.params || {}; // activeTask contains timer info
     const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'MCQs'); // Use initialTab if passed
     const [downloading, setDownloading] = useState(false);
@@ -415,12 +415,12 @@ const ChapterContentScreen = ({ navigation, route }) => {
         }
     }, [isFocused, chapter?.chapter_id]); // Only run on mount/chapter change
 
-    // If already loaded, switching tabs shouldn't trigger a full reload
+    // Re-fetch content when active tab or language changes
     useEffect(() => {
         if (isFocused && chapter?.chapter_id) {
-            loadContent(false, false); // Just ensures local state is set for the tab
+            loadContent(false, false);
         }
-    }, [activeTab]);
+    }, [activeTab, language]);
 
     const preFetchAll = useCallback(async () => {
         if (!chapter?.chapter_id) return;
@@ -441,11 +441,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const loadTabInBackground = async (tab) => {
         try {
             let response;
-            if (tab === 'MCQs') response = await fetchMCQs(chapter.chapter_id, false);
+            if (tab === 'MCQs') response = await fetchMCQs(chapter.chapter_id, false, language);
             else if (tab === 'Notes') response = await fetchNotes(chapter.chapter_id, false);
             else if (tab === 'Videos') response = await fetchVideos(chapter.chapter_id, false);
-            else if (tab === 'Flashcards') response = await fetchFlashcards(chapter.chapter_id, false);
-            else if (tab === 'QuickRevision') response = await fetchQuickRevision(chapter.chapter_id, false);
+            else if (tab === 'Flashcards') response = await fetchFlashcards(chapter.chapter_id, false, language);
+            else if (tab === 'QuickRevision') response = await fetchQuickRevision(chapter.chapter_id, false, language);
 
             const responseData = response?.data || (Array.isArray(response) ? response : null);
             if (responseData) {
@@ -469,11 +469,11 @@ const ChapterContentScreen = ({ navigation, route }) => {
         if (!isRefreshing) {
             try {
                 const cacheKeyMap = {
-                    'MCQs': `mcqs_${chapter.chapter_id}`,
+                    'MCQs': `mcqs_${chapter.chapter_id}_${language}`,
                     'Notes': `notes_${chapter.chapter_id}`,
                     'Videos': `videos_${chapter.chapter_id}`,
-                    'Flashcards': `flashcards_${chapter.chapter_id}`,
-                    'QuickRevision': `quick_rev_${chapter.chapter_id}`
+                    'Flashcards': `flashcards_${chapter.chapter_id}_${language}`,
+                    'QuickRevision': `quick_rev_${chapter.chapter_id}_${language}`
                 };
 
                 const cacheKey = cacheKeyMap[currentTab];
@@ -506,15 +506,15 @@ const ChapterContentScreen = ({ navigation, route }) => {
             const force = forceRefresh; // Respect the explicit forceRefresh flag
 
             if (activeTab === 'MCQs') {
-                response = await fetchMCQs(chapter.chapter_id, force);
+                response = await fetchMCQs(chapter.chapter_id, force, language);
             } else if (activeTab === 'Notes') {
                 response = await fetchNotes(chapter.chapter_id, force);
             } else if (activeTab === 'Videos') {
                 response = await fetchVideos(chapter.chapter_id, force);
             } else if (activeTab === 'Flashcards') {
-                response = await fetchFlashcards(chapter.chapter_id, force);
+                response = await fetchFlashcards(chapter.chapter_id, force, language);
             } else if (activeTab === 'QuickRevision') {
-                response = await fetchQuickRevision(chapter.chapter_id, force);
+                response = await fetchQuickRevision(chapter.chapter_id, force, language);
             }
 
             const responseData = response?.data || (Array.isArray(response) ? response : null);

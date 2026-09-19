@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from './config';
-import { dataCache } from '../utils/dataCache'; // Updated import
+import { dataCache } from '../utils/dataCache';
 
 // New: Fetch Set Status
 export const fetchSetStatus = async (userId, chapterId, type) => {
@@ -49,10 +49,9 @@ export const recordMCQAttempt = async (userId, mcqId, chapterId, selectedAnswer,
     }
 };
 
-export const fetchMCQs = async (chapterId, forceRefresh = false) => {
-    const cacheKey = `mcqs_${chapterId}`;
+export const fetchMCQs = async (chapterId, forceRefresh = false, lang = 'en') => {
+    const cacheKey = `mcqs_${chapterId}_${lang}`;
 
-    // 1. Try cache first (if not forcing refresh)
     if (!forceRefresh) {
         const cached = await dataCache.get(cacheKey, 'mcqs');
         if (cached) {
@@ -60,19 +59,15 @@ export const fetchMCQs = async (chapterId, forceRefresh = false) => {
         }
     }
 
-    // 2. Network Request
     try {
-        // console.log(`[API] Fetching MCQs from server for chapter ${chapterId}...`);
-        const response = await axios.get(`${API_URL}/get_mcqs.php?chapter_id=${chapterId}`);
+        const response = await axios.get(`${API_URL}/get_mcqs.php?chapter_id=${chapterId}&lang=${lang}`);
 
-        // 3. Save to Cache
         if (response.data && response.data.status === 'success') {
             await dataCache.set(cacheKey, response.data, 'mcqs');
         }
 
         return response.data;
     } catch (error) {
-        // Fallback: If network fails and we have STALE cache, return that.
         const staleCached = await dataCache.getStale(cacheKey);
         if (staleCached) {
             return staleCached;
@@ -92,7 +87,6 @@ export const fetchNotes = async (chapterId, forceRefresh = false) => {
     }
 
     try {
-        // console.log(`[API] Fetching notes from server for chapter ${chapterId}...`);
         const response = await axios.get(`${API_URL}/get_notes.php?chapter_id=${chapterId}`);
 
         if (response.data && response.data.status === 'success') {
@@ -120,7 +114,6 @@ export const fetchVideos = async (chapterId, forceRefresh = false) => {
     }
 
     try {
-        // console.log(`[API] Fetching videos from server for chapter ${chapterId}...`);
         const response = await axios.get(`${API_URL}/get_videos.php?chapter_id=${chapterId}`);
 
         if (response.data && response.data.status === 'success') {
@@ -137,37 +130,26 @@ export const fetchVideos = async (chapterId, forceRefresh = false) => {
     }
 };
 
-export const fetchFlashcards = async (chapterId, forceRefresh = false) => {
-    const cacheKey = `flashcards_${chapterId}`;
-    console.log(`[Flashcards] Requesting for chapter ${chapterId}. ForceRefresh: ${forceRefresh}`);
+export const fetchFlashcards = async (chapterId, forceRefresh = false, lang = 'en') => {
+    const cacheKey = `flashcards_${chapterId}_${lang}`;
 
     if (!forceRefresh) {
-        // console.log(`[Flashcards] Checking cache...`);
         const cached = await dataCache.get(cacheKey, 'flashcards');
         if (cached) {
-            // console.log(`[Flashcards] Cache HIT for ${chapterId}`);
             return cached;
         }
-        // console.log(`[Flashcards] Cache MISS for ${chapterId}`);
     }
 
     try {
-        // console.log(`[Flashcards] Fetching from server...`);
-        const response = await axios.get(`${API_URL}/get_flashcards.php?chapter_id=${chapterId}`);
-        // console.log(`[Flashcards] Server responded. Status: ${response.status}`);
-
-        // Aggressive Caching: If we got data back, save it.
-        // This fixes issues where the API structure varies (array vs object).
+        const response = await axios.get(`${API_URL}/get_flashcards.php?chapter_id=${chapterId}&lang=${lang}`);
         const responseData = response.data?.data || (Array.isArray(response.data) ? response.data : null);
         const isSuccess = response.data?.status === 'success' || (Array.isArray(response.data) && response.data.length > 0);
 
         if (isSuccess && responseData) {
-            // console.log(`[Flashcards] Saving to cache (Aggressive)...`);
             await dataCache.set(cacheKey, response.data, 'flashcards');
         }
         return response.data;
     } catch (error) {
-        console.error(`[Flashcards] Network Error:`, error.message);
         const staleCached = await dataCache.getStale(cacheKey);
         if (staleCached) {
             return staleCached;
@@ -176,35 +158,25 @@ export const fetchFlashcards = async (chapterId, forceRefresh = false) => {
     }
 };
 
-export const fetchQuickRevision = async (chapterId, forceRefresh = false) => {
-    const cacheKey = `quick_rev_${chapterId}`;
-    console.log(`[QuickRev] Requesting for chapter ${chapterId}`);
+export const fetchQuickRevision = async (chapterId, forceRefresh = false, lang = 'en') => {
+    const cacheKey = `quick_rev_${chapterId}_${lang}`;
 
     if (!forceRefresh) {
-        // console.log(`[QuickRev] Checking cache...`);
-        const cached = await dataCache.get(cacheKey, 'quick_rev');
+        const cached = await dataCache.get(cacheKey, 'quick_revision');
         if (cached) {
-            // console.log(`[QuickRev] Cache HIT`);
             return cached;
         }
-        // console.log(`[QuickRev] Cache MISS`);
     }
 
     try {
-        // console.log(`[QuickRev] Fetching from server...`);
-        const response = await axios.get(`${API_URL}/get_quick_revision.php?chapter_id=${chapterId}`);
+        const response = await axios.get(`${API_URL}/get_quick_revision.php?chapter_id=${chapterId}&lang=${lang}`);
 
-        // Aggressive Caching
-        const responseData = response.data?.data || (Array.isArray(response.data) ? response.data : null);
-        const isSuccess = response.data?.status === 'success' || (Array.isArray(response.data) && response.data.length > 0);
-
-        if (isSuccess && responseData) {
-            // console.log(`[QuickRev] Saving to cache (Aggressive)...`);
-            await dataCache.set(cacheKey, response.data, 'quick_rev');
+        if (response.data && response.data.status === 'success') {
+            await dataCache.set(cacheKey, response.data, 'quick_revision');
         }
+
         return response.data;
     } catch (error) {
-        console.error(`[QuickRev] Network Error:`, error.message);
         const staleCached = await dataCache.getStale(cacheKey);
         if (staleCached) {
             return staleCached;

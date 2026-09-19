@@ -13,8 +13,10 @@ if "%msg%"=="" set msg=update
 echo 2. Committing...
 git commit -m "%msg%"
 
-echo 3. Pushing to GitHub (main)...
+echo 3. Pushing to GitHub (main, production, master)...
 git push origin main
+git push origin main:production
+git push origin main:master
 
 echo 4. Waiting for Railway to Build and Deploy (45s)...
 echo ⚠️  DO NOT press any key! Railway is deploying your changes.
@@ -34,6 +36,6 @@ echo - Teacher Portal Fix...
 curl -s https://api.veeruapp.in/api/fix_teacher_schema.php
 echo.
 
-echo ✅ Done! Your code is pushed to main and deployed live on Railway!
+echo ✅ Done! Your code is pushed to all branches and deployed live on Railway!
 echo ========================================
 pause

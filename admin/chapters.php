@@ -39,20 +39,140 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Handle Add Chapter
+// Handle Add Chapter / Bulk Upload
 $message = '';
+$message_type = 'success';
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $subject_id = intval($_POST['subject_id']);
-    $name = sanitizeInput($_POST['chapter_name']);
-    $desc = sanitizeInput($_POST['description']);
-    $order = intval($_POST['chapter_order']);
-    
-    try {
-        $stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$subject_id, $name, $desc, $order]);
-        $message = "Chapter added successfully!";
-    } catch (PDOException $e) {
-        $message = "Error: Database error";
+    $form_action = $_POST['form_action'] ?? 'add_single';
+
+    if ($form_action === 'bulk_upload') {
+        $subject_id = intval($_POST['bulk_subject_id'] ?? 0);
+        
+        if ($subject_id <= 0) {
+            $message = "Error: Please select a valid class and subject.";
+            $message_type = 'error';
+        } elseif (!isset($_FILES['chapter_file']) || $_FILES['chapter_file']['error'] !== UPLOAD_ERR_OK) {
+            $message = "Error: Please select a valid file to upload.";
+            $message_type = 'error';
+        } else {
+            $file = $_FILES['chapter_file'];
+            $filename = $file['name'];
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $tmp_path = $file['tmp_name'];
+            
+            $content = file_get_contents($tmp_path);
+            $content = convertUtf8($content);
+            
+            $chapter_names = [];
+            
+            if ($ext === 'csv' || $ext === 'txt') {
+                $lines = preg_split("/\r\n|\n|\r/", $content);
+                foreach ($lines as $line) {
+                    $trimmed = trim($line);
+                    if (empty($trimmed)) continue;
+                    
+                    // If CSV with commas, take the first non-empty column or whole line if no comma
+                    if ($ext === 'csv' && strpos($trimmed, ',') !== false) {
+                        $parts = str_getcsv($trimmed);
+                        $col = trim($parts[0] ?? '');
+                        if (!empty($col)) {
+                            $trimmed = $col;
+                        }
+                    }
+                    
+                    // Ignore header rows
+                    $lower = strtolower($trimmed);
+                    if ($lower === 'chapter_name' || $lower === 'chapter name' || $lower === 'chapters' || $lower === 'title') {
+                        continue;
+                    }
+                    
+                    $chapter_names[] = $trimmed;
+                }
+            } elseif ($ext === 'json') {
+                $data = json_decode($content, true);
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        if (is_string($item) && !empty(trim($item))) {
+                            $chapter_names[] = trim($item);
+                        } elseif (is_array($item)) {
+                            $cname = $item['chapter_name'] ?? $item['name'] ?? $item['title'] ?? '';
+                            if (!empty(trim($cname))) {
+                                $chapter_names[] = trim($cname);
+                            }
+                        }
+                    }
+                }
+            } else {
+                $message = "Error: Unsupported file format (.{$ext}). Please upload a .csv, .txt, or .json file.";
+                $message_type = 'error';
+            }
+            
+            if (!empty($chapter_names)) {
+                // Get highest current chapter_order for subject
+                $stmt = $pdo->prepare("SELECT COALESCE(MAX(chapter_order), 0) FROM chapters WHERE subject_id = ?");
+                $stmt->execute([$subject_id]);
+                $max_order = (int)$stmt->fetchColumn();
+
+                // Fetch existing chapter names for duplicate check
+                $stmt = $pdo->prepare("SELECT LOWER(chapter_name) FROM chapters WHERE subject_id = ?");
+                $stmt->execute([$subject_id]);
+                $existing = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $existing_set = array_flip(array_map('strtolower', $existing));
+
+                $inserted = 0;
+                $skipped = 0;
+
+                $insert_stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
+                
+                foreach ($chapter_names as $cname) {
+                    $sanitized_name = sanitizeInput($cname);
+                    $lower_name = strtolower($sanitized_name);
+
+                    if (empty($sanitized_name)) continue;
+
+                    if (isset($existing_set[$lower_name])) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $max_order++;
+                    $insert_stmt->execute([$subject_id, $sanitized_name, '', $max_order]);
+                    $existing_set[$lower_name] = true;
+                    $inserted++;
+                }
+
+                $message = "🎉 Bulk Upload Successful! Added {$inserted} new chapter(s).";
+                if ($skipped > 0) {
+                    $message .= " ({$skipped} duplicate chapter(s) skipped).";
+                }
+                $message_type = 'success';
+            } elseif (empty($message)) {
+                $message = "Error: No valid chapter names found in the uploaded file.";
+                $message_type = 'error';
+            }
+        }
+    } else {
+        // Handle Single Add Chapter
+        $subject_id = intval($_POST['subject_id']);
+        $name = sanitizeInput($_POST['chapter_name']);
+        $desc = sanitizeInput($_POST['description']);
+        $order = intval($_POST['chapter_order']);
+        
+        if ($subject_id <= 0 || empty($name)) {
+            $message = "Error: Please select a subject and enter a chapter name.";
+            $message_type = 'error';
+        } else {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO chapters (subject_id, chapter_name, description, chapter_order) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$subject_id, $name, $desc, $order]);
+                $message = "Chapter added successfully!";
+                $message_type = 'success';
+            } catch (PDOException $e) {
+                $message = "Error: Could not add chapter to database.";
+                $message_type = 'error';
+            }
+        }
     }
 }
 
@@ -94,8 +214,8 @@ $chapters = $chapters_query->fetchAll();
     <style>
         /* Reusing Dashboard Styles */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; position: relative; }
         .nav { background: white; padding: 0 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .nav ul { list-style: none; display: flex; gap: 5px; }
         .nav li a { display: block; padding: 18px 25px; color: #666; text-decoration: none; font-weight: 500; border-bottom: 3px solid transparent; }
@@ -103,20 +223,19 @@ $chapters = $chapters_query->fetchAll();
         .container { max-width: 1200px; margin: 30px auto; padding: 0 40px; }
         
         .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: #444; display: flex; align-items: center; gap: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         th { color: #666; font-weight: 600; background: #f9f9f9; }
         .btn-logout { background: rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; }
         
-        /* Centered Switch Board Button */
-        .header { position: relative; }
         .center-actions {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
         }
         .btn-switch-board {
-            background: #ff9f43; /* Bright Orange */
+            background: #ff9f43;
             color: white;
             padding: 10px 25px;
             border-radius: 50px;
@@ -135,22 +254,104 @@ $chapters = $chapters_query->fetchAll();
         .btn-switch-board:hover {
             transform: translateY(-2px) scale(1.05);
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-            background: #ffcd19; /* Lighter Orange */
+            background: #ffcd19;
             color: #333;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        select, input[type="text"], input[type="number"], input[type="file"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        select:focus, input:focus {
+            border-color: #667eea;
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-add:hover {
+            opacity: 0.9;
+        }
+        .btn-bulk {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-bulk:hover {
+            opacity: 0.9;
+        }
+        .btn-delete {
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: #fdf2f2;
+        }
+        .btn-delete:hover {
+            background: #fde8e8;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .alert-success {
+            background: #e8f8f5;
+            color: #27ae60;
+            border: 1px solid #a3e4d7;
+        }
+        .alert-error {
+            background: #fdf2f2;
+            color: #c0392b;
+            border: 1px solid #f5b7b1;
+        }
+        .file-hint {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr; }
         }
     </style>
     <script>
-        // Pass PHP data to JS
         const subjects = <?php echo json_encode($all_subjects); ?>;
 
-        function filterSubjects() {
-            const classId = document.getElementById('class_select').value;
-            const subjectSelect = document.getElementById('subject_select');
+        function filterSubjects(classSelectId, subjectSelectId) {
+            const classId = document.getElementById(classSelectId).value;
+            const subjectSelect = document.getElementById(subjectSelectId);
             
-            // Clear current options
             subjectSelect.innerHTML = '<option value="">Select Subject</option>';
             
-            // Filter and add new options
             subjects.forEach(subject => {
                 if (subject.class_id == classId) {
                     const option = document.createElement('option');
@@ -166,7 +367,6 @@ $chapters = $chapters_query->fetchAll();
     <div class="header">
         <h1>🎓 MCQ Admin Panel</h1>
         
-        <!-- Centered Switch Button -->
         <div class="center-actions">
             <a href="select_board.php" class="btn-switch-board">
                 🔁 Switch Board
@@ -204,36 +404,83 @@ $chapters = $chapters_query->fetchAll();
     </nav>
     
     <div class="container">
-        <div class="card">
-            <h2>Add New Chapter</h2>
-            <?php if($message): ?><div class="alert"><?php echo $message; ?></div><?php endif; ?>
-            <form method="POST">
-                <div class="form-grid">
-                    <!-- Step 1: Select Class -->
-                    <select id="class_select" onchange="filterSubjects()" required>
-                        <option value="">Select Class</option>
-                        <?php foreach($classes as $class): ?>
-                            <option value="<?php echo $class['class_id']; ?>">
-                                <?php echo htmlspecialchars($class['class_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+        <?php if($message): ?>
+            <div class="alert alert-<?php echo $message_type; ?>"><?php echo $message; ?></div>
+        <?php endif; ?>
 
-                    <!-- Step 2: Select Subject (Filtered) -->
-                    <select name="subject_id" id="subject_select" required>
-                        <option value="">Select Subject (Choose Class First)</option>
-                    </select>
+        <div class="grid-2">
+            <!-- 📁 Bulk Upload Chapters via File -->
+            <div class="card">
+                <h2>📁 Bulk Upload Chapters (File)</h2>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="form_action" value="bulk_upload">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <!-- Select Class -->
+                        <select id="bulk_class_select" onchange="filterSubjects('bulk_class_select', 'bulk_subject_select')" required>
+                            <option value="">Select Class</option>
+                            <?php foreach($classes as $class): ?>
+                                <option value="<?php echo $class['class_id']; ?>">
+                                    <?php echo htmlspecialchars($class['class_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
 
-                    <input type="text" name="chapter_name" placeholder="Chapter Name" required>
-                    <input type="number" name="chapter_order" placeholder="Order (e.g. 1)" value="1" required>
-                    <input type="text" name="description" placeholder="Description (Optional)">
-                </div>
-                <button type="submit" class="btn-add">Add Chapter</button>
-            </form>
+                        <!-- Select Subject (Filtered) -->
+                        <select name="bulk_subject_id" id="bulk_subject_select" required>
+                            <option value="">Select Subject (Choose Class First)</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#555;">Upload File (.csv, .txt, .json):</label>
+                        <input type="file" name="chapter_file" accept=".csv, .txt, .json" required>
+                        <div class="file-hint">
+                            📄 <strong>Supported Formats:</strong><br>
+                            • <code>.txt</code> or <code>.csv</code>: Chapter names list (1 per line).<br>
+                            • <code>.json</code>: Array of names <code>["Chapter 1", "Chapter 2"]</code>.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-bulk">🚀 Upload & Extract Chapters</button>
+                </form>
+            </div>
+
+            <!-- ➕ Add Single Chapter -->
+            <div class="card">
+                <h2>➕ Add Single Chapter</h2>
+                <form method="POST">
+                    <input type="hidden" name="form_action" value="add_single">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <!-- Select Class -->
+                        <select id="single_class_select" onchange="filterSubjects('single_class_select', 'single_subject_select')" required>
+                            <option value="">Select Class</option>
+                            <?php foreach($classes as $class): ?>
+                                <option value="<?php echo $class['class_id']; ?>">
+                                    <?php echo htmlspecialchars($class['class_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <!-- Select Subject (Filtered) -->
+                        <select name="subject_id" id="single_subject_select" required>
+                            <option value="">Select Subject (Choose Class First)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" name="chapter_name" placeholder="Chapter Name" required style="margin-bottom:10px;">
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" name="chapter_order" placeholder="Order (e.g. 1)" value="1" required style="width: 120px;">
+                            <input type="text" name="description" placeholder="Description (Optional)" style="flex:1;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-add">Add Single Chapter</button>
+                </form>
+            </div>
         </div>
 
+        <!-- 📚 All Chapters List -->
         <div class="card">
-            <h2>All Chapters (<?php echo $board_name; ?>)</h2>
+            <h2>📚 All Chapters (<?php echo htmlspecialchars($board_name); ?>)</h2>
             <table>
                 <thead>
                     <tr>
@@ -245,10 +492,15 @@ $chapters = $chapters_query->fetchAll();
                     </tr>
                 </thead>
                 <tbody>
+                    <?php if(empty($chapters)): ?>
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:#888; padding:30px;">No chapters found for <?php echo htmlspecialchars($board_name); ?>. Select class & subject above to add chapters.</td>
+                    </tr>
+                    <?php else: ?>
                     <?php foreach($chapters as $chapter): ?>
                     <tr>
                         <td>
-                            <small style="color: #666;"><?php echo $chapter['class_name']; ?></small><br>
+                            <small style="color: #666;"><?php echo htmlspecialchars($chapter['class_name']); ?></small><br>
                             <strong><?php echo htmlspecialchars($chapter['subject_name']); ?></strong>
                         </td>
                         <td><?php echo htmlspecialchars($chapter['chapter_name']); ?></td>
@@ -262,6 +514,7 @@ $chapters = $chapters_query->fetchAll();
                         </td>
                     </tr>
                     <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

@@ -19,6 +19,11 @@ $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
 
+// Include Vendor Autoloader if available (for PDF parser & Word parser)
+if (file_exists('../vendor/autoload.php')) {
+    require_once '../vendor/autoload.php';
+}
+
 // Handle Delete
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
@@ -61,35 +66,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
             $tmp_path = $file['tmp_name'];
             
-            $content = file_get_contents($tmp_path);
-            $content = convertUtf8($content);
-            
+            $content = '';
             $chapter_names = [];
             
-            if ($ext === 'csv' || $ext === 'txt') {
-                $lines = preg_split("/\r\n|\n|\r/", $content);
-                foreach ($lines as $line) {
-                    $trimmed = trim($line);
-                    if (empty($trimmed)) continue;
-                    
-                    // If CSV with commas, take the first non-empty column or whole line if no comma
-                    if ($ext === 'csv' && strpos($trimmed, ',') !== false) {
-                        $parts = str_getcsv($trimmed);
-                        $col = trim($parts[0] ?? '');
-                        if (!empty($col)) {
-                            $trimmed = $col;
-                        }
+            if ($ext === 'pdf') {
+                if (class_exists('\Smalot\PdfParser\Parser')) {
+                    try {
+                        $parser = new \Smalot\PdfParser\Parser();
+                        $pdf = $parser->parseFile($tmp_path);
+                        $content = $pdf->getText();
+                    } catch (\Exception $e) {
+                        $message = "Error reading PDF: " . $e->getMessage();
+                        $message_type = 'error';
                     }
-                    
-                    // Ignore header rows
-                    $lower = strtolower($trimmed);
-                    if ($lower === 'chapter_name' || $lower === 'chapter name' || $lower === 'chapters' || $lower === 'title') {
-                        continue;
-                    }
-                    
-                    $chapter_names[] = $trimmed;
+                } else {
+                    $message = "Error: PDF parser library not found on server.";
+                    $message_type = 'error';
                 }
+            } elseif ($ext === 'docx') {
+                try {
+                    $zip = new ZipArchive();
+                    if ($zip->open($tmp_path) === true) {
+                        if (($index = $zip->locateName('word/document.xml')) !== false) {
+                            $xml = $zip->getFromIndex($index);
+                            $content = strip_tags(str_replace(['</w:p>', '<w:br/>', '<w:tr/>'], "\n", $xml));
+                        }
+                        $zip->close();
+                    }
+                } catch (\Exception $e) {
+                    $message = "Error reading DOCX: " . $e->getMessage();
+                    $message_type = 'error';
+                }
+            } elseif ($ext === 'csv' || $ext === 'txt') {
+                $content = file_get_contents($tmp_path);
+                $content = convertUtf8($content);
             } elseif ($ext === 'json') {
+                $content = file_get_contents($tmp_path);
+                $content = convertUtf8($content);
                 $data = json_decode($content, true);
                 if (is_array($data)) {
                     foreach ($data as $item) {
@@ -104,10 +117,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                 }
             } else {
-                $message = "Error: Unsupported file format (.{$ext}). Please upload a .csv, .txt, or .json file.";
+                $message = "Error: Unsupported file format (.{$ext}). Please upload a .pdf, .docx, .csv, .txt, or .json file.";
                 $message_type = 'error';
             }
             
+            // Extract lines for text-based formats (PDF, DOCX, CSV, TXT)
+            if (in_array($ext, ['pdf', 'docx', 'csv', 'txt']) && !empty($content)) {
+                $lines = preg_split("/\r\n|\n|\r/", $content);
+                foreach ($lines as $line) {
+                    $trimmed = trim($line);
+                    if (empty($trimmed)) continue;
+                    
+                    // If CSV with commas, take the first non-empty column or whole line if no comma
+                    if ($ext === 'csv' && strpos($trimmed, ',') !== false) {
+                        $parts = str_getcsv($trimmed);
+                        $col = trim($parts[0] ?? '');
+                        if (!empty($col)) {
+                            $trimmed = $col;
+                        }
+                    }
+                    
+                    // Ignore common header rows & junk lines
+                    $lower = strtolower($trimmed);
+                    if (in_array($lower, ['chapter_name', 'chapter name', 'chapters', 'title', 'subject', 'table of contents', 'contents'])) {
+                        continue;
+                    }
+                    
+                    // Skip lines that are just numbers or page numbers
+                    if (is_numeric($trimmed) || strlen($trimmed) < 2) {
+                        continue;
+                    }
+                    
+                    $chapter_names[] = $trimmed;
+                }
+            }
+
             if (!empty($chapter_names)) {
                 // Get highest current chapter_order for subject
                 $stmt = $pdo->prepare("SELECT COALESCE(MAX(chapter_order), 0) FROM chapters WHERE subject_id = ?");
@@ -333,6 +377,7 @@ $chapters = $chapters_query->fetchAll();
             font-size: 12px;
             color: #7f8c8d;
             margin-top: 5px;
+            line-height: 1.5;
         }
         .grid-2 {
             display: grid;
@@ -432,12 +477,13 @@ $chapters = $chapters_query->fetchAll();
                     </div>
 
                     <div style="margin-bottom: 15px;">
-                        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#555;">Upload File (.csv, .txt, .json):</label>
-                        <input type="file" name="chapter_file" accept=".csv, .txt, .json" required>
+                        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#555;">Upload File (.pdf, .docx, .csv, .txt, .json):</label>
+                        <input type="file" name="chapter_file" accept=".pdf, .docx, .csv, .txt, .json" required>
                         <div class="file-hint">
                             📄 <strong>Supported Formats:</strong><br>
-                            • <code>.txt</code> or <code>.csv</code>: Chapter names list (1 per line).<br>
-                            • <code>.json</code>: Array of names <code>["Chapter 1", "Chapter 2"]</code>.
+                            • <code>.pdf</code> or <code>.docx</code>: PDF or Word document text extraction.<br>
+                            • <code>.txt</code> or <code>.csv</code>: Text/CSV chapter list (1 per line).<br>
+                            • <code>.json</code>: JSON list of chapter names.
                         </div>
                     </div>
                     <button type="submit" class="btn-bulk">🚀 Upload & Extract Chapters</button>

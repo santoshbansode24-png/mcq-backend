@@ -120,11 +120,171 @@ $has_run = isset($_GET['run']) && $_GET['run'] == '1';
 
 if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
 
-    // Helper text normalizer for fuzzy comparison
+    // Helper text normalizer for semantic comparison (supports English, Marathi, Hindi)
     function normalizeText($str) {
         $str = mb_strtolower(trim(strip_tags($str)), 'UTF-8');
-        $str = preg_replace('/[^\w\s\d]/u', '', $str); // Remove punctuation
+        $str = preg_replace('/[^\p{L}\p{M}\p{N}\s]/u', '', $str); // Preserves letters, numbers, and Devanagari matras
         return preg_replace('/\s+/', ' ', $str);
+    }
+
+    // Helper: Extract core key entities after stripping question templates and stop-words (Approach 2)
+    function extractCoreEntities($str) {
+        if (empty($str)) return [];
+        $str = mb_strtolower(strip_tags($str), 'UTF-8');
+        
+        // Remove common question templates / boilerplate prefixes in English, Marathi, Hindi
+        $templates = [
+            '/\b(which\s+(one\s+)?of\s+(the\s+)?(following|these)\b)/i',
+            '/\b(which\s+among\s+(the\s+)?following\b)/i',
+            '/\b(what\s+(is|are)\s+(the\s+)?(meaning\s+of|definition\s+of)?\b)/i',
+            '/\b(what\s+do\s+you\s+(mean|understand)\s+by\b)/i',
+            '/\b(who\s+(was|is)\s+(the\s+)?\b)/i',
+            '/\b(who\s+among\s+(the\s+)?following\b)/i',
+            '/\b(who\s+(discovered|invented|founded|wrote)\b)/i',
+            '/\b(in\s+which\s+(year|place|state|country|city)\b)/i',
+            '/\b(where\s+(is|was|are|were)\s+(the\s+)?\b)/i',
+            '/\b(when\s+(was|is|did)\s+(the\s+)?\b)/i',
+            '/\b(why\s+(is|are|does|do)\s+(the\s+)?\b)/i',
+            '/\b(how\s+(many|much|does|is|are)\s+(the\s+)?\b)/i',
+            '/\b(name\s+the\s+following|name\s+the\b)/i',
+            '/\b(identify\s+the\s+following|identify\s+the\b)/i',
+            '/\b(is\s+(called|known\s+as|defined\s+as|termed\s+as)\b)/i',
+            '/\b(choose\s+the\s+correct\s+option\b)/i',
+            '/\b(fill\s+in\s+the\s+blank(s)?\b)/i',
+            '/\b(state\s+whether\s+true\s+or\s+false\b)/i',
+            '/\b(खालीलपैकी\s+(कोणता|कोणती|कोणते|कोणत्या|कोणाला)\b)/u',
+            '/\b(म्हणजे\s+काय\b)/u',
+            '/\b(असे\s+म्हणतात\b)/u',
+            '/\b(नावे\s+लिहा|ओळखा|सांगा|स्पष्ट\s+करा\b)/u',
+            '/\b(निम्नलिखित\s+में\s+से\s+(कौन|किसे|किस)\b)/u',
+            '/\b(किसे\s+कहते\s+हैं|क्या\s+कहलाता\s+है\b)/u',
+            '/\b(पहचानिए|बताइए|लिखिए\b)/u'
+        ];
+
+        foreach ($templates as $pattern) {
+            $str = preg_replace($pattern, ' ', $str);
+        }
+
+        $str = preg_replace('/[^\p{L}\p{M}\p{N}\s]/u', ' ', $str);
+
+        $stop_words = [
+            'what', 'which', 'who', 'where', 'when', 'why', 'how', 'whose', 'whom',
+            'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+            'in', 'on', 'at', 'to', 'for', 'of', 'by', 'from', 'with', 'about',
+            'and', 'or', 'not', 'no', 'but', 'that', 'this', 'these', 'those',
+            'it', 'its', 'they', 'them', 'their', 'we', 'us', 'our', 'you', 'your',
+            'he', 'him', 'his', 'she', 'her', 'can', 'could', 'would', 'should',
+            'may', 'might', 'must', 'has', 'have', 'had', 'do', 'does', 'did',
+            'comes', 'come', 'get', 'gets', 'given', 'following', 'true', 'false',
+            'option', 'options', 'answer', 'correct', 'type', 'types', 'example',
+            // Regional question words & auxiliary verbs
+            'कोणता', 'कोणती', 'कोणते', 'कोणत्या', 'कोणाला', 'कशापासून', 'कशाने',
+            'आहे', 'नाही', 'होते', 'आणि', 'किंवा', 'च्या', 'चे', 'ची', 'ला', 'ने',
+            'मिळतो', 'मिळते', 'मिळतात', 'मिळवला', 'मिळवले', 'जातो', 'जाते', 'जातात',
+            'झाले', 'झाला', 'झाली', 'येतो', 'येते', 'येतात',
+            'कौन', 'किसे', 'किस', 'क्या', 'कहाँ', 'कब',
+            'है', 'हैं', 'था', 'थी', 'और', 'या', 'का', 'के', 'की', 'में', 'से', 'को', 'जाता', 'जाती', 'मिलता', 'मिलती'
+        ];
+
+        $tokens = preg_split('/\s+/', $str, -1, PREG_SPLIT_NO_EMPTY);
+        $entities = [];
+
+        foreach ($tokens as $token) {
+            $token = trim($token);
+            if (mb_strlen($token, 'UTF-8') < 2) continue;
+            if (in_array($token, $stop_words)) continue;
+            $entities[] = $token;
+        }
+
+        return array_values(array_unique($entities));
+    }
+
+    // Helper: Match individual token variations (plurals, postpositions)
+    function tokenMatches($t1, $t2) {
+        if ($t1 === $t2) return true;
+        // Handle English plural / suffix (fibre vs fibres, element vs elements)
+        if (rtrim($t1, 's') === rtrim($t2, 's')) return true;
+        if (rtrim($t1, 'es') === rtrim($t2, 'es')) return true;
+        // Marathi postpositions (मेंढी vs मेंढीपासून, धागा vs धागे)
+        $clean1 = preg_replace('/(पासून|मध्ये|तून|साठी|ने|ला|चा|ची|चे|तील)$/u', '', $t1);
+        $clean2 = preg_replace('/(पासून|मध्ये|तून|साठी|ने|ला|चा|ची|चे|तील)$/u', '', $t2);
+        if (!empty($clean1) && !empty($clean2) && $clean1 === $clean2) return true;
+        
+        similar_text($t1, $t2, $sim);
+        return $sim >= 85.0;
+    }
+
+    // Combined Duplicate Detector (Approach 1: Answer-Aware + Approach 2: Key Entity Focus)
+    function checkSemanticMCQDuplicate($q1_text, $q1_answer, $q2_text, $q2_answer) {
+        $q1_norm = normalizeText($q1_text);
+        $q2_norm = normalizeText($q2_text);
+        $ans1_norm = normalizeText($q1_answer);
+        $ans2_norm = normalizeText($q2_answer);
+
+        // Rule 0: Exact match on both question and answer
+        if ($q1_norm === $q2_norm && $ans1_norm === $ans2_norm) {
+            return "Exact Duplicate (100% match on question and answer).";
+        }
+
+        // Approach 1: Answer-Aware Check
+        // If the correct answers are completely different, they CANNOT be duplicates!
+        $answers_match = false;
+        if (!empty($ans1_norm) && !empty($ans2_norm)) {
+            if ($ans1_norm === $ans2_norm) {
+                $answers_match = true;
+            } else {
+                similar_text($ans1_norm, $ans2_norm, $ans_similarity);
+                if ($ans_similarity >= 75.0 || str_contains($ans1_norm, $ans2_norm) || str_contains($ans2_norm, $ans1_norm)) {
+                    $answers_match = true;
+                }
+            }
+        }
+
+        // If answers do NOT match, it CANNOT be a duplicate question!
+        if (!$answers_match) {
+            return false;
+        }
+
+        // Approach 2: Key Entity Focus (Compare core entities after stripping templates)
+        $entities1 = extractCoreEntities($q1_text);
+        $entities2 = extractCoreEntities($q2_text);
+
+        if (empty($entities1) || empty($entities2)) {
+            similar_text($q1_norm, $q2_norm, $full_similarity);
+            if ($full_similarity >= 95.0) {
+                return "Near Duplicate (" . round($full_similarity, 1) . "% match with identical answer).";
+            }
+            return false;
+        }
+
+        // Check entity coverage
+        $smaller_list = count($entities1) <= count($entities2) ? $entities1 : $entities2;
+        $larger_list = count($entities1) <= count($entities2) ? $entities2 : $entities1;
+
+        $matched_count = 0;
+        $matched_tokens = [];
+        foreach ($smaller_list as $e1) {
+            foreach ($larger_list as $e2) {
+                if (tokenMatches($e1, $e2)) {
+                    $matched_count++;
+                    $matched_tokens[] = $e1;
+                    break;
+                }
+            }
+        }
+
+        $coverage = count($smaller_list) > 0 ? ($matched_count / count($smaller_list)) : 0;
+
+        // If at least 65% of core entities in the question are identical AND the answer is the same:
+        if ($coverage >= 0.65) {
+            return "Semantic Duplicate: Both questions target the same concept ('" . implode(', ', array_unique($matched_tokens)) . "') with the same correct answer ('{$q1_answer}').";
+        }
+
+        return false;
+    }
+
+    function checkSemanticFlashcardDuplicate($f1_front, $f1_back, $f2_front, $f2_back) {
+        return checkSemanticMCQDuplicate($f1_front, $f1_back, $f2_front, $f2_back);
     }
 
     function checkSubjectIrrelevance($text, $subject_name) {
@@ -272,7 +432,7 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
         $stmtOtherMCQs->execute([$selected_subject_id]);
         $other_mcqs = $stmtOtherMCQs->fetchAll();
 
-        $seen_mcq_texts = [];
+        $seen_mcqs = [];
 
         foreach ($mcq_list as $index => $mcq) {
             $mcq_id = $mcq['mcq_id'];
@@ -319,22 +479,22 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 $issues[] = ['type' => 'incorrect', 'reason' => 'Duplicate option choices found within this question.'];
             }
 
-            // B. Duplicate Check (Exact & Fuzzy 95%+)
+            // B. Duplicate Check (Combined Approach 1: Answer-Aware & Approach 2: Key Entity Focus)
             if (!empty($q_norm)) {
-                if (isset($seen_mcq_texts[$q_norm])) {
-                    $orig_id = $seen_mcq_texts[$q_norm];
-                    $issues[] = ['type' => 'duplicate', 'reason' => "Exact Duplicate of MCQ #{$orig_id} in this subject."];
-                } else {
-                    foreach ($seen_mcq_texts as $seen_text => $orig_id) {
-                        similar_text($q_norm, $seen_text, $percent);
-                        if ($percent >= 95.0) {
-                            $issues[] = ['type' => 'duplicate', 'reason' => "Near Duplicate of MCQ #{$orig_id} (" . round($percent, 1) . "% match, 95%+ threshold)."];
-                            break;
-                        }
+                $dup_found = false;
+                foreach ($seen_mcqs as $prev_id => $prev_item) {
+                    $dup_reason = checkSemanticMCQDuplicate($q_raw, $target_option_val, $prev_item['question'], $prev_item['answer']);
+                    if ($dup_reason) {
+                        $issues[] = ['type' => 'duplicate', 'reason' => "MCQ #{$prev_id}: " . $dup_reason];
+                        $dup_found = true;
+                        break;
                     }
-                    if (empty($issues)) {
-                        $seen_mcq_texts[$q_norm] = $mcq_id;
-                    }
+                }
+                if (!$dup_found) {
+                    $seen_mcqs[$mcq_id] = [
+                        'question' => $q_raw,
+                        'answer' => $target_option_val
+                    ];
                 }
             }
 
@@ -413,7 +573,7 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
         $fc_list = $stmtFC->fetchAll();
         $total_analyzed += count($fc_list);
 
-        $seen_fc_texts = [];
+        $seen_fcs = [];
 
         foreach ($fc_list as $fc) {
             $fc_id = $fc['id'];
@@ -435,22 +595,22 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 $issues[] = ['type' => 'incorrect', 'reason' => 'Question Front and Answer Back are identical.'];
             }
 
-            // B. Duplicate Check
+            // B. Duplicate Check (Combined Approach 1: Answer-Aware & Approach 2: Key Entity Focus)
             if (!empty($front_norm)) {
-                if (isset($seen_fc_texts[$front_norm])) {
-                    $orig_id = $seen_fc_texts[$front_norm];
-                    $issues[] = ['type' => 'duplicate', 'reason' => "Exact Duplicate of Flashcard #{$orig_id}."];
-                } else {
-                    foreach ($seen_fc_texts as $seen_text => $orig_id) {
-                        similar_text($front_norm, $seen_text, $percent);
-                        if ($percent >= 95.0) {
-                            $issues[] = ['type' => 'duplicate', 'reason' => "Near Duplicate of Flashcard #{$orig_id} (" . round($percent, 1) . "% match, 95%+ threshold)."];
-                            break;
-                        }
+                $dup_found = false;
+                foreach ($seen_fcs as $prev_id => $prev_item) {
+                    $dup_reason = checkSemanticFlashcardDuplicate($front, $back, $prev_item['front'], $prev_item['back']);
+                    if ($dup_reason) {
+                        $issues[] = ['type' => 'duplicate', 'reason' => "Flashcard #{$prev_id}: " . $dup_reason];
+                        $dup_found = true;
+                        break;
                     }
-                    if (empty($issues)) {
-                        $seen_fc_texts[$front_norm] = $fc_id;
-                    }
+                }
+                if (!$dup_found) {
+                    $seen_fcs[$fc_id] = [
+                        'front' => $front,
+                        'back' => $back
+                    ];
                 }
             }
 

@@ -205,8 +205,8 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                     // Check Fuzzy match with already seen questions
                     foreach ($seen_mcq_texts as $seen_text => $orig_id) {
                         similar_text($q_norm, $seen_text, $percent);
-                        if ($percent >= 85.0) {
-                            $issues[] = ['type' => 'duplicate', 'reason' => "Near Duplicate of MCQ #{$orig_id} (" . round($percent, 1) . "% match)."];
+                        if ($percent >= 95.0) {
+                            $issues[] = ['type' => 'duplicate', 'reason' => "Near Duplicate of MCQ #{$orig_id} (" . round($percent, 1) . "% match, 95%+ threshold)."];
                             break;
                         }
                     }
@@ -292,8 +292,8 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 } else {
                     foreach ($seen_fc_texts as $seen_text => $orig_id) {
                         similar_text($front_norm, $seen_text, $percent);
-                        if ($percent >= 85.0) {
-                            $issues[] = ['type' => 'duplicate', 'reason' => "Near Duplicate of Flashcard #{$orig_id} (" . round($percent, 1) . "% match)."];
+                        if ($percent >= 95.0) {
+                            $issues[] = ['type' => 'duplicate', 'reason' => "Near Duplicate of Flashcard #{$orig_id} (" . round($percent, 1) . "% match, 95%+ threshold)."];
                             break;
                         }
                     }

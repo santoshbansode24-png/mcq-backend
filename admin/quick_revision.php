@@ -44,7 +44,13 @@ if (isset($_GET['delete'])) {
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $chapter_id = intval($_POST['chapter_id']);
-    $title = sanitizeInput($_POST['title']);
+    $title = sanitizeInput($_POST['title'] ?? '');
+    if (empty($title)) {
+        $stmtCh = $pdo->prepare("SELECT chapter_name FROM chapters WHERE chapter_id = ?");
+        $stmtCh->execute([$chapter_id]);
+        $ch_name = $stmtCh->fetchColumn() ?: 'Chapter';
+        $title = $ch_name . " - Revision";
+    }
     $summary = sanitizeInput($_POST['summary']);
     $key_points = [];
 

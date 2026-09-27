@@ -37,7 +37,13 @@ if (isset($_GET['delete'])) {
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $chapter_id = intval($_POST['chapter_id']);
-    $title = sanitizeInput($_POST['title']);
+    $title = sanitizeInput($_POST['title'] ?? '');
+    if (empty($title)) {
+        $stmtCh = $pdo->prepare("SELECT chapter_name FROM chapters WHERE chapter_id = ?");
+        $stmtCh->execute([$chapter_id]);
+        $ch_name = $stmtCh->fetchColumn() ?: 'Note';
+        $title = $ch_name . " Notes";
+    }
     // Map User Selection to DB Type and Source
     $raw_type = $_POST['note_type'];
     if ($raw_type === 'pdf_upload') {
@@ -329,7 +335,6 @@ $notes = $notes_query->fetchAll();
                         <option value="">Select Chapter (Choose Subject First)</option>
                     </select>
 
-                    <input type="text" name="title" placeholder="Note Title" required>
                     <select name="note_type" id="note_type_select" onchange="toggleNoteInputs()">
                         <option value="pdf_upload">PDF (Upload File)</option>
                         <option value="pdf_drive">PDF (Google Drive / Link)</option>

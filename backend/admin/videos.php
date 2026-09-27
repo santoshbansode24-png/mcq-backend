@@ -44,10 +44,16 @@ if (isset($_GET['delete'])) {
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $chapter_id = intval($_POST['chapter_id']);
-    $title = sanitizeInput($_POST['title']);
+    $title = sanitizeInput($_POST['title'] ?? '');
+    if (empty($title)) {
+        $stmtCh = $pdo->prepare("SELECT chapter_name FROM chapters WHERE chapter_id = ?");
+        $stmtCh->execute([$chapter_id]);
+        $ch_name = $stmtCh->fetchColumn() ?: 'Video';
+        $title = $ch_name . " Video";
+    }
     $url = sanitizeInput($_POST['url']);
-    $desc = sanitizeInput($_POST['description']);
-    $duration = sanitizeInput($_POST['duration']);
+    $desc = sanitizeInput($_POST['description'] ?? '');
+    $duration = sanitizeInput($_POST['duration'] ?? '');
     
     try {
         $stmt = $pdo->prepare("INSERT INTO videos (chapter_id, title, url, description, duration) VALUES (?, ?, ?, ?, ?)");
@@ -220,7 +226,6 @@ $videos = $videos_query->fetchAll();
                         <option value="">Select Chapter (Choose Subject First)</option>
                     </select>
 
-                    <input type="text" name="title" placeholder="Video Title" required>
                     <input type="url" name="url" placeholder="Video URL (YouTube link)" required>
                     <input type="text" name="duration" placeholder="Duration (e.g. 10:30)">
                     <textarea name="description" placeholder="Description (Optional)" style="grid-column: span 2;"></textarea>

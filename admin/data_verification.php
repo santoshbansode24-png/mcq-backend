@@ -88,6 +88,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // -------------------------------------------------------------
+// HANDLE CATEGORY-SPECIFIC DELETE ACTION (Duplicates only, Irrelevant only, or Incorrect only)
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_category') {
+    $category_label = $_POST['category_label'] ?? 'Category Items';
+    $raw_items = $_POST['category_item_keys'] ?? '';
+    $items = array_filter(explode(',', $raw_items));
+    $deleted_count = 0;
+
+    if (!empty($items)) {
+        foreach ($items as $item_str) {
+            $parts = explode('_', trim($item_str), 2);
+            if (count($parts) === 2) {
+                $type = $parts[0];
+                $id = intval($parts[1]);
+
+                if ($type === 'mcq') {
+                    $pdo->prepare("DELETE FROM mcqs WHERE mcq_id = ?")->execute([$id]);
+                    $deleted_count++;
+                } elseif ($type === 'flashcard') {
+                    $pdo->prepare("DELETE FROM flashcards WHERE id = ?")->execute([$id]);
+                    $deleted_count++;
+                } elseif ($type === 'quickrevision' || $type === 'quick_revision') {
+                    $pdo->prepare("DELETE FROM quick_revision WHERE revision_id = ?")->execute([$id]);
+                    $deleted_count++;
+                }
+            }
+        }
+        $message = "Purge Complete: Successfully removed all {$deleted_count} {$category_label}!";
+        $messageType = 'success';
+    } else {
+        $message = "No items found to delete in this category.";
+        $messageType = 'error';
+    }
+}
+
+// -------------------------------------------------------------
 // FETCH CLASSES & SUBJECTS FOR DROPDOWNS
 // -------------------------------------------------------------
 $classes_query = $pdo->prepare("SELECT * FROM classes WHERE board_type = ? ORDER BY class_name ASC");
@@ -711,10 +747,21 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
     $verification_results['total_analyzed'] = $total_analyzed;
     $verification_results['items'] = $flagged_items;
 
+    $duplicate_keys = [];
+    $incorrect_keys = [];
+    $irrelevant_keys = [];
+
     foreach ($flagged_items as $item) {
-        if ($item['flag_category'] === 'duplicate') $verification_results['duplicates_count']++;
-        elseif ($item['flag_category'] === 'incorrect') $verification_results['incorrect_count']++;
-        elseif ($item['flag_category'] === 'irrelevant') $verification_results['irrelevant_count']++;
+        if ($item['flag_category'] === 'duplicate') {
+            $verification_results['duplicates_count']++;
+            $duplicate_keys[] = $item['item_key'];
+        } elseif ($item['flag_category'] === 'incorrect') {
+            $verification_results['incorrect_count']++;
+            $incorrect_keys[] = $item['item_key'];
+        } elseif ($item['flag_category'] === 'irrelevant') {
+            $verification_results['irrelevant_count']++;
+            $irrelevant_keys[] = $item['item_key'];
+        }
     }
 }
 ?>
@@ -788,9 +835,30 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 
-        .filter-tabs { display: flex; gap: 10px; margin-top: 20px; border-bottom: 2px solid #e2e8f0; }
-        .tab-link { padding: 10px 20px; font-weight: 600; color: #64748b; cursor: pointer; text-decoration: none; border-bottom: 3px solid transparent; }
-        .tab-link.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+        /* Category Purge Action Bar */
+        .category-purge-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 24px; margin-bottom: 25px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; }
+        .purge-title { font-weight: 700; font-size: 15px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+        .purge-buttons-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn-purge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+        .btn-purge:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        .btn-purge:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+        .btn-purge-duplicate { background: #fef08a; color: #854d0e; border: 1px solid #facc15; }
+        .btn-purge-duplicate:hover:not(:disabled) { background: #fde047; }
+        .btn-purge-irrelevant { background: #ffedd5; color: #9a3412; border: 1px solid #fb923c; }
+        .btn-purge-irrelevant:hover:not(:disabled) { background: #fed7aa; }
+        .btn-purge-incorrect { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+        .btn-purge-incorrect:hover:not(:disabled) { background: #fca5a5; }
+
+        /* Filter Tabs */
+        .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 2px; }
+        .filter-tab-btn { background: none; border: none; padding: 10px 18px; font-weight: 600; font-size: 14px; color: #64748b; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+        .filter-tab-btn:hover { color: #334155; background: #f1f5f9; }
+        .filter-tab-btn.active { color: #4f46e5; border-bottom: 3px solid #4f46e5; background: #eef2ff; font-weight: 700; }
+        .tab-badge { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 11px; margin-left: 6px; font-weight: 700; }
+        .tab-badge-all { background: #cbd5e1; color: #1e293b; }
+        .tab-badge-duplicate { background: #fef08a; color: #854d0e; }
+        .tab-badge-irrelevant { background: #fed7aa; color: #9a3412; }
+        .tab-badge-incorrect { background: #fca5a5; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -928,6 +996,61 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                     </div>
                 <?php else: ?>
 
+                    <!-- Fast 1-Click Category Purge Actions -->
+                    <div class="category-purge-card">
+                        <div class="purge-title">
+                            <span>⚡ Quick Category Purge:</span>
+                            <span style="font-weight: 400; font-size: 13px; color: #64748b;">Instantly delete all flagged items of a specific issue type in this subject</span>
+                        </div>
+                        <div class="purge-buttons-group">
+                            <!-- Purge Duplicates -->
+                            <form method="POST" action="data_verification.php?run=1&class_id=<?php echo $selected_class_id; ?>&subject_id=<?php echo $selected_subject_id; ?>&content_type=<?php echo $selected_content_type; ?>" style="display:inline;" onsubmit="return confirm('⚠️ Are you sure you want to permanently delete ALL <?php echo count($duplicate_keys); ?> DUPLICATE items in this subject?');">
+                                <input type="hidden" name="action" value="delete_category">
+                                <input type="hidden" name="category_label" value="Duplicate Items">
+                                <input type="hidden" name="category_item_keys" value="<?php echo htmlspecialchars(implode(',', $duplicate_keys)); ?>">
+                                <button type="submit" class="btn-purge btn-purge-duplicate" <?php echo empty($duplicate_keys) ? 'disabled' : ''; ?>>
+                                    🗑️ Delete ONLY Duplicates (<?php echo count($duplicate_keys); ?>)
+                                </button>
+                            </form>
+
+                            <!-- Purge Irrelevant -->
+                            <form method="POST" action="data_verification.php?run=1&class_id=<?php echo $selected_class_id; ?>&subject_id=<?php echo $selected_subject_id; ?>&content_type=<?php echo $selected_content_type; ?>" style="display:inline;" onsubmit="return confirm('⚠️ Are you sure you want to permanently delete ALL <?php echo count($irrelevant_keys); ?> IRRELEVANT items (e.g. missing visual figures) in this subject?');">
+                                <input type="hidden" name="action" value="delete_category">
+                                <input type="hidden" name="category_label" value="Irrelevant Items">
+                                <input type="hidden" name="category_item_keys" value="<?php echo htmlspecialchars(implode(',', $irrelevant_keys)); ?>">
+                                <button type="submit" class="btn-purge btn-purge-irrelevant" <?php echo empty($irrelevant_keys) ? 'disabled' : ''; ?>>
+                                    🗑️ Delete ONLY Irrelevant (<?php echo count($irrelevant_keys); ?>)
+                                </button>
+                            </form>
+
+                            <!-- Purge Incorrect -->
+                            <form method="POST" action="data_verification.php?run=1&class_id=<?php echo $selected_class_id; ?>&subject_id=<?php echo $selected_subject_id; ?>&content_type=<?php echo $selected_content_type; ?>" style="display:inline;" onsubmit="return confirm('⚠️ Are you sure you want to permanently delete ALL <?php echo count($incorrect_keys); ?> INCORRECT items in this subject?');">
+                                <input type="hidden" name="action" value="delete_category">
+                                <input type="hidden" name="category_label" value="Incorrect Items">
+                                <input type="hidden" name="category_item_keys" value="<?php echo htmlspecialchars(implode(',', $incorrect_keys)); ?>">
+                                <button type="submit" class="btn-purge btn-purge-incorrect" <?php echo empty($incorrect_keys) ? 'disabled' : ''; ?>>
+                                    🗑️ Delete ONLY Incorrect (<?php echo count($incorrect_keys); ?>)
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Category Filter Tabs -->
+                    <div class="filter-tabs">
+                        <button type="button" class="filter-tab-btn active" onclick="filterCategory('all', this)">
+                            All Issues <span class="tab-badge tab-badge-all"><?php echo count($verification_results['items']); ?></span>
+                        </button>
+                        <button type="button" class="filter-tab-btn" onclick="filterCategory('duplicate', this)">
+                            🟡 Duplicates <span class="tab-badge tab-badge-duplicate"><?php echo count($duplicate_keys); ?></span>
+                        </button>
+                        <button type="button" class="filter-tab-btn" onclick="filterCategory('irrelevant', this)">
+                            🟠 Irrelevant <span class="tab-badge tab-badge-irrelevant"><?php echo count($irrelevant_keys); ?></span>
+                        </button>
+                        <button type="button" class="filter-tab-btn" onclick="filterCategory('incorrect', this)">
+                            🔴 Incorrect <span class="tab-badge tab-badge-incorrect"><?php echo count($incorrect_keys); ?></span>
+                        </button>
+                    </div>
+
                     <!-- Bulk Actions Form -->
                     <form method="POST" action="data_verification.php?run=1&class_id=<?php echo $selected_class_id; ?>&subject_id=<?php echo $selected_subject_id; ?>&content_type=<?php echo $selected_content_type; ?>" onsubmit="return confirm('Are you sure you want to delete all selected flagged items?');">
                         <input type="hidden" name="action" value="bulk_delete">
@@ -935,7 +1058,7 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                         <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)">
-                                <label for="selectAll" style="font-weight: 600; font-size: 14px; cursor: pointer; margin-left: 5px;">Select All Flagged Items</label>
+                                <label for="selectAll" style="font-weight: 600; font-size: 14px; cursor: pointer; margin-left: 5px;">Select All Visible Items</label>
                             </div>
                             <button type="submit" class="btn-bulk-delete">🗑️ Delete Selected Items</button>
                         </div>
@@ -953,7 +1076,7 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                             </thead>
                             <tbody>
                                 <?php foreach ($verification_results['items'] as $item): ?>
-                                    <tr>
+                                    <tr class="issue-row" data-category="<?php echo $item['flag_category']; ?>">
                                         <td>
                                             <input type="checkbox" name="selected_items[]" value="<?php echo $item['item_key']; ?>" class="item-checkbox">
                                         </td>
@@ -1000,9 +1123,41 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
     </div>
 
     <script>
+        let currentFilter = 'all';
+
+        function filterCategory(category, tabBtn) {
+            currentFilter = category;
+            
+            // Highlight active tab
+            document.querySelectorAll('.filter-tab-btn').forEach(btn => btn.classList.remove('active'));
+            tabBtn.classList.add('active');
+
+            // Filter table rows
+            const rows = document.querySelectorAll('.issue-row');
+            rows.forEach(row => {
+                if (category === 'all' || row.getAttribute('data-category') === category) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                    // Uncheck hidden rows so bulk delete only acts on what admin sees
+                    const cb = row.querySelector('.item-checkbox');
+                    if (cb) cb.checked = false;
+                }
+            });
+
+            // Reset master checkbox
+            const masterCb = document.getElementById('selectAll');
+            if (masterCb) masterCb.checked = false;
+        }
+
         function toggleSelectAll(master) {
-            const checkboxes = document.querySelectorAll('.item-checkbox');
-            checkboxes.forEach(cb => cb.checked = master.checked);
+            const rows = document.querySelectorAll('.issue-row');
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cb = row.querySelector('.item-checkbox');
+                    if (cb) cb.checked = master.checked;
+                }
+            });
         }
     </script>
 </body>

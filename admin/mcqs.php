@@ -362,6 +362,7 @@ $mcqs = $mcqs_query->fetchAll();
             <li><a href="notes.php">Notes</a></li>
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php">Quick Revision</a></li>
+            <li><a href="data_verification.php">Verify Data</a></li>
             <li><a href="content_manager.php">Content Manager</a></li>
             <li><a href="audit_center.php">Audit Center</a></li>
         </ul>

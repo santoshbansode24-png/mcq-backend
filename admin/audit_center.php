@@ -343,14 +343,22 @@ $subjects = $subjects_query->fetchAll();
             <li><a href="mcqs.php">MCQs</a></li>
             <li><a href="flashcards.php">Flashcards</a></li>
             <li><a href="quick_revision.php">Quick Revision</a></li>
+            <li><a href="data_verification.php">Verify Data</a></li>
             <li><a href="audit_center.php" class="active">Audit Center</a></li>
         </ul>
     </nav>
 
     <div class="container">
         <div class="audit-header">
-            <h2>Content Verification</h2>
-            <p style="color: var(--text-muted); font-size: 14px;">Select filters to audit specific class content.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h2>Content Verification & Quality Audit</h2>
+                    <p style="color: var(--text-muted); font-size: 14px;">Select filters to audit specific class content.</p>
+                </div>
+                <a href="data_verification.php" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 22px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(102,126,234,0.3);">
+                    ⚡ Run Automated Duplicate & Error Scan
+                </a>
+            </div>
 
             <div class="filter-grid">
                 <div class="filter-group">

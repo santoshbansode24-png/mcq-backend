@@ -243,6 +243,7 @@ $subjects = $subjects_query->fetchAll();
             <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
             <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
             <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+            <li><a href="data_verification.php"><i class="fa-solid fa-shield-halved"></i> Verify Data</a></li>
             <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
             <li><a href="audit_center.php" class="active"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
@@ -251,7 +252,12 @@ $subjects = $subjects_query->fetchAll();
     
     <div class="container">
         <div class="card">
-            <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Content Quality Verification</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Content Quality Verification</h2>
+                <a href="data_verification.php" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(102,126,234,0.3);">
+                    <i class="fa-solid fa-bolt"></i> ⚡ Run Automated Duplicate & Error Scan
+                </a>
+            </div>
             <div class="filter-grid">
                 <div>
                     <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:#475569;">Class</label>

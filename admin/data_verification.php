@@ -127,6 +127,45 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
         return preg_replace('/\s+/', ' ', $str);
     }
 
+    function checkSubjectIrrelevance($text, $subject_name) {
+        $subj = mb_strtolower($subject_name);
+        $text_lower = mb_strtolower($text);
+
+        $domain_keywords = [
+            'history' => ['revolution', 'dynasty', 'emperor', 'treaty', 'viceroy', 'empire', 'mughal', 'freedom fighter', 'ancient india', 'british rule'],
+            'civics' => ['constitution', 'parliament', 'lok sabha', 'rajya sabha', 'prime minister', 'president of india', 'supreme court', 'fundamental rights', 'democracy', 'amendment'],
+            'geography' => ['latitude', 'longitude', 'equator', 'monsoon', 'tributary', 'plateau', 'himalayas', 'biosphere', 'topography', 'sedimentary'],
+            'biology' => ['photosynthesis', 'chlorophyll', 'mitochondria', 'dna', 'rna', 'chromosome', 'stomata', 'xylem', 'phloem', 'rbc', 'wbc', 'hemoglobin', 'digestive system'],
+            'physics' => ['refraction', 'reflection', 'newton', 'momentum', 'velocity', 'acceleration', 'resistance', 'voltage', 'gravitational', 'kinetic energy'],
+            'chemistry' => ['chemical reaction', 'periodic table', 'atomic number', 'valency', 'isotope', 'covalent', 'ionic bond', 'oxidation', 'reduction', 'h2o', 'nacl'],
+            'math' => ['pythagoras', 'hypotenuse', 'quadratic equation', 'trigonometry', 'sin theta', 'cos theta', 'logarithm', 'polynomial', 'derivative', 'integration', 'fraction'],
+            'english' => ['synonym', 'antonym', 'noun', 'pronoun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'past tense', 'passive voice', 'metaphor']
+        ];
+
+        $current_domain = 'other';
+        if (str_contains($subj, 'physic')) $current_domain = 'physics';
+        elseif (str_contains($subj, 'chem')) $current_domain = 'chemistry';
+        elseif (str_contains($subj, 'bio') || str_contains($subj, 'sci')) $current_domain = 'science';
+        elseif (str_contains($subj, 'math')) $current_domain = 'math';
+        elseif (str_contains($subj, 'hist')) $current_domain = 'history';
+        elseif (str_contains($subj, 'pol') || str_contains($subj, 'civic')) $current_domain = 'civics';
+        elseif (str_contains($subj, 'geog')) $current_domain = 'geography';
+        elseif (str_contains($subj, 'eng')) $current_domain = 'english';
+
+        foreach ($domain_keywords as $domain => $keywords) {
+            if ($domain === $current_domain) continue;
+            if (($current_domain === 'science' || $current_domain === 'physics' || $current_domain === 'chemistry') && in_array($domain, ['physics', 'chemistry', 'biology'])) continue;
+            if ($current_domain === 'history' && in_array($domain, ['civics', 'geography'])) continue;
+
+            foreach ($keywords as $kw) {
+                if (mb_strpos($text_lower, $kw) !== false) {
+                    return "Topic Mismatch: Question contains '{$kw}' which belongs to " . ucfirst($domain) . " (not {$subject_name}).";
+                }
+            }
+        }
+        return false;
+    }
+
     $flagged_items = [];
     $total_analyzed = 0;
 
@@ -174,35 +213,43 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
             $issues = [];
 
             // A. Incorrect / Malformed Data Check
-            if (empty($q_norm) || strlen($q_norm) < 3) {
-                $issues[] = ['type' => 'incorrect', 'reason' => 'Empty or extremely short question text.'];
+            $dummy_patterns = ['/^\s*test\s*$/i', '/^\s*asdf\s*$/i', '/^\s*qwerty\s*$/i', '/^\s*sample\s*$/i', '/^\s*\?+\s*$/i', '/^\s*xyz\s*$/i', '/^\s*1234\s*$/i'];
+            $is_dummy = false;
+            foreach ($dummy_patterns as $pattern) {
+                if (preg_match($pattern, $q_raw)) { $is_dummy = true; break; }
             }
+
+            if (empty($q_norm) || strlen($q_norm) < 6) {
+                $issues[] = ['type' => 'incorrect', 'reason' => 'Question text is empty or too short (< 6 chars).'];
+            } elseif ($is_dummy) {
+                $issues[] = ['type' => 'incorrect', 'reason' => "Question contains dummy test placeholder text ('{$q_raw}')."];
+            }
+
             if ($opt_a === '' || $opt_b === '') {
-                $issues[] = ['type' => 'incorrect', 'reason' => 'Missing basic options (Option A or B is blank).'];
+                $issues[] = ['type' => 'incorrect', 'reason' => 'Missing basic options (Option A or Option B is blank).'];
             }
+
             if (!in_array($correct, ['a', 'b', 'c', 'd', 'option_a', 'option_b', 'option_c', 'option_d'])) {
                 $issues[] = ['type' => 'incorrect', 'reason' => "Invalid correct_answer key: '{$mcq['correct_answer']}'. Must be a, b, c, or d."];
             } else {
-                // Verify correct answer choice has content
                 $correct_letter = str_replace('option_', '', $correct);
                 $target_option_val = $mcq["option_" . $correct_letter] ?? '';
                 if (empty(trim($target_option_val))) {
-                    $issues[] = ['type' => 'incorrect', 'reason' => "Correct answer option '(" . strtoupper($correct_letter) . ")' is empty!"];
+                    $issues[] = ['type' => 'incorrect', 'reason' => "Correct answer option '(" . strtoupper($correct_letter) . ")' is empty or blank!"];
                 }
             }
-            // Check for duplicate options within the same question
+
             $options_array = array_filter([$opt_a, $opt_b, $opt_c, $opt_d]);
             if (count($options_array) !== count(array_unique($options_array))) {
-                $issues[] = ['type' => 'incorrect', 'reason' => 'Duplicate option choices found within this MCQ.'];
+                $issues[] = ['type' => 'incorrect', 'reason' => 'Duplicate option choices found within this question.'];
             }
 
-            // B. Duplicate Check (Exact & Fuzzy)
+            // B. Duplicate Check (Exact & Fuzzy 95%+)
             if (!empty($q_norm)) {
                 if (isset($seen_mcq_texts[$q_norm])) {
                     $orig_id = $seen_mcq_texts[$q_norm];
                     $issues[] = ['type' => 'duplicate', 'reason' => "Exact Duplicate of MCQ #{$orig_id} in this subject."];
                 } else {
-                    // Check Fuzzy match with already seen questions
                     foreach ($seen_mcq_texts as $seen_text => $orig_id) {
                         similar_text($q_norm, $seen_text, $percent);
                         if ($percent >= 95.0) {
@@ -216,13 +263,29 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 }
             }
 
-            // C. Irrelevant / Cross-Subject Misassignment Check
+            // C. Irrelevant / Cross-Subject & Domain Mismatch Check
             if (!empty($q_norm)) {
+                // 1. Cross-subject matching
                 foreach ($other_mcqs as $other) {
                     $other_norm = normalizeText($other['question']);
                     if ($q_norm === $other_norm) {
                         $issues[] = ['type' => 'irrelevant', 'reason' => "Cross-Subject Duplicate: Matches MCQ #{$other['mcq_id']} in '{$other['subject_name']}'."];
                         break;
+                    } else {
+                        similar_text($q_norm, $other_norm, $other_percent);
+                        if ($other_percent >= 80.0) {
+                            $issues[] = ['type' => 'irrelevant', 'reason' => "Cross-Subject Copy: " . round($other_percent, 1) . "% match with MCQ #{$other['mcq_id']} in '{$other['subject_name']}'."];
+                            break;
+                        }
+                    }
+                }
+
+                // 2. Subject Domain Keyword Mismatch
+                if (empty($issues)) {
+                    $subj_name = $mcq['subject_name'] ?? '';
+                    $domain_issue = checkSubjectIrrelevance($q_raw, $subj_name);
+                    if ($domain_issue) {
+                        $issues[] = ['type' => 'irrelevant', 'reason' => $domain_issue];
                     }
                 }
             }

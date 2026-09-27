@@ -3,7 +3,7 @@
  * Student Performance Report & Negative Questions API
  * Veeru API
  */
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 header('Content-Type: application/json; charset=UTF-8');
 
 // Inject CORS Headers
@@ -161,7 +161,7 @@ try {
 
     $stmtAttempts = $pdo->prepare("
         SELECT 
-            ea.*, e.title as exam_title, s.subject_name
+            ea.*, COALESCE(e.title, 'My Exam Practice') as exam_title, s.subject_name
         FROM exam_attempts ea
         LEFT JOIN exams e ON ea.exam_id = e.exam_id
         LEFT JOIN subjects s ON e.subject_id = s.subject_id

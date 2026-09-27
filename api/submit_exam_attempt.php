@@ -3,7 +3,7 @@
  * Submit Exam Attempt API - Calculates Net Score, Negative Marking, and Detailed Item Breakdown
  * Veeru API
  */
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 header('Content-Type: application/json; charset=UTF-8');
 
 // Inject CORS Headers
@@ -32,17 +32,23 @@ $exam_id = intval($input['exam_id'] ?? 0);
 $answers = $input['answers'] ?? [];
 $time_spent_seconds = intval($input['time_spent_seconds'] ?? 0);
 
-if ($user_id <= 0 || $exam_id <= 0) {
-    sendResponse('error', 'Invalid user_id or exam_id', null, 400);
+if ($user_id <= 0) {
+    sendResponse('error', 'Invalid user_id', null, 400);
 }
 
 try {
-    $stmtExam = $pdo->prepare("SELECT * FROM exams WHERE exam_id = ?");
-    $stmtExam->execute([$exam_id]);
-    $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
+    $pos_marks = isset($input['positive_marks']) ? floatval($input['positive_marks']) : 4.00;
+    $neg_marks = isset($input['negative_marks']) ? floatval($input['negative_marks']) : 1.00;
 
-    $pos_marks = floatval($exam['positive_marks'] ?? 4.00);
-    $neg_marks = floatval($exam['negative_marks'] ?? 1.00);
+    if ($exam_id > 0) {
+        $stmtExam = $pdo->prepare("SELECT * FROM exams WHERE exam_id = ?");
+        $stmtExam->execute([$exam_id]);
+        $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
+        if ($exam) {
+            $pos_marks = floatval($exam['positive_marks'] ?? $pos_marks);
+            $neg_marks = floatval($exam['negative_marks'] ?? $neg_marks);
+        }
+    }
 
     $mcq_ids = array_column($answers, 'mcq_id');
     $mcqs_by_id = [];

@@ -234,7 +234,7 @@ const ReviewCard = memo(({ question, index, userAnswer }) => {
                         !wasAnswered ? { color: '#b45309' } :
                             isCorrect ? { color: '#15803d' } : { color: '#b91c1c' }
                     ]}>
-                        {!wasAnswered ? 'Skipped' : isCorrect ? 'Correct' : 'Wrong'}
+                        {!wasAnswered ? '0 pts (Skipped)' : isCorrect ? '+4 pts (Correct)' : '-1 pt Penalty'}
                     </Text>
                 </View>
             </View>
@@ -389,6 +389,25 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     else incorrect++;
                 });
 
+                // Record detailed attempt for performance reporting & negative questions
+                try {
+                    const formattedAnswers = questions.map((q, i) => ({
+                        mcq_id: q.mcq_id || q.id || 0,
+                        selected_option: selectedAnswers[i] || 'skip'
+                    }));
+
+                    await axios.post(`${API_URL}/submit_exam_attempt.php`, {
+                        user_id: userId,
+                        exam_id: route.params?.examId || 0,
+                        answers: formattedAnswers,
+                        time_spent_seconds: finalTimeRef.current,
+                        positive_marks: 4,
+                        negative_marks: 1
+                    });
+                } catch (errAttempt) {
+                    console.log('[Exam] Attempt submit error:', errAttempt);
+                }
+
                 if (route.params?.update_id) {
                     // Send to teacher's class exam results
                     await axios.post(`${API_URL}/submit_class_exam.php`, {
@@ -427,7 +446,11 @@ const MyExamTestScreen = ({ navigation, route }) => {
             else if (ans === q.correct_answer) correct++;
             else incorrect++;
         });
-        return { correct, incorrect, unanswered };
+        const posScore = correct * 4;
+        const negDeduction = incorrect * 1;
+        const netScore = posScore - negDeduction;
+        const maxScore = questions.length * 4;
+        return { correct, incorrect, unanswered, posScore, negDeduction, netScore, maxScore };
     }, [selectedAnswers, questions]);
 
     // Move hooks ABOVE the early return to comply with the Rule of Hooks
@@ -453,7 +476,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
 
     // ── Results Screen ──────────────────────────────────────────────────────
     if (showResults) {
-        const { correct, incorrect, unanswered } = results;
+        const { correct, incorrect, unanswered, posScore, negDeduction, netScore, maxScore } = results;
         const percentage = ((correct / questions.length) * 100).toFixed(1);
 
         const renderReviewItem = ({ item, index }) => (
@@ -467,8 +490,16 @@ const MyExamTestScreen = ({ navigation, route }) => {
                         {percentage >= 75 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
                     </Text>
                     <Text style={styles.resultsTitle}>Test Completed!</Text>
-                    <Text style={styles.resultsScore}>{correct} / {questions.length}</Text>
-                    <Text style={styles.resultsPercentage}>You scored {percentage}%</Text>
+                    <Text style={styles.resultsScore}>Net Score: {netScore} <Text style={{fontSize: 20, color: '#64748b'}}>/ {maxScore} pts</Text></Text>
+                    <View style={styles.marksSummaryRow}>
+                        <View style={[styles.markSummaryBadge, { backgroundColor: '#dcfce7', borderColor: '#86efac' }]}>
+                            <Text style={{ color: '#15803d', fontSize: 13, fontFamily: 'NotoSans-Bold' }}>+{posScore} Correct</Text>
+                        </View>
+                        <View style={[styles.markSummaryBadge, { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }]}>
+                            <Text style={{ color: '#b91c1c', fontSize: 13, fontFamily: 'NotoSans-Bold' }}>-{negDeduction} Negative Penalty</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.resultsPercentage}>Accuracy: {percentage}% ({correct} of {questions.length} questions)</Text>
                 </View>
 
                 {liveExamRanks && (
@@ -588,7 +619,13 @@ const MyExamTestScreen = ({ navigation, route }) => {
                         <View style={styles.questionBadge}>
                             <Text style={styles.questionBadgeText}>Q{currentIndex + 1}</Text>
                         </View>
-                        <Text style={styles.questionPointsText}>1 Point</Text>
+                        <View style={styles.markingSchemeBadge}>
+                            <Text style={styles.markingPositive}>+4 Correct</Text>
+                            <Text style={styles.markingDivider}>•</Text>
+                            <Text style={styles.markingNegative}>-1 Wrong</Text>
+                            <Text style={styles.markingDivider}>•</Text>
+                            <Text style={styles.markingSkip}>0 Skip</Text>
+                        </View>
                     </View>
 
                     {currentQuestion.image_url ? (
@@ -769,6 +806,13 @@ const styles = StyleSheet.create({
     homeButtonWrapper: { borderRadius: 16, overflow: 'hidden', marginTop: 10, shadowColor: '#4f46e5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8 },
     homeButtonGradient: { paddingVertical: 18, alignItems: 'center' },
     homeButtonText: { fontSize: 16, fontFamily: 'NotoSans-Bold', color: 'white', letterSpacing: 0.5 },
+    markingSchemeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, gap: 5 },
+    markingPositive: { fontSize: 11, fontFamily: 'NotoSans-Bold', color: '#16a34a' },
+    markingNegative: { fontSize: 11, fontFamily: 'NotoSans-Bold', color: '#dc2626' },
+    markingSkip: { fontSize: 11, fontFamily: 'NotoSans-Bold', color: '#64748b' },
+    markingDivider: { fontSize: 10, color: '#94a3b8' },
+    marksSummaryRow: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 8 },
+    markSummaryBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
 });
 
 export default MyExamTestScreen;

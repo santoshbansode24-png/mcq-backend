@@ -93,6 +93,76 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
     const [chapterCategory, setChapterCategory] = useState('weak'); // 'weak' | 'average' | 'strong'
     const [mistakeLoading, setMistakeLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [solvingState, setSolvingState] = useState({});
+    const [resolvingId, setResolvingId] = useState(null);
+    const [expandedSolutions, setExpandedSolutions] = useState({});
+
+    const handleResolveQuestion = async (item, selectedOpt) => {
+        const mcqId = item.mcq_id;
+        const answerId = item.answer_id;
+        if (resolvingId) return;
+
+        setResolvingId(mcqId);
+        setSolvingState(prev => ({
+            ...prev,
+            [mcqId]: { selected: selectedOpt, status: 'checking', message: 'Checking answer...' }
+        }));
+
+        try {
+            const uid = await getUserId();
+            const res = await axios.post(`${API_URL}/resolve_negative_question.php`, {
+                user_id: uid,
+                mcq_id: mcqId,
+                selected_option: selectedOpt,
+                answer_id: answerId
+            });
+
+            if (res.data?.status === 'success') {
+                const isCorrect = res.data.data?.is_correct;
+                setSolvingState(prev => ({
+                    ...prev,
+                    [mcqId]: {
+                        selected: selectedOpt,
+                        status: isCorrect ? 'correct' : 'wrong',
+                        message: res.data.message
+                    }
+                }));
+
+                if (isCorrect) {
+                    // Celebration and auto-removal from negative questions tab
+                    setTimeout(() => {
+                        setPerformanceData(prev => {
+                            if (!prev) return prev;
+                            const filtered = (prev.negative_questions || []).filter(q => q.mcq_id !== mcqId);
+                            const updatedStats = {
+                                ...prev.stats,
+                                total_negative_marks_lost: Math.max(0, (parseFloat(prev.stats?.total_negative_marks_lost) || 0) - 1.00),
+                                total_correct: (parseInt(prev.stats?.total_correct) || 0) + 1,
+                                total_wrong: Math.max(0, (parseInt(prev.stats?.total_wrong) || 0) - 1)
+                            };
+                            return {
+                                ...prev,
+                                stats: updatedStats,
+                                negative_questions: filtered
+                            };
+                        });
+                        setResolvingId(null);
+                    }, 1200);
+                } else {
+                    // Reveal explanation so student can study the concept
+                    setExpandedSolutions(prev => ({ ...prev, [mcqId]: true }));
+                    setResolvingId(null);
+                }
+            } else {
+                Alert.alert('Notice', res.data?.message || 'Could not verify answer');
+                setResolvingId(null);
+            }
+        } catch (err) {
+            console.log('[ResolveQuestion] Error:', err);
+            Alert.alert('Error', 'Failed to connect. Please check your connection.');
+            setResolvingId(null);
+        }
+    };
 
     const getUserId = useCallback(async () => {
         if (user?.user_id) return user.user_id;
@@ -412,80 +482,174 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* View 1: Dedicated Negative Questions */}
+                            {/* View 1: Dedicated Negative Questions with Re-solve feature */}
                             {subTab === 'negative' && (
                                 <View style={styles.subViewContainer}>
                                     {negativeQuestions.length === 0 ? (
                                         <View style={styles.noNegativeCard}>
                                             <Ionicons name="shield-checkmark" size={48} color="#10b981" style={{ marginBottom: 8 }} />
-                                            <Text style={styles.noNegativeTitle}>No Negative Questions!</Text>
+                                            <Text style={styles.noNegativeTitle}>No Negative Questions! 🎉</Text>
                                             <Text style={styles.noNegativeSub}>
-                                                You haven't lost any marks to negative penalties in your exams. Great accuracy!
+                                                You have solved and cleared all your negative marked questions! Great job maintaining 100% mastery.
                                             </Text>
                                         </View>
                                     ) : (
-                                        negativeQuestions.map((item, idx) => (
-                                            <View key={item.answer_id || idx} style={styles.negativeCard}>
-                                                <View style={styles.negCardHeader}>
-                                                    <View style={styles.negTagBox}>
-                                                        <Text style={styles.negTagText}>
-                                                            {item.subject_name || 'Exam'} • {item.chapter_name || 'Practice'}
-                                                        </Text>
-                                                    </View>
-                                                    <View style={styles.penaltyBadge}>
-                                                        <Text style={styles.penaltyText}>🔴 -1.00 Mark Penalty</Text>
-                                                    </View>
-                                                </View>
+                                        negativeQuestions.map((item, idx) => {
+                                            const mcqId = item.mcq_id;
+                                            const state = solvingState[mcqId] || {};
+                                            const isChecking = resolvingId === mcqId;
+                                            const isSolved = state.status === 'correct';
+                                            const isWrong = state.status === 'wrong';
+                                            const showSolution = expandedSolutions[mcqId] || isWrong;
 
-                                                <View style={styles.negQuestionBox}>
-                                                    <SmartText
-                                                        content={decodeHtml(item.question)}
-                                                        textColor="#0f172a"
-                                                        fontSize="15px"
-                                                        fontWeight="bold"
-                                                    />
-                                                </View>
-
-                                                {/* Wrong Answer Chosen */}
-                                                <View style={styles.negAnswerRow}>
-                                                    <Text style={styles.negAnswerLabel}>Your Wrong Choice:</Text>
-                                                    <View style={[styles.negAnswerPill, { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }]}>
-                                                        <Ionicons name="close-circle" size={16} color="#dc2626" style={{ marginRight: 6 }} />
-                                                        <Text style={[styles.negAnswerText, { color: '#b91c1c' }]}>
-                                                            Option {item.selected_option ? item.selected_option.toUpperCase() : 'None'}:{' '}
-                                                            {decodeHtml(item[`option_${item.selected_option}`] || '')}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-
-                                                {/* Correct Answer */}
-                                                <View style={styles.negAnswerRow}>
-                                                    <Text style={styles.negAnswerLabel}>Correct Answer:</Text>
-                                                    <View style={[styles.negAnswerPill, { backgroundColor: '#dcfce7', borderColor: '#86efac' }]}>
-                                                        <Ionicons name="checkmark-circle" size={16} color="#16a34a" style={{ marginRight: 6 }} />
-                                                        <Text style={[styles.negAnswerText, { color: '#15803d' }]}>
-                                                            Option {item.correct_option ? item.correct_option.toUpperCase() : ''}:{' '}
-                                                            {decodeHtml(item[`option_${item.correct_option}`] || '')}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-
-                                                {/* Explanation */}
-                                                {item.explanation && (
-                                                    <View style={styles.negExplanationBox}>
-                                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                                            <Ionicons name="bulb-outline" size={16} color="#0369a1" style={{ marginRight: 6 }} />
-                                                            <Text style={styles.negExplanationTitle}>Solution & Explanation</Text>
+                                            return (
+                                                <View key={item.answer_id || idx} style={[styles.negativeCard, isSolved && { borderColor: '#10b981', backgroundColor: '#f0fdf4' }]}>
+                                                    <View style={styles.negCardHeader}>
+                                                        <View style={styles.negTagBox}>
+                                                            <Text style={styles.negTagText}>
+                                                                {item.subject_name || 'Exam'} • {item.chapter_name || 'Practice'}
+                                                            </Text>
                                                         </View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                            <View style={styles.penaltyBadge}>
+                                                                <Text style={styles.penaltyText}>🔴 -1.00 Penalty</Text>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+
+                                                    {/* Question Text */}
+                                                    <View style={styles.negQuestionBox}>
                                                         <SmartText
-                                                            content={decodeHtml(item.explanation)}
-                                                            textColor="#0c4a6e"
-                                                            fontSize="13px"
+                                                            content={decodeHtml(item.question)}
+                                                            textColor="#0f172a"
+                                                            fontSize="15px"
+                                                            fontWeight="bold"
                                                         />
                                                     </View>
-                                                )}
-                                            </View>
-                                        ))
+
+                                                    {/* Previous Mistake Notice */}
+                                                    <View style={styles.mistakeReminderBox}>
+                                                        <Ionicons name="alert-circle" size={16} color="#dc2626" style={{ marginRight: 6 }} />
+                                                        <Text style={styles.mistakeReminderText}>
+                                                            Previous Mistake: Selected Option {item.selected_option ? item.selected_option.toUpperCase() : '-'}
+                                                        </Text>
+                                                    </View>
+
+                                                    {/* Instruction */}
+                                                    <Text style={styles.solveInstructionText}>
+                                                        👉 Re-solve to remove: Tap the correct option below to clear this mistake!
+                                                    </Text>
+
+                                                    {/* 4 Interactive Option Buttons */}
+                                                    <View style={{ gap: 8, marginTop: 8 }}>
+                                                        {['a', 'b', 'c', 'd'].map((opt) => {
+                                                            const optText = item[`option_${opt}`];
+                                                            if (!optText) return null;
+
+                                                            const isSelected = state.selected === opt;
+                                                            const isOptionChecking = isChecking && isSelected;
+                                                            let btnBg = '#f8fafc';
+                                                            let btnBorder = '#e2e8f0';
+                                                            let letterBg = '#e2e8f0';
+                                                            let letterColor = '#475569';
+
+                                                            if (isSelected) {
+                                                                if (isSolved) {
+                                                                    btnBg = '#dcfce7';
+                                                                    btnBorder = '#10b981';
+                                                                    letterBg = '#10b981';
+                                                                    letterColor = '#ffffff';
+                                                                } else if (isWrong) {
+                                                                    btnBg = '#fee2e2';
+                                                                    btnBorder = '#ef4444';
+                                                                    letterBg = '#ef4444';
+                                                                    letterColor = '#ffffff';
+                                                                } else {
+                                                                    btnBg = '#eef2ff';
+                                                                    btnBorder = '#6366f1';
+                                                                    letterBg = '#6366f1';
+                                                                    letterColor = '#ffffff';
+                                                                }
+                                                            }
+
+                                                            return (
+                                                                <TouchableOpacity
+                                                                    key={opt}
+                                                                    style={[styles.solveOptionButton, { backgroundColor: btnBg, borderColor: btnBorder }]}
+                                                                    onPress={() => handleResolveQuestion(item, opt)}
+                                                                    disabled={isChecking || isSolved}
+                                                                    activeOpacity={0.7}
+                                                                >
+                                                                    <View style={[styles.solveOptionLetter, { backgroundColor: letterBg }]}>
+                                                                        {isOptionChecking ? (
+                                                                            <ActivityIndicator size="small" color="#6366f1" />
+                                                                        ) : (
+                                                                            <Text style={[styles.solveOptionLetterText, { color: letterColor }]}>
+                                                                                {opt.toUpperCase()}
+                                                                            </Text>
+                                                                        )}
+                                                                    </View>
+                                                                    <View style={{ flex: 1 }}>
+                                                                        <SmartText
+                                                                            content={decodeHtml(optText)}
+                                                                            textColor="#0f172a"
+                                                                            fontSize="14px"
+                                                                        />
+                                                                    </View>
+                                                                </TouchableOpacity>
+                                                            );
+                                                        })}
+                                                    </View>
+
+                                                    {/* Feedback Banner if Correct */}
+                                                    {isSolved && (
+                                                        <View style={styles.solveSuccessBanner}>
+                                                            <Ionicons name="checkmark-circle" size={18} color="#15803d" />
+                                                            <Text style={styles.solveSuccessText}>
+                                                                🎉 Mistake Solved! Removing from Negative Questions...
+                                                            </Text>
+                                                        </View>
+                                                    )}
+
+                                                    {/* Feedback Banner if Wrong */}
+                                                    {isWrong && (
+                                                        <View style={styles.solveErrorBanner}>
+                                                            <Ionicons name="close-circle" size={18} color="#b91c1c" />
+                                                            <Text style={styles.solveErrorText}>
+                                                                ❌ Still incorrect! Review the explanation below and try again.
+                                                            </Text>
+                                                        </View>
+                                                    )}
+
+                                                    {/* Toggle Explanation Button */}
+                                                    <TouchableOpacity
+                                                        style={styles.solutionToggleBtn}
+                                                        onPress={() => setExpandedSolutions(prev => ({ ...prev, [mcqId]: !prev[mcqId] }))}
+                                                    >
+                                                        <Ionicons name="bulb-outline" size={16} color="#0369a1" style={{ marginRight: 4 }} />
+                                                        <Text style={styles.solutionToggleText}>
+                                                            {showSolution ? 'Hide Explanation' : 'Need Help? View Explanation 💡'}
+                                                        </Text>
+                                                        <Ionicons name={showSolution ? 'chevron-up' : 'chevron-down'} size={14} color="#0369a1" />
+                                                    </TouchableOpacity>
+
+                                                    {/* Solution & Explanation */}
+                                                    {showSolution && item.explanation && (
+                                                        <View style={styles.negExplanationBox}>
+                                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                                                <Ionicons name="bulb" size={16} color="#0369a1" style={{ marginRight: 6 }} />
+                                                                <Text style={styles.negExplanationTitle}>Solution & Explanation</Text>
+                                                            </View>
+                                                            <SmartText
+                                                                content={decodeHtml(item.explanation)}
+                                                                textColor="#0c4a6e"
+                                                                fontSize="13px"
+                                                            />
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            );
+                                        })
                                     )}
                                 </View>
                             )}
@@ -1164,6 +1328,99 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 15,
         fontWeight: 'bold',
+    },
+    mistakeReminderBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fef2f2',
+        borderWidth: 1,
+        borderColor: '#fee2e2',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        marginBottom: 8,
+    },
+    mistakeReminderText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#dc2626',
+        flex: 1,
+    },
+    solveInstructionText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#475569',
+        marginBottom: 4,
+    },
+    solveOptionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        padding: 10,
+        borderWidth: 1.5,
+    },
+    solveOptionLetter: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    solveOptionLetterText: {
+        fontSize: 13,
+        fontWeight: 'bold',
+    },
+    solveSuccessBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#dcfce7',
+        borderWidth: 1,
+        borderColor: '#86efac',
+        padding: 10,
+        borderRadius: 10,
+        marginTop: 10,
+        gap: 8,
+    },
+    solveSuccessText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#15803d',
+        flex: 1,
+    },
+    solveErrorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fee2e2',
+        borderWidth: 1,
+        borderColor: '#fca5a5',
+        padding: 10,
+        borderRadius: 10,
+        marginTop: 10,
+        gap: 8,
+    },
+    solveErrorText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#b91c1c',
+        flex: 1,
+    },
+    solutionToggleBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        marginTop: 10,
+        backgroundColor: '#f0f9ff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#bae6fd',
+    },
+    solutionToggleText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#0369a1',
+        marginRight: 4,
     },
 });
 

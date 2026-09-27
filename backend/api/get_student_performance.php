@@ -58,7 +58,7 @@ try {
         SELECT 
             ea.answer_id, ea.attempt_id, ea.exam_id, ea.mcq_id, ea.selected_option, ea.correct_option,
             ea.marks_awarded, ea.created_at as attempted_at,
-            m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.explanation,
+            m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.explanation, m.correct_answer,
             ch.chapter_name, s.subject_name, e.title as exam_title
         FROM exam_attempt_answers ea
         JOIN mcqs m ON ea.mcq_id = m.mcq_id

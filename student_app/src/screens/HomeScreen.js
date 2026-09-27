@@ -337,14 +337,6 @@ const HomeListHeader = React.memo(({
                 onPress={navToScholarship}
             />
 
-            <HomeBanner 
-                colors={['#00E5FF', '#0072FF']}
-                title={t('classUpdates')}
-                subtitle={t('checkAnnouncements')}
-                icon="bullhorn-outline"
-                onPress={navToNotifications}
-            />
-
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('yourSubjects')}</Text>
         </View>
     );

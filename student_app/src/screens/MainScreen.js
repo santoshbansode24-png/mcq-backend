@@ -35,6 +35,7 @@ import FlashcardsScreen from './FlashcardsScreen';
 import QuickRevisionScreen from './QuickRevisionScreen';
 import MyExamScreen from './MyExamScreen';
 import MyExamTestScreen from './MyExamTestScreen';
+import PerformanceReportScreen from './PerformanceReportScreen';
 import ForgotPasswordScreen from './ForgotPasswordScreen';
 import ScholarshipSubjectsScreen from './ScholarshipSubjectsScreen';
 import ScholarshipChaptersScreen from './ScholarshipChaptersScreen';
@@ -256,7 +257,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     // Determine Active Tab
     const activeTab = useMemo(() => {
         const mapping = {
-            'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
+            'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets', 'Performance', 'PerformanceReport'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
             'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'],
             'ClassUpdates': ['ClassUpdates', 'PDFViewer', 'MyExamTest']
@@ -393,6 +394,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'QuickRevision': return <QuickRevisionScreen {...commonProps} />;
             case 'MyExam': return <MyExamScreen {...commonProps} />;
             case 'MyExamTest': return <MyExamTestScreen {...commonProps} />;
+            case 'Performance': return <PerformanceReportScreen {...commonProps} />;
+            case 'PerformanceReport': return <PerformanceReportScreen {...commonProps} />;
             case 'ForgotPassword': return <ForgotPasswordScreen {...commonProps} />;
             case 'ScholarshipSubjects': return <ScholarshipSubjectsScreen {...commonProps} />;
             case 'ScholarshipChapters': return <ScholarshipChaptersScreen {...commonProps} />;

@@ -183,6 +183,7 @@ foreach ($jobs as $job) {
         2. CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the source text. If the source text is written in Marathi (मराठी), EVERY SINGLE generated MCQ (question, options, explanation), Flashcard (question, answer), and Note (definitions, key_facts, core_concepts) MUST BE 100% IN MARATHI (मराठी). Never translate Marathi into English. If source text is English, output MUST be English. If Hindi, output MUST be Hindi. Maintain 100% native language match.
         3. FORMAT: Return ONLY a valid JSON object. No markdown.
         4. CRITICAL MINIMUM QUOTA: You MUST generate a minimum of 3 MCQs, 3 Flashcards, and 3 bullet points for Notes, regardless of how short the text is. Rely strictly on the text to extract these. NEVER return an empty array for any category.
+        5. NO VISUAL/IMAGE/PICTURE DEPENDENCIES: NEVER generate questions, options, or flashcards that refer to missing visual media (such as 'in that picture match the pair of things', 'as shown in the picture', 'look at the figure/diagram', 'दिलेल्या चित्रात', 'आकृतीमध्ये'). The student application is text-only and does not display textbook pictures. All items must be 100% self-contained conceptual text.
         
         SCHEMA:
         {

@@ -131,6 +131,7 @@ try {
         $prompt = "You are the Veeru Flashcard Generator.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every Flashcard MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
 CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided document text. If the text is written in Marathi (मराठी), EVERY SINGLE question and answer MUST BE WRITTEN IN MARATHI (मराठी). Never translate Marathi content into English. If English, output in English. If Hindi, output in Hindi.
+STRICT NO-VISUAL-MEDIA RULE: NEVER generate flashcards that refer to missing pictures, diagrams, figures, images, maps, or charts (e.g., 'in that picture', 'look at the picture', 'as shown in the figure', 'दिलेल्या चित्रात', 'आकृतीमध्ये'). The student app is text-based and displays no images. All cards must be 100% self-contained conceptual text.
 Generate $count high-quality, highly reliable NEW Flashcards from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:
@@ -143,6 +144,7 @@ Output strict JSON format ONLY:
         $prompt = "You are the Veeru MCQ Quiz Generator.
 STRICT PDF GROUND TRUTH DIRECTIVE: Every MCQ MUST be derived 100% STRICTLY AND EXCLUSIVELY from the provided document text. Do NOT use outside knowledge.
 CRITICAL NATIVE LANGUAGE MANDATE: You MUST detect the language of the provided document text. If the text is written in Marathi (मराठी), EVERY SINGLE question, option, and explanation MUST BE WRITTEN IN MARATHI (मराठी). Never translate Marathi content into English. If English, output in English. If Hindi, output in Hindi.
+STRICT NO-VISUAL-MEDIA RULE: NEVER generate questions or options that refer to missing pictures, diagrams, figures, images, maps, or charts (such as 'in that picture match the pair of things', 'as shown in the picture', 'look at the figure', 'match the following pairs in the picture', 'दिलेल्या चित्रात', 'आकृतीमध्ये'). The student app is text-based and displays no images. Every question and option must be 100% self-contained conceptual text.
 Generate $count challenging Multiple Choice Questions from the provided document.
 $exclusionClause
 Output strict JSON format ONLY:

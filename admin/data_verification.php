@@ -18,7 +18,7 @@ if (!isset($_SESSION['admin_selected_board'])) {
 $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 $message = '';
 $messageType = '';
@@ -166,6 +166,81 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
         return false;
     }
 
+    // Helper: Detect questions referencing missing pictures, diagrams, figures or "match the pair of things"
+    function checkVisualMediaIrrelevance($text) {
+        if (empty($text)) return false;
+        $t = mb_strtolower($text, 'UTF-8');
+
+        // 1. Regular expression patterns for English visual media references
+        $english_patterns = [
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*picture)\b/i',
+            '/\b(in\s+picture\b)/i',
+            '/\b(look\s+at\s+(the\s+)?(this|that|given|following|above|below)?\s*picture)\b/i',
+            '/\b(see\s+(the\s+)?(this|that|given|following|above|below)?\s*picture)\b/i',
+            '/\b(shown\s+in\s+(the\s+)?(this|that|given|following|above|below)?\s*picture)\b/i',
+            '/\b(from\s+(the\s+)?(this|that|given|following|above|below)?\s*picture)\b/i',
+            '/\b(as\s+shown\s+in\s+(the\s+)?(that|this|given|following|above|below)?\s*(picture|figure|diagram|image|illustration))\b/i',
+            '/\b(match\s+(the\s+)?(pair|pairs)\s+(of\s+things\s+)?in\s+(that|the|this|given)\s+picture)\b/i',
+            '/\b(match\s+(the\s+)?pair\s+of\s+things)\b/i',
+            '/\b(which\s+(of\s+the\s+following\s+)?picture)\b/i',
+            '/\b(identify\s+(from\s+)?(the\s+)?picture)\b/i',
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*figure)\b/i',
+            '/\b(refer\s+to\s+(the\s+)?(this|that|given|following|above|below)?\s*figure)\b/i',
+            '/\b(look\s+at\s+(the\s+)?(this|that|given|following|above|below)?\s*figure)\b/i',
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*diagram)\b/i',
+            '/\b(shown\s+in\s+(the\s+)?(this|that|given|following|above|below)?\s*diagram)\b/i',
+            '/\b(look\s+at\s+(the\s+)?(this|that|given|following|above|below)?\s*diagram)\b/i',
+            '/\b(refer\s+to\s+(the\s+)?(this|that|given|following|above|below)?\s*diagram)\b/i',
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*image)\b/i',
+            '/\b(look\s+at\s+(the\s+)?(this|that|given|following|above|below)?\s*image)\b/i',
+            '/\b(shown\s+in\s+(the\s+)?(this|that|given|following|above|below)?\s*image)\b/i',
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*illustration)\b/i',
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*chart)\b/i',
+            '/\b(in\s+(the\s+)?(that|this|given|following|above|below)?\s*map)\b/i',
+            '/\b(shown\s+on\s+(the\s+)?(this|that|given|following|above|below)?\s*map)\b/i',
+            '/\b(mark\s+on\s+(the\s+)?(this|that|given|following|above|below)?\s*map)\b/i',
+            '/\b(given\s+graph|from\s+the\s+graph\s+below)\b/i'
+        ];
+
+        foreach ($english_patterns as $pattern) {
+            if (preg_match($pattern, $text, $matches)) {
+                return "Missing Visual Media: Question refers to visual content ('" . trim($matches[0]) . "'), but no picture/diagram is provided in the app.";
+            }
+        }
+
+        // 2. Multilingual keywords (Marathi & Hindi)
+        $regional_keywords = [
+            // Marathi
+            'चित्रात' => 'चित्रात (Picture reference)',
+            'दिलेल्या चित्रात' => 'दिलेल्या चित्रात (Given picture reference)',
+            'चित्रातील' => 'चित्रातील (In the picture)',
+            'चित्र पाहून' => 'चित्र पाहून (Look at picture)',
+            'खालील चित्रात' => 'खालील चित्रात (Picture below)',
+            'चित्रांच्या जोड्या' => 'चित्रांच्या जोड्या (Match pairs in picture)',
+            'आकृतीमध्ये' => 'आकृतीमध्ये (In figure/diagram)',
+            'दिलेल्या आकृतीत' => 'दिलेल्या आकृतीत (In given figure)',
+            'आकृतीवरून' => 'आकृतीवरून (From the figure)',
+            'नकाशात' => 'नकाशात (In the map)',
+            // Hindi
+            'चित्र में' => 'चित्र में (In the picture)',
+            'दिए गए चित्र में' => 'दिए गए चित्र में (In given picture)',
+            'चित्र देखकर' => 'चित्र देखकर (Look at picture)',
+            'चित्र में दर्शाया' => 'चित्र में दर्शाया (Shown in picture)',
+            'चित्र का मिलान' => 'चित्र का मिलान (Match picture)',
+            'दी गई आकृति में' => 'दी गई आकृति में (In given figure)',
+            'आकृति में' => 'आकृति में (In the figure)',
+            'मानचित्र में' => 'मानचित्र में (In the map)'
+        ];
+
+        foreach ($regional_keywords as $keyword => $desc) {
+            if (mb_strpos($t, $keyword) !== false) {
+                return "Missing Visual Media: Question refers to visual content ('" . $desc . "'), but no picture/diagram is provided in the app.";
+            }
+        }
+
+        return false;
+    }
+
     $flagged_items = [];
     $total_analyzed = 0;
 
@@ -263,9 +338,22 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 }
             }
 
-            // C. Irrelevant / Cross-Subject & Domain Mismatch Check
+            // C. Irrelevant / Cross-Subject, Domain Mismatch & Missing Picture Check
             if (!empty($q_norm)) {
-                // 1. Cross-subject matching
+                // 1. Missing Picture / Visual Reference Check (Pictures, diagrams, "match the pair of things")
+                $visual_issue = checkVisualMediaIrrelevance($q_raw);
+                if (!$visual_issue) {
+                    $opts_combined = "$opt_a $opt_b $opt_c $opt_d";
+                    $visual_opt_issue = checkVisualMediaIrrelevance($opts_combined);
+                    if ($visual_opt_issue) {
+                        $visual_issue = "Missing Visual Media: Option choices refer to visual content (pictures/diagrams) which are not shown in the app.";
+                    }
+                }
+                if ($visual_issue) {
+                    $issues[] = ['type' => 'irrelevant', 'reason' => $visual_issue];
+                }
+
+                // 2. Cross-subject matching
                 foreach ($other_mcqs as $other) {
                     $other_norm = normalizeText($other['question']);
                     if ($q_norm === $other_norm) {
@@ -280,7 +368,7 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                     }
                 }
 
-                // 2. Subject Domain Keyword Mismatch
+                // 3. Subject Domain Keyword Mismatch
                 if (empty($issues)) {
                     $subj_name = $mcq['subject_name'] ?? '';
                     $domain_issue = checkSubjectIrrelevance($q_raw, $subj_name);
@@ -366,6 +454,12 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 }
             }
 
+            // C. Irrelevant / Missing Visual Reference Check
+            $fc_visual_issue = checkVisualMediaIrrelevance("$front $back");
+            if ($fc_visual_issue) {
+                $issues[] = ['type' => 'irrelevant', 'reason' => $fc_visual_issue];
+            }
+
             if (!empty($issues)) {
                 foreach ($issues as $issue) {
                     $flagged_items[] = [
@@ -427,6 +521,12 @@ if ($has_run && $selected_class_id > 0 && $selected_subject_id > 0) {
                 } else {
                     $seen_qr_titles[$title_norm] = $qr_id;
                 }
+            }
+
+            // C. Irrelevant / Missing Visual Reference Check
+            $qr_visual_issue = checkVisualMediaIrrelevance("$title $summary " . ($qr['key_points'] ?? ''));
+            if ($qr_visual_issue) {
+                $issues[] = ['type' => 'irrelevant', 'reason' => $qr_visual_issue];
             }
 
             if (!empty($issues)) {

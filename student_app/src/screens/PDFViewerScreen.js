@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text, StatusBar, ActivityIndicator,
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy'; // Use legacy to match downloadUtils
 
-import { downloadFile } from '../utils/downloadUtils';
+import { downloadFile, isNoteCachedLocally } from '../utils/downloadUtils';
 import { Ionicons } from '@expo/vector-icons';
 
 const PDFViewerScreen = ({ navigation, route }) => {
@@ -25,9 +25,11 @@ const PDFViewerScreen = ({ navigation, route }) => {
     setPdfBase64(null);
     setWebViewLoaded(false);
     try {
-      if (isLocalFile) {
-        console.log("Reading local file as Base64...");
-        const base64 = await FileSystem.readAsStringAsync(url, { encoding: 'base64' });
+      const permanentLocal = isLocalFile ? url : await isNoteCachedLocally(url, title);
+
+      if (permanentLocal) {
+        console.log("Reading permanent local file as Base64:", permanentLocal);
+        const base64 = await FileSystem.readAsStringAsync(permanentLocal, { encoding: 'base64' });
         setPdfBase64(base64);
       } else {
         console.log("Downloading remote PDF from:", url);

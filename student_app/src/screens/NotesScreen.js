@@ -3,6 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 // Fixed syntax error
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchNotes as fetchNotesApi } from '../api/content';
 import { BASE_URL, API_URL } from '../api/config';
 import { getCachedFile } from '../utils/downloadUtils';
 
@@ -24,19 +25,21 @@ const NotesScreen = ({ navigation, route }) => {
     const fetchNotes = async (isRefreshing = false) => {
         if (!isRefreshing && notes.length === 0) setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/get_notes.php?chapter_id=${chapterId}`);
-            const data = await response.json();
+            const response = await fetchNotesApi(chapterId, isRefreshing);
 
-            if (data.status === 'success') {
-                setNotes(data.data);
-            } else {
-                if (data.message !== 'No notes found for this chapter') {
-                    Alert.alert('Error', data.message);
-                }
+            if (response && response.status === 'success') {
+                setNotes(response.data || []);
+            } else if (Array.isArray(response)) {
+                setNotes(response);
+            } else if (response?.message && response.message !== 'No notes found for this chapter') {
+                Alert.alert('Notice', response.message);
             }
         } catch (error) {
             console.error('Error fetching notes:', error);
-            Alert.alert('Error', 'Failed to load notes. Please try again.');
+            // Don't show alert if notes are already loaded from cache
+            if (notes.length === 0) {
+                Alert.alert('Notice', 'Unable to fetch notes. Please check connection.');
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -48,28 +51,47 @@ const NotesScreen = ({ navigation, route }) => {
         fetchNotes(true);
     }, []);
 
-    const openNote = (item) => {
-        // Prioritize file_url if available (provided by v2.5+ backend)
-        const targetUrl = item.file_url || item.file_path;
+    const openNote = async (item) => {
+        const rawPath = item.file_url || item.file_path;
 
-        if (!targetUrl) {
+        if (!rawPath) {
             Alert.alert('Error', 'Note link is missing.');
             return;
         }
 
-        console.log('Opening Note:', item.title, 'URL:', targetUrl);
-
-        // Handle PDF navigation
-        if (item.note_type === 'pdf') {
-            navigation.navigate('PDFViewer', {
-                url: targetUrl,
-                title: item.title
-            });
-        } else if (item.note_type === 'html') {
+        // Handle HTML notes
+        if (item.note_type === 'html') {
             navigation.navigate('HTMLViewer', {
                 content: item.content,
                 title: item.title
             });
+            return;
+        }
+
+        // Handle PDF navigation with permanent cache
+        try {
+            setDownloading(true);
+            setDownloadProgress(0);
+            let remoteUrl = rawPath;
+            if (!rawPath.startsWith('http')) {
+                remoteUrl = `${BASE_URL}/${rawPath}`;
+            }
+
+            const localUri = await getCachedFile(
+                remoteUrl,
+                item.title,
+                (progress) => setDownloadProgress(progress)
+            );
+            setDownloading(false);
+            if (localUri) {
+                navigation.navigate('PDFViewer', {
+                    url: localUri,
+                    title: item.title
+                });
+            }
+        } catch (error) {
+            console.error('Open Note Error:', error);
+            setDownloading(false);
         }
     };
 

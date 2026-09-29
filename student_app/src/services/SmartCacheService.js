@@ -14,6 +14,7 @@ import { BASE_URL } from '../api/config';
 import { getCachedFile } from '../utils/downloadUtils';
 import { fetchVocabSet, fetchVocabStats } from '../api/vocab';
 import { fetchMentalMathProgress } from '../api/mentalMath';
+import NetInfo from '@react-native-community/netinfo';
 
 const SYNC_STATUS_KEY = '@smart_sync_status';
 const SYNC_QUEUE_KEY = '@smart_sync_queue'; // To resume interrupted syncs
@@ -76,6 +77,14 @@ export const SmartCacheService = {
         }
 
         try {
+            // Check connectivity before initiating sync
+            const net = await NetInfo.fetch();
+            if (!net.isConnected) {
+                console.log(`[SmartCache] Offline: Device not connected. Skipping background sync.`);
+                await SmartCacheService.checkSyncState();
+                return;
+            }
+
             // Cooldown check: Don't sync more than once every 6 hours automatically
             // But if it's Priority (user just changed class/board), bypass cooldown
             const status = await SmartCacheService.getSyncStatus();
@@ -178,9 +187,16 @@ export const SmartCacheService = {
 
     processSyncQueue: async (internalCall = false) => {
         if (!internalCall && isProcessing) return;
-        isProcessing = true;
 
         try {
+            const net = await NetInfo.fetch();
+            if (!net.isConnected) {
+                console.log(`[SmartCache] Offline: Pausing sync queue processing.`);
+                await SmartCacheService.checkSyncState();
+                return;
+            }
+
+            isProcessing = true;
             let queue = await SmartCacheService.getSyncQueue();
             
             if (!Array.isArray(queue) || queue.length === 0) {

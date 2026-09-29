@@ -12,7 +12,7 @@ import { fetchSetStatus } from '../api/content';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { downloadFile, getCachedFile } from '../utils/downloadUtils';
+import { downloadFile, getCachedFile, isNoteCachedLocally } from '../utils/downloadUtils';
 import { dataCache } from '../utils/dataCache';
 import VoiceSelectorModal from '../components/VoiceSelectorModal'; // Import VoiceSelectorModal
 import NetInfo from '@react-native-community/netinfo';
@@ -85,6 +85,21 @@ const mcqColors = [
 
 const NoteItem = React.memo(({ item, index, onOpenNote }) => {
     const gradient = noteGradients[index % noteGradients.length];
+    const [isSavedOffline, setIsSavedOffline] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+        const checkSaved = async () => {
+            const rawPath = item.file_path || item.file_url;
+            if (!rawPath) return;
+            const remoteUrl = rawPath.startsWith('http') ? rawPath : `${BASE_URL}/${rawPath}`;
+            const cached = await isNoteCachedLocally(remoteUrl, item.title);
+            if (isMounted) setIsSavedOffline(!!cached);
+        };
+        checkSaved();
+        return () => { isMounted = false; };
+    }, [item.file_path, item.file_url, item.title]);
+
     return (
         <TouchableOpacity
             style={[styles.card, { padding: 0, overflow: 'hidden', borderWidth: 0, elevation: 6, height: 90 }]}
@@ -104,9 +119,16 @@ const NoteItem = React.memo(({ item, index, onOpenNote }) => {
                         <Text style={[styles.cardTitle, { color: 'white', fontSize: 16, fontWeight: '800', marginBottom: 2 }]} numberOfLines={1}>
                             {item.title || `Note Lesson ${index + 1} `}
                         </Text>
-                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13 }]} numberOfLines={1}>
-                            {item.note_type?.toUpperCase() || 'PDF'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                            <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: 13, marginRight: 8 }]} numberOfLines={1}>
+                                {item.note_type?.toUpperCase() || 'PDF'}
+                            </Text>
+                            {isSavedOffline ? (
+                                <View style={{ backgroundColor: 'rgba(255,255,255,0.3)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}>
+                                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>✓ Saved Offline</Text>
+                                </View>
+                            ) : null}
+                        </View>
                     </View>
                 </View>
             </LinearGradient>
@@ -961,12 +983,6 @@ const ChapterContentScreen = ({ navigation, route }) => {
     };
 
     const handleOpenNote = useCallback(async (item) => {
-        const netInfo = await NetInfo.fetch();
-        if (!netInfo.isConnected) {
-            Alert.alert('Offline Mode', 'You are currently offline. Please connect to the internet to view PDF notes.');
-            return;
-        }
-
         const rawPath = item.file_path || item.file_url;
         if (!rawPath) {
             Alert.alert('Error', 'File path is missing');
@@ -980,6 +996,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
             if (!rawPath.startsWith('http')) {
                 remoteUrl = `${BASE_URL}/${rawPath}`;
             }
+
+            // getCachedFile checks permanent local storage first (works completely offline).
+            // Only downloads if file is missing and online.
             const localUri = await getCachedFile(
                 remoteUrl,
                 item.title,
@@ -990,16 +1009,15 @@ const ChapterContentScreen = ({ navigation, route }) => {
                 navigation.navigate('PDFViewer', { url: localUri, title: item.title });
             }
         } catch (error) {
-            console.error(error);
+            console.error('Error opening note:', error);
             setDownloading(false);
-            Alert.alert('Error', 'Failed to open note. Check internet.');
         }
     }, [navigation]);
 
     const handleOpenVideo = useCallback(async (item) => {
         const netInfo = await NetInfo.fetch();
         if (!netInfo.isConnected) {
-            Alert.alert('Offline Mode', 'You are currently offline. Please connect to the internet to watch videos.');
+            Alert.alert('Offline Mode', 'Video streaming requires an active internet connection. Please connect to the internet to watch this video.');
             return;
         }
 

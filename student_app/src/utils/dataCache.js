@@ -37,16 +37,16 @@ export const dataCache = {
             const age = Date.now() - cacheItem.timestamp;
 
             if (age > ttl) {
-                // If offline, bypass expiry and return stale cache
+                // If offline, bypass expiry and return cached data
                 const netInfo = await NetInfo.fetch();
                 if (!netInfo.isConnected) {
                     if (DEBUG) console.log(`[Cache] Offline: Returning expired cache for ${key}`);
                     return cacheItem.data;
                 }
 
-                // Expired & online — remove and return null so caller fetches fresh data
-                if (DEBUG) console.log(`[Cache] Expired ${key} (age: ${Math.round(age / 60000)}min)`);
-                await AsyncStorage.removeItem(`@cache_${key}`);
+                // Online but expired — do NOT delete from storage!
+                // Return null so the caller fetches fresh data, but keep cached data for getStale / offline fallback.
+                if (DEBUG) console.log(`[Cache] Expired ${key} (age: ${Math.round(age / 60000)}min) - fetching fresh`);
                 return null;
             }
 

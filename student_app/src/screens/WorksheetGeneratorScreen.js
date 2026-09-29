@@ -8,7 +8,8 @@ import {
     Alert,
     ActivityIndicator,
     Switch,
-    StatusBar
+    StatusBar,
+    TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,10 +82,41 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
     const [selectedChapterIds, setSelectedChapterIds] = useState([]);
 
     // Config State
+    const [mode, setMode] = useState('auto'); // 'auto' | 'manual'
     const [totalMarks, setTotalMarks] = useState(25);
     const [includeMCQs, setIncludeMCQs] = useState(true);
     const [includeFlashcards, setIncludeFlashcards] = useState(true);
     const [includeRevision, setIncludeRevision] = useState(false);
+
+    // Manual Marks Breakdown State
+    const [manualMCQMarks, setManualMCQMarks] = useState('10');
+    const [manualShortMarks, setManualShortMarks] = useState('10');
+    const [manualLongMarks, setManualLongMarks] = useState('20');
+
+    // Memoized Manual Calculation Values
+    const {
+        manualMCQCount,
+        manualShortCount,
+        manualLongCount,
+        manualTotalMarks,
+        manualTotalQuestions
+    } = React.useMemo(() => {
+        const mcqMarks = parseInt(manualMCQMarks, 10) || 0;
+        const shortMarks = parseInt(manualShortMarks, 10) || 0;
+        const longMarks = parseInt(manualLongMarks, 10) || 0;
+
+        const mcqCount = Math.floor(mcqMarks / 1);
+        const shortCount = Math.floor(shortMarks / 2);
+        const longCount = Math.floor(longMarks / 5);
+
+        return {
+            manualMCQCount: mcqCount,
+            manualShortCount: shortCount,
+            manualLongCount: longCount,
+            manualTotalMarks: (mcqCount * 1) + (shortCount * 2) + (longCount * 5),
+            manualTotalQuestions: mcqCount + shortCount + longCount
+        };
+    }, [manualMCQMarks, manualShortMarks, manualLongMarks]);
 
     // UI State
     const [loading, setLoading] = useState(false);
@@ -186,9 +218,16 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
             return;
         }
 
-        if (!includeMCQs && !includeFlashcards && !includeRevision) {
-            Alert.alert('Selection Error', 'Please select at least one content type.');
-            return;
+        if (mode === 'auto') {
+            if (!includeMCQs && !includeFlashcards && !includeRevision) {
+                Alert.alert('Selection Error', 'Please select at least one content type.');
+                return;
+            }
+        } else {
+            if (manualTotalMarks <= 0) {
+                Alert.alert('Selection Error', 'Please enter marks for at least one question type (MCQ, Short Answers, or Long Answers).');
+                return;
+            }
         }
 
         setGenerating(true);
@@ -198,24 +237,28 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
             let allFlashcards = [];
             let allRevision = [];
 
+            const shouldFetchMCQ = mode === 'auto' ? includeMCQs : manualMCQCount > 0;
+            const shouldFetchShort = mode === 'auto' ? includeFlashcards : manualShortCount > 0;
+            const shouldFetchLong = mode === 'auto' ? includeRevision : manualLongCount > 0;
+
             // 1. Fetch content for ALL selected chapters
             const promises = selectedChapterIds.map(async (chapterId) => {
                 const results = { mcqs: [], flashcards: [], revision: [] };
 
-                if (includeMCQs) {
+                if (shouldFetchMCQ) {
                     try {
                         const res = await fetchMCQs(chapterId);
                         if (res.status === 'success') results.mcqs = res.data;
                     } catch (e) { }
                 }
-                if (includeFlashcards) {
+                if (shouldFetchShort) {
                     try {
                         const res = await fetchFlashcards(chapterId);
                         if (Array.isArray(res)) results.flashcards = res;
                         else if (res.data) results.flashcards = res.data;
                     } catch (e) { }
                 }
-                if (includeRevision) {
+                if (shouldFetchLong) {
                     try {
                         const res = await fetchQuickRevision(chapterId);
                         if (res.data) results.revision = res.data;
@@ -247,25 +290,10 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
             let finalShort = [];
             let finalLong = [];
             let currentMarks = 0;
-            const targetMarks = totalMarks;
-
-            // --- Dynamic Marks Distribution ---
-            // Calculate weights based on enabled toggles
-            // Priorities: Long > Short > MCQ
-            const weightLong = includeRevision ? 50 : 0;
-            const weightShort = includeFlashcards ? 30 : 0;
-            const weightMCQ = includeMCQs ? 20 : 0;
-            const totalWeight = weightLong + weightShort + weightMCQ;
-
-            // Calculate exact mark quotas
-            let quotaLong = totalWeight > 0 ? (weightLong / totalWeight) * targetMarks : 0;
-            let quotaShort = totalWeight > 0 ? (weightShort / totalWeight) * targetMarks : 0;
-            let quotaMCQ = totalWeight > 0 ? (weightMCQ / totalWeight) * targetMarks : 0;
 
             // --- Long Answer Extraction Logic (Robust) ---
-            if (includeRevision && allRevision.length > 0) {
-                let extractedQuestions = [];
-
+            let extractedQuestions = [];
+            if ((mode === 'auto' ? includeRevision : manualLongCount > 0) && allRevision.length > 0) {
                 allRevision.forEach(doc => {
                     let points = doc.key_points || doc.content || doc.point; // Handle legacy keys
 
@@ -307,43 +335,72 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                         }
                     });
                 }
+            }
 
-                // Apply Quota
-                const maxQuestions = Math.floor(quotaLong / 5);
-                const count = Math.min(Math.max(1, maxQuestions), extractedQuestions.length);
+            if (mode === 'manual') {
+                // MANUAL MARKS DISTRIBUTION
+                if (manualLongCount > 0 && extractedQuestions.length > 0) {
+                    finalLong = shuffle(extractedQuestions).slice(0, manualLongCount);
+                    currentMarks += finalLong.length * 5;
+                }
 
-                if (extractedQuestions.length > 0) {
+                if (manualShortCount > 0 && allFlashcards.length > 0) {
+                    finalShort = shuffle([...allFlashcards]).slice(0, manualShortCount);
+                    currentMarks += finalShort.length * 2;
+                }
+
+                if (manualMCQCount > 0 && allMCQs.length > 0) {
+                    finalMCQs = shuffle([...allMCQs]).slice(0, manualMCQCount);
+                    currentMarks += finalMCQs.length * 1;
+                }
+            } else {
+                // AUTO DYNAMIC MARKS DISTRIBUTION
+                const targetMarks = totalMarks;
+                const weightLong = includeRevision ? 50 : 0;
+                const weightShort = includeFlashcards ? 30 : 0;
+                const weightMCQ = includeMCQs ? 20 : 0;
+                const totalWeight = weightLong + weightShort + weightMCQ;
+
+                let quotaLong = totalWeight > 0 ? (weightLong / totalWeight) * targetMarks : 0;
+                let quotaShort = totalWeight > 0 ? (weightShort / totalWeight) * targetMarks : 0;
+                let quotaMCQ = totalWeight > 0 ? (weightMCQ / totalWeight) * targetMarks : 0;
+
+                if (includeRevision && extractedQuestions.length > 0) {
+                    const maxQuestions = Math.floor(quotaLong / 5);
+                    const count = Math.min(Math.max(1, maxQuestions), extractedQuestions.length);
                     finalLong = shuffle(extractedQuestions).slice(0, count);
                     currentMarks += finalLong.length * 5;
                 }
-            }
 
-            if (includeFlashcards && allFlashcards.length > 0) {
-                // Adjust remaining marks incase Long didn't use all its quota
-                const remainingForOthers = targetMarks - currentMarks;
-                let limit = 0;
+                if (includeFlashcards && allFlashcards.length > 0) {
+                    const remainingForOthers = targetMarks - currentMarks;
+                    let limit = 0;
 
-                if (!includeMCQs) {
-                    limit = remainingForOthers; // Take everything if it's the last one
-                } else {
-                    // Re-calculate proportional share of what's left
-                    const remainingWeight = weightShort + weightMCQ;
-                    limit = remainingWeight > 0 ? (weightShort / remainingWeight) * remainingForOthers : remainingForOthers;
+                    if (!includeMCQs) {
+                        limit = remainingForOthers;
+                    } else {
+                        const remainingWeight = weightShort + weightMCQ;
+                        limit = remainingWeight > 0 ? (weightShort / remainingWeight) * remainingForOthers : remainingForOthers;
+                    }
+
+                    const maxQuestions = Math.floor(limit / 2);
+                    const count = Math.min(Math.max(1, maxQuestions), allFlashcards.length);
+
+                    finalShort = shuffle([...allFlashcards]).slice(0, count);
+                    currentMarks += finalShort.length * 2;
                 }
 
-                const maxQuestions = Math.floor(limit / 2);
-                const count = Math.min(Math.max(1, maxQuestions), allFlashcards.length);
-
-                finalShort = shuffle([...allFlashcards]).slice(0, count);
-                currentMarks += finalShort.length * 2;
+                if (includeMCQs && allMCQs.length > 0) {
+                    const remaining = targetMarks - currentMarks;
+                    const count = Math.min(Math.max(remaining, 5), allMCQs.length);
+                    finalMCQs = shuffle([...allMCQs]).slice(0, count);
+                    currentMarks += finalMCQs.length * 1;
+                }
             }
 
-            if (includeMCQs && allMCQs.length > 0) {
-                // MCQs take whatever is left
-                const remaining = targetMarks - currentMarks;
-                const count = Math.min(Math.max(remaining, 5), allMCQs.length);
-                finalMCQs = shuffle([...allMCQs]).slice(0, count);
-                currentMarks += finalMCQs.length * 1;
+            if (finalMCQs.length === 0 && finalShort.length === 0 && finalLong.length === 0) {
+                Alert.alert('No Questions Found', 'Could not find questions for the selected chapters and categories.');
+                return;
             }
 
             // 3. Generate HTML
@@ -626,43 +683,182 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                     <View style={styles.section}>
                         <Text style={styles.sectionHeader}>3. Customize Paper</Text>
 
-                        <View style={styles.card}>
-                            <Text style={styles.label}>Select Total Marks: {totalMarks}</Text>
-                            <View style={styles.markButtonsContainer}>
-                                {[25, 40, 50, 80, 100].map((mark) => (
-                                    <TouchableOpacity
-                                        key={mark}
-                                        style={[
-                                            styles.markButton,
-                                            totalMarks === mark && styles.markButtonSelected
-                                        ]}
-                                        onPress={() => setTotalMarks(mark)}
-                                    >
-                                        <Text style={[
-                                            styles.markButtonText,
-                                            totalMarks === mark && styles.markButtonTextSelected
-                                        ]}>
-                                            {mark}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                        {/* Segmented Mode Switch */}
+                        <View style={styles.segmentedContainer}>
+                            <TouchableOpacity
+                                style={[styles.segmentBtn, mode === 'auto' && styles.segmentBtnActive]}
+                                onPress={() => setMode('auto')}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name="flash"
+                                    size={16}
+                                    color={mode === 'auto' ? 'white' : '#64748b'}
+                                    style={{ marginRight: 6 }}
+                                />
+                                <Text style={[styles.segmentBtnText, mode === 'auto' && styles.segmentBtnTextActive]}>
+                                    Auto Preset
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.segmentBtn, mode === 'manual' && styles.segmentBtnActive]}
+                                onPress={() => setMode('manual')}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name="create"
+                                    size={16}
+                                    color={mode === 'manual' ? 'white' : '#64748b'}
+                                    style={{ marginRight: 6 }}
+                                />
+                                <Text style={[styles.segmentBtnText, mode === 'manual' && styles.segmentBtnTextActive]}>
+                                    Manual Breakdown
+                                </Text>
+                            </TouchableOpacity>
                         </View>
 
-                        <View style={styles.card}>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Include MCQs (1 Mark)</Text>
-                                <Switch value={includeMCQs} onValueChange={setIncludeMCQs} trackColor={{ true: '#C026D3' }} />
+                        {mode === 'auto' ? (
+                            <>
+                                <View style={styles.card}>
+                                    <Text style={styles.label}>Select Total Marks: {totalMarks}</Text>
+                                    <View style={styles.markButtonsContainer}>
+                                        {[25, 40, 50, 80, 100].map((mark) => (
+                                            <TouchableOpacity
+                                                key={mark}
+                                                style={[
+                                                    styles.markButton,
+                                                    totalMarks === mark && styles.markButtonSelected
+                                                ]}
+                                                onPress={() => setTotalMarks(mark)}
+                                            >
+                                                <Text style={[
+                                                    styles.markButtonText,
+                                                    totalMarks === mark && styles.markButtonTextSelected
+                                                ]}>
+                                                    {mark}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                <View style={styles.card}>
+                                    <View style={styles.switchRow}>
+                                        <Text style={styles.switchLabel}>Include MCQs (1 Mark)</Text>
+                                        <Switch value={includeMCQs} onValueChange={setIncludeMCQs} trackColor={{ true: '#C026D3' }} />
+                                    </View>
+                                    <View style={styles.switchRow}>
+                                        <Text style={styles.switchLabel}>Short Answers (2 Marks)</Text>
+                                        <Switch value={includeFlashcards} onValueChange={setIncludeFlashcards} trackColor={{ true: '#C026D3' }} />
+                                    </View>
+                                    <View style={styles.switchRow}>
+                                        <Text style={styles.switchLabel}>Long Answers (5 Marks)</Text>
+                                        <Switch value={includeRevision} onValueChange={setIncludeRevision} trackColor={{ true: '#C026D3' }} />
+                                    </View>
+                                </View>
+                            </>
+                        ) : (
+                            /* Manual Marks Breakdown Card */
+                            <View style={styles.card}>
+                                <Text style={styles.label}>Enter Marks Breakdown</Text>
+                                <Text style={styles.sublabel}>
+                                    Specify marks for each section. Questions are calculated automatically.
+                                </Text>
+
+                                {/* MCQ Row */}
+                                <View style={styles.manualRow}>
+                                    <View style={styles.manualInfo}>
+                                        <View style={styles.manualTypeBadge}>
+                                            <Text style={styles.manualTypeBadgeText}>1 Mark Each</Text>
+                                        </View>
+                                        <Text style={styles.manualTitle}>Multiple Choice (MCQ)</Text>
+                                        <Text style={styles.manualSubtitle}>
+                                            {manualMCQCount} {manualMCQCount === 1 ? 'Question' : 'Questions'} ({manualMCQCount * 1} Marks)
+                                        </Text>
+                                    </View>
+                                    <View style={styles.manualInputWrapper}>
+                                        <TextInput
+                                            style={styles.manualInput}
+                                            value={manualMCQMarks}
+                                            onChangeText={(val) => setManualMCQMarks(val.replace(/[^0-9]/g, ''))}
+                                            keyboardType="number-pad"
+                                            maxLength={3}
+                                            placeholder="0"
+                                            placeholderTextColor="#94a3b8"
+                                        />
+                                        <Text style={styles.manualInputUnit}>Marks</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.divider} />
+
+                                {/* Short Answer Row */}
+                                <View style={styles.manualRow}>
+                                    <View style={styles.manualInfo}>
+                                        <View style={[styles.manualTypeBadge, { backgroundColor: '#e0f2fe' }]}>
+                                            <Text style={[styles.manualTypeBadgeText, { color: '#0284c7' }]}>2 Marks Each</Text>
+                                        </View>
+                                        <Text style={styles.manualTitle}>Short Answers</Text>
+                                        <Text style={styles.manualSubtitle}>
+                                            {manualShortCount} {manualShortCount === 1 ? 'Question' : 'Questions'} ({manualShortCount * 2} Marks)
+                                        </Text>
+                                    </View>
+                                    <View style={styles.manualInputWrapper}>
+                                        <TextInput
+                                            style={styles.manualInput}
+                                            value={manualShortMarks}
+                                            onChangeText={(val) => setManualShortMarks(val.replace(/[^0-9]/g, ''))}
+                                            keyboardType="number-pad"
+                                            maxLength={3}
+                                            placeholder="0"
+                                            placeholderTextColor="#94a3b8"
+                                        />
+                                        <Text style={styles.manualInputUnit}>Marks</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.divider} />
+
+                                {/* Long Answer Row */}
+                                <View style={styles.manualRow}>
+                                    <View style={styles.manualInfo}>
+                                        <View style={[styles.manualTypeBadge, { backgroundColor: '#fef3c7' }]}>
+                                            <Text style={[styles.manualTypeBadgeText, { color: '#d97706' }]}>5 Marks Each</Text>
+                                        </View>
+                                        <Text style={styles.manualTitle}>Long Answers</Text>
+                                        <Text style={styles.manualSubtitle}>
+                                            {manualLongCount} {manualLongCount === 1 ? 'Question' : 'Questions'} ({manualLongCount * 5} Marks)
+                                        </Text>
+                                    </View>
+                                    <View style={styles.manualInputWrapper}>
+                                        <TextInput
+                                            style={styles.manualInput}
+                                            value={manualLongMarks}
+                                            onChangeText={(val) => setManualLongMarks(val.replace(/[^0-9]/g, ''))}
+                                            keyboardType="number-pad"
+                                            maxLength={3}
+                                            placeholder="0"
+                                            placeholderTextColor="#94a3b8"
+                                        />
+                                        <Text style={styles.manualInputUnit}>Marks</Text>
+                                    </View>
+                                </View>
+
+                                {/* Summary Box */}
+                                <View style={styles.summaryBox}>
+                                    <View style={styles.summaryItem}>
+                                        <Text style={styles.summaryLabel}>Total Questions</Text>
+                                        <Text style={styles.summaryValue}>{manualTotalQuestions}</Text>
+                                    </View>
+                                    <View style={styles.summaryDivider} />
+                                    <View style={styles.summaryItem}>
+                                        <Text style={styles.summaryLabel}>Total Paper Marks</Text>
+                                        <Text style={[styles.summaryValue, { color: '#C026D3' }]}>{manualTotalMarks}</Text>
+                                    </View>
+                                </View>
                             </View>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Short Answers (2 Marks)</Text>
-                                <Switch value={includeFlashcards} onValueChange={setIncludeFlashcards} trackColor={{ true: '#C026D3' }} />
-                            </View>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Long Answers (5 Marks)</Text>
-                                <Switch value={includeRevision} onValueChange={setIncludeRevision} trackColor={{ true: '#C026D3' }} />
-                            </View>
-                        </View>
+                        )}
 
                         <TouchableOpacity
                             style={styles.generateBtn}
@@ -673,7 +869,9 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
                                 {generating ? <ActivityIndicator color="white" /> : (
                                     <>
                                         <Ionicons name="print" size={24} color="white" style={{ marginRight: 10 }} />
-                                        <Text style={styles.btnText}>Generate PDF ({selectedChapterIds.length} Chapters)</Text>
+                                        <Text style={styles.btnText}>
+                                            Generate PDF ({mode === 'manual' ? `${manualTotalMarks} Marks` : `${selectedChapterIds.length} Chapters`})
+                                        </Text>
                                     </>
                                 )}
                             </LinearGradient>
@@ -751,6 +949,148 @@ const styles = StyleSheet.create({
     },
     markButtonTextSelected: {
         color: 'white',
+    },
+    // Segmented Mode Control
+    segmentedContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#e2e8f0',
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 16,
+    },
+    segmentBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: 9,
+    },
+    segmentBtnActive: {
+        backgroundColor: '#C026D3',
+        elevation: 2,
+        shadowColor: '#C026D3',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3,
+    },
+    segmentBtnText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#64748b',
+        fontFamily: 'NotoSans-Bold',
+    },
+    segmentBtnTextActive: {
+        color: 'white',
+    },
+    sublabel: {
+        fontSize: 12,
+        color: '#64748b',
+        marginBottom: 14,
+        fontFamily: 'NotoSans-Regular',
+        lineHeight: 18,
+    },
+    // Manual Input Rows
+    manualRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 10,
+    },
+    manualInfo: {
+        flex: 1,
+        paddingRight: 10,
+    },
+    manualTypeBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#fdf4ff',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        marginBottom: 4,
+    },
+    manualTypeBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#C026D3',
+        fontFamily: 'NotoSans-Bold',
+    },
+    manualTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1e293b',
+        fontFamily: 'NotoSans-Bold',
+    },
+    manualSubtitle: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2,
+        fontFamily: 'NotoSans-Regular',
+    },
+    manualInputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        borderWidth: 1.5,
+        borderColor: '#cbd5e1',
+        borderRadius: 10,
+        paddingHorizontal: 8,
+        minWidth: 92,
+        height: 42,
+        justifyContent: 'center',
+    },
+    manualInput: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+        width: 42,
+        textAlign: 'center',
+        padding: 0,
+    },
+    manualInputUnit: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#64748b',
+        marginLeft: 2,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#f1f5f9',
+        marginVertical: 4,
+    },
+    // Summary Box
+    summaryBox: {
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        padding: 12,
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+    },
+    summaryItem: {
+        alignItems: 'center',
+    },
+    summaryLabel: {
+        fontSize: 11,
+        color: '#64748b',
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        marginBottom: 2,
+        fontFamily: 'NotoSans-Bold',
+    },
+    summaryValue: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#1e293b',
+        fontFamily: 'NotoSans-Bold',
+    },
+    summaryDivider: {
+        width: 1,
+        height: 28,
+        backgroundColor: '#cbd5e1',
     },
 });
 

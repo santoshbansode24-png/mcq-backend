@@ -478,14 +478,11 @@ const HomeScreen = ({ user, navigation, route }) => {
             setHasUpdate(false);
             setIsFullySynced(true);
 
-            // Removed deleted data by clearing main class cache keys
-            await dataCache.remove(`subjects_${classId}`);
-            
-            // Refresh subjects list after sync
-            loadSubjects(true);
-            
-            Alert.alert('Sync Complete! 🚀', 'All content is now available offline.');
-            
+            // Keep cache intact and load from cache/memory
+            loadSubjects(false);
+
+            Alert.alert('Offline Sync Complete! 🚀', 'All subjects, chapters, MCQs, and revision data for your class are now saved for offline study.');
+
         } catch (error) {
             console.warn('[Home] Sync failed:', error.message);
         } finally {
@@ -639,37 +636,53 @@ const HomeScreen = ({ user, navigation, route }) => {
         const netInfo = await NetInfo.fetch();
         if (!netInfo.isConnected) {
             if (isFullySynced && !hasUpdate) {
-                Alert.alert('Offline Ready 🟢', 'All textual data for your class is downloaded and available offline.');
+                Alert.alert(
+                    'Offline Ready 🟢',
+                    'All subjects, chapters, MCQs, flashcards, and revision summaries for your class are downloaded and ready for offline study.\n\nAny PDF notes you have opened are also saved permanently on your device.'
+                );
             } else {
-                Alert.alert('Connection Needed ⚠️', 'Please connect to the internet to download updates or start syncing.');
+                Alert.alert('Connection Needed ⚠️', 'Please connect to the internet to download updates or start background sync.');
             }
             return;
         }
 
         try {
-            const serverVer = await SmartCacheService.checkContentVersion(user.board_type);
-            const localVer = await AsyncStorage.getItem(`@local_ver_${user.board_type}`);
+            const serverVer = await SmartCacheService.checkContentVersion(user?.board_type);
+            const localVer = await AsyncStorage.getItem(`@local_ver_${user?.board_type}`);
             if (serverVer && (!localVer || parseInt(serverVer) > parseInt(localVer))) {
                 setHasUpdate(true);
                 setIsFullySynced(false);
                 startGlow();
-                Alert.alert('New Data Found', 'Downloading new updates...');
-                forceSync();
+                Alert.alert(
+                    'New Data Available 🚀',
+                    'New content updates were found for your class. Download now?',
+                    [
+                        { text: 'Later', style: 'cancel' },
+                        { text: 'Download Now', onPress: forceSync }
+                    ]
+                );
             } else {
                 if (isFullySynced && !hasUpdate) {
-                    Alert.alert('Up to Date! 🚀', 'All textual data is downloaded for offline use!');
+                    Alert.alert(
+                        'Up to Date! ✅',
+                        'Your class content is fully downloaded and available offline.\n\nWould you like to re-check for new updates?',
+                        [
+                            { text: 'Close', style: 'cancel' },
+                            { text: 'Check Now', onPress: forceSync }
+                        ]
+                    );
                 } else {
                     forceSync();
                 }
             }
         } catch {
             if (isFullySynced && !hasUpdate) {
-                Alert.alert('Offline Ready 🟢', 'All textual data for your class is downloaded and available offline.');
+                Alert.alert('Offline Ready 🟢', 'All class content is downloaded and available offline.');
             } else {
                 forceSync();
             }
         }
-    }, [isSyncing, isFullySynced, hasUpdate, user?.board_type]);
+    }, [isSyncing, isFullySynced, hasUpdate, user?.board_type, forceSync]);
 
     const handleProfilePress = useCallback(() => navigation.navigate('Profile'), [navigation]);
 

@@ -133,11 +133,44 @@ try {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
+    $stmtBasketUpsert = $pdo->prepare("
+        INSERT INTO negative_basket 
+        (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), 0)
+        ON DUPLICATE KEY UPDATE 
+            wrong_attempt_count = wrong_attempt_count + 1,
+            selected_answer = VALUES(selected_answer),
+            correct_answer = VALUES(correct_answer),
+            last_wrong_date = NOW(),
+            resolved = 0
+    ");
+
     foreach ($answer_details as $detail) {
         $stmtAns->execute([
             $attempt_id, $user_id, $exam_id, $detail['mcq_id'], $detail['chapter_id'],
             $detail['selected_option'], $detail['correct_option'], $detail['is_correct'], $detail['marks_awarded']
         ]);
+
+        if ($detail['is_correct'] === 0) {
+            try {
+                $chStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch LEFT JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+                $chStmt->execute([$detail['chapter_id']]);
+                $chInfo = $chStmt->fetch(PDO::FETCH_ASSOC);
+                $subName = $chInfo['subject_name'] ?? 'Exam';
+                $chName = $chInfo['chapter_name'] ?? 'Exam';
+
+                $stmtBasketUpsert->execute([
+                    $user_id, $detail['mcq_id'], $subName, $chName, $detail['chapter_id'],
+                    $detail['selected_option'], $detail['correct_option']
+                ]);
+            } catch (Exception $e) {
+                // Non-blocking
+            }
+        } elseif ($detail['is_correct'] === 1) {
+            try {
+                $pdo->prepare("UPDATE negative_basket SET resolved = 1 WHERE student_id = ? AND question_id = ?")->execute([$user_id, $detail['mcq_id']]);
+            } catch (Exception $e) {}
+        }
     }
 
     $response_data = [

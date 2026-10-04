@@ -9,13 +9,15 @@ import {
     StatusBar,
     RefreshControl,
     ScrollView,
-    Dimensions
+    Dimensions,
+    Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import Svg, { Circle } from 'react-native-svg';
 import axios from 'axios';
 import { API_URL } from '../api/config';
 import MathJaxWebView from '../components/MathJaxWebView';
@@ -23,7 +25,7 @@ import MathJaxWebView from '../components/MathJaxWebView';
 const { width } = Dimensions.get('window');
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers & SmartText for Questions
+// LaTeX & Text Markup Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 const LATEX_RE = /(\$[^$]+\$|\\\(|\\\[|\\frac|\\sqrt|\\sum|\\int|\\alpha|\\beta|\\gamma|\\delta|\\theta|\\pi|\\sigma|\\omega|\\infty|\\times|\\div|\\pm|\\leq|\\geq|\\neq|\\approx|<[^>]+>)/;
 
@@ -39,7 +41,7 @@ const decodeHtml = (html) => {
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&nbsp;/g, ' ');
-        
+
     decoded = decoded
         .replace(/<p[^>]*>/gi, '')
         .replace(/<\/p>/gi, '\n')
@@ -49,7 +51,7 @@ const decodeHtml = (html) => {
         .replace(/<span[^>]*>/gi, '')
         .replace(/<\/span>/gi, '')
         .trim();
-        
+
     return decoded;
 };
 
@@ -80,89 +82,62 @@ const SmartText = React.memo(({ content, textColor, fontSize, fontWeight, backgr
     );
 });
 
-const PerformanceReportScreen = ({ navigation, route, user }) => {
-    const { themeColors, title, subtitle } = route.params || {};
-    const currentThemeColors = themeColors || ['#4f46e5', '#6366f1'];
-    const screenTitle = title || 'Performance Report';
-    const screenSubtitle = subtitle || 'Exam Analytics & Negative Marking';
+// ─────────────────────────────────────────────────────────────────────────────
+// Circular Progress Component (Native SVG)
+// ─────────────────────────────────────────────────────────────────────────────
+const CircularProgress = React.memo(({ percentage, color = '#10b981', size = 136, strokeWidth = 13 }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const clampedPct = Math.min(100, Math.max(0, percentage));
+    const strokeDashoffset = circumference - (clampedPct / 100) * circumference;
 
+    return (
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+            <Svg width={size} height={size}>
+                {/* Background Ring */}
+                <Circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="rgba(255, 255, 255, 0.16)"
+                    strokeWidth={strokeWidth}
+                    fill="none"
+                />
+                {/* Progress Ring */}
+                <Circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke={color}
+                    strokeWidth={strokeWidth}
+                    fill="none"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                />
+            </Svg>
+            <View style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={styles.circPctText}>{clampedPct}%</Text>
+            </View>
+        </View>
+    );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Performance Screen
+// ─────────────────────────────────────────────────────────────────────────────
+const PerformanceReportScreen = ({ navigation, route, user }) => {
     const [performanceData, setPerformanceData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [subTab, setSubTab] = useState('negative'); // 'negative' | 'chapters' | 'attempts'
-    const [chapterCategory, setChapterCategory] = useState('weak'); // 'weak' | 'average' | 'strong'
     const [mistakeLoading, setMistakeLoading] = useState(false);
-    const [actionLoading, setActionLoading] = useState(false);
-    const [solvingState, setSolvingState] = useState({});
+
+    // Negative Basket Review & Resolution States
+    const [showNegativeDetails, setShowNegativeDetails] = useState(false);
+    const [expandedQuestionId, setExpandedQuestionId] = useState(null);
     const [resolvingId, setResolvingId] = useState(null);
-    const [expandedSolutions, setExpandedSolutions] = useState({});
-
-    const handleResolveQuestion = async (item, selectedOpt) => {
-        const mcqId = item.mcq_id;
-        const answerId = item.answer_id;
-        if (resolvingId) return;
-
-        setResolvingId(mcqId);
-        setSolvingState(prev => ({
-            ...prev,
-            [mcqId]: { selected: selectedOpt, status: 'checking', message: 'Checking answer...' }
-        }));
-
-        try {
-            const uid = await getUserId();
-            const res = await axios.post(`${API_URL}/resolve_negative_question.php`, {
-                user_id: uid,
-                mcq_id: mcqId,
-                selected_option: selectedOpt,
-                answer_id: answerId
-            });
-
-            if (res.data?.status === 'success') {
-                const isCorrect = res.data.data?.is_correct;
-                setSolvingState(prev => ({
-                    ...prev,
-                    [mcqId]: {
-                        selected: selectedOpt,
-                        status: isCorrect ? 'correct' : 'wrong',
-                        message: res.data.message
-                    }
-                }));
-
-                if (isCorrect) {
-                    // Celebration and auto-removal from negative questions tab
-                    setTimeout(() => {
-                        setPerformanceData(prev => {
-                            if (!prev) return prev;
-                            const filtered = (prev.negative_questions || []).filter(q => q.mcq_id !== mcqId);
-                            const updatedStats = {
-                                ...prev.stats,
-                                total_negative_marks_lost: Math.max(0, (parseFloat(prev.stats?.total_negative_marks_lost) || 0) - 1.00),
-                                total_correct: (parseInt(prev.stats?.total_correct) || 0) + 1,
-                                total_wrong: Math.max(0, (parseInt(prev.stats?.total_wrong) || 0) - 1)
-                            };
-                            return {
-                                ...prev,
-                                stats: updatedStats,
-                                negative_questions: filtered
-                            };
-                        });
-                        setResolvingId(null);
-                    }, 1200);
-                } else {
-                    // Reveal explanation so student can study the concept
-                    setExpandedSolutions(prev => ({ ...prev, [mcqId]: true }));
-                    setResolvingId(null);
-                }
-            } else {
-                Alert.alert('Notice', res.data?.message || 'Could not verify answer');
-                setResolvingId(null);
-            }
-        } catch (err) {
-            console.log('[ResolveQuestion] Error:', err);
-            Alert.alert('Error', 'Failed to connect. Please check your connection.');
-            setResolvingId(null);
-        }
-    };
+    const [solvingState, setSolvingState] = useState({});
 
     const getUserId = useCallback(async () => {
         if (user?.user_id) return user.user_id;
@@ -174,7 +149,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                 return parsed.user_id || parsed.id;
             }
         } catch (e) {
-            console.log('[PerformanceReport] Error reading user_data', e);
+            console.log('[PerformanceScreen] Error reading user_data', e);
         }
         return null;
     }, [user]);
@@ -192,7 +167,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                 setPerformanceData(res.data.data);
             }
         } catch (error) {
-            console.log('[PerformanceReport] Error loading performance data:', error);
+            console.log('[PerformanceScreen] Error loading performance:', error.message);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -210,6 +185,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
         loadPerformance();
     }, [loadPerformance]);
 
+    // Practice All Mistakes in Test Mode
     const practiceMistakes = async () => {
         try {
             const uid = await getUserId();
@@ -234,7 +210,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                 navigation.navigate('MyExamTest', {
                     questions: quizList,
                     totalQuestions: quizList.length,
-                    subjectName: 'Practice My Mistakes'
+                    subjectName: 'Practice Negative Questions'
                 });
             } else {
                 Alert.alert(
@@ -249,1178 +225,1236 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
         }
     };
 
-    const practiceChapter = async (chapterId, chapterName) => {
-        setActionLoading(true);
+    // Re-solve Negative Question Inline
+    const handleResolveQuestion = async (item, selectedOpt) => {
+        const mcqId = item.question_id || item.mcq_id;
+        const basketId = item.basket_id;
+        if (resolvingId) return;
+
+        setResolvingId(mcqId);
+        setSolvingState(prev => ({
+            ...prev,
+            [mcqId]: { selected: selectedOpt, status: 'checking', message: 'Checking answer...' }
+        }));
+
         try {
-            const response = await axios.post(`${API_URL}/generate_custom_test.php`, {
-                chapter_ids: String(chapterId),
-                limit: 15
+            const uid = await getUserId();
+            const res = await axios.post(`${API_URL}/resolve_negative_question.php`, {
+                user_id: uid,
+                mcq_id: mcqId,
+                selected_option: selectedOpt,
+                basket_id: basketId
             });
 
-            if (response.data?.status === 'success' && response.data.data?.length > 0) {
-                navigation.navigate('MyExamTest', {
-                    questions: response.data.data,
-                    totalQuestions: response.data.data.length,
-                    subjectName: chapterName
-                });
+            if (res.data?.status === 'success') {
+                const isCorrect = res.data.data?.is_correct;
+                setSolvingState(prev => ({
+                    ...prev,
+                    [mcqId]: {
+                        selected: selectedOpt,
+                        status: isCorrect ? 'correct' : 'wrong',
+                        message: res.data.message
+                    }
+                }));
+
+                if (isCorrect) {
+                    setTimeout(() => {
+                        setPerformanceData(prev => {
+                            if (!prev) return prev;
+                            const filteredQuestions = (prev.negative_basket?.questions || []).filter(
+                                q => (q.question_id || q.mcq_id) !== mcqId
+                            );
+                            const newCount = Math.max(0, (prev.negative_basket?.total_count || 1) - 1);
+                            return {
+                                ...prev,
+                                negative_basket: {
+                                    ...prev.negative_basket,
+                                    total_count: newCount,
+                                    questions: filteredQuestions
+                                },
+                                summary: {
+                                    ...prev.summary,
+                                    negative_questions_count: newCount,
+                                    total_correct: (prev.summary?.total_correct || 0) + 1,
+                                    total_wrong: Math.max(0, (prev.summary?.total_wrong || 1) - 1)
+                                }
+                            };
+                        });
+                        setResolvingId(null);
+                    }, 1100);
+                } else {
+                    setResolvingId(null);
+                }
             } else {
-                Alert.alert('Notice', 'No MCQs available for this chapter.');
+                Alert.alert('Notice', res.data?.message || 'Could not verify answer');
+                setResolvingId(null);
             }
-        } catch (error) {
-            Alert.alert('Error', 'Failed to generate test for this chapter.');
-        } finally {
-            setActionLoading(false);
+        } catch (err) {
+            console.log('[ResolveQuestion] Error:', err);
+            Alert.alert('Error', 'Connection issue. Please try again.');
+            setResolvingId(null);
         }
     };
 
-    const stats = performanceData?.stats || {};
-    const rankInfo = performanceData?.rank_info || { user_rank: 1, total_students: 1, percentile: 100 };
-    const negativeQuestions = performanceData?.negative_questions || [];
-    const chapterBreakdown = performanceData?.chapter_breakdown || { strong_chapters: [], average_chapters: [], weak_chapters: [] };
-    const recentAttempts = performanceData?.recent_attempts || [];
+    // Navigation Handlers
+    const handlePracticeChapter = (chapter) => {
+        if (!chapter?.chapter_id) return;
+        navigation.navigate('ChapterContent', {
+            chapter: {
+                chapter_id: chapter.chapter_id,
+                chapter_name: chapter.chapter_name,
+                subject_id: chapter.subject_id,
+                subject_name: chapter.subject_name
+            },
+            initialTab: 'MCQs'
+        });
+    };
 
-    const hasExams = (parseInt(stats.total_exams) || 0) > 0 || recentAttempts.length > 0;
+    const handleContinueChapter = (chapter) => {
+        if (!chapter?.chapter_id) return;
+        navigation.navigate('ChapterContent', {
+            chapter: {
+                chapter_id: chapter.chapter_id,
+                chapter_name: chapter.chapter_name,
+                subject_id: chapter.subject_id,
+                subject_name: chapter.subject_name
+            }
+        });
+    };
 
-    const displayedChapters = chapterCategory === 'weak'
-        ? chapterBreakdown.weak_chapters
-        : chapterCategory === 'average'
-        ? chapterBreakdown.average_chapters
-        : chapterBreakdown.strong_chapters;
+    const handleStudyNextAction = (studyNext) => {
+        if (!studyNext) return;
+        if (studyNext.action === 'negative_basket') {
+            practiceMistakes();
+        } else if (studyNext.action === 'chapter_mcq' && studyNext.chapter) {
+            handlePracticeChapter(studyNext.chapter);
+        } else if (studyNext.action === 'chapter_content' && studyNext.chapter) {
+            handleContinueChapter(studyNext.chapter);
+        } else {
+            navigation.navigate('Subjects');
+        }
+    };
+
+    // Derive Data
+    const summary = performanceData?.summary || {};
+    const overall = performanceData?.overall_performance || {};
+    const subjects = performanceData?.subjects || [];
+    const weakChapters = performanceData?.weak_chapters || [];
+    const incompleteChapters = performanceData?.incomplete_chapters || [];
+    const negativeBasket = performanceData?.negative_basket || { total_count: 0, questions: [] };
+    const studyNext = performanceData?.study_next || null;
+    const isEmptyState = performanceData?.is_empty_state === true || (overall.attempted_count || 0) === 0;
+
+    const overallPct = overall.percentage ?? 0;
+    const overallStatus = overallPct >= 75 ? 'Good' : overallPct >= 50 ? 'Average' : 'Weak';
+    const overallColor = overallPct >= 75 ? '#10b981' : overallPct >= 50 ? '#f59e0b' : '#ef4444';
+    const overallStatusIcon = overallPct >= 75 ? '🟢 Good' : overallPct >= 50 ? '🟡 Average' : '🔴 Weak';
 
     return (
-        <View style={styles.mainWrapper}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="light-content" backgroundColor="#1e1b4b" />
 
             {/* Header */}
-            <LinearGradient colors={currentThemeColors} style={styles.headerGradient}>
-                <SafeAreaView edges={['top']} style={styles.headerSafe}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <Text style={styles.backButtonText}>←</Text>
-                        </TouchableOpacity>
-                        <View style={styles.headerTextContainer}>
-                            <Text style={styles.headerTitle}>{screenTitle}</Text>
-                            <Text style={styles.headerSubtitle}>{screenSubtitle}</Text>
-                        </View>
-                    </View>
-                </SafeAreaView>
-            </LinearGradient>
+            <View style={styles.header}>
+                <TouchableOpacity
+                    style={styles.backBtn}
+                    onPress={() => navigation.goBack()}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                    <Ionicons name="arrow-back" size={24} color="#ffffff" />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.headerTitle}>📊 My Performance</Text>
+                    <Text style={styles.headerSubtitle}>See your progress and know what to study next.</Text>
+                </View>
+                <TouchableOpacity
+                    style={styles.refreshIconBtn}
+                    onPress={onRefresh}
+                    disabled={refreshing}
+                >
+                    <Ionicons name="refresh" size={20} color="#ffffff" />
+                </TouchableOpacity>
+            </View>
 
-            {loading && !performanceData ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4f46e5" />
-                    <Text style={styles.loadingText}>Loading your performance report...</Text>
+            {loading ? (
+                <View style={styles.centerLoading}>
+                    <ActivityIndicator size="large" color="#6366f1" />
+                    <Text style={styles.loadingText}>Loading your performance...</Text>
                 </View>
             ) : (
                 <ScrollView
-                    style={styles.container}
                     contentContainerStyle={styles.scrollContent}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} />
-                    }
                     showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+                    }
                 >
-                    {!hasExams ? (
-                        <View style={styles.emptyCard}>
-                            <Ionicons name="bar-chart-outline" size={64} color="#94a3b8" style={{ marginBottom: 12 }} />
-                            <Text style={styles.emptyTitle}>No Exam Attempts Yet</Text>
-                            <Text style={styles.emptySubtitle}>
-                                Take your first exam using the "My Exam" feature on the dashboard to unlock your comprehensive performance analysis, negative marking tracking, and class standing!
-                            </Text>
-                            <TouchableOpacity
-                                style={styles.emptyButton}
-                                onPress={() => navigation.navigate('MyExam')}
-                                activeOpacity={0.8}
+                    {isEmptyState ? (
+                        /* 16. EMPTY STATE */
+                        <View style={styles.emptyContainer}>
+                            <LinearGradient
+                                colors={['#312e81', '#1e1b4b']}
+                                style={styles.emptyCard}
                             >
-                                <LinearGradient colors={['#4f46e5', '#6366f1']} style={styles.emptyButtonGrad}>
-                                    <Text style={styles.emptyButtonText}>Start a Test Now</Text>
-                                    <Ionicons name="arrow-forward" size={18} color="white" style={{ marginLeft: 6 }} />
-                                </LinearGradient>
-                            </TouchableOpacity>
+                                <View style={styles.emptyIconCircle}>
+                                    <Text style={{ fontSize: 48 }}>📚</Text>
+                                </View>
+                                <Text style={styles.emptyTitle}>Start Your Learning Journey</Text>
+                                <Text style={styles.emptySubtitle}>
+                                    Complete a chapter or take your first test to see your performance here.
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.primaryActionButton}
+                                    onPress={() => navigation.navigate('Subjects')}
+                                    activeOpacity={0.88}
+                                >
+                                    <LinearGradient
+                                        colors={['#10b981', '#059669']}
+                                        style={styles.btnGradient}
+                                    >
+                                        <Text style={styles.primaryBtnText}>Start Learning →</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </LinearGradient>
                         </View>
                     ) : (
                         <>
-                            {/* Class Standing & Benchmark */}
-                            <View style={styles.rankBanner}>
-                                <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.rankBannerGradient}>
-                                    <View style={styles.rankBannerLeft}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                            <Ionicons name="trophy" size={20} color="#f59e0b" style={{ marginRight: 6 }} />
-                                            <Text style={styles.rankBannerTitle}>Class Standing</Text>
+                            {/* 10. STUDY NEXT (Prominent Top Recommendation) */}
+                            {studyNext && (
+                                <View style={styles.sectionWrap}>
+                                    <View style={styles.sectionHeaderRow}>
+                                        <Text style={styles.sectionHeading}>🎯 Study Next</Text>
+                                    </View>
+                                    <LinearGradient
+                                        colors={['#4338ca', '#3b82f6']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.studyNextCard}
+                                    >
+                                        {/* Glossy Overlay */}
+                                        <LinearGradient
+                                            colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.03)']}
+                                            style={styles.glossyOverlay}
+                                        />
+                                        <View style={{ zIndex: 1 }}>
+                                            <Text style={styles.studyNextTitle}>{studyNext.title}</Text>
+                                            <Text style={styles.studyNextSubtitle}>{studyNext.subtitle}</Text>
+                                            <TouchableOpacity
+                                                style={styles.studyNextBtn}
+                                                onPress={() => handleStudyNextAction(studyNext)}
+                                                activeOpacity={0.88}
+                                            >
+                                                <LinearGradient
+                                                    colors={['#ffffff', '#f1f5f9']}
+                                                    style={styles.studyNextBtnGradient}
+                                                >
+                                                    <Text style={styles.studyNextBtnText}>{studyNext.button_text}</Text>
+                                                </LinearGradient>
+                                            </TouchableOpacity>
                                         </View>
-                                        <Text style={styles.rankBannerSubtitle}>
-                                            Top {rankInfo.percentile || 100}% of {rankInfo.total_students || 1} students in your class
-                                        </Text>
-                                    </View>
-                                    <View style={styles.rankBadge}>
-                                        <Text style={styles.rankBadgeNumber}>#{rankInfo.user_rank || 1}</Text>
-                                        <Text style={styles.rankBadgeLabel}>Class Rank</Text>
-                                    </View>
-                                </LinearGradient>
-                            </View>
-
-                            {/* Overall Score Metrics (2x2 Grid) */}
-                            <View style={styles.metricsGrid}>
-                                <View style={[styles.metricCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                        <Ionicons name="trending-up" size={18} color="#16a34a" style={{ marginRight: 6 }} />
-                                        <Text style={[styles.metricTitle, { color: '#15803d' }]}>Avg Net Score</Text>
-                                    </View>
-                                    <Text style={[styles.metricValue, { color: '#16a34a' }]}>
-                                        {stats.avg_net_score > 0 ? `+${stats.avg_net_score}` : stats.avg_net_score || '0.00'}
-                                    </Text>
-                                    <Text style={styles.metricSub}>Net Points / Exam</Text>
+                                    </LinearGradient>
                                 </View>
+                            )}
 
-                                <View style={[styles.metricCard, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                        <Ionicons name="checkmark-done-circle" size={18} color="#2563eb" style={{ marginRight: 6 }} />
-                                        <Text style={[styles.metricTitle, { color: '#1d4ed8' }]}>Accuracy</Text>
-                                    </View>
-                                    <Text style={[styles.metricValue, { color: '#2563eb' }]}>
-                                        {stats.overall_accuracy_pct || '0'}%
-                                    </Text>
-                                    <Text style={styles.metricSub}>Overall Accuracy</Text>
-                                </View>
-
-                                <View style={[styles.metricCard, { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                        <Ionicons name="remove-circle" size={18} color="#dc2626" style={{ marginRight: 6 }} />
-                                        <Text style={[styles.metricTitle, { color: '#b91c1c' }]}>Negative Marks</Text>
-                                    </View>
-                                    <Text style={[styles.metricValue, { color: '#dc2626' }]}>
-                                        -{stats.total_negative_marks_lost || '0.00'}
-                                    </Text>
-                                    <Text style={styles.metricSub}>Penalty Deductions</Text>
-                                </View>
-
-                                <View style={[styles.metricCard, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                        <Ionicons name="newspaper-outline" size={18} color="#9333ea" style={{ marginRight: 6 }} />
-                                        <Text style={[styles.metricTitle, { color: '#7e22ce' }]}>Total Exams</Text>
-                                    </View>
-                                    <Text style={[styles.metricValue, { color: '#9333ea' }]}>
-                                        {stats.total_exams || 0}
-                                    </Text>
-                                    <Text style={styles.metricSub}>{stats.total_correct || 0} Correct Answers</Text>
-                                </View>
-                            </View>
-
-                            {/* "Practice My Mistakes" 1-Click Action Card */}
-                            <TouchableOpacity
-                                style={styles.mistakeBanner}
-                                onPress={practiceMistakes}
-                                disabled={mistakeLoading}
-                                activeOpacity={0.85}
-                            >
-                                <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.mistakeGradient}>
-                                    <View style={styles.mistakeIconBox}>
-                                        <Ionicons name="flash" size={26} color="#fbbf24" />
-                                    </View>
-                                    <View style={{ flex: 1, paddingRight: 8 }}>
-                                        <Text style={styles.mistakeTitle}>Practice My Mistakes</Text>
-                                        <Text style={styles.mistakeSub}>
-                                            Target and re-attempt questions where you lost negative marks!
-                                        </Text>
-                                    </View>
-                                    {mistakeLoading ? (
-                                        <ActivityIndicator color="white" />
-                                    ) : (
-                                        <View style={styles.mistakeButtonPill}>
-                                            <Text style={styles.mistakeButtonText}>Start</Text>
-                                            <Ionicons name="arrow-forward" size={14} color="#4f46e5" />
-                                        </View>
-                                    )}
-                                </LinearGradient>
-                            </TouchableOpacity>
-
-                            {/* Sub-tab Navigation */}
-                            <View style={styles.subTabContainer}>
-                                <TouchableOpacity
-                                    style={[styles.subTabButton, subTab === 'negative' && styles.subTabButtonActive]}
-                                    onPress={() => setSubTab('negative')}
+                            {/* 3. OVERALL PERFORMANCE */}
+                            <View style={styles.sectionWrap}>
+                                <LinearGradient
+                                    colors={['#1e1b4b', '#312e81']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.overallCard}
                                 >
-                                    <Ionicons
-                                        name="alert-circle"
-                                        size={16}
-                                        color={subTab === 'negative' ? '#dc2626' : '#64748b'}
-                                        style={{ marginRight: 4 }}
+                                    {/* Glossy Overlay */}
+                                    <LinearGradient
+                                        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.02)']}
+                                        style={styles.glossyOverlay}
                                     />
-                                    <Text style={[styles.subTabText, subTab === 'negative' && styles.subTabTextActive]}>
-                                        Negative Questions ({negativeQuestions.length})
-                                    </Text>
-                                </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={[styles.subTabButton, subTab === 'chapters' && styles.subTabButtonActive]}
-                                    onPress={() => setSubTab('chapters')}
-                                >
-                                    <Ionicons
-                                        name="list"
-                                        size={16}
-                                        color={subTab === 'chapters' ? '#4f46e5' : '#64748b'}
-                                        style={{ marginRight: 4 }}
-                                    />
-                                    <Text style={[styles.subTabText, subTab === 'chapters' && styles.subTabTextActive]}>
-                                        Chapter Weakness
-                                    </Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.subTabButton, subTab === 'attempts' && styles.subTabButtonActive]}
-                                    onPress={() => setSubTab('attempts')}
-                                >
-                                    <Ionicons
-                                        name="time"
-                                        size={16}
-                                        color={subTab === 'attempts' ? '#4f46e5' : '#64748b'}
-                                        style={{ marginRight: 4 }}
-                                    />
-                                    <Text style={[styles.subTabText, subTab === 'attempts' && styles.subTabTextActive]}>
-                                        History ({recentAttempts.length})
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* View 1: Dedicated Negative Questions with Re-solve feature */}
-                            {subTab === 'negative' && (
-                                <View style={styles.subViewContainer}>
-                                    {negativeQuestions.length === 0 ? (
-                                        <View style={styles.noNegativeCard}>
-                                            <Ionicons name="shield-checkmark" size={48} color="#10b981" style={{ marginBottom: 8 }} />
-                                            <Text style={styles.noNegativeTitle}>No Negative Questions! 🎉</Text>
-                                            <Text style={styles.noNegativeSub}>
-                                                You have solved and cleared all your negative marked questions! Great job maintaining 100% mastery.
+                                    {/* Header & Status */}
+                                    <View style={styles.overallTopRow}>
+                                        <Text style={styles.overallCardTitle}>⭐ Overall Performance</Text>
+                                        <View style={[styles.statusPill, { backgroundColor: `${overallColor}25`, borderColor: `${overallColor}60` }]}>
+                                            <Text style={[styles.statusPillText, { color: overallColor }]}>
+                                                {overallStatusIcon}
                                             </Text>
                                         </View>
-                                    ) : (
-                                        negativeQuestions.map((item, idx) => {
-                                            const mcqId = item.mcq_id;
-                                            const state = solvingState[mcqId] || {};
-                                            const isChecking = resolvingId === mcqId;
-                                            const isSolved = state.status === 'correct';
-                                            const isWrong = state.status === 'wrong';
-                                            const showSolution = expandedSolutions[mcqId] || isWrong;
+                                    </View>
 
-                                            return (
-                                                <View key={item.answer_id || idx} style={[styles.negativeCard, isSolved && { borderColor: '#10b981', backgroundColor: '#f0fdf4' }]}>
-                                                    <View style={styles.negCardHeader}>
-                                                        <View style={styles.negTagBox}>
-                                                            <Text style={styles.negTagText}>
-                                                                {item.subject_name || 'Exam'} • {item.chapter_name || 'Practice'}
-                                                            </Text>
-                                                        </View>
-                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                            <View style={styles.penaltyBadge}>
-                                                                <Text style={styles.penaltyText}>🔴 -1.00 Penalty</Text>
-                                                            </View>
-                                                        </View>
+                                    {/* Circular Progress Ring */}
+                                    <View style={styles.circWrap}>
+                                        <CircularProgress
+                                            percentage={overallPct}
+                                            color={overallColor}
+                                            size={136}
+                                            strokeWidth={13}
+                                        />
+                                    </View>
+
+                                    {/* Metrics Pill Grid */}
+                                    <View style={styles.metricRow}>
+                                        <View style={styles.metricPill}>
+                                            <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
+                                            <Text style={styles.metricVal}>{overall.correct_count ?? 0}</Text>
+                                            <Text style={styles.metricLbl}>Correct</Text>
+                                        </View>
+                                        <View style={styles.metricPill}>
+                                            <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
+                                            <Text style={styles.metricVal}>{overall.wrong_count ?? 0}</Text>
+                                            <Text style={styles.metricLbl}>Wrong</Text>
+                                        </View>
+                                        <View style={styles.metricPill}>
+                                            <View style={[styles.metricDot, { backgroundColor: '#38bdf8' }]} />
+                                            <Text style={styles.metricVal}>{overall.attempted_count ?? 0}</Text>
+                                            <Text style={styles.metricLbl}>Attempted</Text>
+                                        </View>
+                                    </View>
+                                </LinearGradient>
+                            </View>
+
+                            {/* 4. SUBJECT PERFORMANCE */}
+                            <View style={styles.sectionWrap}>
+                                <Text style={styles.sectionHeading}>📚 Subject Performance</Text>
+                                {subjects.length === 0 ? (
+                                    <Text style={styles.subNoteText}>No subjects available for your class.</Text>
+                                ) : (
+                                    subjects.map((sub, idx) => {
+                                        const acc = sub.accuracy_pct ?? 0;
+                                        const subColor = acc >= 75 ? '#10b981' : acc >= 50 ? '#f59e0b' : acc > 0 ? '#ef4444' : '#64748b';
+                                        const subLabel = acc >= 75 ? '🟢 Strong' : acc >= 50 ? '🟡 Average' : acc > 0 ? '🔴 Weak' : '⚪ Not Started';
+
+                                        return (
+                                            <View key={sub.subject_id || idx} style={styles.subjectCard}>
+                                                <View style={styles.subjectTopRow}>
+                                                    <Text style={styles.subjectName}>{sub.subject_name}</Text>
+                                                    <View style={[styles.miniStatusBadge, { backgroundColor: `${subColor}18` }]}>
+                                                        <Text style={[styles.miniStatusText, { color: subColor }]}>{subLabel}</Text>
                                                     </View>
-
-                                                    {/* Question Text */}
-                                                    <View style={styles.negQuestionBox}>
-                                                        <SmartText
-                                                            content={decodeHtml(item.question)}
-                                                            textColor="#0f172a"
-                                                            fontSize="15px"
-                                                            fontWeight="bold"
-                                                        />
-                                                    </View>
-
-                                                    {/* Previous Mistake Notice */}
-                                                    <View style={styles.mistakeReminderBox}>
-                                                        <Ionicons name="alert-circle" size={16} color="#dc2626" style={{ marginRight: 6 }} />
-                                                        <Text style={styles.mistakeReminderText}>
-                                                            Previous Mistake: Selected Option {item.selected_option ? item.selected_option.toUpperCase() : '-'}
-                                                        </Text>
-                                                    </View>
-
-                                                    {/* Instruction */}
-                                                    <Text style={styles.solveInstructionText}>
-                                                        👉 Re-solve to remove: Tap the correct option below to clear this mistake!
+                                                </View>
+                                                <View style={styles.subjectAccRow}>
+                                                    <Text style={styles.subjectAccLabel}>Accuracy:</Text>
+                                                    <Text style={[styles.subjectAccValue, { color: subColor }]}>
+                                                        {acc}%
                                                     </Text>
-
-                                                    {/* 4 Interactive Option Buttons */}
-                                                    <View style={{ gap: 8, marginTop: 8 }}>
-                                                        {['a', 'b', 'c', 'd'].map((opt) => {
-                                                            const optText = item[`option_${opt}`];
-                                                            if (!optText) return null;
-
-                                                            const isSelected = state.selected === opt;
-                                                            const isOptionChecking = isChecking && isSelected;
-                                                            let btnBg = '#f8fafc';
-                                                            let btnBorder = '#e2e8f0';
-                                                            let letterBg = '#e2e8f0';
-                                                            let letterColor = '#475569';
-
-                                                            if (isSelected) {
-                                                                if (isSolved) {
-                                                                    btnBg = '#dcfce7';
-                                                                    btnBorder = '#10b981';
-                                                                    letterBg = '#10b981';
-                                                                    letterColor = '#ffffff';
-                                                                } else if (isWrong) {
-                                                                    btnBg = '#fee2e2';
-                                                                    btnBorder = '#ef4444';
-                                                                    letterBg = '#ef4444';
-                                                                    letterColor = '#ffffff';
-                                                                } else {
-                                                                    btnBg = '#eef2ff';
-                                                                    btnBorder = '#6366f1';
-                                                                    letterBg = '#6366f1';
-                                                                    letterColor = '#ffffff';
-                                                                }
-                                                            }
-
-                                                            return (
-                                                                <TouchableOpacity
-                                                                    key={opt}
-                                                                    style={[styles.solveOptionButton, { backgroundColor: btnBg, borderColor: btnBorder }]}
-                                                                    onPress={() => handleResolveQuestion(item, opt)}
-                                                                    disabled={isChecking || isSolved}
-                                                                    activeOpacity={0.7}
-                                                                >
-                                                                    <View style={[styles.solveOptionLetter, { backgroundColor: letterBg }]}>
-                                                                        {isOptionChecking ? (
-                                                                            <ActivityIndicator size="small" color="#6366f1" />
-                                                                        ) : (
-                                                                            <Text style={[styles.solveOptionLetterText, { color: letterColor }]}>
-                                                                                {opt.toUpperCase()}
-                                                                            </Text>
-                                                                        )}
-                                                                    </View>
-                                                                    <View style={{ flex: 1 }}>
-                                                                        <SmartText
-                                                                            content={decodeHtml(optText)}
-                                                                            textColor="#0f172a"
-                                                                            fontSize="14px"
-                                                                        />
-                                                                    </View>
-                                                                </TouchableOpacity>
-                                                            );
-                                                        })}
-                                                    </View>
-
-                                                    {/* Feedback Banner if Correct */}
-                                                    {isSolved && (
-                                                        <View style={styles.solveSuccessBanner}>
-                                                            <Ionicons name="checkmark-circle" size={18} color="#15803d" />
-                                                            <Text style={styles.solveSuccessText}>
-                                                                🎉 Mistake Solved! Removing from Negative Questions...
-                                                            </Text>
-                                                        </View>
-                                                    )}
-
-                                                    {/* Feedback Banner if Wrong */}
-                                                    {isWrong && (
-                                                        <View style={styles.solveErrorBanner}>
-                                                            <Ionicons name="close-circle" size={18} color="#b91c1c" />
-                                                            <Text style={styles.solveErrorText}>
-                                                                ❌ Still incorrect! Review the explanation below and try again.
-                                                            </Text>
-                                                        </View>
-                                                    )}
-
-                                                    {/* Toggle Explanation Button */}
-                                                    <TouchableOpacity
-                                                        style={styles.solutionToggleBtn}
-                                                        onPress={() => setExpandedSolutions(prev => ({ ...prev, [mcqId]: !prev[mcqId] }))}
-                                                    >
-                                                        <Ionicons name="bulb-outline" size={16} color="#0369a1" style={{ marginRight: 4 }} />
-                                                        <Text style={styles.solutionToggleText}>
-                                                            {showSolution ? 'Hide Explanation' : 'Need Help? View Explanation 💡'}
-                                                        </Text>
-                                                        <Ionicons name={showSolution ? 'chevron-up' : 'chevron-down'} size={14} color="#0369a1" />
-                                                    </TouchableOpacity>
-
-                                                    {/* Solution & Explanation */}
-                                                    {showSolution && item.explanation && (
-                                                        <View style={styles.negExplanationBox}>
-                                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                                                <Ionicons name="bulb" size={16} color="#0369a1" style={{ marginRight: 6 }} />
-                                                                <Text style={styles.negExplanationTitle}>Solution & Explanation</Text>
-                                                            </View>
-                                                            <SmartText
-                                                                content={decodeHtml(item.explanation)}
-                                                                textColor="#0c4a6e"
-                                                                fontSize="13px"
-                                                            />
-                                                        </View>
-                                                    )}
                                                 </View>
-                                            );
-                                        })
-                                    )}
-                                </View>
-                            )}
-
-                            {/* View 2: Chapter Weakness Breakdown */}
-                            {subTab === 'chapters' && (
-                                <View style={styles.subViewContainer}>
-                                    <View style={styles.chapterCategoryRow}>
-                                        <TouchableOpacity
-                                            style={[styles.categoryPill, chapterCategory === 'weak' && styles.categoryPillWeak]}
-                                            onPress={() => setChapterCategory('weak')}
-                                        >
-                                            <Text style={[styles.categoryPillText, chapterCategory === 'weak' && styles.categoryPillTextActive]}>
-                                                Weak &lt;60% ({chapterBreakdown.weak_chapters.length})
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={[styles.categoryPill, chapterCategory === 'average' && styles.categoryPillAvg]}
-                                            onPress={() => setChapterCategory('average')}
-                                        >
-                                            <Text style={[styles.categoryPillText, chapterCategory === 'average' && styles.categoryPillTextActive]}>
-                                                Average 60-79% ({chapterBreakdown.average_chapters.length})
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={[styles.categoryPill, chapterCategory === 'strong' && styles.categoryPillStrong]}
-                                            onPress={() => setChapterCategory('strong')}
-                                        >
-                                            <Text style={[styles.categoryPillText, chapterCategory === 'strong' && styles.categoryPillTextActive]}>
-                                                Strong ≥80% ({chapterBreakdown.strong_chapters.length})
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    {displayedChapters.length === 0 ? (
-                                        <View style={styles.noChaptersCard}>
-                                            <Text style={styles.noChaptersText}>
-                                                No chapters currently in the {chapterCategory} category.
-                                            </Text>
-                                        </View>
-                                    ) : (
-                                        displayedChapters.map((ch, idx) => {
-                                            const progressColor = chapterCategory === 'weak' ? '#ef4444' : chapterCategory === 'average' ? '#f59e0b' : '#10b981';
-                                            return (
-                                                <View key={ch.chapter_id || idx} style={styles.chapterCard}>
-                                                    <View style={styles.chapterCardHeader}>
-                                                        <View style={{ flex: 1, paddingRight: 10 }}>
-                                                            <Text style={styles.chapterCardSubject}>{ch.subject_name}</Text>
-                                                            <Text style={styles.chapterCardName}>{ch.chapter_name}</Text>
-                                                        </View>
-                                                        <View style={[styles.accuracyBadge, { backgroundColor: `${progressColor}15`, borderColor: progressColor }]}>
-                                                            <Text style={[styles.accuracyBadgeText, { color: progressColor }]}>
-                                                                {ch.accuracy_pct}% Accuracy
-                                                            </Text>
-                                                        </View>
-                                                    </View>
-
-                                                    {/* Progress Bar */}
-                                                    <View style={styles.progressBarTrack}>
-                                                        <View style={[styles.progressBarFill, { width: `${Math.min(ch.accuracy_pct, 100)}%`, backgroundColor: progressColor }]} />
-                                                    </View>
-
-                                                    <View style={styles.chapterCardFooter}>
-                                                        <Text style={styles.chapterCardStats}>
-                                                            {ch.correct_count} correct • {ch.wrong_count} wrong • {ch.total_attempted} attempts
-                                                        </Text>
-                                                        {chapterCategory === 'weak' && (
-                                                            <TouchableOpacity
-                                                                style={styles.strengthenButton}
-                                                                onPress={() => practiceChapter(ch.chapter_id, ch.chapter_name)}
-                                                                disabled={actionLoading}
-                                                            >
-                                                                <Text style={styles.strengthenButtonText}>Strengthen Chapter</Text>
-                                                                <Ionicons name="arrow-forward" size={12} color="#4f46e5" />
-                                                            </TouchableOpacity>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                            );
-                                        })
-                                    )}
-                                </View>
-                            )}
-
-                            {/* View 3: Recent Exams History */}
-                            {subTab === 'attempts' && (
-                                <View style={styles.subViewContainer}>
-                                    {recentAttempts.length === 0 ? (
-                                        <View style={styles.noChaptersCard}>
-                                            <Text style={styles.noChaptersText}>No recorded test attempts yet.</Text>
-                                        </View>
-                                    ) : (
-                                        recentAttempts.map((att, idx) => (
-                                            <View key={att.attempt_id || idx} style={styles.attemptCard}>
-                                                <View style={styles.attemptCardHeader}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text style={styles.attemptCardTitle}>
-                                                            {att.exam_title || 'Custom Practice Exam'}
-                                                        </Text>
-                                                        <Text style={styles.attemptCardDate}>
-                                                            {att.completed_at ? new Date(att.completed_at).toLocaleDateString() : 'Recent'}
-                                                        </Text>
-                                                    </View>
-                                                    <View style={styles.attemptNetScoreBadge}>
-                                                        <Text style={styles.attemptNetScoreText}>
-                                                            Net: {att.net_score > 0 ? `+${att.net_score}` : att.net_score} pts
-                                                        </Text>
-                                                    </View>
-                                                </View>
-
-                                                <View style={styles.attemptStatsRow}>
-                                                    <View style={styles.attemptStatItem}>
-                                                        <Text style={styles.attemptStatLabel}>Correct</Text>
-                                                        <Text style={[styles.attemptStatVal, { color: '#16a34a' }]}>
-                                                            +{att.positive_score} ({att.correct_count} Qs)
-                                                        </Text>
-                                                    </View>
-                                                    <View style={styles.attemptStatItem}>
-                                                        <Text style={styles.attemptStatLabel}>Negative Penalty</Text>
-                                                        <Text style={[styles.attemptStatVal, { color: '#dc2626' }]}>
-                                                            -{att.negative_deduction} ({att.wrong_count} Qs)
-                                                        </Text>
-                                                    </View>
-                                                    <View style={styles.attemptStatItem}>
-                                                        <Text style={styles.attemptStatLabel}>Accuracy</Text>
-                                                        <Text style={[styles.attemptStatVal, { color: '#2563eb' }]}>
-                                                            {att.accuracy_percentage}%
-                                                        </Text>
-                                                    </View>
+                                                {/* Simple Progress Bar */}
+                                                <View style={styles.progressBarTrack}>
+                                                    <View style={[styles.progressBarFill, { width: `${acc}%`, backgroundColor: subColor }]} />
                                                 </View>
                                             </View>
-                                        ))
-                                    )}
-                                </View>
-                            )}
+                                        );
+                                    })
+                                )}
+                            </View>
+
+                            {/* 5. WEAK CHAPTERS */}
+                            <View style={styles.sectionWrap}>
+                                <Text style={styles.sectionHeading}>🔴 Weak Chapters</Text>
+                                {weakChapters.length === 0 ? (
+                                    <View style={styles.celebrationCard}>
+                                        <Text style={{ fontSize: 32, marginBottom: 6 }}>🎉</Text>
+                                        <Text style={styles.celebrationTitle}>Great!</Text>
+                                        <Text style={styles.celebrationSub}>You currently don't have any weak chapters.</Text>
+                                    </View>
+                                ) : (
+                                    weakChapters.map((ch, idx) => (
+                                        <View key={ch.chapter_id || idx} style={styles.weakChapterCard}>
+                                            <View style={styles.chapterHeaderRow}>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={styles.chapterTitle}>{ch.chapter_name}</Text>
+                                                    <Text style={styles.chapterSubject}>{ch.subject_name}</Text>
+                                                </View>
+                                                <View style={styles.weakBadge}>
+                                                    <Text style={styles.weakBadgeText}>🔴 Weak</Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.chapterBottomRow}>
+                                                <Text style={styles.chapterAccText}>Accuracy: <Text style={{ fontFamily: 'NotoSans-Bold', color: '#ef4444' }}>{ch.accuracy_pct}%</Text></Text>
+                                                <TouchableOpacity
+                                                    style={styles.practiceBtn}
+                                                    onPress={() => handlePracticeChapter(ch)}
+                                                    activeOpacity={0.85}
+                                                >
+                                                    <LinearGradient
+                                                        colors={['#ef4444', '#dc2626']}
+                                                        style={styles.practiceBtnGradient}
+                                                    >
+                                                        <Text style={styles.practiceBtnText}>Practice Now →</Text>
+                                                    </LinearGradient>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ))
+                                )}
+                            </View>
+
+                            {/* 6. INCOMPLETE CHAPTERS */}
+                            <View style={styles.sectionWrap}>
+                                <Text style={styles.sectionHeading}>📖 Incomplete Chapters</Text>
+                                {incompleteChapters.length === 0 ? (
+                                    <View style={styles.celebrationCard}>
+                                        <Text style={{ fontSize: 32, marginBottom: 6 }}>🏆</Text>
+                                        <Text style={styles.celebrationTitle}>All Completed!</Text>
+                                        <Text style={styles.celebrationSub}>You have completed all available chapters.</Text>
+                                    </View>
+                                ) : (
+                                    incompleteChapters.slice(0, 10).map((ch, idx) => {
+                                        const isInProgress = ch.progress_pct > 0;
+                                        const statusColor = isInProgress ? '#f59e0b' : '#94a3b8';
+                                        const statusLabel = isInProgress ? '🟡 In Progress' : '⚪ Not Started';
+                                        const actionText = isInProgress ? 'Continue →' : 'Start Learning →';
+
+                                        return (
+                                            <View key={ch.chapter_id || idx} style={styles.incompleteChapterCard}>
+                                                <View style={styles.chapterHeaderRow}>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={styles.chapterSubject}>{ch.subject_name}</Text>
+                                                        <Text style={styles.chapterTitle}>{ch.chapter_name}</Text>
+                                                    </View>
+                                                    <View style={[styles.miniStatusBadge, { backgroundColor: `${statusColor}18` }]}>
+                                                        <Text style={[styles.miniStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                                                    </View>
+                                                </View>
+                                                <View style={styles.incompleteMidRow}>
+                                                    <Text style={styles.progressLabel}>Progress: <Text style={{ fontFamily: 'NotoSans-Bold', color: '#0f172a' }}>{ch.progress_pct}%</Text></Text>
+                                                </View>
+                                                {/* Progress Bar */}
+                                                <View style={styles.progressBarTrack}>
+                                                    <View style={[styles.progressBarFill, { width: `${ch.progress_pct}%`, backgroundColor: statusColor }]} />
+                                                </View>
+                                                <TouchableOpacity
+                                                    style={styles.continueBtn}
+                                                    onPress={() => handleContinueChapter(ch)}
+                                                    activeOpacity={0.85}
+                                                >
+                                                    <LinearGradient
+                                                        colors={isInProgress ? ['#f59e0b', '#d97706'] : ['#4f46e5', '#6366f1']}
+                                                        style={styles.continueBtnGradient}
+                                                    >
+                                                        <Text style={styles.continueBtnText}>{actionText}</Text>
+                                                    </LinearGradient>
+                                                </TouchableOpacity>
+                                            </View>
+                                        );
+                                    })
+                                )}
+                            </View>
+
+                            {/* 8. NEGATIVE BASKET */}
+                            <View style={styles.sectionWrap}>
+                                <Text style={styles.sectionHeading}>🧠 Negative Basket</Text>
+                                <Text style={styles.sectionSubtitle}>Questions you answered incorrectly.</Text>
+
+                                <LinearGradient
+                                    colors={['#831843', '#be123c']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.negativeBasketCard}
+                                >
+                                    {/* Glossy Overlay */}
+                                    <LinearGradient
+                                        colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.03)']}
+                                        style={styles.glossyOverlay}
+                                    />
+                                    <View style={{ zIndex: 1 }}>
+                                        <View style={styles.negTopRow}>
+                                            <View>
+                                                <Text style={styles.negCountText}>
+                                                    {negativeBasket.total_count} Questions
+                                                </Text>
+                                                <Text style={styles.negStatusText}>Needs Revision</Text>
+                                            </View>
+                                            <View style={styles.negIconBadge}>
+                                                <Ionicons name="alert-circle" size={32} color="#ffffff" />
+                                            </View>
+                                        </View>
+
+                                        {negativeBasket.total_count > 0 && (
+                                            <TouchableOpacity
+                                                style={styles.practiceMistakesBtn}
+                                                onPress={practiceMistakes}
+                                                disabled={mistakeLoading}
+                                                activeOpacity={0.88}
+                                            >
+                                                <LinearGradient
+                                                    colors={['#ffffff', '#ffe4e6']}
+                                                    style={styles.practiceMistakesBtnGradient}
+                                                >
+                                                    {mistakeLoading ? (
+                                                        <ActivityIndicator size="small" color="#be123c" />
+                                                    ) : (
+                                                        <Text style={styles.practiceMistakesBtnText}>Practice Negative Questions →</Text>
+                                                    )}
+                                                </LinearGradient>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </LinearGradient>
+
+                                {/* Negative Questions List / Review Toggle */}
+                                {negativeBasket.questions?.length > 0 && (
+                                    <View style={styles.negQuestionsSection}>
+                                        <TouchableOpacity
+                                            style={styles.toggleDetailsRow}
+                                            onPress={() => setShowNegativeDetails(!showNegativeDetails)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text style={styles.toggleDetailsText}>
+                                                {showNegativeDetails ? 'Hide Questions ▲' : 'View Wrong Questions List ▼'}
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        {showNegativeDetails && (
+                                            negativeBasket.questions.map((q, idx) => {
+                                                const qId = q.question_id || q.mcq_id;
+                                                const isExpanded = expandedQuestionId === qId;
+                                                const sState = solvingState[qId];
+
+                                                return (
+                                                    <View key={q.basket_id || qId || idx} style={styles.negQuestionItem}>
+                                                        <View style={styles.negItemHeader}>
+                                                            <Text style={styles.negCrossIcon}>❌</Text>
+                                                            <View style={{ flex: 1 }}>
+                                                                <SmartText
+                                                                    content={decodeHtml(q.question)}
+                                                                    fontSize={15}
+                                                                    fontWeight="bold"
+                                                                    textColor="#0f172a"
+                                                                />
+                                                            </View>
+                                                        </View>
+
+                                                        <View style={styles.negItemBreadcrumb}>
+                                                            <Text style={styles.negBreadcrumbText}>
+                                                                {q.subject_name || 'General'} → {q.chapter_name || 'Chapter'}
+                                                            </Text>
+                                                            <View style={styles.wrongAttemptsPill}>
+                                                                <Text style={styles.wrongAttemptsText}>
+                                                                    Wrong Attempts: {q.wrong_attempt_count || 1}
+                                                                </Text>
+                                                            </View>
+                                                        </View>
+
+                                                        <TouchableOpacity
+                                                            style={styles.reviewBtn}
+                                                            onPress={() => setExpandedQuestionId(isExpanded ? null : qId)}
+                                                            activeOpacity={0.8}
+                                                        >
+                                                            <Text style={styles.reviewBtnText}>
+                                                                {isExpanded ? 'Close Review ▲' : 'Review →'}
+                                                            </Text>
+                                                        </TouchableOpacity>
+
+                                                        {/* Expanded Review & Inline Re-solve */}
+                                                        {isExpanded && (
+                                                            <View style={styles.expandedBox}>
+                                                                <Text style={styles.resolvePrompt}>Re-solve now to clear from negative basket:</Text>
+
+                                                                {['a', 'b', 'c', 'd'].map(optKey => {
+                                                                    const optVal = q[`option_${optKey}`];
+                                                                    if (!optVal) return null;
+
+                                                                    const isSelected = sState?.selected === optKey;
+                                                                    const isCorrectOpt = sState?.status === 'correct' && isSelected;
+                                                                    const isWrongOpt = sState?.status === 'wrong' && isSelected;
+
+                                                                    return (
+                                                                        <TouchableOpacity
+                                                                            key={optKey}
+                                                                            style={[
+                                                                                styles.optBtn,
+                                                                                isSelected && styles.optBtnSelected,
+                                                                                isCorrectOpt && styles.optBtnCorrect,
+                                                                                isWrongOpt && styles.optBtnWrong
+                                                                            ]}
+                                                                            onPress={() => handleResolveQuestion(q, optKey)}
+                                                                            disabled={resolvingId === qId || sState?.status === 'correct'}
+                                                                        >
+                                                                            <View style={[styles.optKeyCircle, isSelected && styles.optKeyCircleSelected]}>
+                                                                                <Text style={[styles.optKeyText, isSelected && styles.optKeyTextSelected]}>
+                                                                                    {optKey.toUpperCase()}
+                                                                                </Text>
+                                                                            </View>
+                                                                            <View style={{ flex: 1 }}>
+                                                                                <SmartText content={decodeHtml(optVal)} fontSize={14} textColor="#1e293b" />
+                                                                            </View>
+                                                                        </TouchableOpacity>
+                                                                    );
+                                                                })}
+
+                                                                {sState?.message && (
+                                                                    <View style={[
+                                                                        styles.feedbackPill,
+                                                                        sState.status === 'correct' ? styles.feedbackSuccess : styles.feedbackError
+                                                                    ]}>
+                                                                        <Text style={styles.feedbackText}>{sState.message}</Text>
+                                                                    </View>
+                                                                )}
+
+                                                                {q.explanation ? (
+                                                                    <View style={styles.explBox}>
+                                                                        <Text style={styles.explLabel}>💡 Explanation:</Text>
+                                                                        <SmartText content={decodeHtml(q.explanation)} fontSize={13} textColor="#475569" />
+                                                                    </View>
+                                                                ) : null}
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                );
+                                            })
+                                        )}
+                                    </View>
+                                )}
+                            </View>
                         </>
                     )}
                 </ScrollView>
             )}
-        </View>
+        </SafeAreaView>
     );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    mainWrapper: {
+    container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
-    },
-    headerGradient: {
-        paddingBottom: 16,
-    },
-    headerSafe: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#0f172a',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingBottom: 6,
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 16,
+        backgroundColor: '#0f172a',
     },
-    backButton: {
+    backBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
-        marginRight: 15,
-    },
-    backButtonText: {
-        fontSize: 24,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    headerTextContainer: {
-        flex: 1,
+        justifyContent: 'center',
+        marginRight: 12,
     },
     headerTitle: {
         fontSize: 22,
-        fontWeight: 'bold',
-        color: 'white',
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
     },
     headerSubtitle: {
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.9)',
-        marginTop: 2,
-    },
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: 16,
-        paddingBottom: 40,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 80,
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 14,
-        color: '#64748b',
-        fontWeight: '600',
-    },
-    rankBanner: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginBottom: 16,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-    },
-    rankBannerGradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-    },
-    rankBannerLeft: {
-        flex: 1,
-    },
-    rankBannerTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#f8fafc',
-    },
-    rankBannerSubtitle: {
         fontSize: 12,
+        fontFamily: 'NotoSans-Regular',
         color: '#94a3b8',
         marginTop: 2,
     },
-    rankBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderWidth: 1,
-        borderColor: '#f59e0b',
-        borderRadius: 12,
+    refreshIconBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 8,
+    },
+    scrollContent: {
         paddingHorizontal: 16,
-        paddingVertical: 8,
-        alignItems: 'center',
+        paddingBottom: 40,
     },
-    rankBadgeNumber: {
-        fontSize: 22,
-        fontWeight: '900',
-        color: '#f59e0b',
-    },
-    rankBadgeLabel: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#fbbf24',
-        textTransform: 'uppercase',
-    },
-    metricsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-        marginBottom: 16,
-    },
-    metricCard: {
-        width: (width - 42) / 2,
-        padding: 14,
-        borderRadius: 14,
-        borderWidth: 1,
-    },
-    metricTitle: {
-        fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.3,
-    },
-    metricValue: {
-        fontSize: 22,
-        fontWeight: '900',
-        marginBottom: 2,
-    },
-    metricSub: {
-        fontSize: 11,
-        color: '#64748b',
-    },
-    mistakeBanner: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginBottom: 20,
-        elevation: 4,
-        shadowColor: '#4f46e5',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-    },
-    mistakeGradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-    },
-    mistakeIconBox: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    mistakeTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    mistakeSub: {
-        fontSize: 12,
-        color: 'rgba(255, 255, 255, 0.85)',
-        marginTop: 2,
-    },
-    mistakeButtonPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        gap: 4,
-    },
-    mistakeButtonText: {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#4f46e5',
-    },
-    subTabContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        padding: 4,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    subTabButton: {
+    centerLoading: {
         flex: 1,
-        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        borderRadius: 8,
     },
-    subTabButtonActive: {
-        backgroundColor: '#eef2ff',
-        borderWidth: 1,
-        borderColor: '#c7d2fe',
+    loadingText: {
+        color: '#94a3b8',
+        fontSize: 14,
+        fontFamily: 'NotoSans-Medium',
+        marginTop: 12,
     },
-    subTabText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#64748b',
+
+    // Glossy Overlay Helper
+    glossyOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
     },
-    subTabTextActive: {
-        color: '#4f46e5',
-        fontWeight: '700',
+
+    // 10. Study Next Card
+    sectionWrap: {
+        marginBottom: 20,
     },
-    subViewContainer: {
-        gap: 12,
-    },
-    noNegativeCard: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 30,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    noNegativeTitle: {
+    sectionHeading: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#0f172a',
-        marginBottom: 4,
-    },
-    noNegativeSub: {
-        fontSize: 13,
-        color: '#64748b',
-        textAlign: 'center',
-        lineHeight: 18,
-    },
-    negativeCard: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#fecaca',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
-        elevation: 1,
-    },
-    negCardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
         marginBottom: 10,
     },
-    negTagBox: {
-        backgroundColor: '#e0f2fe',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-        maxWidth: '65%',
-    },
-    negTagText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#0369a1',
-    },
-    penaltyBadge: {
-        backgroundColor: '#fee2e2',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-    },
-    penaltyText: {
-        fontSize: 11,
-        fontWeight: 'bold',
-        color: '#dc2626',
-    },
-    negQuestionBox: {
-        marginBottom: 12,
-    },
-    negAnswerRow: {
-        marginBottom: 8,
-    },
-    negAnswerLabel: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#64748b',
-        marginBottom: 4,
-        textTransform: 'uppercase',
-    },
-    negAnswerPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-        borderRadius: 10,
-        borderWidth: 1,
-    },
-    negAnswerText: {
-        fontSize: 13,
-        fontWeight: '600',
-        flex: 1,
-    },
-    negExplanationBox: {
-        backgroundColor: '#f0f9ff',
-        borderRadius: 10,
-        padding: 12,
-        marginTop: 8,
-        borderWidth: 1,
-        borderColor: '#e0f2fe',
-        borderLeftWidth: 4,
-        borderLeftColor: '#0ea5e9',
-    },
-    negExplanationTitle: {
+    sectionSubtitle: {
         fontSize: 12,
-        fontWeight: 'bold',
-        color: '#0369a1',
+        fontFamily: 'NotoSans-Regular',
+        color: '#94a3b8',
+        marginBottom: 10,
+        marginTop: -6,
     },
-    chapterCategoryRow: {
+    studyNextCard: {
+        borderRadius: 20,
+        padding: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        ...Platform.select({
+            android: { elevation: 6 },
+            ios: { shadowColor: '#3b82f6', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }
+        }),
+    },
+    studyNextTitle: {
+        fontSize: 18,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+        marginBottom: 4,
+    },
+    studyNextSubtitle: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Medium',
+        color: 'rgba(255, 255, 255, 0.88)',
+        marginBottom: 14,
+    },
+    studyNextBtn: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        alignSelf: 'flex-start',
+    },
+    studyNextBtnGradient: {
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        borderRadius: 12,
+    },
+    studyNextBtnText: {
+        color: '#1e3a8a',
+        fontFamily: 'NotoSans-Bold',
+        fontSize: 14,
+    },
+
+    // 3. Overall Performance Card
+    overallCard: {
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        ...Platform.select({
+            android: { elevation: 5 },
+            ios: { shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }
+        }),
+    },
+    overallTopRow: {
         flexDirection: 'row',
-        gap: 8,
-        marginBottom: 8,
-    },
-    categoryPill: {
-        flex: 1,
-        paddingVertical: 8,
-        borderRadius: 10,
-        backgroundColor: '#f1f5f9',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        zIndex: 1,
     },
-    categoryPillWeak: {
-        backgroundColor: '#fee2e2',
-        borderColor: '#fca5a5',
+    overallCardTitle: {
+        fontSize: 17,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
     },
-    categoryPillAvg: {
-        backgroundColor: '#fef3c7',
-        borderColor: '#fde68a',
-    },
-    categoryPillStrong: {
-        backgroundColor: '#dcfce7',
-        borderColor: '#86efac',
-    },
-    categoryPillText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#64748b',
-    },
-    categoryPillTextActive: {
-        fontWeight: 'bold',
-        color: '#0f172a',
-    },
-    chapterCard: {
-        backgroundColor: 'white',
+    statusPill: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
         borderRadius: 14,
-        padding: 14,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
     },
-    chapterCardHeader: {
+    statusPillText: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+    },
+    circWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 6,
+        zIndex: 1,
+    },
+    circPctText: {
+        fontSize: 34,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    metricRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 8,
+        marginTop: 18,
+        zIndex: 1,
     },
-    chapterCardSubject: {
+    metricPill: {
+        flex: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderRadius: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 8,
+        alignItems: 'center',
+        marginHorizontal: 4,
+    },
+    metricDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginBottom: 4,
+    },
+    metricVal: {
+        fontSize: 17,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    metricLbl: {
         fontSize: 11,
-        fontWeight: '700',
-        color: '#64748b',
-        textTransform: 'uppercase',
-    },
-    chapterCardName: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#0f172a',
+        fontFamily: 'NotoSans-Regular',
+        color: '#cbd5e1',
         marginTop: 2,
     },
-    accuracyBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+
+    // 4. Subject Performance Cards
+    subjectCard: {
+        backgroundColor: '#1e293b',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 10,
         borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
-    accuracyBadgeText: {
+    subjectTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    subjectName: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+        flex: 1,
+    },
+    miniStatusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: 12,
+    },
+    miniStatusText: {
         fontSize: 11,
-        fontWeight: 'bold',
+        fontFamily: 'NotoSans-Bold',
+    },
+    subjectAccRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    subjectAccLabel: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Regular',
+        color: '#94a3b8',
+        marginRight: 6,
+    },
+    subjectAccValue: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Bold',
     },
     progressBarTrack: {
-        height: 6,
-        backgroundColor: '#f1f5f9',
-        borderRadius: 3,
+        height: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderRadius: 4,
         overflow: 'hidden',
-        marginVertical: 8,
     },
     progressBarFill: {
         height: '100%',
-        borderRadius: 3,
+        borderRadius: 4,
     },
-    chapterCardFooter: {
+    subNoteText: {
+        color: '#94a3b8',
+        fontSize: 13,
+        fontFamily: 'NotoSans-Regular',
+        fontStyle: 'italic',
+    },
+
+    // 5. Weak Chapters
+    weakChapterCard: {
+        backgroundColor: '#1e293b',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 10,
+        borderLeftWidth: 4,
+        borderLeftColor: '#ef4444',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    chapterHeaderRow: {
         flexDirection: 'row',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    chapterTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    chapterSubject: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Regular',
+        color: '#94a3b8',
+        marginTop: 2,
+    },
+    weakBadge: {
+        backgroundColor: 'rgba(239, 68, 68, 0.18)',
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: 12,
+    },
+    weakBadgeText: {
+        color: '#ef4444',
+        fontSize: 11,
+        fontFamily: 'NotoSans-Bold',
+    },
+    chapterBottomRow: {
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginTop: 4,
     },
-    chapterCardStats: {
-        fontSize: 11,
-        color: '#64748b',
+    chapterAccText: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Regular',
+        color: '#cbd5e1',
     },
-    strengthenButton: {
+    practiceBtn: {
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    practiceBtnGradient: {
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+    },
+    practiceBtnText: {
+        color: '#ffffff',
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+    },
+    celebrationCard: {
+        backgroundColor: '#1e293b',
+        borderRadius: 16,
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    celebrationTitle: {
+        fontSize: 18,
+        fontFamily: 'NotoSans-Bold',
+        color: '#10b981',
+        marginBottom: 4,
+    },
+    celebrationSub: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Regular',
+        color: '#cbd5e1',
+        textAlign: 'center',
+    },
+
+    // 6. Incomplete Chapters
+    incompleteChapterCard: {
+        backgroundColor: '#1e293b',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    incompleteMidRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#eef2ff',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
-        gap: 4,
+        justifyContent: 'space-between',
+        marginVertical: 6,
     },
-    strengthenButtonText: {
-        fontSize: 11,
-        fontWeight: 'bold',
-        color: '#4f46e5',
-    },
-    noChaptersCard: {
-        backgroundColor: 'white',
-        borderRadius: 14,
-        padding: 24,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    noChaptersText: {
+    progressLabel: {
         fontSize: 13,
-        color: '#94a3b8',
+        fontFamily: 'NotoSans-Regular',
+        color: '#cbd5e1',
     },
-    attemptCard: {
-        backgroundColor: 'white',
+    continueBtn: {
+        marginTop: 12,
+        borderRadius: 10,
+        overflow: 'hidden',
+        alignSelf: 'flex-start',
+    },
+    continueBtnGradient: {
+        paddingVertical: 7,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+    },
+    continueBtnText: {
+        color: '#ffffff',
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+    },
+
+    // 8. Negative Basket Card
+    negativeBasketCard: {
+        borderRadius: 20,
+        padding: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.18)',
+        ...Platform.select({
+            android: { elevation: 6 },
+            ios: { shadowColor: '#be123c', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }
+        }),
+    },
+    negTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    negCountText: {
+        fontSize: 22,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    negStatusText: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Medium',
+        color: '#fecdd3',
+        marginTop: 2,
+    },
+    negIconBadge: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    practiceMistakesBtn: {
+        marginTop: 16,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    practiceMistakesBtnGradient: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+    },
+    practiceMistakesBtnText: {
+        color: '#be123c',
+        fontFamily: 'NotoSans-Bold',
+        fontSize: 14,
+    },
+
+    // Negative Questions Details
+    negQuestionsSection: {
+        marginTop: 12,
+    },
+    toggleDetailsRow: {
+        paddingVertical: 10,
+        alignItems: 'center',
+    },
+    toggleDetailsText: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Bold',
+        color: '#f43f5e',
+    },
+    negQuestionItem: {
+        backgroundColor: '#1e293b',
         borderRadius: 14,
         padding: 14,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    attemptCardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
-        paddingBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(244, 63, 94, 0.2)',
     },
-    attemptCardTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#0f172a',
+    negItemHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 8,
     },
-    attemptCardDate: {
-        fontSize: 11,
-        color: '#94a3b8',
+    negCrossIcon: {
+        fontSize: 16,
+        marginRight: 8,
         marginTop: 2,
     },
-    attemptNetScoreBadge: {
-        backgroundColor: '#eef2ff',
-        borderWidth: 1,
-        borderColor: '#c7d2fe',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    attemptNetScoreText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#4f46e5',
-    },
-    attemptStatsRow: {
+    negItemBreadcrumb: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
+        marginTop: 4,
+        marginBottom: 10,
     },
-    attemptStatItem: {
+    negBreadcrumbText: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Medium',
+        color: '#94a3b8',
         flex: 1,
     },
-    attemptStatLabel: {
-        fontSize: 10,
-        color: '#64748b',
-        textTransform: 'uppercase',
-        fontWeight: '600',
+    wrongAttemptsPill: {
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
     },
-    attemptStatVal: {
+    wrongAttemptsText: {
+        fontSize: 11,
+        fontFamily: 'NotoSans-Bold',
+        color: '#fca5a5',
+    },
+    reviewBtn: {
+        alignSelf: 'flex-end',
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    reviewBtnText: {
         fontSize: 12,
-        fontWeight: 'bold',
-        marginTop: 2,
+        fontFamily: 'NotoSans-Bold',
+        color: '#38bdf8',
+    },
+    expandedBox: {
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    resolvePrompt: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Medium',
+        color: '#cbd5e1',
+        marginBottom: 8,
+    },
+    optBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    optBtnSelected: {
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    },
+    optBtnCorrect: {
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    },
+    optBtnWrong: {
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    },
+    optKeyCircle: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 10,
+    },
+    optKeyCircleSelected: {
+        backgroundColor: '#6366f1',
+    },
+    optKeyText: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    optKeyTextSelected: {
+        color: '#ffffff',
+    },
+    feedbackPill: {
+        padding: 8,
+        borderRadius: 8,
+        marginTop: 8,
+    },
+    feedbackSuccess: {
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    },
+    feedbackError: {
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    },
+    feedbackText: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+        textAlign: 'center',
+    },
+    explBox: {
+        marginTop: 8,
+        padding: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+        borderRadius: 8,
+    },
+    explLabel: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        color: '#fbbf24',
+        marginBottom: 4,
+    },
+
+    // 16. Empty State
+    emptyContainer: {
+        paddingTop: 30,
     },
     emptyCard: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 30,
+        borderRadius: 24,
+        padding: 28,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        marginTop: 20,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    emptyIconCircle: {
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
     },
     emptyTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#0f172a',
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+        textAlign: 'center',
         marginBottom: 8,
     },
     emptySubtitle: {
         fontSize: 14,
-        color: '#64748b',
+        fontFamily: 'NotoSans-Regular',
+        color: '#cbd5e1',
         textAlign: 'center',
         lineHeight: 20,
-        marginBottom: 20,
+        marginBottom: 24,
     },
-    emptyButton: {
+    primaryActionButton: {
         borderRadius: 14,
         overflow: 'hidden',
+        width: '100%',
     },
-    emptyButtonGrad: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
+    btnGradient: {
         paddingVertical: 14,
-        gap: 6,
+        alignItems: 'center',
+        borderRadius: 14,
     },
-    emptyButtonText: {
-        color: 'white',
+    primaryBtnText: {
+        color: '#ffffff',
         fontSize: 15,
-        fontWeight: 'bold',
-    },
-    mistakeReminderBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fef2f2',
-        borderWidth: 1,
-        borderColor: '#fee2e2',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        marginBottom: 8,
-    },
-    mistakeReminderText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#dc2626',
-        flex: 1,
-    },
-    solveInstructionText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#475569',
-        marginBottom: 4,
-    },
-    solveOptionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 12,
-        padding: 10,
-        borderWidth: 1.5,
-    },
-    solveOptionLetter: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-    },
-    solveOptionLetterText: {
-        fontSize: 13,
-        fontWeight: 'bold',
-    },
-    solveSuccessBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#dcfce7',
-        borderWidth: 1,
-        borderColor: '#86efac',
-        padding: 10,
-        borderRadius: 10,
-        marginTop: 10,
-        gap: 8,
-    },
-    solveSuccessText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#15803d',
-        flex: 1,
-    },
-    solveErrorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fee2e2',
-        borderWidth: 1,
-        borderColor: '#fca5a5',
-        padding: 10,
-        borderRadius: 10,
-        marginTop: 10,
-        gap: 8,
-    },
-    solveErrorText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#b91c1c',
-        flex: 1,
-    },
-    solutionToggleBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        marginTop: 10,
-        backgroundColor: '#f0f9ff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#bae6fd',
-    },
-    solutionToggleText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#0369a1',
-        marginRight: 4,
+        fontFamily: 'NotoSans-Bold',
     },
 });
 

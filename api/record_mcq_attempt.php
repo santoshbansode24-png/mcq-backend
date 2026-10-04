@@ -57,6 +57,36 @@ try {
     ]);
     
     $attempt_id = $pdo->lastInsertId();
+
+    // Track Negative Basket
+    try {
+        if (!$is_correct) {
+            $chStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch LEFT JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+            $chStmt->execute([$chapter_id]);
+            $chInfo = $chStmt->fetch(PDO::FETCH_ASSOC);
+            $subName = $chInfo['subject_name'] ?? 'General';
+            $chName = $chInfo['chapter_name'] ?? 'Practice';
+
+            $negStmt = $pdo->prepare("
+                INSERT INTO negative_basket 
+                (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), 0)
+                ON DUPLICATE KEY UPDATE 
+                    wrong_attempt_count = wrong_attempt_count + 1,
+                    selected_answer = VALUES(selected_answer),
+                    correct_answer = VALUES(correct_answer),
+                    last_wrong_date = NOW(),
+                    resolved = 0
+            ");
+            $negStmt->execute([
+                $user_id, $mcq_id, $subName, $chName, $chapter_id, $selected_answer, $correct_answer
+            ]);
+        } else {
+            $pdo->prepare("UPDATE negative_basket SET resolved = 1 WHERE student_id = ? AND question_id = ?")->execute([$user_id, $mcq_id]);
+        }
+    } catch (Exception $e) {
+        // Continue silently if basket logging encounters an edge case
+    }
     
     // Get updated progress for this chapter
     $progressStmt = $pdo->prepare("

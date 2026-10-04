@@ -63,6 +63,11 @@ try {
             $stmtUpd->execute([$user_id, $mcq_id]);
         }
 
+        // Also update negative_basket table
+        try {
+            $pdo->prepare("UPDATE negative_basket SET resolved = 1 WHERE student_id = ? AND question_id = ?")->execute([$user_id, $mcq_id]);
+        } catch (Exception $e) {}
+
         sendResponse('success', 'Question solved correctly! Removed from negative questions.', [
             'is_correct' => true,
             'mcq_id' => $mcq_id,
@@ -72,6 +77,10 @@ try {
         ]);
     } else {
         // Still incorrect
+        try {
+            $pdo->prepare("UPDATE negative_basket SET wrong_attempt_count = wrong_attempt_count + 1, last_wrong_date = NOW() WHERE student_id = ? AND question_id = ?")->execute([$user_id, $mcq_id]);
+        } catch (Exception $e) {}
+
         sendResponse('success', 'Incorrect answer. Review the explanation and try again.', [
             'is_correct' => false,
             'mcq_id' => $mcq_id,

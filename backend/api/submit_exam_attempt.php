@@ -29,7 +29,7 @@ if (!$input) {
 
 $user_id = intval($input['user_id'] ?? 0);
 $exam_id = intval($input['exam_id'] ?? 0);
-$answers = $input['answers'] ?? []; // Array of [{mcq_id: 10, selected_option: 'a'}, ...]
+$answers = $input['answers'] ?? [];
 $time_spent_seconds = intval($input['time_spent_seconds'] ?? 0);
 
 if ($user_id <= 0) {
@@ -37,7 +37,6 @@ if ($user_id <= 0) {
 }
 
 try {
-    // 1. Fetch Exam Scoring Metadata
     $pos_marks = isset($input['positive_marks']) ? floatval($input['positive_marks']) : 4.00;
     $neg_marks = isset($input['negative_marks']) ? floatval($input['negative_marks']) : 1.00;
 
@@ -51,7 +50,6 @@ try {
         }
     }
 
-    // 2. Fetch MCQs for this exam or chapters
     $mcq_ids = array_column($answers, 'mcq_id');
     $mcqs_by_id = [];
 
@@ -78,13 +76,11 @@ try {
         if (!$mcq_data) continue;
 
         $correct_opt = strtolower(trim($mcq_data['correct_answer']));
-
-        // Check format of correct_answer (a vs option_a)
         $correct_letter = str_replace('option_', '', $correct_opt);
 
         if (empty($selected) || $selected === 'skip' || $selected === 'none') {
             $unattempted_count++;
-            $is_correct = -1; // Skipped
+            $is_correct = -1;
             $marks_awarded = 0.00;
         } elseif ($selected === $correct_letter || $selected === 'option_' . $correct_letter) {
             $correct_count++;
@@ -120,7 +116,6 @@ try {
     $attempted_q = $correct_count + $wrong_count;
     $accuracy_pct = $attempted_q > 0 ? round(($correct_count / $attempted_q) * 100, 2) : 0.00;
 
-    // 3. Save to `exam_attempts`
     $stmtAttempt = $pdo->prepare("
         INSERT INTO exam_attempts 
         (exam_id, user_id, total_questions, correct_count, wrong_count, unattempted_count, positive_score, negative_deduction, net_score, max_possible_score, accuracy_percentage, time_spent_seconds)
@@ -132,11 +127,22 @@ try {
     ]);
     $attempt_id = $pdo->lastInsertId();
 
-    // 4. Save to `exam_attempt_answers`
     $stmtAns = $pdo->prepare("
         INSERT INTO exam_attempt_answers 
         (attempt_id, user_id, exam_id, mcq_id, chapter_id, selected_option, correct_option, is_correct, marks_awarded)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+    $stmtBasketUpsert = $pdo->prepare("
+        INSERT INTO negative_basket 
+        (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), 0)
+        ON DUPLICATE KEY UPDATE 
+            wrong_attempt_count = wrong_attempt_count + 1,
+            selected_answer = VALUES(selected_answer),
+            correct_answer = VALUES(correct_answer),
+            last_wrong_date = NOW(),
+            resolved = 0
     ");
 
     foreach ($answer_details as $detail) {
@@ -144,9 +150,29 @@ try {
             $attempt_id, $user_id, $exam_id, $detail['mcq_id'], $detail['chapter_id'],
             $detail['selected_option'], $detail['correct_option'], $detail['is_correct'], $detail['marks_awarded']
         ]);
+
+        if ($detail['is_correct'] === 0) {
+            try {
+                $chStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch LEFT JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+                $chStmt->execute([$detail['chapter_id']]);
+                $chInfo = $chStmt->fetch(PDO::FETCH_ASSOC);
+                $subName = $chInfo['subject_name'] ?? 'Exam';
+                $chName = $chInfo['chapter_name'] ?? 'Exam';
+
+                $stmtBasketUpsert->execute([
+                    $user_id, $detail['mcq_id'], $subName, $chName, $detail['chapter_id'],
+                    $detail['selected_option'], $detail['correct_option']
+                ]);
+            } catch (Exception $e) {
+                // Non-blocking
+            }
+        } elseif ($detail['is_correct'] === 1) {
+            try {
+                $pdo->prepare("UPDATE negative_basket SET resolved = 1 WHERE student_id = ? AND question_id = ?")->execute([$user_id, $detail['mcq_id']]);
+            } catch (Exception $e) {}
+        }
     }
 
-    // Response Object
     $response_data = [
         'attempt_id' => $attempt_id,
         'exam_id' => $exam_id,

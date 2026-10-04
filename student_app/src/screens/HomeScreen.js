@@ -225,9 +225,82 @@ const HomeBanner = React.memo(({ colors, title, subtitle, icon, onPress, iconIsT
     </TouchableOpacity>
 ));
 
+const HomePerformanceCard = React.memo(({ perfSummary, onPress, isDarkMode }) => {
+    const overall = perfSummary?.overall_performance_pct ?? 0;
+    const accuracy = perfSummary?.accuracy_pct ?? 0;
+    const tests = perfSummary?.total_tests ?? 0;
+    const negative = perfSummary?.negative_questions_count ?? 0;
+
+    return (
+        <View style={styles.perfCardContainer}>
+            <LinearGradient
+                colors={isDarkMode ? ['#1e1b4b', '#2e1065', '#312e81'] : ['#4338ca', '#4f46e5', '#6366f1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.perfCardGradient}
+            >
+                {/* Glossy Overlay */}
+                <LinearGradient
+                    colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.03)']}
+                    style={styles.glossyOverlay}
+                />
+
+                {/* Header */}
+                <View style={styles.perfHeaderRow}>
+                    <View style={styles.perfTitleRow}>
+                        <Text style={{ fontSize: 20, marginRight: 8 }}>📊</Text>
+                        <Text style={styles.perfCardTitle}>My Performance</Text>
+                    </View>
+                    <View style={[styles.perfBadgePill, { backgroundColor: overall >= 75 ? 'rgba(16, 185, 129, 0.25)' : overall >= 50 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(239, 68, 68, 0.25)' }]}>
+                        <Text style={[styles.perfBadgeText, { color: overall >= 75 ? '#6ee7b7' : overall >= 50 ? '#fde68a' : '#fca5a5' }]}>
+                            {overall >= 75 ? '🟢 Strong' : overall >= 50 ? '🟡 Average' : '🔴 Needs Practice'}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* 4 Stats Grid */}
+                <View style={styles.perfStatsGrid}>
+                    <View style={styles.perfStatItem}>
+                        <Text style={styles.perfStatNumber}>{overall}%</Text>
+                        <Text style={styles.perfStatLabel}>Overall Performance</Text>
+                    </View>
+                    <View style={styles.perfStatItem}>
+                        <Text style={styles.perfStatNumber}>{accuracy}%</Text>
+                        <Text style={styles.perfStatLabel}>Accuracy</Text>
+                    </View>
+                    <View style={styles.perfStatItem}>
+                        <Text style={styles.perfStatNumber}>{tests}</Text>
+                        <Text style={styles.perfStatLabel}>Tests</Text>
+                    </View>
+                    <View style={styles.perfStatItem}>
+                        <Text style={[styles.perfStatNumber, negative > 0 && { color: '#fca5a5' }]}>
+                            {negative}
+                        </Text>
+                        <Text style={styles.perfStatLabel}>Negative Questions</Text>
+                    </View>
+                </View>
+
+                {/* View Performance Button */}
+                <TouchableOpacity
+                    style={styles.perfActionButton}
+                    onPress={onPress}
+                    activeOpacity={0.88}
+                >
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.28)', 'rgba(255,255,255,0.12)']}
+                        style={styles.perfBtnInnerGradient}
+                    >
+                        <Text style={styles.perfActionText}>View Performance →</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+            </LinearGradient>
+        </View>
+    );
+});
+
 const HomeListHeader = React.memo(({ 
     userName, theme, t, isDarkMode, isSyncing, isFullySynced, hasUpdate, itemsLeft,
-    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam, activeLiveClass 
+    syncRotAnim, glowAnim, user, navigation, onSyncPress, onProfilePress, activeLiveExam, activeLiveClass, perfSummary 
 }) => {
     // Memoize the navigation handlers to prevent HomeBanner from re-rendering
     const navToStudyPlanner = useCallback(() => navigation.navigate('StudyPlanner'), [navigation]);
@@ -313,12 +386,10 @@ const HomeListHeader = React.memo(({
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('dailyBoosters')}</Text>
             <HomeBoosterGrid t={t} navigation={navigation} />
 
-            <HomeBanner 
-                colors={['#4F46E5', '#6366F1']}
-                title={t('performanceReport') || 'Performance Report 📊'}
-                subtitle="Net Score, Negative Questions & Weakness Analysis"
-                icon="chart-timeline-variant-shimmer"
+            <HomePerformanceCard 
+                perfSummary={perfSummary}
                 onPress={navToPerformance}
+                isDarkMode={isDarkMode}
             />
 
             <HomeBanner 
@@ -359,6 +430,26 @@ const HomeScreen = ({ user, navigation, route }) => {
     const [activeLiveClass, setActiveLiveClass] = useState(null);
     const glowAnim = useRef(new Animated.Value(0)).current;
     const syncRotAnim = useRef(new Animated.Value(0)).current;
+    const [perfSummary, setPerfSummary] = useState(null);
+
+    const loadPerformanceSummary = useCallback(async () => {
+        const uid = user?.user_id || user?.id;
+        if (!uid) return;
+        try {
+            const res = await axios.get(`${API_URL}/get_student_performance.php?user_id=${uid}`, { timeout: 6000 });
+            if (res.data?.status === 'success' && res.data.data?.summary) {
+                setPerfSummary(res.data.data.summary);
+            }
+        } catch (e) {
+            // Non-blocking
+        }
+    }, [user?.user_id, user?.id]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadPerformanceSummary();
+        }, [loadPerformanceSummary])
+    );
 
     // Live Exam & Live Class Polling
     useEffect(() => {
@@ -553,6 +644,7 @@ const HomeScreen = ({ user, navigation, route }) => {
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
+        loadPerformanceSummary();
         if (classId) {
             await dataCache.remove(`subjects_${classId}`);
             await loadSubjects(true);
@@ -560,7 +652,7 @@ const HomeScreen = ({ user, navigation, route }) => {
             setRefreshing(false);
             Alert.alert('Welcome!', 'Please go to your Profile and select your Class first.');
         }
-    }, [classId]);
+    }, [classId, loadPerformanceSummary]);
 
     const getImageUrl = (path) => {
         if (!path) return null;
@@ -705,8 +797,9 @@ const HomeScreen = ({ user, navigation, route }) => {
             onProfilePress={handleProfilePress}
             activeLiveExam={activeLiveExam}
             activeLiveClass={activeLiveClass}
+            perfSummary={perfSummary}
         />
-    ), [userName, theme, t, isDarkMode, isSyncing, itemsLeft, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam, activeLiveClass]);
+    ), [userName, theme, t, isDarkMode, isSyncing, itemsLeft, isFullySynced, hasUpdate, user, navigation, handleSyncPress, handleProfilePress, activeLiveExam, activeLiveClass, perfSummary]);
 
     return (
         <View style={styles.container}>
@@ -935,7 +1028,90 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-    }
+    },
+    // Home Performance Card Styles
+    perfCardContainer: {
+        marginBottom: 16,
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.18)',
+        ...Platform.select({
+            android: { elevation: 6 },
+            ios: { shadowColor: '#4338ca', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
+        }),
+    },
+    perfCardGradient: {
+        padding: 18,
+        borderRadius: 20,
+    },
+    perfHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 14,
+        zIndex: 1,
+    },
+    perfTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    perfCardTitle: {
+        fontSize: 18,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    perfBadgePill: {
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: 12,
+    },
+    perfBadgeText: {
+        fontSize: 11,
+        fontFamily: 'NotoSans-Bold',
+    },
+    perfStatsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginBottom: 14,
+        zIndex: 1,
+    },
+    perfStatItem: {
+        width: '48%',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 8,
+    },
+    perfStatNumber: {
+        fontSize: 18,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+    },
+    perfStatLabel: {
+        fontSize: 11,
+        fontFamily: 'NotoSans-Medium',
+        color: 'rgba(255, 255, 255, 0.85)',
+        marginTop: 2,
+    },
+    perfActionButton: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        zIndex: 1,
+    },
+    perfBtnInnerGradient: {
+        paddingVertical: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+    },
+    perfActionText: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontFamily: 'NotoSans-Bold',
+    },
 });
 
 export default HomeScreen;

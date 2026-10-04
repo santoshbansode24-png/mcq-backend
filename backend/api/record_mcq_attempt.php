@@ -19,13 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getJsonInput();
 
 // Validate required fields
-$required = ['user_id', 'mcq_id', 'chapter_id', 'selected_answer', 'correct_answer'];
+$required = ['user_id', 'mcq_id', 'chapter_id', 'selected_answer', 'correct_answer', 'is_correct'];
 $missing = validateRequired($input, $required);
-
-// Check is_correct separately because false is treated as empty
-if (!isset($input['is_correct'])) {
-    $missing[] = 'is_correct';
-}
 
 if (!empty($missing)) {
     sendResponse('error', 'Missing required fields: ' . implode(', ', $missing), null, 400);
@@ -62,11 +57,59 @@ try {
     ]);
     
     $attempt_id = $pdo->lastInsertId();
+
+    // Track Negative Basket
+    try {
+        if (!$is_correct) {
+            $chStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch LEFT JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+            $chStmt->execute([$chapter_id]);
+            $chInfo = $chStmt->fetch(PDO::FETCH_ASSOC);
+            $subName = $chInfo['subject_name'] ?? 'General';
+            $chName = $chInfo['chapter_name'] ?? 'Practice';
+
+            $negStmt = $pdo->prepare("
+                INSERT INTO negative_basket 
+                (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), 0)
+                ON DUPLICATE KEY UPDATE 
+                    wrong_attempt_count = wrong_attempt_count + 1,
+                    selected_answer = VALUES(selected_answer),
+                    correct_answer = VALUES(correct_answer),
+                    last_wrong_date = NOW(),
+                    resolved = 0
+            ");
+            $negStmt->execute([
+                $user_id, $mcq_id, $subName, $chName, $chapter_id, $selected_answer, $correct_answer
+            ]);
+        } else {
+            $pdo->prepare("UPDATE negative_basket SET resolved = 1 WHERE student_id = ? AND question_id = ?")->execute([$user_id, $mcq_id]);
+        }
+    } catch (Exception $e) {
+        // Continue silently if basket logging encounters an edge case
+    }
+    
+    // Get updated progress for this chapter
+    $progressStmt = $pdo->prepare("
+        SELECT 
+            (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ?) as total_mcqs,
+            (SELECT COUNT(DISTINCT mcq_id) FROM mcq_attempts WHERE user_id = ? AND chapter_id = ?) as solved_mcqs
+    ");
+    $progressStmt->execute([$chapter_id, $user_id, $chapter_id]);
+    $progress = $progressStmt->fetch();
+    
+    $total = intval($progress['total_mcqs']);
+    $solved = intval($progress['solved_mcqs']);
+    $percentage = $total > 0 ? round(($solved / $total) * 100, 1) : 0;
     
     // Success response
     sendResponse('success', 'MCQ attempt recorded successfully', [
         'attempt_id' => $attempt_id,
-        'is_correct' => $is_correct
+        'is_correct' => $is_correct,
+        'chapter_progress' => [
+            'total_mcqs' => $total,
+            'solved_mcqs' => $solved,
+            'completion_percentage' => $percentage
+        ]
     ], 201);
     
 } catch (PDOException $e) {

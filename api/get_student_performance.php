@@ -139,24 +139,39 @@ try {
     if ($negative_questions_count === 0 && intval($mcqStats['mcq_wrong']) > 0) {
         try {
             $pdo->prepare("
-                INSERT IGNORE INTO negative_basket 
+                INSERT INTO negative_basket 
                 (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
                 SELECT 
-                    ma.user_id as student_id,
-                    ma.mcq_id as question_id,
-                    COALESCE(s.subject_name, 'General') as subject_name,
-                    COALESCE(ch.chapter_name, 'Practice') as chapter_name,
-                    ma.chapter_id,
-                    ma.selected_answer,
-                    ma.correct_answer,
-                    COUNT(*) as wrong_count,
-                    MAX(ma.attempted_at) as last_wrong,
-                    0 as resolved
-                FROM mcq_attempts ma
-                LEFT JOIN chapters ch ON ma.chapter_id = ch.chapter_id
-                LEFT JOIN subjects s ON ch.subject_id = s.subject_id
-                WHERE ma.user_id = ? AND ma.is_correct = 0
-                GROUP BY ma.user_id, ma.mcq_id
+                    t.student_id,
+                    t.question_id,
+                    t.subject_name,
+                    t.chapter_name,
+                    t.chapter_id,
+                    t.selected_answer,
+                    t.correct_answer,
+                    t.wrong_count,
+                    t.last_wrong,
+                    0
+                FROM (
+                    SELECT 
+                        ma.user_id as student_id,
+                        ma.mcq_id as question_id,
+                        COALESCE(MAX(s.subject_name), 'General') as subject_name,
+                        COALESCE(MAX(ch.chapter_name), 'Practice') as chapter_name,
+                        MAX(ma.chapter_id) as chapter_id,
+                        MAX(ma.selected_answer) as selected_answer,
+                        MAX(ma.correct_answer) as correct_answer,
+                        COUNT(*) as wrong_count,
+                        MAX(ma.attempted_at) as last_wrong
+                    FROM mcq_attempts ma
+                    LEFT JOIN chapters ch ON ma.chapter_id = ch.chapter_id
+                    LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+                    WHERE ma.user_id = ? AND ma.is_correct = 0
+                    GROUP BY ma.user_id, ma.mcq_id
+                ) t
+                ON DUPLICATE KEY UPDATE 
+                    wrong_attempt_count = VALUES(wrong_attempt_count),
+                    last_wrong_date = VALUES(last_wrong_date)
             ")->execute([$user_id]);
 
             $stmtBasketCount->execute([$user_id]);
@@ -171,24 +186,39 @@ try {
     if ($negative_questions_count === 0 && intval($examStats['exam_wrong']) > 0) {
         try {
             $pdo->prepare("
-                INSERT IGNORE INTO negative_basket 
+                INSERT INTO negative_basket 
                 (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
                 SELECT 
-                    ea.user_id as student_id,
-                    ea.mcq_id as question_id,
-                    COALESCE(s.subject_name, 'General') as subject_name,
-                    COALESCE(ch.chapter_name, 'Exam') as chapter_name,
-                    ea.chapter_id,
-                    ea.selected_option as selected_answer,
-                    ea.correct_option as correct_answer,
-                    COUNT(*) as wrong_count,
-                    MAX(ea.created_at) as last_wrong,
-                    0 as resolved
-                FROM exam_attempt_answers ea
-                LEFT JOIN chapters ch ON ea.chapter_id = ch.chapter_id
-                LEFT JOIN subjects s ON ch.subject_id = s.subject_id
-                WHERE ea.user_id = ? AND ea.is_correct = 0
-                GROUP BY ea.user_id, ea.mcq_id
+                    t.student_id,
+                    t.question_id,
+                    t.subject_name,
+                    t.chapter_name,
+                    t.chapter_id,
+                    t.selected_answer,
+                    t.correct_answer,
+                    t.wrong_count,
+                    t.last_wrong,
+                    0
+                FROM (
+                    SELECT 
+                        ea.user_id as student_id,
+                        ea.mcq_id as question_id,
+                        COALESCE(MAX(s.subject_name), 'General') as subject_name,
+                        COALESCE(MAX(ch.chapter_name), 'Exam') as chapter_name,
+                        MAX(ea.chapter_id) as chapter_id,
+                        MAX(ea.selected_option) as selected_answer,
+                        MAX(ea.correct_option) as correct_answer,
+                        COUNT(*) as wrong_count,
+                        MAX(ea.created_at) as last_wrong
+                    FROM exam_attempt_answers ea
+                    LEFT JOIN chapters ch ON ea.chapter_id = ch.chapter_id
+                    LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+                    WHERE ea.user_id = ? AND ea.is_correct = 0
+                    GROUP BY ea.user_id, ea.mcq_id
+                ) t
+                ON DUPLICATE KEY UPDATE 
+                    wrong_attempt_count = VALUES(wrong_attempt_count),
+                    last_wrong_date = VALUES(last_wrong_date)
             ")->execute([$user_id]);
 
             $stmtBasketCount->execute([$user_id]);
@@ -208,20 +238,30 @@ try {
     $is_empty_state = ($total_attempted === 0);
 
     // 3. Subject-wise Performance
-    // Fetch subjects for this student's class (or any subjects attempted)
+    // Fetch subjects for this student's class AND any subjects they have attempted
     $subSql = "
-        SELECT 
-            s.subject_id,
-            s.subject_name
+        SELECT DISTINCT s.subject_id, s.subject_name
         FROM subjects s
-        WHERE s.class_id = ? OR s.class_id IS NULL OR s.class_id = 0
+        WHERE (s.class_id = ? OR ? = 0 OR s.class_id IS NULL)
+           OR s.subject_id IN (
+               SELECT DISTINCT ch.subject_id 
+               FROM mcq_attempts ma 
+               JOIN chapters ch ON ma.chapter_id = ch.chapter_id 
+               WHERE ma.user_id = ?
+           )
+           OR s.subject_id IN (
+               SELECT DISTINCT ch.subject_id 
+               FROM exam_attempt_answers ea 
+               JOIN chapters ch ON ea.chapter_id = ch.chapter_id 
+               WHERE ea.user_id = ?
+           )
         ORDER BY s.subject_name ASC
     ";
     $stmtSub = $pdo->prepare($subSql);
-    $stmtSub->execute([$class_id]);
+    $stmtSub->execute([$class_id, $class_id, $user_id, $user_id]);
     $subjectsList = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
 
-    // If none found for class, fetch all distinct subjects
+    // If none found, fetch all distinct subjects
     if (empty($subjectsList)) {
         $subjectsList = $pdo->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -292,24 +332,27 @@ try {
     }
 
     // 4. Chapter Breakdown & Weak Chapters
-    // Look at chapters the student has attempted
+    // Look at chapters the student has attempted in both MCQ practice and exams
     $stmtChAttempts = $pdo->prepare("
         SELECT 
             ch.chapter_id,
             ch.chapter_name,
             ch.subject_id,
-            s.subject_name,
+            COALESCE(s.subject_name, 'General') as subject_name,
             COUNT(*) as attempted,
-            SUM(CASE WHEN ma.is_correct = 1 THEN 1 ELSE 0 END) as correct,
-            SUM(CASE WHEN ma.is_correct = 0 THEN 1 ELSE 0 END) as wrong
-        FROM mcq_attempts ma
-        JOIN chapters ch ON ma.chapter_id = ch.chapter_id
+            SUM(CASE WHEN att.is_correct = 1 THEN 1 ELSE 0 END) as correct,
+            SUM(CASE WHEN att.is_correct = 0 THEN 1 ELSE 0 END) as wrong
+        FROM (
+            SELECT user_id, chapter_id, is_correct FROM mcq_attempts WHERE user_id = ?
+            UNION ALL
+            SELECT user_id, chapter_id, is_correct FROM exam_attempt_answers WHERE user_id = ? AND is_correct IN (0, 1)
+        ) att
+        JOIN chapters ch ON att.chapter_id = ch.chapter_id
         LEFT JOIN subjects s ON ch.subject_id = s.subject_id
-        WHERE ma.user_id = ?
-        GROUP BY ch.chapter_id
+        GROUP BY ch.chapter_id, ch.chapter_name, ch.subject_id, s.subject_name
         ORDER BY attempted DESC
     ");
-    $stmtChAttempts->execute([$user_id]);
+    $stmtChAttempts->execute([$user_id, $user_id]);
     $chRows = $stmtChAttempts->fetchAll(PDO::FETCH_ASSOC);
 
     $weak_chapters = [];
@@ -348,7 +391,7 @@ try {
     }
 
     // 5. Incomplete Chapters Logic (0% Not Started, 1-99% In Progress, 100% Completed)
-    // Query chapters for student's class
+    // Query chapters for student's class AND any chapters attempted
     $stmtAllChapters = $pdo->prepare("
         SELECT 
             ch.chapter_id,
@@ -361,11 +404,13 @@ try {
             (SELECT COUNT(*) FROM notes WHERE chapter_id = ch.chapter_id) as total_notes
         FROM chapters ch
         JOIN subjects s ON ch.subject_id = s.subject_id
-        WHERE (s.class_id = ? OR ? = 0)
+        WHERE (s.class_id = ? OR ? = 0 OR ch.subject_id IN (
+            SELECT DISTINCT ch2.subject_id FROM mcq_attempts ma2 JOIN chapters ch2 ON ma2.chapter_id = ch2.chapter_id WHERE ma2.user_id = ?
+        ))
         ORDER BY ch.chapter_id ASC
         LIMIT 60
     ");
-    $stmtAllChapters->execute([$user_id, $class_id, $class_id]);
+    $stmtAllChapters->execute([$user_id, $class_id, $class_id, $user_id]);
     $allChapters = $stmtAllChapters->fetchAll(PDO::FETCH_ASSOC);
 
     $incomplete_chapters = [];
@@ -433,6 +478,40 @@ try {
     ");
     $stmtBasket->execute([$user_id]);
     $basketQuestions = $stmtBasket->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fallback if negative_basket table has no rows yet but student has wrong attempts recorded
+    if (empty($basketQuestions) && $negative_questions_count > 0) {
+        try {
+            $stmtFallbackQ = $pdo->prepare("
+                SELECT 
+                    0 as basket_id,
+                    m.mcq_id as question_id,
+                    COALESCE(s.subject_name, 'General') as subject_name,
+                    COALESCE(ch.chapter_name, 'Practice') as chapter_name,
+                    m.chapter_id,
+                    MAX(ma.selected_answer) as selected_answer,
+                    MAX(ma.correct_answer) as correct_answer,
+                    COUNT(*) as wrong_attempt_count,
+                    MAX(ma.attempted_at) as last_wrong_date,
+                    m.question,
+                    m.option_a,
+                    m.option_b,
+                    m.option_c,
+                    m.option_d,
+                    m.explanation
+                FROM mcq_attempts ma
+                JOIN mcqs m ON ma.mcq_id = m.mcq_id
+                LEFT JOIN chapters ch ON m.chapter_id = ch.chapter_id
+                LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+                WHERE ma.user_id = ? AND ma.is_correct = 0
+                GROUP BY m.mcq_id, m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.explanation, m.chapter_id, s.subject_name, ch.chapter_name
+                ORDER BY wrong_attempt_count DESC, last_wrong_date DESC
+                LIMIT 50
+            ");
+            $stmtFallbackQ->execute([$user_id]);
+            $basketQuestions = $stmtFallbackQ->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {}
+    }
 
     // 7. Study Next Recommendation (Exactly ONE main recommendation)
     $study_next = null;

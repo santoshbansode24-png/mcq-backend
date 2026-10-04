@@ -135,11 +135,65 @@ try {
     $stmtBasketCount->execute([$user_id]);
     $negative_questions_count = intval($stmtBasketCount->fetch()['c'] ?? 0);
 
-    // If negative_basket was empty but student had wrong answers in mcq_attempts, fall back to unique wrong mcqs
+    // If negative_basket is empty but student had wrong answers in mcq_attempts or exams, auto-backfill on the fly
     if ($negative_questions_count === 0 && intval($mcqStats['mcq_wrong']) > 0) {
-        $stmtFallbackNeg = $pdo->prepare("SELECT COUNT(DISTINCT mcq_id) as c FROM mcq_attempts WHERE user_id = ? AND is_correct = 0");
-        $stmtFallbackNeg->execute([$user_id]);
-        $negative_questions_count = intval($stmtFallbackNeg->fetch()['c'] ?? 0);
+        try {
+            $pdo->prepare("
+                INSERT IGNORE INTO negative_basket 
+                (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
+                SELECT 
+                    ma.user_id as student_id,
+                    ma.mcq_id as question_id,
+                    COALESCE(s.subject_name, 'General') as subject_name,
+                    COALESCE(ch.chapter_name, 'Practice') as chapter_name,
+                    ma.chapter_id,
+                    ma.selected_answer,
+                    ma.correct_answer,
+                    COUNT(*) as wrong_count,
+                    MAX(ma.attempted_at) as last_wrong,
+                    0 as resolved
+                FROM mcq_attempts ma
+                LEFT JOIN chapters ch ON ma.chapter_id = ch.chapter_id
+                LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+                WHERE ma.user_id = ? AND ma.is_correct = 0
+                GROUP BY ma.user_id, ma.mcq_id
+            ")->execute([$user_id]);
+
+            $stmtBasketCount->execute([$user_id]);
+            $negative_questions_count = intval($stmtBasketCount->fetch()['c'] ?? 0);
+        } catch (Exception $e) {
+            $stmtFallbackNeg = $pdo->prepare("SELECT COUNT(DISTINCT mcq_id) as c FROM mcq_attempts WHERE user_id = ? AND is_correct = 0");
+            $stmtFallbackNeg->execute([$user_id]);
+            $negative_questions_count = intval($stmtFallbackNeg->fetch()['c'] ?? 0);
+        }
+    }
+
+    if ($negative_questions_count === 0 && intval($examStats['exam_wrong']) > 0) {
+        try {
+            $pdo->prepare("
+                INSERT IGNORE INTO negative_basket 
+                (student_id, question_id, subject_name, chapter_name, chapter_id, selected_answer, correct_answer, wrong_attempt_count, last_wrong_date, resolved)
+                SELECT 
+                    ea.user_id as student_id,
+                    ea.mcq_id as question_id,
+                    COALESCE(s.subject_name, 'General') as subject_name,
+                    COALESCE(ch.chapter_name, 'Exam') as chapter_name,
+                    ea.chapter_id,
+                    ea.selected_option as selected_answer,
+                    ea.correct_option as correct_answer,
+                    COUNT(*) as wrong_count,
+                    MAX(ea.created_at) as last_wrong,
+                    0 as resolved
+                FROM exam_attempt_answers ea
+                LEFT JOIN chapters ch ON ea.chapter_id = ch.chapter_id
+                LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+                WHERE ea.user_id = ? AND ea.is_correct = 0
+                GROUP BY ea.user_id, ea.mcq_id
+            ")->execute([$user_id]);
+
+            $stmtBasketCount->execute([$user_id]);
+            $negative_questions_count = intval($stmtBasketCount->fetch()['c'] ?? 0);
+        } catch (Exception $e) {}
     }
 
     // Overall Status

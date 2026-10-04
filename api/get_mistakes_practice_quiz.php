@@ -30,24 +30,47 @@ if ($user_id <= 0) {
 }
 
 try {
+    // 1. First attempt to pull from negative_basket
     $stmt = $pdo->prepare("
         SELECT DISTINCT 
             m.mcq_id, m.chapter_id, m.question, m.option_a, m.option_b, m.option_c, m.option_d,
             m.correct_answer, m.explanation, m.difficulty,
-            ch.chapter_name, s.subject_name
-        FROM exam_attempt_answers ea
-        JOIN mcqs m ON ea.mcq_id = m.mcq_id
-        JOIN chapters ch ON m.chapter_id = ch.chapter_id
-        JOIN subjects s ON ch.subject_id = s.subject_id
-        WHERE ea.user_id = ? AND ea.is_correct = 0
-        ORDER BY RAND()
+            COALESCE(ch.chapter_name, nb.chapter_name, 'Practice') as chapter_name,
+            COALESCE(s.subject_name, nb.subject_name, 'General') as subject_name
+        FROM negative_basket nb
+        JOIN mcqs m ON nb.question_id = m.mcq_id
+        LEFT JOIN chapters ch ON m.chapter_id = ch.chapter_id
+        LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+        WHERE nb.student_id = ? AND nb.resolved = 0
+        ORDER BY nb.wrong_attempt_count DESC, RAND()
         LIMIT ?
     ");
     $stmt->bindValue(1, $user_id, PDO::PARAM_INT);
     $stmt->bindValue(2, $limit, PDO::PARAM_INT);
     $stmt->execute();
-
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 2. Fallback to exam_attempt_answers and mcq_attempts if negative_basket is empty
+    if (empty($questions)) {
+        $stmtFallback = $pdo->prepare("
+            SELECT DISTINCT 
+                m.mcq_id, m.chapter_id, m.question, m.option_a, m.option_b, m.option_c, m.option_d,
+                m.correct_answer, m.explanation, m.difficulty,
+                COALESCE(ch.chapter_name, 'Practice') as chapter_name,
+                COALESCE(s.subject_name, 'General') as subject_name
+            FROM mcq_attempts ma
+            JOIN mcqs m ON ma.mcq_id = m.mcq_id
+            LEFT JOIN chapters ch ON m.chapter_id = ch.chapter_id
+            LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+            WHERE ma.user_id = ? AND ma.is_correct = 0
+            ORDER BY RAND()
+            LIMIT ?
+        ");
+        $stmtFallback->bindValue(1, $user_id, PDO::PARAM_INT);
+        $stmtFallback->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmtFallback->execute();
+        $questions = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     $formatted_quiz = [];
     foreach ($questions as $q) {

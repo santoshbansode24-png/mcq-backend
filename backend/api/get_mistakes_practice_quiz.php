@@ -32,17 +32,18 @@ if ($user_id <= 0) {
 try {
     // 1. First attempt to pull from negative_basket
     $stmt = $pdo->prepare("
-        SELECT DISTINCT 
+        SELECT 
             m.mcq_id, m.chapter_id, m.question, m.option_a, m.option_b, m.option_c, m.option_d,
             m.correct_answer, m.explanation, m.difficulty,
             COALESCE(ch.chapter_name, nb.chapter_name, 'Practice') as chapter_name,
-            COALESCE(s.subject_name, nb.subject_name, 'General') as subject_name
+            COALESCE(s.subject_name, nb.subject_name, 'General') as subject_name,
+            nb.wrong_attempt_count
         FROM negative_basket nb
         JOIN mcqs m ON nb.question_id = m.mcq_id
         LEFT JOIN chapters ch ON m.chapter_id = ch.chapter_id
         LEFT JOIN subjects s ON ch.subject_id = s.subject_id
         WHERE nb.student_id = ? AND nb.resolved = 0
-        ORDER BY nb.wrong_attempt_count DESC, RAND()
+        ORDER BY nb.wrong_attempt_count DESC, m.mcq_id DESC
         LIMIT ?
     ");
     $stmt->bindValue(1, $user_id, PDO::PARAM_INT);
@@ -50,24 +51,31 @@ try {
     $stmt->execute();
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Fallback to exam_attempt_answers and mcq_attempts if negative_basket is empty
+    // 2. Fallback to mcq_attempts and exam_attempt_answers if negative_basket is empty
     if (empty($questions)) {
         $stmtFallback = $pdo->prepare("
-            SELECT DISTINCT 
+            SELECT 
                 m.mcq_id, m.chapter_id, m.question, m.option_a, m.option_b, m.option_c, m.option_d,
                 m.correct_answer, m.explanation, m.difficulty,
-                COALESCE(ch.chapter_name, 'Practice') as chapter_name,
-                COALESCE(s.subject_name, 'General') as subject_name
-            FROM mcq_attempts ma
-            JOIN mcqs m ON ma.mcq_id = m.mcq_id
+                COALESCE(MAX(ch.chapter_name), 'Practice') as chapter_name,
+                COALESCE(MAX(s.subject_name), 'General') as subject_name,
+                COUNT(*) as wrong_count
+            FROM (
+                SELECT user_id, mcq_id, chapter_id, is_correct FROM mcq_attempts WHERE user_id = ? AND is_correct = 0
+                UNION ALL
+                SELECT user_id, mcq_id, chapter_id, is_correct FROM exam_attempt_answers WHERE user_id = ? AND is_correct = 0
+            ) combined
+            JOIN mcqs m ON combined.mcq_id = m.mcq_id
             LEFT JOIN chapters ch ON m.chapter_id = ch.chapter_id
             LEFT JOIN subjects s ON ch.subject_id = s.subject_id
-            WHERE ma.user_id = ? AND ma.is_correct = 0
-            ORDER BY RAND()
+            GROUP BY m.mcq_id, m.chapter_id, m.question, m.option_a, m.option_b, m.option_c, m.option_d,
+                     m.correct_answer, m.explanation, m.difficulty
+            ORDER BY wrong_count DESC, m.mcq_id DESC
             LIMIT ?
         ");
         $stmtFallback->bindValue(1, $user_id, PDO::PARAM_INT);
-        $stmtFallback->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmtFallback->bindValue(2, $user_id, PDO::PARAM_INT);
+        $stmtFallback->bindValue(3, $limit, PDO::PARAM_INT);
         $stmtFallback->execute();
         $questions = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
     }

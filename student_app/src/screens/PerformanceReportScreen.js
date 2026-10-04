@@ -60,7 +60,7 @@ const SmartText = React.memo(({ content, textColor, fontSize, fontWeight, backgr
         return (
             <Text style={[
                 {
-                    color: textColor || '#0f172a',
+                    color: textColor || '#ffffff',
                     fontSize: parseInt(fontSize) || 15,
                     fontFamily: fontWeight === 'bold' ? 'NotoSans-Bold' : 'NotoSans-Regular',
                     lineHeight: (parseInt(fontSize) || 15) * 1.4,
@@ -615,7 +615,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                                                     </View>
                                                 </View>
                                                 <View style={styles.incompleteMidRow}>
-                                                    <Text style={styles.progressLabel}>Progress: <Text style={{ fontFamily: 'NotoSans-Bold', color: '#0f172a' }}>{ch.progress_pct}%</Text></Text>
+                                                    <Text style={styles.progressLabel}>Progress: <Text style={{ fontFamily: 'NotoSans-Bold', color: '#38bdf8' }}>{ch.progress_pct}%</Text></Text>
                                                 </View>
                                                 {/* Progress Bar */}
                                                 <View style={styles.progressBarTrack}>
@@ -718,7 +718,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                                                                     content={decodeHtml(q.question)}
                                                                     fontSize={15}
                                                                     fontWeight="bold"
-                                                                    textColor="#0f172a"
+                                                                    textColor="#ffffff"
                                                                 />
                                                             </View>
                                                         </View>
@@ -775,7 +775,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                                                                                 </Text>
                                                                             </View>
                                                                             <View style={{ flex: 1 }}>
-                                                                                <SmartText content={decodeHtml(optVal)} fontSize={14} textColor="#1e293b" />
+                                                                                <SmartText content={decodeHtml(optVal)} fontSize={14} textColor="#f1f5f9" />
                                                                             </View>
                                                                         </TouchableOpacity>
                                                                     );
@@ -793,7 +793,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                                                                 {q.explanation ? (
                                                                     <View style={styles.explBox}>
                                                                         <Text style={styles.explLabel}>💡 Explanation:</Text>
-                                                                        <SmartText content={decodeHtml(q.explanation)} fontSize={13} textColor="#475569" />
+                                                                        <SmartText content={decodeHtml(q.explanation)} fontSize={13} textColor="#cbd5e1" />
                                                                     </View>
                                                                 ) : null}
                                                             </View>

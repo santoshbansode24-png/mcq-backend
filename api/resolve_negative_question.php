@@ -68,6 +68,11 @@ try {
             $pdo->prepare("UPDATE negative_basket SET resolved = 1 WHERE student_id = ? AND question_id = ?")->execute([$user_id, $mcq_id]);
         } catch (Exception $e) {}
 
+        // Also update mcq_attempts table so progress and accuracy reflect resolution
+        try {
+            $pdo->prepare("UPDATE mcq_attempts SET is_correct = 1 WHERE user_id = ? AND mcq_id = ?")->execute([$user_id, $mcq_id]);
+        } catch (Exception $e) {}
+
         sendResponse('success', 'Question solved correctly! Removed from negative questions.', [
             'is_correct' => true,
             'mcq_id' => $mcq_id,

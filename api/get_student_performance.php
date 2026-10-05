@@ -238,101 +238,144 @@ try {
     $is_empty_state = ($total_attempted === 0);
 
     // 3. Subject-wise Performance
-    // Fetch subjects for this student's class AND any subjects they have attempted
-    $subSql = "
-        SELECT DISTINCT s.subject_id, s.subject_name
-        FROM subjects s
-        WHERE (s.class_id = ? OR ? = 0 OR s.class_id IS NULL)
-           OR s.subject_id IN (
-               SELECT DISTINCT ch.subject_id 
-               FROM mcq_attempts ma 
-               JOIN chapters ch ON ma.chapter_id = ch.chapter_id 
-               WHERE ma.user_id = ?
-           )
-           OR s.subject_id IN (
-               SELECT DISTINCT ch.subject_id 
-               FROM exam_attempt_answers ea 
-               JOIN chapters ch ON ea.chapter_id = ch.chapter_id 
-               WHERE ea.user_id = ?
-           )
-        ORDER BY s.subject_name ASC
-    ";
-    $stmtSub = $pdo->prepare($subSql);
-    $stmtSub->execute([$class_id, $class_id, $user_id, $user_id]);
-    $subjectsList = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
-
-    // If none found, fetch all distinct subjects
-    if (empty($subjectsList)) {
-        $subjectsList = $pdo->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Calculate subject accuracy
+    // STRICT RULE: Only fetch subjects belonging to the student's class.
+    // OMIT any subject where admin has NOT uploaded data (no MCQs, videos, or notes) and no attempts.
+    // Group and deduplicate by subject name to avoid showing duplicate cards (e.g. 2 Science subjects).
     $subjectPerformance = [];
-    foreach ($subjectsList as $sub) {
-        $subId = intval($sub['subject_id']);
-        
-        // Sum from mcq_attempts
-        $stmtSubMcq = $pdo->prepare("
+
+    if ($class_id > 0) {
+        $subSql = "
             SELECT 
-                COUNT(*) as attempted,
-                IFNULL(SUM(CASE WHEN ma.is_correct = 1 THEN 1 ELSE 0 END), 0) as correct,
-                IFNULL(SUM(CASE WHEN ma.is_correct = 0 THEN 1 ELSE 0 END), 0) as wrong
-            FROM mcq_attempts ma
-            JOIN chapters ch ON ma.chapter_id = ch.chapter_id
-            WHERE ma.user_id = ? AND ch.subject_id = ?
-        ");
-        $stmtSubMcq->execute([$user_id, $subId]);
-        $subMcq = $stmtSubMcq->fetch(PDO::FETCH_ASSOC);
+                s.subject_id,
+                TRIM(s.subject_name) as subject_name,
+                s.class_id,
+                (
+                    SELECT COUNT(*) 
+                    FROM chapters ch 
+                    WHERE ch.subject_id = s.subject_id
+                ) as total_chapters,
+                (
+                    SELECT COUNT(*) 
+                    FROM mcqs m 
+                    JOIN chapters ch ON m.chapter_id = ch.chapter_id 
+                    WHERE ch.subject_id = s.subject_id
+                ) as total_mcqs,
+                (
+                    SELECT COUNT(*) 
+                    FROM videos v 
+                    JOIN chapters ch ON v.chapter_id = ch.chapter_id 
+                    WHERE ch.subject_id = s.subject_id
+                ) as total_videos,
+                (
+                    SELECT COUNT(*) 
+                    FROM notes n 
+                    JOIN chapters ch ON n.chapter_id = ch.chapter_id 
+                    WHERE ch.subject_id = s.subject_id
+                ) as total_notes
+            FROM subjects s
+            WHERE s.class_id = ?
+            ORDER BY s.subject_name ASC
+        ";
+        $stmtSub = $pdo->prepare($subSql);
+        $stmtSub->execute([$class_id]);
+        $rawSubjects = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
 
-        // Sum from exam_attempt_answers
-        $stmtSubExam = $pdo->prepare("
-            SELECT 
-                COUNT(*) as attempted,
-                IFNULL(SUM(CASE WHEN ea.is_correct = 1 THEN 1 ELSE 0 END), 0) as correct,
-                IFNULL(SUM(CASE WHEN ea.is_correct = 0 THEN 1 ELSE 0 END), 0) as wrong
-            FROM exam_attempt_answers ea
-            JOIN chapters ch ON ea.chapter_id = ch.chapter_id
-            WHERE ea.user_id = ? AND ch.subject_id = ? AND ea.is_correct IN (0, 1)
-        ");
-        $stmtSubExam->execute([$user_id, $subId]);
-        $subExam = $stmtSubExam->fetch(PDO::FETCH_ASSOC);
-
-        $subAttempted = intval($subMcq['attempted']) + intval($subExam['attempted']);
-        $subCorrect = intval($subMcq['correct']) + intval($subExam['correct']);
-        $subWrong = intval($subMcq['wrong']) + intval($subExam['wrong']);
-
-        $subAccuracy = $subAttempted > 0 ? round(($subCorrect / $subAttempted) * 100) : 0;
-        
-        $status = 'Average';
-        $status_color = 'yellow';
-        if ($subAttempted === 0) {
-            $status = 'Not Started';
-            $status_color = 'gray';
-        } elseif ($subAccuracy >= 75) {
-            $status = 'Strong';
-            $status_color = 'green';
-        } elseif ($subAccuracy >= 50) {
-            $status = 'Average';
-            $status_color = 'yellow';
-        } else {
-            $status = 'Weak';
-            $status_color = 'red';
+        // Group & deduplicate by normalized subject name
+        $subjectsByName = [];
+        foreach ($rawSubjects as $sub) {
+            $normName = strtolower(trim($sub['subject_name']));
+            if (!isset($subjectsByName[$normName])) {
+                $subjectsByName[$normName] = [
+                    'subject_id' => intval($sub['subject_id']),
+                    'subject_ids' => [intval($sub['subject_id'])],
+                    'subject_name' => trim($sub['subject_name']),
+                    'total_chapters' => intval($sub['total_chapters']),
+                    'total_mcqs' => intval($sub['total_mcqs']),
+                    'total_videos' => intval($sub['total_videos']),
+                    'total_notes' => intval($sub['total_notes'])
+                ];
+            } else {
+                $subjectsByName[$normName]['subject_ids'][] = intval($sub['subject_id']);
+                $subjectsByName[$normName]['total_chapters'] += intval($sub['total_chapters']);
+                $subjectsByName[$normName]['total_mcqs'] += intval($sub['total_mcqs']);
+                $subjectsByName[$normName]['total_videos'] += intval($sub['total_videos']);
+                $subjectsByName[$normName]['total_notes'] += intval($sub['total_notes']);
+            }
         }
 
-        $subjectPerformance[] = [
-            'subject_id' => $subId,
-            'subject_name' => $sub['subject_name'],
-            'accuracy_pct' => $subAccuracy,
-            'total_attempted' => $subAttempted,
-            'correct_count' => $subCorrect,
-            'wrong_count' => $subWrong,
-            'status' => $status,
-            'status_color' => $status_color
-        ];
+        foreach ($subjectsByName as $subGroup) {
+            $subIds = $subGroup['subject_ids'];
+            $idPlaceholders = implode(',', array_fill(0, count($subIds), '?'));
+
+            // Sum from mcq_attempts for these subject_ids
+            $stmtSubMcq = $pdo->prepare("
+                SELECT 
+                    COUNT(*) as attempted,
+                    IFNULL(SUM(CASE WHEN ma.is_correct = 1 THEN 1 ELSE 0 END), 0) as correct,
+                    IFNULL(SUM(CASE WHEN ma.is_correct = 0 THEN 1 ELSE 0 END), 0) as wrong
+                FROM mcq_attempts ma
+                JOIN chapters ch ON ma.chapter_id = ch.chapter_id
+                WHERE ma.user_id = ? AND ch.subject_id IN ($idPlaceholders)
+            ");
+            $stmtSubMcq->execute(array_merge([$user_id], $subIds));
+            $subMcq = $stmtSubMcq->fetch(PDO::FETCH_ASSOC);
+
+            // Sum from exam_attempt_answers for these subject_ids
+            $stmtSubExam = $pdo->prepare("
+                SELECT 
+                    COUNT(*) as attempted,
+                    IFNULL(SUM(CASE WHEN ea.is_correct = 1 THEN 1 ELSE 0 END), 0) as correct,
+                    IFNULL(SUM(CASE WHEN ea.is_correct = 0 THEN 1 ELSE 0 END), 0) as wrong
+                FROM exam_attempt_answers ea
+                JOIN chapters ch ON ea.chapter_id = ch.chapter_id
+                WHERE ea.user_id = ? AND ch.subject_id IN ($idPlaceholders) AND ea.is_correct IN (0, 1)
+            ");
+            $stmtSubExam->execute(array_merge([$user_id], $subIds));
+            $subExam = $stmtSubExam->fetch(PDO::FETCH_ASSOC);
+
+            $subAttempted = intval($subMcq['attempted'] ?? 0) + intval($subExam['attempted'] ?? 0);
+            $subCorrect = intval($subMcq['correct'] ?? 0) + intval($subExam['correct'] ?? 0);
+            $subWrong = intval($subMcq['wrong'] ?? 0) + intval($subExam['wrong'] ?? 0);
+
+            // User Requirement: When admin has NOT uploaded data for a subject (no MCQs, videos, or notes) and no attempts, DO NOT SHOW
+            $hasData = ($subGroup['total_mcqs'] > 0 || $subGroup['total_videos'] > 0 || $subGroup['total_notes'] > 0 || $subAttempted > 0);
+            if (!$hasData) {
+                continue;
+            }
+
+            $subAccuracy = $subAttempted > 0 ? round(($subCorrect / $subAttempted) * 100) : 0;
+            
+            $status = 'Average';
+            $status_color = 'yellow';
+            if ($subAttempted === 0) {
+                $status = 'Not Started';
+                $status_color = 'gray';
+            } elseif ($subAccuracy >= 75) {
+                $status = 'Strong';
+                $status_color = 'green';
+            } elseif ($subAccuracy >= 50) {
+                $status = 'Average';
+                $status_color = 'yellow';
+            } else {
+                $status = 'Weak';
+                $status_color = 'red';
+            }
+
+            $subjectPerformance[] = [
+                'subject_id' => $subGroup['subject_id'],
+                'subject_name' => $subGroup['subject_name'],
+                'accuracy_pct' => $subAccuracy,
+                'total_attempted' => $subAttempted,
+                'correct_count' => $subCorrect,
+                'wrong_count' => $subWrong,
+                'status' => $status,
+                'status_color' => $status_color
+            ];
+        }
     }
 
     // 4. Chapter Breakdown & Weak Chapters
-    // Look at chapters the student has attempted in both MCQ practice and exams
+    // Look at chapters the student has attempted in both MCQ practice and exams (strictly for their class)
     $stmtChAttempts = $pdo->prepare("
         SELECT 
             ch.chapter_id,
@@ -348,11 +391,12 @@ try {
             SELECT user_id, chapter_id, is_correct FROM exam_attempt_answers WHERE user_id = ? AND is_correct IN (0, 1)
         ) att
         JOIN chapters ch ON att.chapter_id = ch.chapter_id
-        LEFT JOIN subjects s ON ch.subject_id = s.subject_id
+        JOIN subjects s ON ch.subject_id = s.subject_id
+        WHERE s.class_id = ?
         GROUP BY ch.chapter_id, ch.chapter_name, ch.subject_id, s.subject_name
         ORDER BY attempted DESC
     ");
-    $stmtChAttempts->execute([$user_id, $user_id]);
+    $stmtChAttempts->execute([$user_id, $user_id, $class_id]);
     $chRows = $stmtChAttempts->fetchAll(PDO::FETCH_ASSOC);
 
     $weak_chapters = [];
@@ -391,66 +435,75 @@ try {
     }
 
     // 5. Incomplete Chapters Logic (0% Not Started, 1-99% In Progress, 100% Completed)
-    // Query chapters for student's class AND any chapters attempted
-    $stmtAllChapters = $pdo->prepare("
-        SELECT 
-            ch.chapter_id,
-            ch.chapter_name,
-            ch.subject_id,
-            s.subject_name,
-            (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ch.chapter_id) as total_mcqs,
-            (SELECT COUNT(DISTINCT mcq_id) FROM mcq_attempts WHERE user_id = ? AND chapter_id = ch.chapter_id) as solved_mcqs,
-            (SELECT COUNT(*) FROM videos WHERE chapter_id = ch.chapter_id) as total_videos,
-            (SELECT COUNT(*) FROM notes WHERE chapter_id = ch.chapter_id) as total_notes
-        FROM chapters ch
-        JOIN subjects s ON ch.subject_id = s.subject_id
-        WHERE (s.class_id = ? OR ? = 0 OR ch.subject_id IN (
-            SELECT DISTINCT ch2.subject_id FROM mcq_attempts ma2 JOIN chapters ch2 ON ma2.chapter_id = ch2.chapter_id WHERE ma2.user_id = ?
-        ))
-        ORDER BY ch.chapter_id ASC
-        LIMIT 60
-    ");
-    $stmtAllChapters->execute([$user_id, $class_id, $class_id, $user_id]);
-    $allChapters = $stmtAllChapters->fetchAll(PDO::FETCH_ASSOC);
-
+    // Strictly query chapters for student's class where admin has ACTUALLY uploaded data (MCQs, videos, or notes)
     $incomplete_chapters = [];
-    foreach ($allChapters as $ch) {
-        $totMcqs = intval($ch['total_mcqs']);
-        $solvedMcqs = intval($ch['solved_mcqs']);
-        
-        $progress = 0;
-        if ($totMcqs > 0) {
-            $progress = round(($solvedMcqs / $totMcqs) * 100);
-        } elseif ($solvedMcqs > 0) {
-            $progress = 50;
+    if ($class_id > 0) {
+        $stmtAllChapters = $pdo->prepare("
+            SELECT 
+                ch.chapter_id,
+                ch.chapter_name,
+                ch.subject_id,
+                s.subject_name,
+                (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ch.chapter_id) as total_mcqs,
+                (SELECT COUNT(DISTINCT mcq_id) FROM mcq_attempts WHERE user_id = ? AND chapter_id = ch.chapter_id) as solved_mcqs,
+                (SELECT COUNT(*) FROM videos WHERE chapter_id = ch.chapter_id) as total_videos,
+                (SELECT COUNT(*) FROM notes WHERE chapter_id = ch.chapter_id) as total_notes
+            FROM chapters ch
+            JOIN subjects s ON ch.subject_id = s.subject_id
+            WHERE s.class_id = ?
+            ORDER BY ch.chapter_order ASC, ch.chapter_id ASC
+            LIMIT 60
+        ");
+        $stmtAllChapters->execute([$user_id, $class_id]);
+        $allChapters = $stmtAllChapters->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($allChapters as $ch) {
+            $totMcqs = intval($ch['total_mcqs']);
+            $totVideos = intval($ch['total_videos']);
+            $totNotes = intval($ch['total_notes']);
+            $solvedMcqs = intval($ch['solved_mcqs']);
+
+            // User Requirement: When admin has not uploaded data for a chapter (no MCQs, videos, or notes), DO NOT SHOW in performance tab
+            if ($totMcqs === 0 && $totVideos === 0 && $totNotes === 0) {
+                continue;
+            }
+
+            $progress = 0;
+            if ($totMcqs > 0) {
+                $progress = min(100, round(($solvedMcqs / $totMcqs) * 100));
+            } elseif ($solvedMcqs > 0) {
+                $progress = 50;
+            }
+
+            if ($progress >= 100) {
+                continue; // Completed, omit from incomplete list
+            }
+
+            $status = ($progress === 0) ? 'Not Started' : 'In Progress';
+            $status_type = ($progress === 0) ? 'not_started' : 'in_progress';
+
+            $incomplete_chapters[] = [
+                'chapter_id' => intval($ch['chapter_id']),
+                'chapter_name' => $ch['chapter_name'],
+                'subject_id' => intval($ch['subject_id']),
+                'subject_name' => $ch['subject_name'],
+                'progress_pct' => $progress,
+                'status' => $status,
+                'status_type' => $status_type,
+                'total_mcqs' => $totMcqs,
+                'solved_mcqs' => $solvedMcqs
+            ];
         }
 
-        if ($progress >= 100) {
-            continue; // Completed, omit from incomplete list
-        }
-
-        $status = ($progress === 0) ? 'Not Started' : 'In Progress';
-        $status_type = ($progress === 0) ? 'not_started' : 'in_progress';
-
-        $incomplete_chapters[] = [
-            'chapter_id' => intval($ch['chapter_id']),
-            'chapter_name' => $ch['chapter_name'],
-            'subject_id' => intval($ch['subject_id']),
-            'subject_name' => $ch['subject_name'],
-            'progress_pct' => $progress,
-            'status' => $status,
-            'status_type' => $status_type,
-            'total_mcqs' => $totMcqs,
-            'solved_mcqs' => $solvedMcqs
-        ];
+        // Sort Incomplete chapters: In Progress (progress > 0) first, then Not Started (progress == 0)
+        usort($incomplete_chapters, function($a, $b) {
+            if ($a['progress_pct'] > 0 && $b['progress_pct'] == 0) return -1;
+            if ($a['progress_pct'] == 0 && $b['progress_pct'] > 0) return 1;
+            return $b['progress_pct'] - $a['progress_pct'];
+        });
     }
 
-    // Sort Incomplete chapters: In Progress (progress > 0) first, then Not Started (progress == 0)
-    usort($incomplete_chapters, function($a, $b) {
-        if ($a['progress_pct'] > 0 && $b['progress_pct'] == 0) return -1;
-        if ($a['progress_pct'] == 0 && $b['progress_pct'] > 0) return 1;
-        return $b['progress_pct'] - $a['progress_pct'];
-    });
+    $is_empty_state = ($total_attempted === 0 && empty($subjectPerformance) && empty($incomplete_chapters));
 
     // 6. Negative Basket Questions Detail
     $stmtBasket = $pdo->prepare("
@@ -576,6 +629,100 @@ try {
         ];
     }
 
+    // 6. My Exam History
+    $myExamHistory = [];
+    try {
+        $stmtEh = $pdo->prepare("
+            SELECT id, user_id, chapter_ids, subject_names, correct, incorrect, unanswered, total, percentage, time_seconds, taken_at
+            FROM exam_history
+            WHERE user_id = ?
+            ORDER BY taken_at DESC
+            LIMIT 30
+        ");
+        $stmtEh->execute([$user_id]);
+        $ehRows = $stmtEh->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($ehRows as $row) {
+            $correct = intval($row['correct']);
+            $incorrect = intval($row['incorrect']);
+            $total = intval($row['total']);
+            $pos = $correct * 4;
+            $neg = $incorrect * 1;
+            $net = $pos - $neg;
+            $max = $total * 4;
+            $pct = $total > 0 ? round(($correct / $total) * 100, 1) : 0;
+            $subName = trim($row['subject_names'] ?? '');
+            $subName = urldecode($subName);
+            if (empty($subName)) $subName = 'My Custom Exam';
+
+            $myExamHistory[] = [
+                'id' => intval($row['id']),
+                'subject_name' => $subName,
+                'total_questions' => $total,
+                'correct_count' => $correct,
+                'wrong_count' => $incorrect,
+                'unattempted_count' => intval($row['unanswered']),
+                'positive_score' => $pos,
+                'negative_deduction' => $neg,
+                'net_score' => $net,
+                'max_possible_score' => $max,
+                'percentage' => $pct,
+                'time_seconds' => intval($row['time_seconds']),
+                'taken_at' => $row['taken_at'],
+                'date_formatted' => date('d M Y, h:i A', strtotime($row['taken_at'])),
+                'status' => $pct >= 75 ? 'Excellent' : ($pct >= 40 ? 'Average' : 'Needs Practice')
+            ];
+        }
+
+        // If exam_history was empty, fallback to exam_attempts
+        if (empty($myExamHistory)) {
+            $stmtAtt = $pdo->prepare("
+                SELECT ea.*, COALESCE(e.title, 'My Exam') as exam_title
+                FROM exam_attempts ea
+                LEFT JOIN exams e ON ea.exam_id = e.exam_id
+                WHERE ea.user_id = ?
+                ORDER BY ea.completed_at DESC
+                LIMIT 30
+            ");
+            $stmtAtt->execute([$user_id]);
+            $attRows = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($attRows as $row) {
+                $correct = intval($row['correct_count']);
+                $incorrect = intval($row['wrong_count']);
+                $total = intval($row['total_questions']);
+                $pos = floatval($row['positive_score']);
+                $neg = floatval($row['negative_deduction']);
+                $net = floatval($row['net_score']);
+                $max = floatval($row['max_possible_score']);
+                $pct = floatval($row['accuracy_percentage']);
+
+                $myExamHistory[] = [
+                    'id' => intval($row['attempt_id']),
+                    'subject_name' => $row['exam_title'] ?: 'My Exam',
+                    'total_questions' => $total,
+                    'correct_count' => $correct,
+                    'wrong_count' => $incorrect,
+                    'unattempted_count' => intval($row['unattempted_count']),
+                    'positive_score' => $pos,
+                    'negative_deduction' => $neg,
+                    'net_score' => $net,
+                    'max_possible_score' => $max,
+                    'percentage' => $pct,
+                    'time_seconds' => intval($row['time_spent_seconds']),
+                    'taken_at' => $row['completed_at'],
+                    'date_formatted' => date('d M Y, h:i A', strtotime($row['completed_at'])),
+                    'status' => $pct >= 75 ? 'Excellent' : ($pct >= 40 ? 'Average' : 'Needs Practice')
+                ];
+            }
+        }
+    } catch (Exception $e) {
+        $myExamHistory = [];
+    }
+
+    if (count($myExamHistory) > $total_tests) {
+        $total_tests = count($myExamHistory);
+    }
+
     // Response structure
     $response_payload = [
         'is_empty_state' => $is_empty_state,
@@ -596,6 +743,7 @@ try {
             'wrong_count' => $total_wrong,
             'attempted_count' => $total_attempted
         ],
+        'my_exam_history' => $myExamHistory,
         'subjects' => $subjectPerformance,
         'weak_chapters' => $weak_chapters,
         'incomplete_chapters' => $incomplete_chapters,

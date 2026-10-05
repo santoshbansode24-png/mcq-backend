@@ -390,15 +390,27 @@ const MyExamTestScreen = ({ navigation, route }) => {
                 });
 
                 // Record detailed attempt for performance reporting & negative questions
-                try {
-                    const formattedAnswers = questions.map((q, i) => ({
-                        mcq_id: q.mcq_id || q.id || 0,
-                        selected_option: selectedAnswers[i] || 'skip'
-                    }));
+                const formattedAnswers = questions.map((q, i) => ({
+                    mcq_id: q.mcq_id || q.id || 0,
+                    chapter_id: q.chapter_id || route.params?.chapter_id || 0,
+                    selected_option: selectedAnswers[i] || 'skip',
+                    correct_answer: q.correct_answer || '',
+                    question: q.question || '',
+                    option_a: q.option_a || '',
+                    option_b: q.option_b || '',
+                    option_c: q.option_c || '',
+                    option_d: q.option_d || '',
+                    explanation: q.explanation || '',
+                    subject_name: subjectName || q.subject_name || '',
+                    chapter_name: q.chapter_name || ''
+                }));
 
+                try {
                     await axios.post(`${API_URL}/submit_exam_attempt.php`, {
                         user_id: userId,
                         exam_id: route.params?.examId || 0,
+                        subject_names: subjectName || '',
+                        chapter_ids: route.params?.chapterIds?.join(',') || (route.params?.chapter_id ? String(route.params.chapter_id) : ''),
                         answers: formattedAnswers,
                         time_spent_seconds: finalTimeRef.current,
                         positive_marks: 4,
@@ -423,13 +435,14 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     // Save to normal personal exam history
                     await axios.post(`${API_URL}/save_exam_history.php`, {
                         user_id: userId,
-                        chapter_ids: route.params?.chapterIds?.join(',') || '',
+                        chapter_ids: route.params?.chapterIds?.join(',') || (route.params?.chapter_id ? String(route.params.chapter_id) : ''),
                         subject_names: subjectName || '',
                         correct,
                         incorrect,
                         unanswered,
                         total: questions.length,
-                        time_seconds: finalTimeRef.current
+                        time_seconds: finalTimeRef.current,
+                        answers: formattedAnswers
                     });
                 }
             }

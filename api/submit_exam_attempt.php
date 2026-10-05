@@ -69,11 +69,27 @@ try {
     $answer_details = [];
 
     foreach ($answers as $ans) {
-        $mcq_id = intval($ans['mcq_id']);
+        $mcq_id = intval($ans['mcq_id'] ?? 0);
         $selected = strtolower(trim($ans['selected_option'] ?? ''));
         $mcq_data = $mcqs_by_id[$mcq_id] ?? null;
 
-        if (!$mcq_data) continue;
+        if (!$mcq_data) {
+            if (!empty($ans['correct_answer'])) {
+                $mcq_data = [
+                    'mcq_id' => $mcq_id,
+                    'chapter_id' => intval($ans['chapter_id'] ?? 0),
+                    'question' => $ans['question'] ?? 'Question',
+                    'option_a' => $ans['option_a'] ?? '',
+                    'option_b' => $ans['option_b'] ?? '',
+                    'option_c' => $ans['option_c'] ?? '',
+                    'option_d' => $ans['option_d'] ?? '',
+                    'correct_answer' => $ans['correct_answer'],
+                    'explanation' => $ans['explanation'] ?? ''
+                ];
+            } else {
+                continue;
+            }
+        }
 
         $correct_opt = strtolower(trim($mcq_data['correct_answer']));
         $correct_letter = str_replace('option_', '', $correct_opt);
@@ -127,6 +143,20 @@ try {
     ]);
     $attempt_id = $pdo->lastInsertId();
 
+    // Also keep exam_history synchronized
+    try {
+        $subNames = !empty($data['subject_names']) ? substr(trim($data['subject_names']), 0, 255) : 'My Exam';
+        $chIds = !empty($data['chapter_ids']) ? substr(trim($data['chapter_ids']), 0, 500) : '';
+        $ehPct = $total_q > 0 ? round(($correct_count / $total_q) * 100, 1) : 0;
+        $pdo->prepare("
+            INSERT INTO exam_history 
+                (user_id, chapter_ids, subject_names, correct, incorrect, unanswered, total, percentage, time_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ")->execute([
+            $user_id, $chIds, $subNames, $correct_count, $wrong_count, $unattempted_count, $total_q, $ehPct, $time_spent_seconds
+        ]);
+    } catch (Exception $e) {}
+
     $stmtAns = $pdo->prepare("
         INSERT INTO exam_attempt_answers 
         (attempt_id, user_id, exam_id, mcq_id, chapter_id, selected_option, correct_option, is_correct, marks_awarded)
@@ -145,6 +175,8 @@ try {
             resolved = 0
     ");
 
+    $defaultSubName = !empty($data['subject_names']) ? substr(trim($data['subject_names']), 0, 150) : 'Exam';
+
     foreach ($answer_details as $detail) {
         $stmtAns->execute([
             $attempt_id, $user_id, $exam_id, $detail['mcq_id'], $detail['chapter_id'],
@@ -153,16 +185,24 @@ try {
 
         if ($detail['is_correct'] === 0) {
             try {
-                $chStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch LEFT JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
-                $chStmt->execute([$detail['chapter_id']]);
-                $chInfo = $chStmt->fetch(PDO::FETCH_ASSOC);
-                $subName = $chInfo['subject_name'] ?? 'Exam';
-                $chName = $chInfo['chapter_name'] ?? 'Exam';
+                $subName = $defaultSubName;
+                $chName = 'Exam';
+                if ($detail['chapter_id'] > 0) {
+                    $chStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch LEFT JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+                    $chStmt->execute([$detail['chapter_id']]);
+                    $chInfo = $chStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($chInfo) {
+                        $subName = $chInfo['subject_name'] ?? $defaultSubName;
+                        $chName = $chInfo['chapter_name'] ?? 'Exam';
+                    }
+                }
 
-                $stmtBasketUpsert->execute([
-                    $user_id, $detail['mcq_id'], $subName, $chName, $detail['chapter_id'],
-                    $detail['selected_option'], $detail['correct_option']
-                ]);
+                if ($detail['mcq_id'] > 0) {
+                    $stmtBasketUpsert->execute([
+                        $user_id, $detail['mcq_id'], $subName, $chName, $detail['chapter_id'],
+                        $detail['selected_option'], $detail['correct_option']
+                    ]);
+                }
             } catch (Exception $e) {
                 // Non-blocking
             }

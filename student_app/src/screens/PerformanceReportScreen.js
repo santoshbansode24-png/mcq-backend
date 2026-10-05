@@ -125,6 +125,18 @@ const CircularProgress = React.memo(({ percentage, color = '#10b981', size = 136
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Time Formatter Helper
+// ─────────────────────────────────────────────────────────────────────────────
+const formatTimeSpent = (seconds) => {
+    const s = parseInt(seconds) || 0;
+    if (s <= 0) return '0s';
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const remS = s % 60;
+    return remS > 0 ? `${m}m ${remS}s` : `${m}m`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Performance Screen
 // ─────────────────────────────────────────────────────────────────────────────
 const PerformanceReportScreen = ({ navigation, route, user }) => {
@@ -132,6 +144,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [mistakeLoading, setMistakeLoading] = useState(false);
+    const [showAllExams, setShowAllExams] = useState(false);
 
     // Negative Basket Review & Resolution States
     const [showNegativeDetails, setShowNegativeDetails] = useState(false);
@@ -338,12 +351,23 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
     // Derive Data
     const summary = performanceData?.summary || {};
     const overall = performanceData?.overall_performance || {};
-    const subjects = performanceData?.subjects || [];
+    const rawSubjects = performanceData?.subjects || [];
+    // Deduplicate subjects by normalized name so duplicate subject cards (e.g. 2 Science) never appear
+    const subjects = useMemo(() => {
+        const seen = new Set();
+        return rawSubjects.filter(sub => {
+            const name = (sub.subject_name || '').trim().toLowerCase();
+            if (!name || seen.has(name)) return false;
+            seen.add(name);
+            return true;
+        });
+    }, [rawSubjects]);
     const weakChapters = performanceData?.weak_chapters || [];
     const incompleteChapters = performanceData?.incomplete_chapters || [];
     const negativeBasket = performanceData?.negative_basket || { total_count: 0, questions: [] };
+    const myExamHistory = performanceData?.my_exam_history || [];
     const studyNext = performanceData?.study_next || null;
-    const isEmptyState = performanceData?.is_empty_state === true || (overall.attempted_count || 0) === 0;
+    const isEmptyState = performanceData?.is_empty_state === true || ((overall.attempted_count || 0) === 0 && subjects.length === 0 && myExamHistory.length === 0);
 
     const overallPct = overall.percentage ?? 0;
     const overallStatus = overallPct >= 75 ? 'Good' : overallPct >= 50 ? 'Average' : 'Weak';
@@ -352,7 +376,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar barStyle="light-content" backgroundColor="#1e1b4b" />
+            <StatusBar barStyle="light-content" backgroundColor="#0a0f1d" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -507,8 +531,177 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
                                             <Text style={styles.metricVal}>{overall.attempted_count ?? 0}</Text>
                                             <Text style={styles.metricLbl}>Attempted</Text>
                                         </View>
+                                        <View style={styles.metricPill}>
+                                            <View style={[styles.metricDot, { backgroundColor: '#818cf8' }]} />
+                                            <Text style={styles.metricVal}>{myExamHistory.length || summary.total_tests || 0}</Text>
+                                            <Text style={styles.metricLbl}>My Exams</Text>
+                                        </View>
                                     </View>
                                 </LinearGradient>
+                            </View>
+
+                            {/* 3.5 MY EXAM HISTORY */}
+                            <View style={styles.sectionWrap}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.sectionHeading}>📝 My Exam History</Text>
+                                        <Text style={styles.sectionSubtitle}>Review your custom tests, marks, and negative penalties.</Text>
+                                    </View>
+                                    {myExamHistory.length > 0 && (
+                                        <View style={styles.historyCountBadge}>
+                                            <Text style={styles.historyCountBadgeText}>
+                                                {myExamHistory.length} {myExamHistory.length === 1 ? 'Test' : 'Tests'}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {myExamHistory.length === 0 ? (
+                                    <LinearGradient
+                                        colors={['#1e293b', '#0f172a']}
+                                        style={styles.emptyExamCard}
+                                    >
+                                        <LinearGradient
+                                            colors={['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)']}
+                                            style={styles.glossyOverlay}
+                                        />
+                                        <View style={styles.emptyExamContent}>
+                                            <View style={styles.emptyExamIcon}>
+                                                <Ionicons name="school-outline" size={32} color="#818cf8" />
+                                            </View>
+                                            <Text style={styles.emptyExamTitle}>No Exams Solved Yet</Text>
+                                            <Text style={styles.emptyExamSub}>
+                                                Practice chapters in the My Exam tab to see your detailed marks, scores, and wrong question history here.
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.goToMyExamBtn}
+                                                onPress={() => navigation.navigate('MyExam')}
+                                                activeOpacity={0.88}
+                                            >
+                                                <LinearGradient
+                                                    colors={['#6366f1', '#4f46e5']}
+                                                    style={styles.goToMyExamGradient}
+                                                >
+                                                    <Text style={styles.goToMyExamText}>Take a Test in My Exam →</Text>
+                                                </LinearGradient>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </LinearGradient>
+                                ) : (
+                                    <>
+                                        {(showAllExams ? myExamHistory : myExamHistory.slice(0, 5)).map((item, idx) => {
+                                            const pct = item.percentage ?? 0;
+                                            const statusColor = pct >= 75 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444';
+                                            const isNetPositive = item.net_score > 0;
+                                            const netScoreDisplay = isNetPositive ? `+${item.net_score}` : `${item.net_score}`;
+
+                                            return (
+                                                <LinearGradient
+                                                    key={item.id || idx}
+                                                    colors={['#1e293b', '#0f172a']}
+                                                    start={{ x: 0, y: 0 }}
+                                                    end={{ x: 1, y: 1 }}
+                                                    style={styles.examHistoryCard}
+                                                >
+                                                    {/* Glossy sheen */}
+                                                    <LinearGradient
+                                                        colors={['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)']}
+                                                        style={styles.glossyOverlay}
+                                                    />
+
+                                                    <View style={{ zIndex: 1 }}>
+                                                        {/* Top row: Subject name & Date */}
+                                                        <View style={styles.examCardTopRow}>
+                                                            <View style={styles.examTitleWrap}>
+                                                                <View style={styles.examIconPill}>
+                                                                    <Ionicons name="document-text" size={15} color="#818cf8" />
+                                                                </View>
+                                                                <Text style={styles.examSubjectTitle} numberOfLines={1}>
+                                                                    {item.subject_name}
+                                                                </Text>
+                                                            </View>
+                                                            <View style={styles.examDatePill}>
+                                                                <Ionicons name="calendar-outline" size={11} color="#94a3b8" style={{ marginRight: 4 }} />
+                                                                <Text style={styles.examDateText}>{item.date_formatted}</Text>
+                                                            </View>
+                                                        </View>
+
+                                                        {/* Marks Banner */}
+                                                        <View style={styles.examMarksBanner}>
+                                                            <View style={styles.marksBadgeLeft}>
+                                                                <Text style={styles.marksLabel}>MARKS OBTAINED</Text>
+                                                                <View style={styles.marksNumberRow}>
+                                                                    <Text style={[styles.netScoreText, { color: item.net_score >= 0 ? '#38bdf8' : '#ef4444' }]}>
+                                                                        {netScoreDisplay}
+                                                                    </Text>
+                                                                    <Text style={styles.maxScoreText}> / {item.max_possible_score}</Text>
+                                                                </View>
+                                                            </View>
+                                                            <View style={styles.marksBadgeRight}>
+                                                                <View style={[styles.examPctPill, { backgroundColor: `${statusColor}22`, borderColor: `${statusColor}55` }]}>
+                                                                    <Text style={[styles.examPctText, { color: statusColor }]}>
+                                                                        {pct}%
+                                                                    </Text>
+                                                                </View>
+                                                                <Text style={[styles.examStatusText, { color: statusColor }]}>
+                                                                    {item.status}
+                                                                </Text>
+                                                            </View>
+                                                        </View>
+
+                                                        {/* Breakdown Pills */}
+                                                        <View style={styles.examStatsPillRow}>
+                                                            <View style={[styles.miniStatPill, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+                                                                <Text style={[styles.miniStatVal, { color: '#10b981' }]}>
+                                                                    ✓ {item.correct_count}
+                                                                </Text>
+                                                                <Text style={styles.miniStatSub}>+{item.positive_score}</Text>
+                                                            </View>
+
+                                                            <View style={[styles.miniStatPill, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
+                                                                <Text style={[styles.miniStatVal, { color: '#ef4444' }]}>
+                                                                    ✗ {item.wrong_count}
+                                                                </Text>
+                                                                <Text style={styles.miniStatSub}>-{item.negative_deduction}</Text>
+                                                            </View>
+
+                                                            <View style={[styles.miniStatPill, { backgroundColor: 'rgba(148, 163, 184, 0.10)' }]}>
+                                                                <Text style={[styles.miniStatVal, { color: '#cbd5e1' }]}>
+                                                                    — {item.unattempted_count}
+                                                                </Text>
+                                                                <Text style={styles.miniStatSub}>skip</Text>
+                                                            </View>
+
+                                                            <View style={[styles.miniStatPill, { backgroundColor: 'rgba(56, 189, 248, 0.10)' }]}>
+                                                                <Text style={[styles.miniStatVal, { color: '#38bdf8' }]}>
+                                                                    ⏱️ {formatTimeSpent(item.time_seconds)}
+                                                                </Text>
+                                                                <Text style={styles.miniStatSub}>time</Text>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+                                                </LinearGradient>
+                                            );
+                                        })}
+
+                                        {myExamHistory.length > 5 && (
+                                            <TouchableOpacity
+                                                style={styles.toggleExamsBtn}
+                                                onPress={() => setShowAllExams(!showAllExams)}
+                                                activeOpacity={0.8}
+                                            >
+                                                <LinearGradient
+                                                    colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']}
+                                                    style={styles.toggleExamsGradient}
+                                                >
+                                                    <Text style={styles.toggleExamsText}>
+                                                        {showAllExams ? 'Show Recent Tests ▲' : `View All ${myExamHistory.length} Tests ▼`}
+                                                    </Text>
+                                                </LinearGradient>
+                                            </TouchableOpacity>
+                                        )}
+                                    </>
+                                )}
                             </View>
 
                             {/* 4. SUBJECT PERFORMANCE */}
@@ -819,7 +1012,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#0a0f1d',
     },
     header: {
         flexDirection: 'row',
@@ -827,7 +1020,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 8,
         paddingBottom: 16,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#0a0f1d',
     },
     backBtn: {
         width: 40,
@@ -942,13 +1135,13 @@ const styles = StyleSheet.create({
 
     // 3. Overall Performance Card
     overallCard: {
-        borderRadius: 20,
+        borderRadius: 22,
         padding: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
+        borderWidth: 1.2,
+        borderColor: 'rgba(255, 255, 255, 0.16)',
         ...Platform.select({
-            android: { elevation: 5 },
-            ios: { shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }
+            android: { elevation: 6 },
+            ios: { shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
         }),
     },
     overallTopRow: {
@@ -995,9 +1188,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.08)',
         borderRadius: 14,
         paddingVertical: 10,
-        paddingHorizontal: 8,
+        paddingHorizontal: 4,
         alignItems: 'center',
-        marginHorizontal: 4,
+        marginHorizontal: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
     },
     metricDot: {
         width: 6,
@@ -1006,25 +1201,247 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     metricVal: {
-        fontSize: 17,
+        fontSize: 16,
         fontFamily: 'NotoSans-Bold',
         color: '#ffffff',
     },
     metricLbl: {
-        fontSize: 11,
+        fontSize: 10,
         fontFamily: 'NotoSans-Regular',
         color: '#cbd5e1',
         marginTop: 2,
     },
 
-    // 4. Subject Performance Cards
-    subjectCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: 16,
-        padding: 16,
+    // 3.5 My Exam History
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 10,
+    },
+    historyCountBadge: {
+        backgroundColor: 'rgba(99, 102, 241, 0.18)',
+        borderWidth: 1,
+        borderColor: 'rgba(99, 102, 241, 0.45)',
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: 12,
+    },
+    historyCountBadgeText: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+        color: '#a5b4fc',
+    },
+    examHistoryCard: {
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1.2,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        ...Platform.select({
+            android: { elevation: 5 },
+            ios: { shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }
+        }),
+    },
+    examCardTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    examTitleWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 8,
+    },
+    examIconPill: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(99, 102, 241, 0.22)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+    },
+    examSubjectTitle: {
+        fontSize: 15,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+        flex: 1,
+    },
+    examDatePill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    examDateText: {
+        fontSize: 11,
+        fontFamily: 'NotoSans-Regular',
+        color: '#cbd5e1',
+    },
+    examMarksBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 14,
+        padding: 12,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    marksBadgeLeft: {
+        flexDirection: 'column',
+    },
+    marksLabel: {
+        fontSize: 10,
+        fontFamily: 'NotoSans-Bold',
+        color: '#94a3b8',
+        letterSpacing: 0.6,
+        marginBottom: 2,
+    },
+    marksNumberRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    netScoreText: {
+        fontSize: 22,
+        fontFamily: 'NotoSans-Bold',
+    },
+    maxScoreText: {
+        fontSize: 14,
+        fontFamily: 'NotoSans-Medium',
+        color: '#94a3b8',
+    },
+    marksBadgeRight: {
+        alignItems: 'flex-end',
+    },
+    examPctPill: {
+        paddingHorizontal: 9,
+        paddingVertical: 2,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginBottom: 2,
+    },
+    examPctText: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Bold',
+    },
+    examStatusText: {
+        fontSize: 11,
+        fontFamily: 'NotoSans-Medium',
+    },
+    examStatsPillRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    miniStatPill: {
+        flex: 1,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginHorizontal: 3,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    miniStatVal: {
+        fontSize: 12,
+        fontFamily: 'NotoSans-Bold',
+    },
+    miniStatSub: {
+        fontSize: 10,
+        fontFamily: 'NotoSans-Regular',
+        color: '#94a3b8',
+        marginTop: 1,
+    },
+    toggleExamsBtn: {
+        marginTop: 4,
+        marginBottom: 10,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    toggleExamsGradient: {
+        paddingVertical: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    toggleExamsText: {
+        color: '#a5b4fc',
+        fontFamily: 'NotoSans-Bold',
+        fontSize: 13,
+    },
+    emptyExamCard: {
+        borderRadius: 20,
+        padding: 22,
+        borderWidth: 1.2,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        overflow: 'hidden',
+    },
+    emptyExamContent: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1,
+    },
+    emptyExamIcon: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(99, 102, 241, 0.18)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    emptyExamTitle: {
+        fontSize: 16,
+        fontFamily: 'NotoSans-Bold',
+        color: '#ffffff',
+        marginBottom: 6,
+    },
+    emptyExamSub: {
+        fontSize: 13,
+        fontFamily: 'NotoSans-Regular',
+        color: '#94a3b8',
+        textAlign: 'center',
+        lineHeight: 18,
+        marginBottom: 16,
+        paddingHorizontal: 12,
+    },
+    goToMyExamBtn: {
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    goToMyExamGradient: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+    },
+    goToMyExamText: {
+        color: '#ffffff',
+        fontFamily: 'NotoSans-Bold',
+        fontSize: 13,
+    },
+
+    // 4. Subject Performance Cards
+    subjectCard: {
+        backgroundColor: '#161f36',
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1.2,
+        borderColor: 'rgba(255, 255, 255, 0.10)',
+        ...Platform.select({
+            android: { elevation: 4 },
+            ios: { shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } }
+        }),
     },
     subjectTopRow: {
         flexDirection: 'row',
@@ -1081,14 +1498,18 @@ const styles = StyleSheet.create({
 
     // 5. Weak Chapters
     weakChapterCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: 16,
+        backgroundColor: '#161f36',
+        borderRadius: 18,
         padding: 16,
-        marginBottom: 10,
+        marginBottom: 12,
         borderLeftWidth: 4,
         borderLeftColor: '#ef4444',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.06)',
+        borderWidth: 1.2,
+        borderColor: 'rgba(239, 68, 68, 0.22)',
+        ...Platform.select({
+            android: { elevation: 4 },
+            ios: { shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } }
+        }),
     },
     chapterHeaderRow: {
         flexDirection: 'row',
@@ -1144,13 +1565,13 @@ const styles = StyleSheet.create({
         fontFamily: 'NotoSans-Bold',
     },
     celebrationCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: 16,
+        backgroundColor: '#161f36',
+        borderRadius: 18,
         padding: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        borderWidth: 1.2,
+        borderColor: 'rgba(16, 185, 129, 0.25)',
     },
     celebrationTitle: {
         fontSize: 18,
@@ -1167,12 +1588,16 @@ const styles = StyleSheet.create({
 
     // 6. Incomplete Chapters
     incompleteChapterCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: 16,
+        backgroundColor: '#161f36',
+        borderRadius: 18,
         padding: 16,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.06)',
+        marginBottom: 12,
+        borderWidth: 1.2,
+        borderColor: 'rgba(255, 255, 255, 0.10)',
+        ...Platform.select({
+            android: { elevation: 4 },
+            ios: { shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } }
+        }),
     },
     incompleteMidRow: {
         flexDirection: 'row',
@@ -1204,13 +1629,13 @@ const styles = StyleSheet.create({
 
     // 8. Negative Basket Card
     negativeBasketCard: {
-        borderRadius: 20,
-        padding: 18,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.18)',
+        borderRadius: 22,
+        padding: 20,
+        borderWidth: 1.2,
+        borderColor: 'rgba(255, 255, 255, 0.22)',
         ...Platform.select({
             android: { elevation: 6 },
-            ios: { shadowColor: '#be123c', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }
+            ios: { shadowColor: '#be123c', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
         }),
     },
     negTopRow: {

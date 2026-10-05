@@ -46,9 +46,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $desc = sanitizeInput($_POST['description']);
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO subjects (subject_name, class_id, description) VALUES (?, ?, ?)");
-        $stmt->execute([$name, $class_id, $desc]);
-        $message = "Subject added successfully!";
+        // Prevent duplicate subjects for the same class
+        $checkDup = $pdo->prepare("SELECT subject_id FROM subjects WHERE class_id = ? AND LOWER(TRIM(subject_name)) = LOWER(TRIM(?))");
+        $checkDup->execute([$class_id, $name]);
+        if ($checkDup->fetch()) {
+            $message = "Error: A subject with the name '{$name}' already exists for this class.";
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO subjects (subject_name, class_id, description) VALUES (?, ?, ?)");
+            $stmt->execute([$name, $class_id, $desc]);
+            $message = "Subject added successfully!";
+        }
     } catch (PDOException $e) {
         $message = "Error: Database error";
     }

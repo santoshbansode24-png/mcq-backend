@@ -153,7 +153,7 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
                 </LinearGradient>
             </TouchableOpacity>
         </View>
-        <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row' }}>
             <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('MyExam')}>
                 <LinearGradient colors={['#00FFB0', '#0072FF']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     {/* Glossy Overlay */}
@@ -165,20 +165,7 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
                     <Text style={[styles.gridTitle, { zIndex: 1 }]}>{t('myExam')}</Text>
                 </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('PerformanceReport')}>
-                <LinearGradient colors={['#6366F1', '#4F46E5']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    {/* Glossy Overlay */}
-                    <LinearGradient
-                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
-                        style={styles.glossyOverlay}
-                    />
-                    <MaterialCommunityIcons name="chart-box-outline" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
-                    <Text style={[styles.gridTitle, { zIndex: 1 }]}>{t('performance') || 'Performance'}</Text>
-                </LinearGradient>
-            </TouchableOpacity>
-        </View>
-        <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity style={[styles.gridItem, { marginRight: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
+            <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('WorksheetGenerator')}>
                 <LinearGradient colors={['#E064EC', '#7F00FF']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     {/* Glossy Overlay */}
                     <LinearGradient
@@ -187,17 +174,6 @@ const HomeBoosterGrid = React.memo(({ t, navigation }) => (
                     />
                     <MaterialCommunityIcons name="printer" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
                     <Text style={[styles.gridTitle, { zIndex: 1 }]}>Worksheet</Text>
-                </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.gridItem, { marginLeft: 6 }]} onPress={() => navigation.navigate('StudyPlanner')}>
-                <LinearGradient colors={['#FF5252', '#FF1744']} style={styles.gridGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    {/* Glossy Overlay */}
-                    <LinearGradient
-                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
-                        style={styles.glossyOverlay}
-                    />
-                    <MaterialCommunityIcons name="compass-outline" size={32} color="white" style={{ marginBottom: 8, zIndex: 1 }} />
-                    <Text style={[styles.gridTitle, { zIndex: 1 }]}>{t('studyPlanner') || 'Study Plan'}</Text>
                 </LinearGradient>
             </TouchableOpacity>
         </View>

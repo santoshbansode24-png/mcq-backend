@@ -1,4 +1,2 @@
-3.1.0-LIVE
-// Android APK live server configuration release (Student Build 39, Teacher Build 7) with Class Updates, PDF Viewer, and Login enhancements.
-
-
+1.0.68-LIVE
+// Android APK live server configuration release (Student Build 68) with Reels Vertical Quick Revision, Zero-Lag Audio Cache, and Clean 2x2 HomeScreen Boosters.

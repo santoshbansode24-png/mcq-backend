@@ -38,3 +38,5 @@ scratch/
 
 # Uploads
 backend/uploads/
+uploads/tts_cache/*.b64
+*.b64

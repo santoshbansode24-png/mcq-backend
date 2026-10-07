@@ -4,26 +4,13 @@ CREATE TABLE IF NOT EXISTS quick_revision (
     title VARCHAR(255) NOT NULL,
     key_points JSON NOT NULL,
     summary TEXT,
+    title_hi VARCHAR(255) DEFAULT NULL,
+    title_mr VARCHAR(255) DEFAULT NULL,
+    key_points_hi JSON DEFAULT NULL,
+    key_points_mr JSON DEFAULT NULL,
+    summary_hi TEXT DEFAULT NULL,
+    summary_mr TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_chapter_created (chapter_id, created_at DESC),
     FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE
-);
-
--- Insert sample data for testing
-INSERT INTO quick_revision (chapter_id, title, key_points, summary) VALUES
-(13, 'Geography Quick Revision', 
- JSON_ARRAY(
-    'Capital of France is Paris',
-    'Photosynthesis converts light to energy',
-    'Earth has 8 planets in solar system',
-    'Water covers 71% of Earth surface',
-    'Mount Everest is highest peak'
- ),
- 'This chapter covers basic geography concepts including capitals, natural processes, and planetary facts.'),
-(14, 'Science Quick Revision',
- JSON_ARRAY(
-    'Speed of light is 299,792 km/s',
-    'DNA stands for Deoxyribonucleic Acid',
-    'Human body has 206 bones',
-    'Gravity acceleration is 9.8 m/s²'
- ),
- 'Key scientific facts and formulas for quick revision before exams.');
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

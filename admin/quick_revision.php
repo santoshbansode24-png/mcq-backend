@@ -51,7 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $ch_name = $stmtCh->fetchColumn() ?: 'Chapter';
         $title = $ch_name . " - Revision";
     }
-    $summary = sanitizeInput($_POST['summary']);
+    $summary = sanitizeInput($_POST['summary'] ?? '');
+    if (empty($summary)) {
+        $summary = "Quick revision notes for " . $title;
+    }
     $key_points = [];
 
     // 1. Handle CSV Upload if present
@@ -61,41 +64,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Read file content
         $content = file_get_contents($file);
         
+        // Strip UTF-8 BOM if present (common when saving from Excel)
+        $bom = pack('H*','EFBBBF');
+        $content = preg_replace("/^$bom/", '', $content);
+
         // Detect and Convert to UTF-8 (Vital for Marathi/Hindi text)
-        // This handles cases where Excel saves as ANSI or other encodings
         if (!mb_check_encoding($content, 'UTF-8')) {
             $content = mb_convert_encoding($content, 'UTF-8', 'auto');
         }
 
-        // Split into lines (handle different line endings)
-        $lines = preg_split('/\r\n|\r|\n/', $content);
-        
-        foreach ($lines as $line) {
-            // Skip empty lines
-            if (empty(trim($line))) continue;
+        // Parse with memory stream for RFC 4180 CSV compliance (handles quotes, commas, multiline)
+        $stream = fopen('php://memory', 'r+');
+        fwrite($stream, $content);
+        rewind($stream);
 
-            // Parse CSV line
-            $data = str_getcsv($line);
+        $rowNum = 0;
+        while (($data = fgetcsv($stream)) !== false) {
+            $rowNum++;
+            if (empty($data) || count($data) < 2) continue;
 
-            // Expecting Format: [Question, Answer]
-            if (count($data) >= 2) {
-                // Sanitize and ensure UTF-8 strings
-                $q = trim($data[0]);
-                $a = trim($data[1]);
-                $e = isset($data[2]) ? trim($data[2]) : ''; // Handle Explanation
-                
-                // Skip header row
-                if (strtolower($q) == 'question' && strtolower($a) == 'answer') continue;
-                
-                if (!empty($q) && !empty($a)) {
-                    $key_points[] = [
-                        'q' => sanitizeInput($q), 
-                        'a' => sanitizeInput($a),
-                        'e' => sanitizeInput($e)
-                    ];
-                }
+            $q = trim($data[0] ?? '');
+            $a = trim($data[1] ?? '');
+            $e = trim($data[2] ?? '');
+
+            // Skip header row
+            if ($rowNum === 1 && (strtolower($q) === 'question' || strtolower($a) === 'answer')) {
+                continue;
+            }
+
+            if (!empty($q) && !empty($a)) {
+                $key_points[] = [
+                    'q' => sanitizeInput($q), 
+                    'a' => sanitizeInput($a),
+                    'e' => sanitizeInput($e)
+                ];
             }
         }
+        fclose($stream);
     }
 
     // 2. Handle Manual Inputs
@@ -116,12 +121,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($key_points)) {
         $message = "Error: Please add at least one Q&A pair via form or CSV.";
     } else {
-        $json_points = json_encode($key_points);
+        $json_points = json_encode($key_points, JSON_UNESCAPED_UNICODE);
         
         try {
-            $stmt = $pdo->prepare("INSERT INTO quick_revision (chapter_id, title, summary, key_points) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$chapter_id, $title, $summary, $json_points]);
-            $message = "Quick Revision added successfully! (" . count($key_points) . " points)";
+            // Check if revision already exists for this chapter (Upsert)
+            $checkExisting = $pdo->prepare("SELECT revision_id FROM quick_revision WHERE chapter_id = ?");
+            $checkExisting->execute([$chapter_id]);
+            $existingId = $checkExisting->fetchColumn();
+
+            if ($existingId) {
+                $stmt = $pdo->prepare("UPDATE quick_revision SET title = ?, summary = ?, key_points = ?, created_at = NOW() WHERE revision_id = ?");
+                $stmt->execute([$title, $summary, $json_points, $existingId]);
+                $message = "Quick Revision updated successfully! (" . count($key_points) . " points)";
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO quick_revision (chapter_id, title, summary, key_points) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$chapter_id, $title, $summary, $json_points]);
+                $message = "Quick Revision added successfully! (" . count($key_points) . " points)";
+            }
         } catch (PDOException $e) {
             $message = "Error: Database error - " . $e->getMessage();
         }
@@ -355,9 +371,9 @@ $revisions = $revisions_query->fetchAll();
                         <option value="">Select Chapter (Choose Subject First)</option>
                     </select>
 
-                    <input type="text" name="title" placeholder="Revision Title" required style="grid-column: span 3;">
+                    <input type="text" name="title" placeholder="Revision Title (Optional - auto defaults to Chapter Name)" style="grid-column: span 3;">
                     
-                    <textarea name="summary" placeholder="Chapter Summary..." style="grid-column: span 3; height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;" required></textarea>
+                    <textarea name="summary" placeholder="Chapter Summary (Optional)..." style="grid-column: span 3; height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"></textarea>
                 </div>
 
                 <div class="csv-section">
@@ -365,7 +381,7 @@ $revisions = $revisions_query->fetchAll();
                     <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer, Explanation</code> (3 Columns). First row header ignored.</p>
                     <input type="file" name="csv_file" accept=".csv" style="background: white;">
                     <br><br>
-                    <a href="sample_quick_revision.csv" download style="font-size: 13px; color: #667eea;">⬇️ Download Sample CSV</a>
+                    <a href="sample_quick_revision.csv" download style="font-size: 13px; color: #667eea; font-weight: 600;">⬇️ Download Sample CSV</a>
                 </div>
 
                 <div class="qa-container">
@@ -399,9 +415,9 @@ $revisions = $revisions_query->fetchAll();
                 <tbody>
                     <?php foreach($revisions as $rev): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($rev['title']); ?></td>
+                        <td><strong><?php echo htmlspecialchars($rev['title']); ?></strong></td>
                         <td>
-                            <small><?php echo htmlspecialchars($rev['subject_name']); ?></small><br>
+                            <small style="color:#667eea;font-weight:600;"><?php echo htmlspecialchars($rev['subject_name']); ?></small><br>
                             <?php echo htmlspecialchars($rev['chapter_name']); ?>
                         </td>
                         <td>
@@ -411,6 +427,7 @@ $revisions = $revisions_query->fetchAll();
                             ?> points
                         </td>
                         <td>
+                            <button type="button" onclick='showPointsPreview(<?php echo htmlspecialchars(json_encode($points ?: []), ENT_QUOTES, "UTF-8"); ?>, <?php echo htmlspecialchars(json_encode($rev["title"]), ENT_QUOTES, "UTF-8"); ?>)' class="btn-small" style="background:#4f46e5;color:#fff;margin-right:8px;padding:6px 12px;border-radius:6px;cursor:pointer;">👁️ View</button>
                             <a href="?delete=<?php echo $rev['revision_id']; ?>" class="btn-delete" onclick="return confirm('Delete this revision?')">Delete</a>
                         </td>
                     </tr>
@@ -419,5 +436,53 @@ $revisions = $revisions_query->fetchAll();
             </table>
         </div>
     </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;justify-content:center;align-items:center;">
+        <div style="background:#fff;width:90%;max-width:700px;max-height:85vh;border-radius:16px;padding:25px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding-bottom:12px;margin-bottom:15px;">
+                <h3 id="modalTitle" style="color:#1e293b;font-size:18px;">Revision Points</h3>
+                <button type="button" onclick="closeModal()" style="background:#f1f5f9;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-weight:bold;font-size:16px;">✕</button>
+            </div>
+            <div id="modalBody" style="overflow-y:auto;flex:1;padding-right:10px;"></div>
+        </div>
+    </div>
+
+    <script>
+        function showPointsPreview(points, title) {
+            document.getElementById('modalTitle').textContent = title || 'Revision Points';
+            const body = document.getElementById('modalBody');
+            body.innerHTML = '';
+            if (!points || points.length === 0) {
+                body.innerHTML = '<p style="color:#64748b;">No points found.</p>';
+            } else {
+                points.forEach((p, idx) => {
+                    const q = p.q || p.Question || '';
+                    const a = p.a || p.Answer || '';
+                    const e = p.e || p.Explanation || '';
+                    const itemDiv = document.createElement('div');
+                    itemDiv.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;';
+                    itemDiv.innerHTML = `
+                        <div style="font-size:11px;font-weight:bold;color:#6366f1;margin-bottom:4px;">POINT ${idx + 1}</div>
+                        <div style="font-weight:700;color:#0f172a;margin-bottom:6px;">❓ ${escapeHtml(q)}</div>
+                        <div style="color:#16a34a;font-weight:600;margin-bottom:6px;">✅ ${escapeHtml(a)}</div>
+                        ${e ? `<div style="font-size:13px;color:#475569;background:#eef2ff;padding:8px 12px;border-radius:8px;margin-top:6px;">💡 <em>${escapeHtml(e)}</em></div>` : ''}
+                    `;
+                    body.appendChild(itemDiv);
+                });
+            }
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
 </body>
 </html>

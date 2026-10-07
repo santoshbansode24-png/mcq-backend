@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StatusBar, Platform, RefreshControl, Image, BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchMCQs, fetchNotes, fetchVideos, recordMCQAttempt, fetchFlashcards, fetchQuickRevision, markSetCompleted } from '../api/content';
+import { playGoogleTTS } from '../api/googleTTS';
 import axios from 'axios';
 import { API_URL, BASE_URL } from '../api/config';
 import * as Speech from 'expo-speech';
@@ -309,6 +311,7 @@ const ChapterContentScreen = ({ navigation, route }) => {
     const [flashcardSets, setFlashcardSets] = useState([]);
     const [revisionData, setRevisionData] = useState([]);
     const [playingIndex, setPlayingIndex] = useState(null);
+    const [ttsSound, setTtsSound] = useState(null);
     const [setStatuses, setSetStatuses] = useState({});
     const [userAnswers, setUserAnswers] = useState({});
 
@@ -587,9 +590,14 @@ const ChapterContentScreen = ({ navigation, route }) => {
             setFlashcardsDataState(allCards);
             if (isFresh) loadSetStatus('flashcard');
         } else if (actingTab === 'QuickRevision') {
-            const points = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
-            setRevisionData(points.slice(1));
-            setRevisionDataItems(points.slice(1));
+            const raw = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
+            let validPoints = Array.isArray(raw) ? raw : [];
+            if (validPoints.length > 0 && validPoints[0]?.q?.toString().trim().toLowerCase() === 'question') {
+                validPoints = validPoints.slice(1);
+            }
+            validPoints = validPoints.filter(p => (p.q || p.Question || p.a || p.Answer));
+            setRevisionData(validPoints);
+            setRevisionDataItems(validPoints);
         } else if (actingTab === 'Notes') {
             setNotesData(Array.isArray(responseData) ? responseData : []);
         } else if (actingTab === 'Videos') {
@@ -795,6 +803,13 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
     // TTS Logic
     const stopTTS = async () => {
+        if (ttsSound) {
+            try {
+                await ttsSound.stopAsync();
+                await ttsSound.unloadAsync();
+            } catch (e) {}
+            setTtsSound(null);
+        }
         await Speech.stop();
         setPlayingIndex(null);
     };
@@ -807,30 +822,28 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         const q = decodeHtml(item.q || item.Question || '');
         const a = decodeHtml(item.a || item.Answer || '');
-        const textToSpeak = `Question. ${q}. Answer. ${a}`;
+        const exp = decodeHtml(item.e || item.Explanation || '');
+        const textToSpeak = `${q}. ${a}. ${exp ? 'स्पष्टीकरण: ' + exp : ''}`.trim();
 
         try {
-            await Speech.stop();
+            await stopTTS();
             setPlayingIndex(index);
 
-            setPlayingIndex(index);
+            const voiceLang = language === 'mr' ? 'mr-IN' : (language === 'hi' ? 'hi-IN' : 'en-IN');
+            const newSound = await playGoogleTTS(textToSpeak, voiceLang);
 
-            // Get the best available voice (Prioritizes Marathi -> Hindi -> English)
-            const bestVoice = await getBestVoice();
-            // console.log('Using Voice:', bestVoice);
-
-            Speech.speak(textToSpeak, {
-                language: 'en-IN', // Base language (fallback)
-                voice: bestVoice,  // Specific voice identifier (e.g., Marathi)
-                pitch: 1.0,
-                rate: 0.85,        // Slightly slower for better clarity
-                onDone: () => setPlayingIndex(null),
-                onStopped: () => setPlayingIndex(null),
-                onError: (e) => {
-                    // console.log('TTS Error', e);
-                    setPlayingIndex(null);
-                }
-            });
+            if (newSound) {
+                setTtsSound(newSound);
+                newSound.setOnPlaybackStatusUpdate((status) => {
+                    if (status.didJustFinish) {
+                        setPlayingIndex(null);
+                        setTtsSound(null);
+                        newSound.unloadAsync().catch(() => {});
+                    }
+                });
+            } else {
+                setPlayingIndex(null);
+            }
         } catch (error) {
             console.error(error);
             setPlayingIndex(null);
@@ -1216,18 +1229,67 @@ const ChapterContentScreen = ({ navigation, route }) => {
                     contentContainerStyle={[styles.listContainer, contentContainerPadding]}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     ListHeaderComponent={() => (
-                        <View style={styles.sectionHeaderRow}>
-                            <View>
-                                <Text style={[styles.quizTitle, { color: theme.text }]}>Quick Revision</Text>
-                                <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>Key points for {chapter.chapter_name}</Text>
-                            </View>
+                        <View style={{ marginBottom: 12 }}>
                             <TouchableOpacity
-                                onPress={() => setVoiceModalVisible(true)}
-                                style={styles.voiceButton}
+                                activeOpacity={0.88}
+                                onPress={() => navigation.navigate('QuickRevision', {
+                                    chapterId: chapter.chapter_id,
+                                    chapterName: chapter.chapter_name,
+                                    revisionData: revisionDataItems
+                                })}
+                                style={{
+                                    borderRadius: 20,
+                                    overflow: 'hidden',
+                                    marginBottom: 16,
+                                    elevation: 6,
+                                    shadowColor: '#4f46e5',
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: 0.25,
+                                    shadowRadius: 10,
+                                }}
                             >
-                                <Text style={styles.voiceIcon}>🗣️</Text>
-                                <Text style={styles.voiceText}>VOICE</Text>
+                                <LinearGradient
+                                    colors={['#4338ca', '#6366f1', '#8b5cf6']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={{ padding: 18, flexDirection: 'row', alignItems: 'center' }}
+                                >
+                                    <View style={{ flex: 1, paddingRight: 12 }}>
+                                        <View style={{
+                                            backgroundColor: 'rgba(255,255,255,0.2)',
+                                            alignSelf: 'flex-start',
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 3,
+                                            borderRadius: 10,
+                                            marginBottom: 6
+                                        }}>
+                                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>⚡ REELS & STORIES MODE</Text>
+                                        </View>
+                                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Launch Vertical Cards</Text>
+                                        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 4 }}>
+                                            Swipe up card-by-card with auto-play mentor voice & zero lag.
+                                        </Text>
+                                    </View>
+                                    <View style={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 24,
+                                        backgroundColor: '#fff',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        elevation: 3
+                                    }}>
+                                        <Ionicons name="play" size={24} color="#4f46e5" style={{ marginLeft: 3 }} />
+                                    </View>
+                                </LinearGradient>
                             </TouchableOpacity>
+
+                            <View style={styles.sectionHeaderRow}>
+                                <View>
+                                    <Text style={[styles.quizTitle, { color: theme.text }]}>Quick Revision Summary</Text>
+                                    <Text style={[styles.quizSubtitle, { color: theme.textSecondary }]}>{revisionDataItems.length} points for {chapter.chapter_name}</Text>
+                                </View>
+                            </View>
                         </View>
                     )}
                     renderItem={({ item, index }) => {
@@ -1267,6 +1329,27 @@ const ChapterContentScreen = ({ navigation, route }) => {
                                         </Text>
                                     </>
                                 )}
+
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('QuickRevision', {
+                                        chapterId: chapter.chapter_id,
+                                        chapterName: chapter.chapter_name,
+                                        revisionData: revisionDataItems
+                                    })}
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        alignSelf: 'flex-end',
+                                        marginTop: 10,
+                                        backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                                        paddingHorizontal: 10,
+                                        paddingVertical: 5,
+                                        borderRadius: 12
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#4f46e5', marginRight: 4 }}>Full-Screen Cards</Text>
+                                    <Ionicons name="arrow-forward" size={12} color="#4f46e5" />
+                                </TouchableOpacity>
                             </View>
                         );
                     }}

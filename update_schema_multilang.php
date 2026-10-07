@@ -35,7 +35,11 @@ try {
         "ALTER TABLE quick_revision ADD COLUMN IF NOT EXISTS key_points_hi JSON DEFAULT NULL AFTER key_points",
         "ALTER TABLE quick_revision ADD COLUMN IF NOT EXISTS key_points_mr JSON DEFAULT NULL AFTER key_points_hi",
         "ALTER TABLE quick_revision ADD COLUMN IF NOT EXISTS summary_hi TEXT DEFAULT NULL AFTER summary",
-        "ALTER TABLE quick_revision ADD COLUMN IF NOT EXISTS summary_mr TEXT DEFAULT NULL AFTER summary_hi"
+        "ALTER TABLE quick_revision ADD COLUMN IF NOT EXISTS summary_mr TEXT DEFAULT NULL AFTER summary_hi",
+
+        // 4. Quick Revision High-Speed Index & Charset
+        "ALTER TABLE quick_revision ADD INDEX idx_chapter_created (chapter_id, created_at DESC)",
+        "ALTER TABLE quick_revision CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
     ];
 
     $executed = 0;

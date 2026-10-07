@@ -52,7 +52,27 @@ addIndex($pdo, 'subjects', 'idx_class', 'class_id');
 // 4. Optimize Content Progress (Already has Unique Key, adding index for analytics)
 addIndex($pdo, 'content_progress', 'idx_user_type', 'user_id, content_type');
 
-// 5. Run Table Optimization (Defragments data for faster reads)
+// 5. Optimize Quick Revision (High performance index, multilang columns, and utf8mb4)
+$qrCols = [
+    "title_hi VARCHAR(255) DEFAULT NULL",
+    "title_mr VARCHAR(255) DEFAULT NULL",
+    "key_points_hi JSON DEFAULT NULL",
+    "key_points_mr JSON DEFAULT NULL",
+    "summary_hi TEXT DEFAULT NULL",
+    "summary_mr TEXT DEFAULT NULL"
+];
+foreach ($qrCols as $colDef) {
+    try {
+        $pdo->exec("ALTER TABLE quick_revision ADD COLUMN IF NOT EXISTS $colDef");
+    } catch (PDOException $e) {}
+}
+addIndex($pdo, 'quick_revision', 'idx_chapter_created', 'chapter_id, created_at DESC');
+try {
+    $pdo->exec("ALTER TABLE quick_revision CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    echo "<p style='color: green'>✅ Converted quick_revision to <strong>utf8mb4</strong>.</p>";
+} catch (PDOException $e) {}
+
+// 6. Run Table Optimization (Defragments data for faster reads)
 $tables = ['mcqs', 'chapters', 'subjects', 'users', 'notes', 'videos', 'content_progress'];
 echo "<h3>📦 Defragmenting Tables...</h3>";
 foreach ($tables as $table) {

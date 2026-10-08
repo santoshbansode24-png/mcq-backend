@@ -257,9 +257,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     // Determine Active Tab
     const activeTab = useMemo(() => {
         const mapping = {
-            'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets'],
+            'Home': ['Home', 'Leaderboard', 'Notifications', 'Profile', 'VocabDashboard', 'VocabBooster', 'MentalMaths', 'MyExam', 'MyExamTest', 'ScholarshipSubjects', 'ScholarshipChapters', 'ScholarshipSets', 'Performance', 'PerformanceReport'],
             'Subjects': ['Subjects', 'Chapters', 'ChapterContent', 'PDFViewer', 'Notes', 'Flashcards', 'QuickRevision', 'WorksheetGenerator', 'StudyPlanner'],
-            'Performance': ['Performance', 'PerformanceReport'],
             'AI': ['AI', 'HomeworkSolver', 'EnglishMissionMap', 'PDFToExam', 'AIPdfExam', 'AIPdfWorksheet', 'StudyDetail', 'AIPdfNotes'],
             'ClassUpdates': ['ClassUpdates', 'PDFViewer', 'MyExamTest']
         };
@@ -288,8 +287,8 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         // }
         // ----------------------------
 
-        // Check if we are just switching tabs (Home, AI, Subjects, Performance, ClassUpdates)
-        const isRootTab = ['Home', 'Subjects', 'Performance', 'AI', 'ClassUpdates'].includes(screen);
+        // Check if we are just switching tabs (Home, AI, Subjects, ClassUpdates)
+        const isRootTab = ['Home', 'Subjects', 'AI', 'ClassUpdates'].includes(screen);
 
         if (isRootTab) {
             // Reset stack if switching to a root tab
@@ -415,7 +414,6 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     const tabs = [
         { key: 'Home', icon: 'home', label: t('home') },
         { key: 'Subjects', icon: 'book', label: t('subject') },
-        { key: 'Performance', icon: 'stats-chart', label: 'Performance' },
         { key: 'AI', icon: 'sparkles', label: t('aiTools') },
         { key: 'ClassUpdates', icon: 'school', label: 'Class' },
     ];

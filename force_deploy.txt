@@ -1,1 +1,1 @@
-Force Railway build timestamp: 2026-10-09 22:14:00 - Add multilang columns alter and seed Chapter 1
+Force Railway build timestamp: 2026-10-09 22:18:00 - Convert quick_revision charset to utf8mb4

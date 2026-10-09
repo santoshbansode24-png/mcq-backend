@@ -172,21 +172,34 @@ try {
         INDEX `idx_chapter_created` (`chapter_id`, `created_at` DESC)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
-    // Add missing columns if table existed prior to multilang upgrade
+    // Add missing columns and ensure utf8mb4 charset
     $qrCols = [
-        "title_hi VARCHAR(255) DEFAULT NULL",
-        "title_mr VARCHAR(255) DEFAULT NULL",
+        "title_hi VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL",
+        "title_mr VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL",
         "key_points_hi JSON DEFAULT NULL",
         "key_points_mr JSON DEFAULT NULL",
-        "summary_hi TEXT DEFAULT NULL",
-        "summary_mr TEXT DEFAULT NULL"
+        "summary_hi TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL",
+        "summary_mr TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL"
     ];
     foreach ($qrCols as $colDef) {
         try {
             $pdo->exec("ALTER TABLE `quick_revision` ADD COLUMN $colDef");
         } catch (Exception $e) {}
     }
-    echo "✅ Table quick_revision and multilang columns verified.\n";
+
+    // Force Table & Column Charset to utf8mb4
+    try {
+        $pdo->exec("ALTER TABLE `quick_revision` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        $pdo->exec("ALTER TABLE `quick_revision` MODIFY `title` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
+        $pdo->exec("ALTER TABLE `quick_revision` MODIFY `title_mr` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL");
+        $pdo->exec("ALTER TABLE `quick_revision` MODIFY `title_hi` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL");
+        $pdo->exec("ALTER TABLE `quick_revision` MODIFY `summary` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL");
+        $pdo->exec("ALTER TABLE `quick_revision` MODIFY `summary_mr` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL");
+        $pdo->exec("ALTER TABLE `quick_revision` MODIFY `summary_hi` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL");
+    } catch (Exception $e) {}
+
+    $pdo->exec("SET NAMES utf8mb4");
+    echo "✅ Table quick_revision and multilang columns converted to utf8mb4.\n";
 
     // Sample revision points for Chapter 1 (Real Numbers)
     $sampleEN = [

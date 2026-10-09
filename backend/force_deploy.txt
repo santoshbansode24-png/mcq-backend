@@ -1,1 +1,1 @@
-Force Railway build timestamp: 2026-10-04 23:25:00 - Deploy performance tab updates and negative basket practice fixes
+Force Railway build timestamp: 2026-10-09 22:12:00 - Seed quick revision sample for Chapter 1

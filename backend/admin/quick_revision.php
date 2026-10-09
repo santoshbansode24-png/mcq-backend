@@ -44,6 +44,7 @@ if (isset($_GET['delete'])) {
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $chapter_id = intval($_POST['chapter_id']);
+    $lang = strtolower(trim($_POST['language'] ?? 'en'));
     $title = sanitizeInput($_POST['title'] ?? '');
     if (empty($title)) {
         $stmtCh = $pdo->prepare("SELECT chapter_name FROM chapters WHERE chapter_id = ?");
@@ -130,13 +131,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $existingId = $checkExisting->fetchColumn();
 
             if ($existingId) {
-                $stmt = $pdo->prepare("UPDATE quick_revision SET title = ?, summary = ?, key_points = ?, created_at = NOW() WHERE revision_id = ?");
-                $stmt->execute([$title, $summary, $json_points, $existingId]);
-                $message = "Quick Revision updated successfully! (" . count($key_points) . " points)";
+                if ($lang === 'mr') {
+                    $stmt = $pdo->prepare("UPDATE quick_revision SET title_mr = ?, summary_mr = ?, key_points_mr = ?, created_at = NOW() WHERE revision_id = ?");
+                    $stmt->execute([$title, $summary, $json_points, $existingId]);
+                } elseif ($lang === 'hi') {
+                    $stmt = $pdo->prepare("UPDATE quick_revision SET title_hi = ?, summary_hi = ?, key_points_hi = ?, created_at = NOW() WHERE revision_id = ?");
+                    $stmt->execute([$title, $summary, $json_points, $existingId]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE quick_revision SET title = ?, summary = ?, key_points = ?, created_at = NOW() WHERE revision_id = ?");
+                    $stmt->execute([$title, $summary, $json_points, $existingId]);
+                }
+                $message = "Quick Revision updated successfully (" . strtoupper($lang) . ")! (" . count($key_points) . " points)";
             } else {
-                $stmt = $pdo->prepare("INSERT INTO quick_revision (chapter_id, title, summary, key_points) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$chapter_id, $title, $summary, $json_points]);
-                $message = "Quick Revision added successfully! (" . count($key_points) . " points)";
+                if ($lang === 'mr') {
+                    $stmt = $pdo->prepare("INSERT INTO quick_revision (chapter_id, title, summary, key_points, title_mr, summary_mr, key_points_mr) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$chapter_id, $title, $summary, $json_points, $title, $summary, $json_points]);
+                } elseif ($lang === 'hi') {
+                    $stmt = $pdo->prepare("INSERT INTO quick_revision (chapter_id, title, summary, key_points, title_hi, summary_hi, key_points_hi) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$chapter_id, $title, $summary, $json_points, $title, $summary, $json_points]);
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO quick_revision (chapter_id, title, summary, key_points) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$chapter_id, $title, $summary, $json_points]);
+                }
+                $message = "Quick Revision added successfully (" . strtoupper($lang) . ")! (" . count($key_points) . " points)";
             }
         } catch (PDOException $e) {
             $message = "Error: Database error - " . $e->getMessage();
@@ -371,14 +388,20 @@ $revisions = $revisions_query->fetchAll();
                         <option value="">Select Chapter (Choose Subject First)</option>
                     </select>
 
-                    <input type="text" name="title" placeholder="Revision Title (Optional - auto defaults to Chapter Name)" style="grid-column: span 3;">
+                    <select name="language" id="language_select" style="border: 2px solid #6366f1; font-weight: 600; color: #4338ca;">
+                        <option value="en">🌐 English (default)</option>
+                        <option value="mr">🚩 मराठी (Marathi)</option>
+                        <option value="hi">🇮🇳 हिंदी (Hindi)</option>
+                    </select>
+
+                    <input type="text" name="title" placeholder="Revision Title (Optional - auto defaults to Chapter Name)" style="grid-column: span 2;">
                     
                     <textarea name="summary" placeholder="Chapter Summary (Optional)..." style="grid-column: span 3; height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"></textarea>
                 </div>
 
                 <div class="csv-section">
                     <h3>📂 Option 1: Upload CSV (Bulk Import)</h3>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer, Explanation</code> (3 Columns). First row header ignored.</p>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Format: <code>Question, Answer, Explanation</code> (3 Columns). First row header ignored. UTF-8 Devanagari supported.</p>
                     <input type="file" name="csv_file" accept=".csv" style="background: white;">
                     <br><br>
                     <a href="sample_quick_revision.csv" download style="font-size: 13px; color: #667eea; font-weight: 600;">⬇️ Download Sample CSV</a>
@@ -408,6 +431,7 @@ $revisions = $revisions_query->fetchAll();
                     <tr>
                         <th>Title</th>
                         <th>Chapter</th>
+                        <th>Languages</th>
                         <th>Points</th>
                         <th>Action</th>
                     </tr>
@@ -419,6 +443,11 @@ $revisions = $revisions_query->fetchAll();
                         <td>
                             <small style="color:#667eea;font-weight:600;"><?php echo htmlspecialchars($rev['subject_name']); ?></small><br>
                             <?php echo htmlspecialchars($rev['chapter_name']); ?>
+                        </td>
+                        <td>
+                            <span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;margin-right:3px;background:<?php echo !empty($rev['key_points']) ? '#dcfce7;color:#166534' : '#f1f5f9;color:#94a3b8'; ?>;">EN</span>
+                            <span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;margin-right:3px;background:<?php echo !empty($rev['key_points_mr']) ? '#ede9fe;color:#5b21b6' : '#f1f5f9;color:#94a3b8'; ?>;">MR</span>
+                            <span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;background:<?php echo !empty($rev['key_points_hi']) ? '#ffedd5;color:#9a3412' : '#f1f5f9;color:#94a3b8'; ?>;">HI</span>
                         </td>
                         <td>
                             <?php 

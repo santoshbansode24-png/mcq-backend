@@ -322,6 +322,128 @@ try {
         $stmtInsert->execute([$targetChapterId, $jsonEN, $jsonMR, $jsonHI]);
         echo "✅ Chapter 1 sample quick revision inserted successfully!\n";
     }
+
+    // --- SEED CHAPTER 2 (Polynomials) ---
+    $sampleEN_Ch2 = [
+        [
+            "q" => "What is the degree of a polynomial?",
+            "a" => "The degree of a polynomial is the highest power of the variable x in the polynomial p(x).",
+            "e" => "For example, in 3x^2 + 5x - 7, the highest power of x is 2, so the degree is 2."
+        ],
+        [
+            "q" => "How many zeroes can a quadratic polynomial have at most?",
+            "a" => "A quadratic polynomial of degree 2 can have at most 2 zeroes.",
+            "e" => "The number of zeroes of any polynomial is at most equal to its degree."
+        ],
+        [
+            "q" => "What is the relationship between zeroes (α, β) and coefficients of ax^2 + bx + c?",
+            "a" => "Sum of zeroes: α + β = -b/a, and Product of zeroes: α × β = c/a.",
+            "e" => "This formula connects the roots directly to the coefficients of x^2, x, and the constant term."
+        ],
+        [
+            "q" => "What is the geometric meaning of the zeroes of a polynomial p(x)?",
+            "a" => "The zeroes are the x-coordinates of the points where the graph of y = p(x) intersects the x-axis.",
+            "e" => "If the parabola crosses the x-axis at two distinct points, the polynomial has two distinct real zeroes."
+        ],
+        [
+            "q" => "How do you form a quadratic polynomial when the sum (S) and product (P) of zeroes are given?",
+            "a" => "The quadratic polynomial is given by k[x^2 - Sx + P], where k is any non-zero real constant.",
+            "e" => "Always remember: x^2 minus (sum of roots) times x plus (product of roots)."
+        ]
+    ];
+
+    $sampleMR_Ch2 = [
+        [
+            "q" => "बहुपदीची कोटी (Degree of a polynomial) म्हणजे काय?",
+            "a" => "दिलेल्या बहुपदी p(x) मधील चलाच्या (variable x) सर्वोच्च घातांकाला बहुपदीची कोटी म्हणतात.",
+            "e" => "उदाहरणार्थ, 3x^2 + 5x - 7 या बहुपदीमध्ये चलाचा सर्वोच्च घातांक 2 आहे, म्हणून तिची कोटी 2 आहे."
+        ],
+        [
+            "q" => "वर्ग बहुपदीला (Quadratic Polynomial) जास्तीत जास्त किती शून्ये (Zeroes) असू शकतात?",
+            "a" => "2 कोटी असणाऱ्या वर्ग बहुपदीला जास्तीत जास्त 2 शून्ये (Zeroes) असू शकतात.",
+            "e" => "कोणत्याही बहुपदीच्या शून्यांची संख्या जास्तीत जास्त तिच्या कोटीइतकीच (Degree) असू शकते."
+        ],
+        [
+            "q" => "वर्ग बहुपदी ax^2 + bx + c च्या शून्ये (α, β) आणि सहगुणक (coefficients) यांमधील संबंध काय आहे?",
+            "a" => "शून्यांची बेरीज: α + β = -b/a, आणि शून्यांचा गुणाकार: α × β = c/a.",
+            "e" => "हे सूत्र बहुपदीच्या मुळांचा आणि सहगुणकांचा थेट गणितीय संबंध दर्शवते."
+        ],
+        [
+            "q" => "बहुपदीच्या शून्यांचा भूमितीय अर्थ काय होतो?",
+            "a" => "y = p(x) चा आलेख x-अक्षाला ज्या बिंदूंमध्ये छेदतो, त्या बिंदूंचे x-निर्देशांक म्हणजेच बहुपदीची शून्ये होत.",
+            "e" => "जर परवलय (Parabola) x-अक्षाला दोन ठिकाणी छेदत असेल, तर त्या बहुपदीला दोन वास्तव शून्ये मिळतात."
+        ],
+        [
+            "q" => "शून्यांची बेरीज (S) आणि गुणाकार (P) माहिती असल्यास वर्ग बहुपदी कशी तयार करतात?",
+            "a" => "वर्ग बहुपदीचे सूत्र: k[x^2 - Sx + P] (जेथे k ही शून्येतर वास्तव संख्या आहे).",
+            "e" => "नेहमी लक्षात ठेवा: x^2 वजा (शून्यांची बेरीज) गुणले x अधिक (शून्यांचा गुणाकार)."
+        ]
+    ];
+
+    $sampleHI_Ch2 = [
+        [
+            "q" => "बहुपद की घात (Degree of a polynomial) क्या होती है?",
+            "a" => "किसी बहुपद p(x) में चर x के उच्चतम घात (highest power) को उस बहुपद की घात कहते हैं.",
+            "e" => "उदाहरण के लिए, 3x^2 + 5x - 7 में x की उच्चतम घात 2 है, इसलिए इस बहुपद की घात 2 है."
+        ],
+        [
+            "q" => "द्विघात बहुपद के अधिकतम कितने शून्यक (Zeroes) हो सकते हैं?",
+            "a" => "घात 2 वाले द्विघात बहुपद के अधिकतम 2 शून्यक हो सकते हैं.",
+            "e" => "किसी भी बहुपद के शून्यकों की अधिकतम संख्या उसकी घात (Degree) के बराबर होती है."
+        ],
+        [
+            "q" => "द्विघात बहुपद ax^2 + bx + c के शून्यकों (α, β) और गुणांकों में क्या संबंध होता है?",
+            "a" => "शून्यकों का योग: α + β = -b/a, और शून्यकों का गुणनफल: α × β = c/a.",
+            "e" => "यह संबंध शून्यकों और समीकरण के गुणांकों को सीधे जोड़ता है."
+        ],
+        [
+            "q" => "बहुपद p(x) के शून्यकों का ज्यामितीय अर्थ क्या होता है?",
+            "a" => "y = p(x) का आलेख x-अक्ष को जिन बिंदुओं पर काटता है, उनके x-निर्देशांक ही बहुपद के शून्यक होते हैं.",
+            "e" => "यदि कोई परवलय (Parabola) x-अक्ष को दो बिंदुओं पर काटता है, तो बहुपद के दो वास्तविक शून्यक होते हैं."
+        ],
+        [
+            "q" => "शून्यकों का योग (S) और गुणनफल (P) ज्ञात होने पर द्विघात बहुपद कैसे बनाते हैं?",
+            "a" => "द्विघात बहुपद का सूत्र है: k[x^2 - Sx + P], जहाँ k कोई शून्येतर वास्तविक संख्या है.",
+            "e" => "हमेशा याद रखें: x^2 ऋण (शून्यकों का योग) गुणा x धन (शून्यकों का गुणनफल)."
+        ]
+    ];
+
+    $targetChapterId2 = 2;
+    $checkQ2 = $pdo->prepare("SELECT revision_id FROM quick_revision WHERE chapter_id = ?");
+    $checkQ2->execute([$targetChapterId2]);
+    $existingRev2 = $checkQ2->fetch(PDO::FETCH_ASSOC);
+
+    $jsonEN2 = json_encode($sampleEN_Ch2, JSON_UNESCAPED_UNICODE);
+    $jsonMR2 = json_encode($sampleMR_Ch2, JSON_UNESCAPED_UNICODE);
+    $jsonHI2 = json_encode($sampleHI_Ch2, JSON_UNESCAPED_UNICODE);
+
+    if ($existingRev2) {
+        $stmtUpdate2 = $pdo->prepare("UPDATE quick_revision SET 
+            title = 'Polynomials - Quick Revision',
+            key_points = ?,
+            summary = 'Key concepts of Polynomials, Degree, Zeroes, Graphical representation, and Coefficients.',
+            title_mr = 'बहुपदी - जलद पुनरावलोकन',
+            key_points_mr = ?,
+            summary_mr = 'बहुपदीची कोटी, शून्ये, आलेख आणि सहगुणकांमधील महत्त्वाचे संबंध.',
+            title_hi = 'बहुपद - त्वरित पुनरावलोकन',
+            key_points_hi = ?,
+            summary_hi = 'बहुपद की घात, शून्यक, आलेख और गुणांकों के महत्वपूर्ण सूत्र.',
+            created_at = NOW()
+            WHERE chapter_id = ?");
+        $stmtUpdate2->execute([$jsonEN2, $jsonMR2, $jsonHI2, $targetChapterId2]);
+        echo "✅ Chapter 2 sample quick revision updated successfully!\n";
+    } else {
+        $stmtInsert2 = $pdo->prepare("INSERT INTO quick_revision (
+            chapter_id, title, key_points, summary,
+            title_mr, key_points_mr, summary_mr,
+            title_hi, key_points_hi, summary_hi
+        ) VALUES (?, 'Polynomials - Quick Revision', ?, 'Key concepts of Polynomials, Degree, Zeroes, Graphical representation, and Coefficients.',
+            'बहुपदी - जलद पुनरावलोकन', ?, 'बहुपदीची कोटी, शून्ये, आलेख आणि सहगुणकांमधील महत्त्वाचे संबंध.',
+            'बहुपद - त्वरित पुनरावलोकन', ?, 'बहुपद की घात, शून्यक, आलेख और गुणांकों के महत्वपूर्ण सूत्र.'
+        )");
+        $stmtInsert2->execute([$targetChapterId2, $jsonEN2, $jsonMR2, $jsonHI2]);
+        echo "✅ Chapter 2 sample quick revision inserted successfully!\n";
+    }
 } catch (Exception $e) {
     echo "❌ Quick Revision Seed Error: " . $e->getMessage() . "\n";
 }

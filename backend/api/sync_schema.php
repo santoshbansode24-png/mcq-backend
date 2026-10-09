@@ -171,7 +171,22 @@ try {
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX `idx_chapter_created` (`chapter_id`, `created_at` DESC)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-    echo "✅ Table quick_revision verified.\n";
+
+    // Add missing columns if table existed prior to multilang upgrade
+    $qrCols = [
+        "title_hi VARCHAR(255) DEFAULT NULL",
+        "title_mr VARCHAR(255) DEFAULT NULL",
+        "key_points_hi JSON DEFAULT NULL",
+        "key_points_mr JSON DEFAULT NULL",
+        "summary_hi TEXT DEFAULT NULL",
+        "summary_mr TEXT DEFAULT NULL"
+    ];
+    foreach ($qrCols as $colDef) {
+        try {
+            $pdo->exec("ALTER TABLE `quick_revision` ADD COLUMN $colDef");
+        } catch (Exception $e) {}
+    }
+    echo "✅ Table quick_revision and multilang columns verified.\n";
 
     // Sample revision points for Chapter 1 (Real Numbers)
     $sampleEN = [

@@ -3,8 +3,12 @@
  * Get MCQs API (Multi-Language Supported)
  * Veeru
  */
-require_once 'cors_middleware.php';
-require_once '../config/db.php';
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+require_once __DIR__ . '/cors_middleware.php';
+require_once __DIR__ . '/../config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse('error', 'Only GET requests are allowed', null, 405);
@@ -82,3 +86,4 @@ try {
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);
 }
+?>

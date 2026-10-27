@@ -528,7 +528,8 @@ const ChapterContentScreen = ({ navigation, route }) => {
 
         try {
             let response;
-            const force = forceRefresh; // Respect the explicit forceRefresh flag
+            // Revalidate against server if cache was shown or if current tab is empty
+            const force = forceRefresh || hasCache || (getTabSpecificData(currentTab).length === 0);
 
             if (activeTab === 'MCQs') {
                 response = await fetchMCQs(chapter.chapter_id, force, language);

@@ -7,8 +7,13 @@
  * Purpose: Get all chapters for a specific subject
  */
 
-require_once 'cors_middleware.php';
-require_once '../config/db.php';
+require_once __DIR__ . '/cors_middleware.php';
+require_once __DIR__ . '/../config/db.php';
+
+// Prevent caching of chapters response
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -44,7 +49,6 @@ try {
         ");
     } else {
         // Highly Optimized Query: Fetch chapters and counts in a single pass
-        // Uses LEFT JOIN and GROUP BY with COUNT(DISTINCT) for accuracy and speed
         $stmt = $pdo->prepare("
             SELECT 
                 ch.chapter_id,
@@ -55,7 +59,9 @@ try {
                 s.subject_name,
                 (SELECT COUNT(*) FROM videos v WHERE v.chapter_id = ch.chapter_id) as total_videos,
                 (SELECT COUNT(*) FROM notes n WHERE n.chapter_id = ch.chapter_id) as total_notes,
-                (SELECT COUNT(*) FROM mcqs m WHERE m.chapter_id = ch.chapter_id) as total_mcqs
+                (SELECT COUNT(*) FROM mcqs m WHERE m.chapter_id = ch.chapter_id) as total_mcqs,
+                (SELECT COUNT(*) FROM flashcards f WHERE f.chapter_id = ch.chapter_id) as total_flashcards,
+                (SELECT COUNT(*) FROM quick_revision qr WHERE qr.chapter_id = ch.chapter_id) as total_quick_revision
             FROM chapters ch
             INNER JOIN subjects s ON ch.subject_id = s.subject_id
             WHERE ch.subject_id = ?

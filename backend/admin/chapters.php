@@ -1,6 +1,6 @@
 <?php
 /**
- * Chapters Management with Bulk Upload
+ * Chapters Management with Bulk Upload & Edit Chapter Name
  * Veeru
  */
 session_start();
@@ -21,14 +21,14 @@ if (!isset($_SESSION['admin_selected_board'])) {
 $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
-require_once '../config/db.php';
-if (file_exists('../helpers/text_normalizer.php')) {
-    require_once '../helpers/text_normalizer.php';
+require_once __DIR__ . '/../config/db.php';
+if (file_exists(__DIR__ . '/../helpers/text_normalizer.php')) {
+    require_once __DIR__ . '/../helpers/text_normalizer.php';
 }
-if (file_exists('../vendor/autoload.php')) {
-    require_once '../vendor/autoload.php';
-} elseif (file_exists('../../vendor/autoload.php')) {
-    require_once '../../vendor/autoload.php';
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
+    require_once __DIR__ . '/../../vendor/autoload.php';
 }
 
 // Handle Delete
@@ -51,14 +51,55 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Handle Add Chapter / Bulk Upload
+// Handle Add / Edit / Bulk Upload Chapter
 $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $form_action = $_POST['form_action'] ?? 'add_single';
 
-    if ($form_action === 'bulk_upload') {
+    if ($form_action === 'edit_single') {
+        // Handle Edit Chapter Name & Details
+        $chapter_id = intval($_POST['edit_chapter_id'] ?? 0);
+        $subject_id = intval($_POST['edit_subject_id'] ?? 0);
+        $name = sanitizeInput($_POST['edit_chapter_name'] ?? '');
+        $desc = sanitizeInput($_POST['edit_description'] ?? '');
+        $order = intval($_POST['edit_chapter_order'] ?? 1);
+
+        if ($chapter_id <= 0 || empty($name)) {
+            $error = "Please provide a valid chapter ID and chapter name.";
+        } else {
+            // Verify chapter belongs to current board
+            $check = $pdo->prepare("
+                SELECT ch.chapter_id FROM chapters ch 
+                JOIN subjects s ON ch.subject_id = s.subject_id
+                JOIN classes c ON s.class_id = c.class_id 
+                WHERE ch.chapter_id = ? AND c.board_type = ?
+            ");
+            $check->execute([$chapter_id, $selected_board]);
+
+            if (!$check->fetch()) {
+                $error = "Unauthorized: Chapter not found for current board.";
+            } else {
+                if (function_exists('normalizeChapterName')) {
+                    $name = normalizeChapterName($name);
+                }
+
+                try {
+                    if ($subject_id > 0) {
+                        $stmt = $pdo->prepare("UPDATE chapters SET chapter_name = ?, description = ?, chapter_order = ?, subject_id = ?, created_at = NOW() WHERE chapter_id = ?");
+                        $stmt->execute([$name, $desc, $order, $subject_id, $chapter_id]);
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE chapters SET chapter_name = ?, description = ?, chapter_order = ?, created_at = NOW() WHERE chapter_id = ?");
+                        $stmt->execute([$name, $desc, $order, $chapter_id]);
+                    }
+                    $message = "✓ Chapter updated successfully to: " . htmlspecialchars($name);
+                } catch (PDOException $e) {
+                    $error = "Database error updating chapter: " . $e->getMessage();
+                }
+            }
+        }
+    } elseif ($form_action === 'bulk_upload') {
         $subject_id = intval($_POST['bulk_subject_id'] ?? 0);
         
         if ($subject_id <= 0) {
@@ -234,11 +275,14 @@ $all_subjects_query = $pdo->prepare("
 $all_subjects_query->execute([$selected_board]);
 $all_subjects = $all_subjects_query->fetchAll();
 
-// Get Chapters List
+// Get Chapters List with All Content Counts
 $chapters_query = $pdo->prepare("
-    SELECT ch.*, s.subject_name, c.class_name,
+    SELECT ch.*, s.subject_name, s.class_id, c.class_name,
     (SELECT COUNT(*) FROM mcqs WHERE chapter_id = ch.chapter_id) as mcq_count,
-    (SELECT COUNT(*) FROM videos WHERE chapter_id = ch.chapter_id) as video_count
+    (SELECT COUNT(*) FROM videos WHERE chapter_id = ch.chapter_id) as video_count,
+    (SELECT COUNT(*) FROM notes WHERE chapter_id = ch.chapter_id) as note_count,
+    (SELECT COUNT(*) FROM flashcards WHERE chapter_id = ch.chapter_id) as flashcard_count,
+    (SELECT COUNT(*) FROM quick_revision WHERE chapter_id = ch.chapter_id) as qr_count
     FROM chapters ch
     JOIN subjects s ON ch.subject_id = s.subject_id
     JOIN classes c ON s.class_id = c.class_id
@@ -293,11 +337,71 @@ $chapters = $chapters_query->fetchAll();
         .btn-bulk-upload:hover {
             background: #059669;
         }
+        .btn-edit {
+            background: #3b82f6;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            transition: background 0.2s;
+            margin-right: 5px;
+        }
+        .btn-edit:hover {
+            background: #2563eb;
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-card {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-card h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px;
+        }
     </style>
     <script>
         const subjects = <?php echo json_encode($all_subjects); ?>;
 
-        function filterSubjects(classSelectId, subjectSelectId) {
+        function filterSubjects(classSelectId, subjectSelectId, selectedSubId = null) {
             const classId = document.getElementById(classSelectId).value;
             const subjectSelect = document.getElementById(subjectSelectId);
             
@@ -308,10 +412,34 @@ $chapters = $chapters_query->fetchAll();
                     const option = document.createElement('option');
                     option.value = subject.subject_id;
                     option.textContent = subject.subject_name;
+                    if (selectedSubId && subject.subject_id == selectedSubId) {
+                        option.selected = true;
+                    }
                     subjectSelect.appendChild(option);
                 }
             });
         }
+
+        function openEditModal(chapterData) {
+            document.getElementById('edit_chapter_id').value = chapterData.chapter_id;
+            document.getElementById('edit_class_select').value = chapterData.class_id;
+            filterSubjects('edit_class_select', 'edit_subject_select', chapterData.subject_id);
+            document.getElementById('edit_chapter_name').value = chapterData.chapter_name;
+            document.getElementById('edit_description').value = chapterData.description || '';
+            document.getElementById('edit_chapter_order').value = chapterData.chapter_order || 1;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        };
     </script>
 </head>
 <body>
@@ -348,7 +476,6 @@ $chapters = $chapters_query->fetchAll();
             <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
             <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
             <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
-            <li><a href="data_verification.php"><i class="fa-solid fa-shield-halved"></i> Verify Data</a></li>
             <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
             <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
             <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
@@ -429,7 +556,7 @@ $chapters = $chapters_query->fetchAll();
                     </div>
 
                     <div style="margin-bottom: 12px;">
-                        <input type="text" name="chapter_name" placeholder="Chapter Name" required>
+                        <input type="text" name="chapter_name" placeholder="Chapter Name (e.g. Ancient Civilisation)" required>
                     </div>
 
                     <div style="margin-bottom: 12px;">
@@ -453,8 +580,8 @@ $chapters = $chapters_query->fetchAll();
                         <th><i class="fa-solid fa-book"></i> Class & Subject</th>
                         <th><i class="fa-solid fa-heading"></i> Chapter Name</th>
                         <th><i class="fa-solid fa-sort"></i> Order</th>
-                        <th><i class="fa-solid fa-layer-group"></i> Content</th>
-                        <th><i class="fa-solid fa-bolt"></i> Action</th>
+                        <th><i class="fa-solid fa-layer-group"></i> Uploaded Content</th>
+                        <th><i class="fa-solid fa-bolt"></i> Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -472,17 +599,80 @@ $chapters = $chapters_query->fetchAll();
                         <td><strong><?php echo htmlspecialchars($chapter['chapter_name']); ?></strong></td>
                         <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 4px; font-weight: 600;"><?php echo $chapter['chapter_order']; ?></span></td>
                         <td>
-                            <span style="background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;"><?php echo $chapter['mcq_count']; ?> MCQs</span>
-                            <span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;"><?php echo $chapter['video_count']; ?> Videos</span>
+                            <span class="badge-tag" style="background: #e0e7ff; color: #4338ca;"><?php echo $chapter['mcq_count']; ?> MCQs</span>
+                            <span class="badge-tag" style="background: #dcfce7; color: #15803d;"><?php echo $chapter['note_count']; ?> Notes</span>
+                            <span class="badge-tag" style="background: #fef3c7; color: #b45309;"><?php echo $chapter['video_count']; ?> Videos</span>
+                            <span class="badge-tag" style="background: #fae8ff; color: #7e22ce;"><?php echo $chapter['flashcard_count']; ?> Flashcards</span>
+                            <span class="badge-tag" style="background: #ffe4e6; color: #be123c;"><?php echo $chapter['qr_count']; ?> Revisions</span>
                         </td>
                         <td>
-                            <a href="?delete=<?php echo $chapter['chapter_id']; ?>" class="btn-delete" onclick="return confirm('Delete this chapter?')"><i class="fa-solid fa-trash"></i> Delete</a>
+                            <button type="button" class="btn-edit" onclick='openEditModal(<?php echo json_encode([
+                                "chapter_id" => $chapter["chapter_id"],
+                                "class_id" => $chapter["class_id"],
+                                "subject_id" => $chapter["subject_id"],
+                                "chapter_name" => $chapter["chapter_name"],
+                                "description" => $chapter["description"] ?? "",
+                                "chapter_order" => $chapter["chapter_order"]
+                            ]); ?>)'><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                            <a href="?delete=<?php echo $chapter['chapter_id']; ?>" class="btn-delete" onclick="return confirm('Delete this chapter and all its content?')"><i class="fa-solid fa-trash"></i> Delete</a>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- ✏️ EDIT CHAPTER MODAL -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-card">
+            <h2><i class="fa-solid fa-pen-to-square" style="color: #3b82f6;"></i> Update Chapter Name & Details</h2>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 20px;">Update the chapter name or change its class/subject association.</p>
+            
+            <form method="POST">
+                <input type="hidden" name="form_action" value="edit_single">
+                <input type="hidden" name="edit_chapter_id" id="edit_chapter_id">
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Class:</label>
+                    <select id="edit_class_select" onchange="filterSubjects('edit_class_select', 'edit_subject_select')" required>
+                        <option value="">Select Class</option>
+                        <?php foreach($classes as $class): ?>
+                            <option value="<?php echo $class['class_id']; ?>">
+                                <?php echo htmlspecialchars($class['class_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Subject:</label>
+                    <select name="edit_subject_id" id="edit_subject_select" required>
+                        <option value="">Select Subject</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Chapter Name:</label>
+                    <input type="text" name="edit_chapter_name" id="edit_chapter_name" placeholder="Chapter Name" required style="width: 100%; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Description (Optional):</label>
+                    <input type="text" name="edit_description" id="edit_description" placeholder="Description" style="width: 100%; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Chapter Order:</label>
+                    <input type="number" name="edit_chapter_order" id="edit_chapter_order" value="1" required style="width: 120px;">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeEditModal()" style="padding: 10px 18px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px; font-weight: 600; cursor: pointer; color: #475569;">Cancel</button>
+                    <button type="submit" class="btn-add" style="margin: 0; padding: 10px 20px;"><i class="fa-solid fa-check"></i> Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 </body>

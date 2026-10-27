@@ -78,6 +78,17 @@ const ChaptersScreen = ({ navigation, route, user }) => {
                 setChapters(chaptersResponse.data);
                 // CRITICAL OPTIMIZATION: Stop main loading indicator here so list renders
                 if (!isRefreshing) setLoading(false);
+
+                // Background revalidation: always fetch fresh chapters from server so updated names & new chapters appear immediately
+                if (!isRefreshing) {
+                    fetchChapters(subject.subject_id, true).then(freshResponse => {
+                        if (freshResponse?.status === 'success' && Array.isArray(freshResponse.data)) {
+                            setChapters(freshResponse.data);
+                        }
+                    }).catch(e => {
+                        // Silent fail in background
+                    });
+                }
             }
 
             // 2. Fetch Progress (Async)

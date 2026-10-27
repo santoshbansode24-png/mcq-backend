@@ -7,8 +7,8 @@
  * Purpose: Get all subjects for a specific class
  */
 
-require_once 'cors_middleware.php';
-require_once '../config/db.php';
+require_once __DIR__ . '/cors_middleware.php';
+require_once __DIR__ . '/../config/db.php';
 
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -23,13 +23,30 @@ if ($class_id <= 0) {
     sendResponse('error', 'Valid class_id is required', null, 400);
 }
 
-// Map classroom ID to generic class ID if applicable (Optimized direct mapping)
+// Map classroom ID to generic class ID only if class_id is NOT a standard class
 try {
-    $stmt_generic = $pdo->prepare("SELECT class_level FROM classrooms WHERE class_id = ? LIMIT 1");
-    $stmt_generic->execute([$class_id]);
-    $mapped_class_id = $stmt_generic->fetchColumn();
-    if ($mapped_class_id) {
-        $class_id = (int)$mapped_class_id;
+    $stmt_check_class = $pdo->prepare("SELECT class_id FROM classes WHERE class_id = ? LIMIT 1");
+    $stmt_check_class->execute([$class_id]);
+    $is_standard_class = (bool)$stmt_check_class->fetchColumn();
+
+    if (!$is_standard_class) {
+        $stmt_generic = $pdo->prepare("SELECT class_level, board, medium FROM classrooms WHERE class_id = ? LIMIT 1");
+        $stmt_generic->execute([$class_id]);
+        $cr = $stmt_generic->fetch(PDO::FETCH_ASSOC);
+        if ($cr && !empty($cr['class_level'])) {
+            $board_type = 'CBSE';
+            if (stripos($cr['board'] ?? '', 'State') !== false) {
+                $board_type = (stripos($cr['medium'] ?? '', 'Semi') !== false) ? 'STATE_SEMI' : 'STATE_MARATHI';
+            }
+            $stmt_find = $pdo->prepare("SELECT class_id FROM classes WHERE board_type = ? AND (class_name LIKE ? OR class_name LIKE ?) LIMIT 1");
+            $stmt_find->execute([$board_type, "%Class {$cr['class_level']}%", "%CLASS {$cr['class_level']}%"]);
+            $found_id = $stmt_find->fetchColumn();
+            if ($found_id) {
+                $class_id = (int)$found_id;
+            } else {
+                $class_id = (int)$cr['class_level'];
+            }
+        }
     }
 } catch (PDOException $e) {
     // Fail silently and use original class_id if classrooms tables don't exist

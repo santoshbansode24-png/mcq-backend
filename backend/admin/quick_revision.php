@@ -132,8 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             if ($existingId) {
                 if ($lang === 'mr') {
-                    $stmt = $pdo->prepare("UPDATE quick_revision SET title_mr = ?, summary_mr = ?, key_points_mr = ?, created_at = NOW() WHERE revision_id = ?");
-                    $stmt->execute([$title, $summary, $json_points, $existingId]);
+                    $stmt = $pdo->prepare("UPDATE quick_revision SET title_mr = ?, summary_mr = ?, key_points_mr = ?, title = CASE WHEN title IS NULL OR title = '' OR title = 'Revision' THEN ? ELSE title END, summary = CASE WHEN summary IS NULL OR summary = '' THEN ? ELSE summary END, key_points = CASE WHEN key_points IS NULL OR key_points = '' OR key_points = '[]' THEN ? ELSE key_points END, created_at = NOW() WHERE revision_id = ?");
+                    $stmt->execute([$title, $summary, $json_points, $title, $summary, $json_points, $existingId]);
                 } elseif ($lang === 'hi') {
                     $stmt = $pdo->prepare("UPDATE quick_revision SET title_hi = ?, summary_hi = ?, key_points_hi = ?, created_at = NOW() WHERE revision_id = ?");
                     $stmt->execute([$title, $summary, $json_points, $existingId]);

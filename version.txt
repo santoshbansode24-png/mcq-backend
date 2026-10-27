@@ -1,2 +1,2 @@
-1.0.68-LIVE
-// Android APK live server configuration release (Student Build 68) with Reels Vertical Quick Revision, Zero-Lag Audio Cache, and Clean 2x2 HomeScreen Boosters.
+1.0.69-LIVE
+// Android AAB & APK live server configuration release (Student Build 69) with Reels Vertical Quick Revision, Zero-Lag Audio Cache, and Clean 2x2 HomeScreen Boosters.

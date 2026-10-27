@@ -2,24 +2,22 @@
 /**
  * Get MCQs API (Multi-Language Supported)
  * Veeru
- * 
- * Endpoint: GET /api/get_mcqs.php?chapter_id=1&lang=mr
  */
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
-require_once 'cors_middleware.php';
-require_once '../config/db.php';
+require_once __DIR__ . '/cors_middleware.php';
+require_once __DIR__ . '/../config/db.php';
 
-// Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse('error', 'Only GET requests are allowed', null, 405);
 }
 
-// Get parameters
 $chapter_id = isset($_GET['chapter_id']) ? intval($_GET['chapter_id']) : 0;
 $chapter_ids = isset($_GET['chapter_ids']) ? $_GET['chapter_ids'] : '';
 $lang = strtolower(trim($_GET['lang'] ?? $_GET['language'] ?? 'en'));
 
-// Validate
 if ($chapter_id <= 0 && empty($chapter_ids)) {
     sendResponse('error', 'Valid chapter_id or chapter_ids is required', null, 400);
 }
@@ -64,7 +62,6 @@ try {
             'difficulty' => $row['difficulty']
         ];
 
-        // Apply Language Translation if requested & available
         if ($lang === 'hi') {
             if (!empty($row['question_hi'])) $mcq['question'] = $row['question_hi'];
             if (!empty($row['option_a_hi'])) $mcq['option_a'] = $row['option_a_hi'];
@@ -89,3 +86,4 @@ try {
 } catch (PDOException $e) {
     sendResponse('error', 'Database error occurred', ['error' => $e->getMessage()], 500);
 }
+?>

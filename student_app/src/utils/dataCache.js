@@ -3,9 +3,9 @@ import NetInfo from '@react-native-community/netinfo';
 
 // Cache TTLs per type (milliseconds)
 const EXPIRY_MAP = {
-    chapters: 60 * 60 * 1000,       // 1 hour  (chapters rarely change mid-session)
-    subjects: 2 * 60 * 60 * 1000,   // 2 hours
-    default:  24 * 60 * 60 * 1000,  // 24 hours fallback
+    chapters: 15 * 60 * 1000,      // 15 mins (was 1 hr)
+    subjects: 30 * 60 * 1000,      // 30 mins (was 2 hrs)
+    default:  60 * 60 * 1000,      // 1 hour fallback (was 24 hrs)
 };
 
 const DEBUG = false;
@@ -16,7 +16,16 @@ export const dataCache = {
      */
     set: async (key, data, type) => {
         try {
-            const cacheItem = { data, timestamp: Date.now(), type };
+            const isEmpty = Array.isArray(data) 
+                ? data.length === 0 
+                : (Array.isArray(data?.data) ? data.data.length === 0 : false);
+
+            const cacheItem = { 
+                data, 
+                timestamp: Date.now(), 
+                type,
+                isEmpty
+            };
             await AsyncStorage.setItem(`@cache_${key}`, JSON.stringify(cacheItem));
             if (DEBUG) console.log(`[Cache] Saved ${key} (${type})`);
         } catch (error) {
@@ -33,7 +42,8 @@ export const dataCache = {
             if (!raw) return null;
 
             const cacheItem = JSON.parse(raw);
-            const ttl = EXPIRY_MAP[type] || EXPIRY_MAP.default;
+            // If data was empty, revalidate quickly (30s) so newly uploaded content appears
+            const ttl = cacheItem.isEmpty ? 30 * 1000 : (EXPIRY_MAP[type] || EXPIRY_MAP.default);
             const age = Date.now() - cacheItem.timestamp;
 
             if (age > ttl) {

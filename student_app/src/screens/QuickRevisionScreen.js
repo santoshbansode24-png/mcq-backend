@@ -405,7 +405,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         // 1. If this is Slide 0 (Question & Poll):
         if (currentSlide.type === 'poll') {
-            setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: 5 }));
+            setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: 3 }));
 
             // Play Question Audio
             try {
@@ -417,8 +417,8 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 soundRef.current = soundObj;
             } catch (e) {}
 
-            // Start 5-second countdown timer for student answer
-            let secondsLeft = 5;
+            // Start 3-second countdown timer for student answer
+            let secondsLeft = 3;
             pollTimerRef.current = setInterval(() => {
                 if (thisToken !== activePlayTokenRef.current) {
                     clearInterval(pollTimerRef.current);
@@ -438,13 +438,13 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                         HapticManager.triggerWarning();
                         setRevealedPolls((prev) => ({ ...prev, [cardIdx]: true }));
 
-                        // 2. Hold for EXACTLY 3 SECONDS so student sees the correct answer
+                        // 2. Hold for EXACTLY 1 SECOND (1000ms) so student sees the correct answer
                         autoAdvanceTimerRef.current = setTimeout(() => {
                             if (thisToken === activePlayTokenRef.current) {
                                 // Transition to Step 1
                                 playSlide(cardIdx, 1);
                             }
-                        }, 3000);
+                        }, 1000);
                     }
                 }
             }, 1000);
@@ -527,10 +527,10 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         setUserGuesses((prev) => ({ ...prev, [cardIdx]: choice }));
         setRevealedPolls((prev) => ({ ...prev, [cardIdx]: true }));
 
-        // Hold revealed answer for 1.5 seconds then smoothly move forward to Step 1
+        // Hold revealed answer for 1 second then smoothly move forward to Step 1
         autoAdvanceTimerRef.current = setTimeout(() => {
             playSlide(cardIdx, 1);
-        }, 1500);
+        }, 1000);
     };
 
     /* ---------------- INSTAGRAM STORY TAP NAVIGATION ---------------- */
@@ -641,7 +641,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const userGuess = userGuesses[index];
         const isPollRevealed = Boolean(revealedPolls[index]);
         const correctChoice = correct;
-        const secondsLeft = pollTimeRemaining[index] ?? 5;
+        const secondsLeft = pollTimeRemaining[index] ?? 3;
         const isMastered = !!masteredCards[index];
 
         return (

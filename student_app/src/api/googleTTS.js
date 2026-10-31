@@ -28,14 +28,14 @@ export const isAudioCached = (text, languageCode = 'mr-IN', speed = 0.88) => {
 
 /**
  * Pre-fetches audio in the background and saves into memory cache.
- * Completely non-blocking and silent.
+ * Completely non-blocking, silent, and zero-lag.
  */
 export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) => {
     if (!text || typeof text !== 'string') return false;
     const cleanText = text.trim();
     if (!cleanText) return false;
 
-    // If server TTS was already detected as unavailable, don't waste network requests
+    // If server TTS was already confirmed unavailable due to missing keys, don't spam
     if (isServerTTSAvailable === false) {
         return false;
     }
@@ -62,7 +62,7 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
             };
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
 
             const response = await fetch(PROXY_URL, {
                 method: 'POST',
@@ -76,7 +76,6 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                isServerTTSAvailable = false;
                 return false;
             }
 
@@ -86,13 +85,13 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
                 audioMemoryCache.set(cacheKey, data.audioContent);
                 return true;
             } else {
-                if (data?.error && data.error.includes('Google API Key not configured')) {
+                if (data?.error && (data.error.includes('No TTS API') || data.error.includes('not configured'))) {
                     isServerTTSAvailable = false;
                 }
                 return false;
             }
         } catch (e) {
-            // Network failure or timeout
+            // Network failure or timeout (silent)
             return false;
         } finally {
             activeFetches.delete(cacheKey);
@@ -105,7 +104,7 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
 
 /**
  * Plays TTS audio with Zero-Lag:
- * 1. Uses pre-fetched audio instantly if available
+ * 1. Uses pre-fetched audio instantly if available (0ms latency)
  * 2. If server TTS is available, fetches from server with server-side permanent disk cache (₹0)
  * 3. Instant, reliable fallback to high-quality on-device native speech (0ms latency, native onDone tracking)
  */
@@ -128,7 +127,7 @@ export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) 
             };
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
 
             const response = await fetch(PROXY_URL, {
                 method: 'POST',
@@ -147,21 +146,16 @@ export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) 
                     audioBase64 = data.audioContent;
                     audioMemoryCache.set(cacheKey, audioBase64);
                     isServerTTSAvailable = true;
-                } else if (data?.error) {
+                } else if (data?.error && (data.error.includes('No TTS API') || data.error.includes('not configured'))) {
                     isServerTTSAvailable = false;
                 }
-            } else {
-                isServerTTSAvailable = false;
             }
         } catch (netErr) {
-            // Mark server as unavailable so subsequent cards don't stall
-            if (isServerTTSAvailable === null) {
-                isServerTTSAvailable = false;
-            }
+            console.warn('[TTS] Network timeout, using instant on-device speech fallback');
         }
     }
 
-    // 2. Play Google Natural Audio if Base64 available
+    // 2. Play Server Natural Audio if Base64 available (Sarvam AI / Google Cloud)
     if (audioBase64) {
         try {
             await Speech.stop();

@@ -591,7 +591,9 @@ const ChapterContentScreen = ({ navigation, route }) => {
             setFlashcardsDataState(allCards);
             if (isFresh) loadSetStatus('flashcard');
         } else if (actingTab === 'QuickRevision') {
-            const raw = Array.isArray(responseData) ? (responseData[0]?.key_points || []) : [];
+            const raw = Array.isArray(responseData) 
+                ? (responseData[0]?.key_points || []) 
+                : (responseData?.key_points || []);
             let validPoints = Array.isArray(raw) ? raw : [];
             if (validPoints.length > 0 && validPoints[0]?.q?.toString().trim().toLowerCase() === 'question') {
                 validPoints = validPoints.slice(1);

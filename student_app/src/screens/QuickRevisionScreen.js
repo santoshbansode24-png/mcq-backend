@@ -83,27 +83,30 @@ const buildConversationalTeacherScript = (item, lang = 'mr') => {
     const cleanA = sanitizeCleanText(item.a || item.Answer || '');
     const cleanE = sanitizeCleanText(item.e || item.Explanation || '');
 
-    let questionScript = '';
-    let answerScript = '';
-    let explanationScript = '';
+    let questionScript = cleanQ;
+    let answerScript = cleanA;
+    let explanationScript = cleanE;
 
     if (lang === 'mr') {
-        questionScript = `चला मित्रांनो, आधी हा प्रश्न सोप्या भाषेत समजून घेऊया! प्रश्न असा आहे: ${cleanQ}`;
-        answerScript = `याचं मुख्य उत्तर आणि संकल्पना अशी आहे: ${cleanA}`;
+        // Teacher tone for Marathi: Explains pedagogically with teacher guidance
+        questionScript = `लक्ष द्या विद्यार्थ्यांनो, प्रश्न समजून घ्या — ${cleanQ}`;
+        answerScript = `याचं सोपं आणि नेमकं उत्तर आहे — ${cleanA}`;
         if (cleanE) {
-            explanationScript = `परीक्षेसाठी ही खास टीप लक्षात ठेवा: ${cleanE}`;
+            explanationScript = `परीक्षेसाठी ही महत्त्वाची टीप नक्की लक्षात ठेवा: ${cleanE}`;
         }
     } else if (lang === 'hi') {
-        questionScript = `नमस्ते दोस्तों! चलिए पहले इस सवाल को सरल भाषा में समझते हैं! सवाल यह है: ${cleanQ}`;
-        answerScript = `इसका मुख्य उत्तर और सही कारण यह है: ${cleanA}`;
+        // Teacher tone for Hindi
+        questionScript = `प्यारे बच्चों, आइए यह सवाल समझते हैं: ${cleanQ}`;
+        answerScript = `इसका सीधा और आसान उत्तर है: ${cleanA}`;
         if (cleanE) {
-            explanationScript = `परीक्षा के लिए यह जरूरी बात याद रखिए: ${cleanE}`;
+            explanationScript = `परीक्षा के लिए यह खास बात याद रखिएगा: ${cleanE}`;
         }
     } else {
-        questionScript = `Hey students! Let's understand this question simply: ${cleanQ}`;
-        answerScript = `The core answer and concept here is: ${cleanA}`;
+        // Teacher tone for English
+        questionScript = `Students, let's understand this question: ${cleanQ}`;
+        answerScript = `Here is the clear explanation: ${cleanA}`;
         if (cleanE) {
-            explanationScript = `Here is a golden exam tip to remember: ${cleanE}`;
+            explanationScript = `Key exam tip to remember: ${cleanE}`;
         }
     }
 
@@ -114,53 +117,47 @@ const buildConversationalTeacherScript = (item, lang = 'mr') => {
         questionScript,
         answerScript,
         explanationScript,
-        keywords: extractKeywords(cleanQ, cleanA),
+        keywords: [],
     };
 };
 
-// 6 Vibrant theme presets rotating per card for Instagram Reels/TikTok look
+// Classroom Blackboard Themes (हिरवा फळा / Dark Slate Chalkboard)
 const REEL_THEMES = [
     {
-        darkGrad: ['#0f172a', '#1e1b4b', '#172554'],
-        lightGrad: ['#f8faff', '#ede9fe', '#e0e7ff'],
-        accent: '#6366f1',
-        tagBg: 'rgba(99,102,241,0.15)',
-        name: 'Indigo Pulse',
+        darkGrad: ['#061a11', '#0b261b', '#103324'],
+        lightGrad: ['#0b261b', '#103324', '#174230'],
+        accent: '#34d399',
+        tagBg: 'rgba(52,211,153,0.18)',
+        chalkWhite: '#ffffff',
+        chalkYellow: '#fef08a',
+        name: 'Emerald Chalkboard (हिरवा फळा)',
     },
     {
-        darkGrad: ['#022c22', '#064e3b', '#065f46'],
-        lightGrad: ['#f0fdf4', '#dcfce7', '#ecfdf5'],
+        darkGrad: ['#0d1715', '#14201d', '#1b2925'],
+        lightGrad: ['#14201d', '#1b2925', '#243732'],
         accent: '#10b981',
-        tagBg: 'rgba(16,185,129,0.15)',
-        name: 'Emerald Glow',
+        tagBg: 'rgba(16,185,129,0.18)',
+        chalkWhite: '#ffffff',
+        chalkYellow: '#fef08a',
+        name: 'Classic Dark Slate (काळा फळा)',
     },
     {
-        darkGrad: ['#31103f', '#4a044e', '#581c87'],
-        lightGrad: ['#faf5ff', '#f3e8ff', '#fce7f3'],
-        accent: '#ec4899',
-        tagBg: 'rgba(236,72,153,0.15)',
-        name: 'Cosmic Magenta',
+        darkGrad: ['#082017', '#0e2b20', '#14382a'],
+        lightGrad: ['#0e2b20', '#14382a', '#1d4d3a'],
+        accent: '#6ee7b7',
+        tagBg: 'rgba(110,231,183,0.18)',
+        chalkWhite: '#ffffff',
+        chalkYellow: '#fef08a',
+        name: 'Deep Forest Slate',
     },
     {
-        darkGrad: ['#1c1917', '#451a03', '#78350f'],
-        lightGrad: ['#fffbeb', '#fef3c7', '#fed7aa'],
-        accent: '#f59e0b',
-        tagBg: 'rgba(245,158,11,0.15)',
-        name: 'Sunset Amber',
-    },
-    {
-        darkGrad: ['#082f49', '#0c4a6e', '#164e63'],
-        lightGrad: ['#f0f9ff', '#e0f2fe', '#cffafe'],
-        accent: '#06b6d4',
-        tagBg: 'rgba(6,182,212,0.15)',
-        name: 'Electric Cyan',
-    },
-    {
-        darkGrad: ['#3b0764', '#1e1b4b', '#431407'],
-        lightGrad: ['#fff1f2', '#ffe4e6', '#ede9fe'],
-        accent: '#8b5cf6',
-        tagBg: 'rgba(139,92,246,0.15)',
-        name: 'Neon Violet',
+        darkGrad: ['#081721', '#0e2331', '#143042'],
+        lightGrad: ['#0e2331', '#143042', '#1b3f57'],
+        accent: '#38bdf8',
+        tagBg: 'rgba(56,189,248,0.18)',
+        chalkWhite: '#ffffff',
+        chalkYellow: '#fef08a',
+        name: 'Classroom Navy Slate',
     },
 ];
 
@@ -177,6 +174,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     // Audio & Phase Synchronization: 'question' | 'answer' | 'explanation' | null
     const [playingIndex, setPlayingIndex] = useState(null);
     const [activePhase, setActivePhase] = useState(null);
+    const [countdownVal, setCountdownVal] = useState(null);
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
     const [speechSpeed, setSpeechSpeed] = useState(0.92); // 0.85x, 0.92x, 1.1x
     const [masteredCards, setMasteredCards] = useState({});
@@ -211,9 +209,33 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         currentIndexRef.current = currentIndex;
     }, [currentIndex]);
 
-    useEffect(() => {
+        useEffect(() => {
         speechSpeedRef.current = speechSpeed;
     }, [speechSpeed]);
+
+    // Zero-Lag Prefetching for current card and upcoming cards
+    const prefetchCardAudio = useCallback((item) => {
+        if (!item) return;
+        const scripts = buildConversationalTeacherScript(item, language);
+        const { questionScript, answerScript, explanationScript } = scripts;
+        const currentSpeed = speechSpeedRef.current;
+        const langCode = preferredLanguage.current;
+
+        if (questionScript) prefetchGoogleTTS(questionScript, langCode, currentSpeed);
+        if (answerScript) prefetchGoogleTTS(answerScript, langCode, currentSpeed);
+        if (explanationScript) prefetchGoogleTTS(explanationScript, langCode, currentSpeed);
+    }, [language]);
+
+    useEffect(() => {
+        if (revisionData.length === 0) return;
+        const start = currentIndex;
+        const end = Math.min(currentIndex + 2, revisionData.length - 1);
+        for (let i = start; i <= end; i++) {
+            if (revisionData[i]) {
+                prefetchCardAudio(revisionData[i]);
+            }
+        }
+    }, [currentIndex, revisionData, prefetchCardAudio]);
 
     /* ---------------- LIFECYCLE ---------------- */
     useEffect(() => {
@@ -274,7 +296,9 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 if (cachedData) {
                     const parsed = JSON.parse(cachedData);
                     if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-                        const rawPoints = parsed.data?.[0]?.key_points || [];
+                        const rawPoints = Array.isArray(parsed.data) 
+                            ? (parsed.data[0]?.key_points || []) 
+                            : (parsed.data?.key_points || []);
                         const validPoints = cleanPoints(rawPoints);
                         if (validPoints.length > 0) {
                             setRevisionData(validPoints);
@@ -292,8 +316,10 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         try {
             const response = await fetchQuickRevision(chapterId, forceReconnect, language);
-            if (response?.status === 'success' && response?.data?.length) {
-                const rawPoints = response.data[0]?.key_points || [];
+            if (response?.status === 'success' && response?.data) {
+                const rawPoints = Array.isArray(response.data) 
+                    ? (response.data[0]?.key_points || []) 
+                    : (response.data?.key_points || []);
                 const validPoints = cleanPoints(rawPoints);
                 if (validPoints.length > 0) {
                     setRevisionData(validPoints);
@@ -326,6 +352,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     /* ---------------- STOP TTS ---------------- */
     const stopTTS = async () => {
         activePlayTokenRef.current++;
+        setCountdownVal(null);
         if (soundRef.current) {
             try {
                 await soundRef.current.stopAsync();
@@ -399,13 +426,22 @@ const QuickRevisionScreen = ({ navigation, route }) => {
             });
         };
 
-        // --- SEQUENCE EXECUTION ---
+        // --- SEQUENCE EXECUTION (Question -> 3s Countdown -> Answer Reveal) ---
         try {
             // Phase 1: Question Understanding
+            setCountdownVal(null);
             const qDone = await runPhase('question', questionScript);
             if (!qDone || thisToken !== activePlayTokenRef.current) return;
 
-            // Phase 2: Core Concept & Answer Explanation with Synced Keywords
+            // Phase 2: Brisk, seamless teacher transition pause (700ms - no awkward delay)
+            setActivePhase('countdown');
+            setCountdownVal(1);
+            HapticManager.triggerLight();
+            await new Promise((r) => setTimeout(r, 700));
+            if (thisToken !== activePlayTokenRef.current) return;
+            setCountdownVal(null);
+
+            // Phase 3: Core Concept & Answer Explanation with Chalk Reveal
             const aDone = await runPhase('answer', answerScript);
             if (!aDone || thisToken !== activePlayTokenRef.current) return;
 
@@ -522,7 +558,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const renderCard = ({ item, index }) => {
         const themePreset = REEL_THEMES[index % REEL_THEMES.length];
         const scriptData = buildConversationalTeacherScript(item, language);
-        const { cleanQ, cleanA, cleanE, keywords } = scriptData;
+        const { cleanQ, cleanA, cleanE } = scriptData;
 
         const isCurrentCard = currentIndex === index;
         const isPlayingThis = playingIndex === index;
@@ -534,23 +570,23 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         return (
             <View style={[styles.cardWrapper, { height: containerHeight }]}>
-                {/* MODERN REEL CARD WITH DYNAMIC ACCENT & BORDER */}
+                {/* FULL-WIDTH IMMERSIVE CHALKBOARD REEL CARD */}
                 <View
                     style={[
                         styles.reelCard,
                         {
-                            backgroundColor: isDarkMode ? '#111827' : '#ffffff',
-                            borderColor: isPlayingThis ? themePreset.accent : isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                            shadowColor: isPlayingThis ? themePreset.accent : '#000',
+                            backgroundColor: '#0c2319',
+                            borderColor: isPlayingThis ? '#34d399' : 'rgba(52,211,153,0.35)',
+                            shadowColor: '#34d399',
                         },
                     ]}
                 >
-                    {/* TOP STATUS PILL ROW */}
+                    {/* TOP STATUS ROW */}
                     <View style={styles.cardHeaderRow}>
-                        <View style={[styles.reelBadge, { backgroundColor: themePreset.tagBg }]}>
-                            <MaterialCommunityIcons name="lightning-bolt" size={15} color={themePreset.accent} />
-                            <Text style={[styles.reelBadgeText, { color: themePreset.accent }]}>
-                                POINT {index + 1} OF {revisionData.length}
+                        <View style={styles.reelBadge}>
+                            <MaterialCommunityIcons name="lightning-bolt" size={16} color="#34d399" />
+                            <Text style={styles.reelBadgeText}>
+                                {index + 1} / {revisionData.length}
                             </Text>
                         </View>
 
@@ -560,14 +596,12 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                 styles.phaseChip,
                                 {
                                     backgroundColor: isQuestionActive
-                                        ? 'rgba(99,102,241,0.2)'
+                                        ? 'rgba(56,189,248,0.25)'
                                         : isAnswerActive
-                                        ? 'rgba(16,185,129,0.2)'
+                                        ? 'rgba(52,211,153,0.25)'
                                         : isExplanationActive
-                                        ? 'rgba(245,158,11,0.2)'
-                                        : isDarkMode
-                                        ? 'rgba(255,255,255,0.06)'
-                                        : '#f1f5f9',
+                                        ? 'rgba(251,191,36,0.25)'
+                                        : 'rgba(255,255,255,0.08)',
                                 },
                             ]}
                         >
@@ -576,12 +610,12 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                 size={14}
                                 color={
                                     isQuestionActive
-                                        ? '#6366f1'
+                                        ? '#38bdf8'
                                         : isAnswerActive
-                                        ? '#10b981'
+                                        ? '#34d399'
                                         : isExplanationActive
-                                        ? '#f59e0b'
-                                        : theme.textSecondary
+                                        ? '#fbbf24'
+                                        : '#94a3b8'
                                 }
                             />
                             <Text
@@ -589,24 +623,23 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                     styles.phaseChipText,
                                     {
                                         color: isQuestionActive
-                                            ? '#6366f1'
+                                            ? '#38bdf8'
                                             : isAnswerActive
-                                            ? '#10b981'
+                                            ? '#34d399'
                                             : isExplanationActive
-                                            ? '#f59e0b'
-                                            : theme.textSecondary,
+                                            ? '#fbbf24'
+                                            : '#cbd5e1',
                                     },
                                 ]}
                             >
-                                {isQuestionActive
-                                    ? '🎙️ समजावून सांगत आहोत'
-                                    : isAnswerActive
-                                    ? '💡 मुख्य संकल्पना व उत्तर'
-                                    : isExplanationActive
-                                    ? '✨ खास परीक्षेची टीप'
-                                    : '🇮🇳 Indian Teacher Voice'}
+                                {isQuestionActive ? '🎙️ प्रश्न स्पष्टीकरण' : isAnswerActive ? '💡 उत्तर स्पष्टीकरण' : isExplanationActive ? '✨ परीक्षेची टीप' : '🇮🇳 शिक्षक आवाज'}
                             </Text>
                         </View>
+
+                        {/* SPEED CHIP */}
+                        <TouchableOpacity onPress={toggleSpeed} style={styles.speedChip}>
+                            <Text style={styles.speedChipText}>{speechSpeed.toFixed(2)}x</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* MAIN SCROLLABLE CONTENT */}
@@ -615,268 +648,162 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                         showsVerticalScrollIndicator={false}
                         nestedScrollEnabled={true}
                     >
-                        {/* 1. QUESTION SECTION (INTERACTIVE & SYNCHRONIZED) */}
+                        {/* 1. QUESTION SECTION */}
                         <TouchableOpacity
-                            activeOpacity={0.85}
+                            activeOpacity={0.88}
                             onPress={() => playConversationalTTS(item, index)}
                             style={[
                                 styles.questionBox,
                                 {
-                                    backgroundColor: isQuestionActive
-                                        ? isDarkMode
-                                            ? 'rgba(99,102,241,0.18)'
-                                            : '#eef2ff'
-                                        : isDarkMode
-                                        ? 'rgba(255,255,255,0.03)'
-                                        : '#f8fafc',
-                                    borderColor: isQuestionActive ? '#6366f1' : 'transparent',
+                                    backgroundColor: isQuestionActive ? 'rgba(56,189,248,0.18)' : '#123325',
+                                    borderColor: isQuestionActive ? '#38bdf8' : 'rgba(255,255,255,0.15)',
                                 },
                             ]}
                         >
                             <View style={styles.sectionHeaderLine}>
-                                <View style={[styles.sectionBullet, { backgroundColor: '#6366f1' }]} />
-                                <Text style={[styles.sectionHeading, { color: '#6366f1' }]}>QUESTION CONCEPT</Text>
+                                <Ionicons name="help-circle" size={16} color="#38bdf8" />
+                                <Text style={styles.sectionHeadingQ}>QUESTION / प्रश्न</Text>
                                 {isQuestionActive && (
                                     <View style={styles.liveVoiceBadge}>
-                                        <Text style={styles.liveVoiceBadgeText}>TALKING</Text>
+                                        <Text style={styles.liveVoiceBadgeText}>SPEAKING</Text>
                                     </View>
                                 )}
                             </View>
-                            <Text style={[styles.questionMainText, { color: theme.text }]}>{cleanQ}</Text>
+                            <Text style={styles.questionMainText}>{cleanQ}</Text>
                         </TouchableOpacity>
 
-                        {/* 2. KEYWORD HIGHLIGHTS PILL BAR (SYNCHRONIZED WITH ANSWER EXPLANATION) */}
-                        {keywords.length > 0 && (
-                            <View style={styles.keywordsContainer}>
-                                <Text style={[styles.keywordsLabel, { color: theme.textSecondary }]}>
-                                    IMP KEYPOINTS:
-                                </Text>
-                                <View style={styles.keywordsWrap}>
-                                    {keywords.map((kw, kwIdx) => (
-                                        <View
-                                            key={kwIdx}
-                                            style={[
-                                                styles.kwPill,
-                                                {
-                                                    backgroundColor: isAnswerActive
-                                                        ? 'rgba(16,185,129,0.2)'
-                                                        : isDarkMode
-                                                        ? 'rgba(255,255,255,0.06)'
-                                                        : '#f1f5f9',
-                                                    borderColor: isAnswerActive ? '#10b981' : isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
-                                                },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.kwText,
-                                                    {
-                                                        color: isAnswerActive
-                                                            ? '#10b981'
-                                                            : isDarkMode
-                                                            ? '#cbd5e1'
-                                                            : '#475569',
-                                                    },
-                                                ]}
-                                            >
-                                                #{kw}
-                                            </Text>
-                                        </View>
-                                    ))}
+                        {/* INTERACTIVE TEACHER TRANSITION DISPLAY */}
+                        {isPlayingThis && activePhase === 'countdown' && (
+                            <View style={styles.countdownBox}>
+                                <Text style={styles.countdownTitle}>💡 उत्तर स्पष्टीकरण सुरु होत आहे...</Text>
+                                <View style={styles.countdownCircle}>
+                                    <Ionicons name="sparkles" size={24} color="#34d399" />
                                 </View>
+                                <Text style={styles.countdownSubtitle}>शिक्षकांचे सोपे स्पष्टीकरण ऐका!</Text>
                             </View>
                         )}
 
-                        {/* 3. KEY ANSWER SECTION (SYNCHRONIZED WITH TEACHER EXPLANATION) */}
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            onPress={() => playConversationalTTS(item, index)}
-                            style={[
-                                styles.answerBox,
-                                {
-                                    backgroundColor: isAnswerActive
-                                        ? isDarkMode
-                                            ? 'rgba(16,185,129,0.15)'
-                                            : '#f0fdf4'
-                                        : isDarkMode
-                                        ? 'rgba(255,255,255,0.04)'
-                                        : '#f9fbfd',
-                                    borderColor: isAnswerActive ? '#10b981' : isDarkMode ? 'rgba(255,255,255,0.06)' : '#e2e8f0',
-                                },
-                            ]}
-                        >
-                            <View style={styles.sectionHeaderLine}>
-                                <View style={[styles.sectionBullet, { backgroundColor: '#10b981' }]} />
-                                <Text style={[styles.sectionHeading, { color: '#10b981' }]}>KEY ANSWER</Text>
-                                {isAnswerActive && (
-                                    <View style={[styles.liveVoiceBadge, { backgroundColor: '#10b981' }]}>
-                                        <Text style={styles.liveVoiceBadgeText}>EXPLAINING</Text>
-                                    </View>
-                                )}
+                        {/* 2. KEY ANSWER SECTION */}
+                        {isPlayingThis && (activePhase === 'question' || activePhase === 'countdown') ? (
+                            <View style={[styles.answerBox, styles.answerBoxVeiled]}>
+                                <View style={styles.sectionHeaderLine}>
+                                    <Ionicons name="bulb-outline" size={16} color="#34d399" />
+                                    <Text style={styles.sectionHeadingA}>ANSWER / उत्तर (विचार करा)</Text>
+                                </View>
+                                <Text style={styles.veiledText}>
+                                    🔒 प्रश्न ऐकून आधी स्वतः उत्तर आठवा... टायमर संपताच उत्तर उलगडेल!
+                                </Text>
                             </View>
-                            <Text style={[styles.answerMainText, { color: isDarkMode ? '#f8fafc' : '#0f172a' }]}>
-                                {cleanA}
-                            </Text>
-                        </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                activeOpacity={0.88}
+                                onPress={() => playConversationalTTS(item, index)}
+                                style={[
+                                    styles.answerBox,
+                                    {
+                                        backgroundColor: isAnswerActive ? 'rgba(52,211,153,0.22)' : '#153a2b',
+                                        borderColor: isAnswerActive ? '#34d399' : 'rgba(52,211,153,0.3)',
+                                    },
+                                ]}
+                            >
+                                <View style={styles.sectionHeaderLine}>
+                                    <Ionicons name="bulb" size={16} color="#34d399" />
+                                    <Text style={styles.sectionHeadingA}>KEY ANSWER / मुख्य उत्तर</Text>
+                                    {isAnswerActive && (
+                                        <View style={[styles.liveVoiceBadge, { backgroundColor: '#34d399' }]}>
+                                            <Text style={styles.liveVoiceBadgeText}>EXPLAINING</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <Text style={styles.answerMainText}>
+                                    {cleanA}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
-                        {/* 4. MEMORY HOOK / EXPLANATION (SYNCHRONIZED WITH EXAM TIP) */}
+                        {/* 3. EXAM PRO TIP / MEMORY HOOK */}
                         {cleanE ? (
                             <TouchableOpacity
-                                activeOpacity={0.85}
+                                activeOpacity={0.88}
                                 onPress={() => playConversationalTTS(item, index)}
                                 style={[
                                     styles.hookBox,
                                     {
-                                        backgroundColor: isExplanationActive
-                                            ? isDarkMode
-                                                ? 'rgba(245,158,11,0.18)'
-                                                : '#fffbeb'
-                                            : isDarkMode
-                                            ? 'rgba(99,102,241,0.07)'
-                                            : '#f5f7ff',
-                                        borderColor: isExplanationActive ? '#f59e0b' : isDarkMode ? 'rgba(99,102,241,0.2)' : '#c7d2fe',
+                                        backgroundColor: isExplanationActive ? 'rgba(251,191,36,0.22)' : '#262208',
+                                        borderColor: isExplanationActive ? '#fbbf24' : '#f59e0b',
                                     },
                                 ]}
                             >
                                 <View style={styles.hookHeader}>
-                                    <MaterialCommunityIcons
-                                        name="lightbulb-on-outline"
-                                        size={18}
-                                        color={isExplanationActive ? '#f59e0b' : '#6366f1'}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.hookTitle,
-                                            { color: isExplanationActive ? '#f59e0b' : '#6366f1' },
-                                        ]}
-                                    >
-                                        EXAM PRO TIP / MEMORY HOOK
-                                    </Text>
+                                    <Ionicons name="star" size={16} color="#fbbf24" />
+                                    <Text style={styles.hookTitle}>EXAM PRO TIP / परीक्षेची टीप</Text>
                                 </View>
-                                <Text style={[styles.hookText, { color: isDarkMode ? '#cbd5e1' : '#334155' }]}>
+                                <Text style={styles.hookText}>
                                     {cleanE}
                                 </Text>
                             </TouchableOpacity>
                         ) : null}
                     </ScrollView>
 
-                    {/* REEL SIDEBAR & BOTTOM ACTIONS */}
+                    {/* BOTTOM REEL ACTIONS BAR */}
                     <View style={styles.bottomControlBar}>
                         <TouchableOpacity
                             onPress={() => toggleMastered(index)}
                             style={[
                                 styles.masterBtn,
-                                isMastered && { backgroundColor: 'rgba(245,158,11,0.2)', borderColor: '#f59e0b' },
+                                isMastered && { backgroundColor: 'rgba(251,191,36,0.25)', borderColor: '#fbbf24' },
                             ]}
                         >
                             <Ionicons
                                 name={isMastered ? 'star' : 'star-outline'}
                                 size={18}
-                                color={isMastered ? '#f59e0b' : theme.textSecondary}
+                                color={isMastered ? '#fbbf24' : '#94a3b8'}
                             />
-                            <Text
-                                style={[
-                                    styles.masterBtnText,
-                                    { color: isMastered ? '#f59e0b' : theme.textSecondary },
-                                ]}
-                            >
+                            <Text style={[styles.masterBtnText, isMastered && { color: '#fbbf24' }]}>
                                 {isMastered ? 'Mastered ⭐' : 'Got this?'}
                             </Text>
                         </TouchableOpacity>
 
-                        <View style={styles.swipeHintWrap}>
-                            <Text style={[styles.swipeHint, { color: theme.textSecondary }]}>
-                                {index + 1 === revisionData.length ? '🎉 All Done!' : 'Swipe up for next Reel 👆'}
-                            </Text>
-                        </View>
-
-                        {/* AUDIO LISTEN BUTTON */}
+                        {/* LISTEN / PLAY BUTTON */}
                         <TouchableOpacity
                             onPress={() => playConversationalTTS(item, index)}
                             style={[
                                 styles.listenPill,
                                 {
-                                    backgroundColor: isPlayingThis ? themePreset.accent : isDarkMode ? '#334155' : '#e2e8f0',
+                                    backgroundColor: isPlayingThis ? '#ef4444' : '#10b981',
                                 },
                             ]}
                         >
                             <Ionicons
                                 name={isPlayingThis ? 'pause' : 'play'}
-                                size={16}
-                                color={isPlayingThis ? '#fff' : themePreset.accent}
+                                size={18}
+                                color="#fff"
                             />
-                            <Text
-                                style={[
-                                    styles.listenPillText,
-                                    { color: isPlayingThis ? '#fff' : isDarkMode ? '#f8fafc' : '#1e293b' },
-                                ]}
-                            >
+                            <Text style={styles.listenPillText}>
                                 {isPlayingThis ? 'Pause' : 'Explain'}
                             </Text>
                         </TouchableOpacity>
-                    </View>
-                </View>
 
-                {/* FLOATING REEL ACTION BAR (INSTAGRAM SHORTS STYLE) */}
-                <View style={styles.reelsSidebar}>
-                    <TouchableOpacity
-                        onPress={() => playConversationalTTS(item, index)}
-                        style={[
-                            styles.sidebarBtn,
-                            isPlayingThis && { backgroundColor: themePreset.accent, transform: [{ scale: 1.05 }] },
-                        ]}
-                    >
-                        <Ionicons
-                            name={isPlayingThis ? 'volume-high' : 'headset-outline'}
-                            size={20}
-                            color={isPlayingThis ? '#fff' : theme.text}
-                        />
-                        <Text style={[styles.sidebarBtnLabel, isPlayingThis && { color: '#fff' }]}>
-                            {isPlayingThis ? 'Active' : 'Listen'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={toggleAutoPlay}
-                        style={[
-                            styles.sidebarBtn,
-                            isAutoPlaying && { backgroundColor: '#ef4444' },
-                        ]}
-                    >
-                        <Ionicons
-                            name={isAutoPlaying ? 'pause' : 'play-skip-forward'}
-                            size={18}
-                            color={isAutoPlaying ? '#fff' : theme.text}
-                        />
-                        <Text style={[styles.sidebarBtnLabel, isAutoPlaying && { color: '#fff' }]}>
-                            {isAutoPlaying ? 'Auto' : 'Play All'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={toggleSpeed} style={styles.sidebarBtn}>
-                        <MaterialCommunityIcons name="speedometer" size={19} color={theme.text} />
-                        <Text style={styles.sidebarBtnLabel}>{speechSpeed.toFixed(2)}x</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => {
-                            if (index + 1 < revisionDataRef.current.length) {
-                                const nextIdx = index + 1;
-                                isProgrammaticScrollRef.current = true;
-                                scrollToIndex(nextIdx);
-                                if (isAutoPlayingRef.current) {
-                                    playConversationalTTS(revisionDataRef.current[nextIdx], nextIdx, true);
-                                } else {
-                                    stopTTS();
+                        {/* NEXT REEL BUTTON */}
+                        <TouchableOpacity
+                            onPress={() => {
+                                if (index + 1 < revisionDataRef.current.length) {
+                                    const nextIdx = index + 1;
+                                    isProgrammaticScrollRef.current = true;
+                                    scrollToIndex(nextIdx);
+                                    if (isAutoPlayingRef.current) {
+                                        playConversationalTTS(revisionDataRef.current[nextIdx], nextIdx, true);
+                                    } else {
+                                        stopTTS();
+                                    }
                                 }
-                            }
-                        }}
-                        style={[styles.sidebarBtn, index + 1 === revisionData.length && { opacity: 0.3 }]}
-                        disabled={index + 1 === revisionData.length}
-                    >
-                        <Ionicons name="chevron-down" size={20} color={theme.text} />
-                        <Text style={styles.sidebarBtnLabel}>Next</Text>
-                    </TouchableOpacity>
+                            }}
+                            style={[styles.nextBtn, index + 1 === revisionData.length && { opacity: 0.3 }]}
+                            disabled={index + 1 === revisionData.length}
+                        >
+                            <Text style={styles.nextBtnText}>Next ⬇️</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         );
@@ -1026,14 +953,15 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, backgroundColor: '#071610' },
     safeArea: { flex: 1, paddingTop: STATUSBAR_HEIGHT },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    loadingText: { marginTop: 12, fontSize: 14, fontWeight: '600' },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#071610' },
+    loadingText: { marginTop: 12, fontSize: 14, fontWeight: '600', color: '#94a3b8' },
     retryBtn: {
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 24,
+        backgroundColor: '#10b981',
     },
     header: {
         flexDirection: 'row',
@@ -1041,6 +969,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: '#071610',
     },
     backBtn: {
         width: 38,
@@ -1048,7 +978,7 @@ const styles = StyleSheet.create({
         borderRadius: 19,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.14)',
+        backgroundColor: 'rgba(255,255,255,0.12)',
     },
     headerTitleWrap: {
         flex: 1,
@@ -1057,11 +987,12 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: '#ffffff',
         fontFamily: 'NotoSans-Bold',
     },
     headerSubtitle: {
         fontSize: 11,
-        fontFamily: 'NotoSans-Regular',
+        color: '#34d399',
         marginTop: 2,
     },
     autoPlayBtn: {
@@ -1070,9 +1001,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 18,
-        backgroundColor: 'rgba(255,255,255,0.85)',
+        backgroundColor: 'rgba(16,185,129,0.15)',
         borderWidth: 1,
-        borderColor: 'rgba(99,102,241,0.2)',
+        borderColor: '#10b981',
     },
     autoPlayBtnText: {
         fontSize: 12,
@@ -1095,18 +1026,19 @@ const styles = StyleSheet.create({
     },
     cardWrapper: {
         width: SCREEN_WIDTH,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        flexDirection: 'row',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        justifyContent: 'center',
         alignItems: 'center',
     },
     reelCard: {
-        flex: 1,
+        width: '100%',
+        height: '100%',
         borderRadius: 24,
-        padding: 16,
+        padding: 18,
         borderWidth: 2,
         elevation: 8,
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.25,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 6 },
     },
@@ -1122,10 +1054,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
+        backgroundColor: 'rgba(52,211,153,0.18)',
     },
     reelBadgeText: {
-        fontSize: 11,
-        fontWeight: '800',
+        fontSize: 12,
+        fontWeight: '900',
+        color: '#34d399',
         marginLeft: 4,
         letterSpacing: 0.5,
     },
@@ -1141,173 +1075,200 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         marginLeft: 4,
     },
+    speedChip: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    speedChipText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#ffffff',
+    },
     cardScroll: {
         flex: 1,
     },
     questionBox: {
         borderRadius: 18,
-        padding: 14,
-        marginBottom: 10,
+        padding: 16,
+        marginBottom: 12,
         borderWidth: 1.5,
     },
     sectionHeaderLine: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 8,
     },
-    sectionBullet: {
-        width: 7,
-        height: 7,
-        borderRadius: 3.5,
-        marginRight: 6,
-    },
-    sectionHeading: {
-        fontSize: 10.5,
-        fontWeight: '800',
+    sectionHeadingQ: {
+        fontSize: 11,
+        fontWeight: '900',
         letterSpacing: 0.8,
+        color: '#38bdf8',
+        marginLeft: 6,
+        flex: 1,
+    },
+    sectionHeadingA: {
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+        color: '#34d399',
+        marginLeft: 6,
         flex: 1,
     },
     liveVoiceBadge: {
-        backgroundColor: '#6366f1',
+        backgroundColor: '#38bdf8',
         paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: 8,
+        borderRadius: 6,
     },
     liveVoiceBadgeText: {
         fontSize: 9,
         fontWeight: '900',
-        color: '#fff',
+        color: '#071610',
     },
     questionMainText: {
-        fontSize: 16,
-        lineHeight: 24,
-        fontWeight: '700',
+        fontSize: 20,
+        lineHeight: 29,
+        fontWeight: 'bold',
+        color: '#ffffff',
         fontFamily: 'NotoSans-Bold',
     },
-    keywordsContainer: {
-        marginVertical: 6,
+    countdownBox: {
+        backgroundColor: 'rgba(52,211,153,0.15)',
+        borderColor: '#34d399',
+        borderWidth: 1.5,
+        borderRadius: 18,
+        padding: 16,
+        alignItems: 'center',
+        marginVertical: 12,
     },
-    keywordsLabel: {
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-        marginBottom: 4,
-    },
-    keywordsWrap: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 6,
-    },
-    kwPill: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 10,
-        borderWidth: 1,
-    },
-    kwText: {
-        fontSize: 12,
+    countdownTitle: {
+        color: '#6ee7b7',
+        fontSize: 14,
         fontWeight: '700',
+        marginBottom: 8,
+    },
+    countdownCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: '#34d399',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginVertical: 4,
+    },
+    countdownNumber: {
+        color: '#071610',
+        fontSize: 26,
+        fontWeight: '900',
+    },
+    countdownSubtitle: {
+        color: '#cbd5e1',
+        fontSize: 12,
+        marginTop: 6,
     },
     answerBox: {
         borderRadius: 18,
-        padding: 14,
-        marginTop: 6,
-        marginBottom: 10,
+        padding: 16,
+        marginBottom: 12,
         borderWidth: 1.5,
     },
+    answerBoxVeiled: {
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderColor: 'rgba(255,255,255,0.12)',
+        borderStyle: 'dashed',
+    },
+    veiledText: {
+        color: '#94a3b8',
+        fontSize: 14,
+        fontStyle: 'italic',
+        lineHeight: 22,
+    },
     answerMainText: {
-        fontSize: 15,
-        lineHeight: 23,
-        fontWeight: '500',
+        fontSize: 17,
+        lineHeight: 26,
+        fontWeight: '600',
+        color: '#ffffff',
         fontFamily: 'NotoSans-Regular',
     },
     hookBox: {
-        borderRadius: 16,
-        padding: 12,
+        borderRadius: 18,
+        padding: 14,
         borderWidth: 1.5,
         borderStyle: 'dashed',
-        marginTop: 4,
-        marginBottom: 10,
+        marginBottom: 12,
     },
     hookHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 6,
     },
     hookTitle: {
         fontSize: 11,
-        fontWeight: '800',
+        fontWeight: '900',
         marginLeft: 6,
         letterSpacing: 0.5,
+        color: '#fbbf24',
     },
     hookText: {
-        fontSize: 13,
-        lineHeight: 20,
+        fontSize: 15,
+        lineHeight: 23,
+        color: '#fef08a',
+        fontWeight: '500',
         fontFamily: 'NotoSans-Regular',
     },
     bottomControlBar: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 10,
+        paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(0,0,0,0.06)',
+        borderTopColor: 'rgba(255,255,255,0.1)',
+        gap: 8,
     },
     masterBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.08)',
         borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)',
+        borderColor: 'rgba(255,255,255,0.12)',
     },
     masterBtnText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
+        color: '#cbd5e1',
         marginLeft: 4,
-    },
-    swipeHintWrap: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    swipeHint: {
-        fontSize: 11,
-        fontWeight: '600',
     },
     listenPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+        elevation: 4,
     },
     listenPillText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#ffffff',
+        marginLeft: 6,
+    },
+    nextBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+    },
+    nextBtnText: {
         fontSize: 12,
         fontWeight: '700',
-        marginLeft: 4,
-    },
-    reelsSidebar: {
-        width: 48,
-        marginLeft: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 12,
-    },
-    sidebarBtn: {
-        width: 44,
-        height: 48,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.12)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    sidebarBtnLabel: {
-        fontSize: 9,
-        fontWeight: '800',
-        marginTop: 2,
+        color: '#ffffff',
     },
 });
 

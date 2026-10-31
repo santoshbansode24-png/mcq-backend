@@ -4,7 +4,7 @@
     "slug": "mcq-student-app",
     "owner": "virajbansode",
     "scheme": "com.veeru.app",
-    "version": "1.0.69",
+    "version": "1.0.73",
     "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -39,7 +39,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.veeru.app",
-      "versionCode": 69,
+      "versionCode": 73,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

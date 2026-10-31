@@ -75,10 +75,17 @@ if (empty($text)) {
     exit();
 }
 
-// Auto-switch to mr-IN if Devanagari detected and language was generic English
+// Auto-switch language based on script content (Marathi vs Indian English)
 $hasDevanagari = preg_match('/[\x{0900}-\x{097F}]/u', $text);
-if ($hasDevanagari && ($languageCode === 'en-IN' || $languageCode === 'en')) {
-    $languageCode = 'mr-IN';
+if ($hasDevanagari) {
+    if ($languageCode === 'en-IN' || $languageCode === 'en') {
+        $languageCode = 'mr-IN';
+    }
+} else {
+    // English text -> ensure en-IN for Indian English accent
+    if ($languageCode === 'mr-IN' || $languageCode === 'mr') {
+        $languageCode = 'en-IN';
+    }
 }
 
 // Determine best speaker

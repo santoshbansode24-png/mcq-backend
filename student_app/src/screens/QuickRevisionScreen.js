@@ -47,6 +47,15 @@ const sanitizeCleanText = (text) => {
 };
 
 /**
+ * Automatically detects whether text is in Marathi (Devanagari) or English
+ */
+const detectTextLanguage = (text) => {
+    if (!text) return 'en';
+    const hasDevanagari = /[\u0900-\u097F]/.test(text);
+    return hasDevanagari ? 'mr' : 'en';
+};
+
+/**
  * Splits explanation into clean pedagogical story steps
  */
 const parseCleanSteps = (item, cleanA, cleanE) => {
@@ -91,7 +100,7 @@ const parseCleanSteps = (item, cleanA, cleanE) => {
 /**
  * Builds structured Story Slides for each Reel Question
  */
-const buildCardSlides = (item, language = 'mr') => {
+const buildCardSlides = (item) => {
     const cleanQ = sanitizeCleanText(item.q || item.Question || '');
     const cleanA = sanitizeCleanText(item.a || item.Answer || '');
     const cleanE = sanitizeCleanText(item.e || item.Explanation || '');
@@ -99,6 +108,11 @@ const buildCardSlides = (item, language = 'mr') => {
     const optB = sanitizeCleanText(item.opt_b || '');
     const correct = (item.correct || 'A').toUpperCase() === 'B' ? 'B' : 'A';
     const correctText = correct === 'B' ? (optB || cleanA) : (optA || cleanA);
+
+    // Detect language of question content
+    const cardLang = detectTextLanguage(cleanQ + ' ' + cleanA);
+    const langCode = cardLang === 'mr' ? 'mr-IN' : 'en-IN';
+    const speaker = cardLang === 'mr' ? 'rupali' : 'kavya';
 
     const hasPoll = Boolean(optA && optB);
     const steps = parseCleanSteps(item, cleanA, cleanE);
@@ -108,10 +122,8 @@ const buildCardSlides = (item, language = 'mr') => {
     // Slide 0: Question & 2-Option Guess Challenge
     if (hasPoll) {
         let qVoice = '';
-        if (language === 'mr') {
+        if (cardLang === 'mr') {
             qVoice = `${cleanQ} ... योग्य पर्याय निवडा.`;
-        } else if (language === 'hi') {
-            qVoice = `${cleanQ} ... सही विकल्प चुनिए.`;
         } else {
             qVoice = `${cleanQ} ... Choose the correct option.`;
         }
@@ -124,6 +136,8 @@ const buildCardSlides = (item, language = 'mr') => {
             optB,
             correct,
             audioText: qVoice,
+            langCode,
+            speaker,
         });
     } else {
         slides.push({
@@ -131,6 +145,8 @@ const buildCardSlides = (item, language = 'mr') => {
             slideIndex: 0,
             question: cleanQ,
             audioText: cleanQ,
+            langCode,
+            speaker,
         });
     }
 
@@ -145,6 +161,8 @@ const buildCardSlides = (item, language = 'mr') => {
             icon: step.icon,
             accent: step.accent,
             audioText: step.text,
+            langCode,
+            speaker,
         });
     });
 
@@ -156,6 +174,9 @@ const buildCardSlides = (item, language = 'mr') => {
         optB,
         correct,
         correctText,
+        cardLang,
+        langCode,
+        speaker,
         hasPoll,
         slides,
     };
@@ -194,7 +215,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const [cardSlideIndex, setCardSlideIndex] = useState({});
     const [userGuesses, setUserGuesses] = useState({});
     const [revealedPolls, setRevealedPolls] = useState({});
-    const [pollTimeRemaining, setPollTimeRemaining] = useState({}); // Card index -> remaining seconds (5 -> 0)
+    const [pollTimeRemaining, setPollTimeRemaining] = useState({}); // Card index -> remaining seconds (3 -> 0), or null for 'reading'
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
     const [speechSpeed, setSpeechSpeed] = useState(0.92);
     const [masteredCards, setMasteredCards] = useState({});
@@ -206,7 +227,6 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const activePlayTokenRef = useRef(0);
     const pollTimerRef = useRef(null);
     const autoAdvanceTimerRef = useRef(null);
-    const preferredLanguage = useRef(language === 'hi' ? 'hi-IN' : language === 'en' ? 'en-IN' : 'mr-IN');
     const speechSpeedRef = useRef(0.92);
     const isAutoPlayingRef = useRef(false);
     const revisionDataRef = useRef([]);
@@ -214,10 +234,6 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const cardSlideIndexRef = useRef({});
     const userGuessesRef = useRef({});
     const isProgrammaticScrollRef = useRef(false);
-
-    useEffect(() => {
-        preferredLanguage.current = language === 'hi' ? 'hi-IN' : language === 'en' ? 'en-IN' : 'mr-IN';
-    }, [language]);
 
     useEffect(() => {
         isAutoPlayingRef.current = isAutoPlaying;
@@ -246,9 +262,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     /* ---------------- ZERO-LAG AUDIO PREFETCHING ---------------- */
     const prefetchSlideAudios = useCallback((cardItem) => {
         if (!cardItem) return;
-        const { slides } = buildCardSlides(cardItem, language);
-        const langCode = preferredLanguage.current;
-        const speaker = langCode.startsWith('mr') ? 'rupali' : langCode.startsWith('hi') ? 'ritu' : 'kavya';
+        const { slides, langCode, speaker } = buildCardSlides(cardItem);
         const speed = speechSpeedRef.current;
 
         slides.forEach((sl) => {
@@ -256,7 +270,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 prefetchGoogleTTS(sl.audioText, langCode, speed, speaker);
             }
         });
-    }, [language]);
+    }, []);
 
     // Prefetch for current and next card
     useEffect(() => {
@@ -412,7 +426,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const item = revisionDataRef.current[cardIdx];
         if (!item) return;
 
-        const { slides, correctChoice = item.correct?.toUpperCase() === 'B' ? 'B' : 'A' } = buildCardSlides(item, language);
+        const { slides, langCode, speaker } = buildCardSlides(item);
         const currentSlide = slides[slideIdx];
         if (!currentSlide) return;
 
@@ -422,16 +436,48 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         // Update card slide state
         setCardSlideIndex((prev) => ({ ...prev, [cardIdx]: slideIdx }));
-
-        const langCode = preferredLanguage.current;
-        const speaker = langCode.startsWith('mr') ? 'rupali' : langCode.startsWith('hi') ? 'ritu' : 'kavya';
         const speed = speechSpeedRef.current;
 
         // 1. If this is Slide 0 (Question & Poll):
         if (currentSlide.type === 'poll') {
-            setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: 3 }));
+            // Set to null while question is actively reading
+            setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: null }));
 
-            // Play Question Audio
+            const startCountdown = () => {
+                if (thisToken !== activePlayTokenRef.current) return;
+                let secondsLeft = 3;
+                setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: 3 }));
+
+                if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+                pollTimerRef.current = setInterval(() => {
+                    if (thisToken !== activePlayTokenRef.current) {
+                        clearInterval(pollTimerRef.current);
+                        return;
+                    }
+                    secondsLeft -= 1;
+                    setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: Math.max(0, secondsLeft) }));
+
+                    if (secondsLeft <= 0) {
+                        clearInterval(pollTimerRef.current);
+                        pollTimerRef.current = null;
+
+                        const alreadyGuessed = userGuessesRef.current[cardIdx];
+                        if (!alreadyGuessed) {
+                            HapticManager.triggerWarning();
+                            setRevealedPolls((prev) => ({ ...prev, [cardIdx]: true }));
+
+                            // Hold for EXACTLY 1 SECOND (1000ms) then advance to Step 1
+                            autoAdvanceTimerRef.current = setTimeout(() => {
+                                if (thisToken === activePlayTokenRef.current) {
+                                    playSlide(cardIdx, 1);
+                                }
+                            }, 1000);
+                        }
+                    }
+                }, 1000);
+            };
+
+            // Play Question Audio first
             try {
                 const soundObj = await playGoogleTTS(currentSlide.audioText, langCode, speed, speaker);
                 if (thisToken !== activePlayTokenRef.current) {
@@ -439,39 +485,28 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                     return;
                 }
                 soundRef.current = soundObj;
-            } catch (e) {}
 
-            // Start 3-second countdown timer for student answer
-            let secondsLeft = 3;
-            pollTimerRef.current = setInterval(() => {
-                if (thisToken !== activePlayTokenRef.current) {
-                    clearInterval(pollTimerRef.current);
-                    return;
+                if (soundObj?.setOnPlaybackStatusUpdate) {
+                    let hasTriggered = false;
+                    soundObj.setOnPlaybackStatusUpdate((status) => {
+                        if (thisToken !== activePlayTokenRef.current) return;
+                        if (status.didJustFinish && !hasTriggered) {
+                            hasTriggered = true;
+                            // Question fully read -> NOW START 3s COUNTDOWN!
+                            startCountdown();
+                        }
+                    });
+                } else {
+                    const estDuration = Math.max(2500, currentSlide.audioText.length * 80);
+                    setTimeout(() => {
+                        if (thisToken === activePlayTokenRef.current) {
+                            startCountdown();
+                        }
+                    }, estDuration);
                 }
-                secondsLeft -= 1;
-                setPollTimeRemaining((prev) => ({ ...prev, [cardIdx]: Math.max(0, secondsLeft) }));
-
-                if (secondsLeft <= 0) {
-                    clearInterval(pollTimerRef.current);
-                    pollTimerRef.current = null;
-
-                    // If user hasn't attempted:
-                    const alreadyGuessed = userGuessesRef.current[cardIdx];
-                    if (!alreadyGuessed) {
-                        // 1. Reveal correct answer in green
-                        HapticManager.triggerWarning();
-                        setRevealedPolls((prev) => ({ ...prev, [cardIdx]: true }));
-
-                        // 2. Hold for EXACTLY 1 SECOND (1000ms) so student sees the correct answer
-                        autoAdvanceTimerRef.current = setTimeout(() => {
-                            if (thisToken === activePlayTokenRef.current) {
-                                // Transition to Step 1
-                                playSlide(cardIdx, 1);
-                            }
-                        }, 1000);
-                    }
-                }
-            }, 1000);
+            } catch (e) {
+                startCountdown();
+            }
 
             return;
         }
@@ -492,20 +527,17 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                     if (status.didJustFinish) {
                         const nextSlideIdx = slideIdx + 1;
                         if (nextSlideIdx < slides.length) {
-                            // Smooth auto-transition to next step
                             autoAdvanceTimerRef.current = setTimeout(() => {
                                 if (thisToken === activePlayTokenRef.current) {
                                     playSlide(cardIdx, nextSlideIdx);
                                 }
                             }, 400);
                         } else {
-                            // All slides for this card finished!
                             handleCardAllSlidesComplete(cardIdx);
                         }
                     }
                 });
             } else {
-                // Fallback timer if on-device status update is unavailable
                 const duration = Math.max(4000, currentSlide.text.length * 90);
                 autoAdvanceTimerRef.current = setTimeout(() => {
                     if (thisToken === activePlayTokenRef.current) {
@@ -536,7 +568,6 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
     /* ---------------- USER SELECTS OPTION ---------------- */
     const handleSelectOption = (cardIdx, choice, correctChoice) => {
-        // Clear any running 5-sec countdown
         clearAllTimers();
 
         const isCorrect = choice === correctChoice;
@@ -563,7 +594,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const item = revisionDataRef.current[cardIdx];
         if (!item) return;
 
-        const { slides } = buildCardSlides(item, language);
+        const { slides } = buildCardSlides(item);
         const currentSlide = cardSlideIndex[cardIdx] || 0;
 
         // Tapped Left 30%: Go back to previous slide
@@ -579,7 +610,6 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 HapticManager.triggerLight();
                 playSlide(cardIdx, currentSlide + 1);
             } else {
-                // End of card: Next Reel
                 if (cardIdx + 1 < revisionDataRef.current.length) {
                     scrollToIndex(cardIdx + 1);
                 }
@@ -655,8 +685,8 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
     /* ---------------- RENDER REEL CARD ---------------- */
     const renderCard = ({ item, index }) => {
-        const cardData = buildCardSlides(item, language);
-        const { cleanQ, optA, optB, correct, hasPoll, slides } = cardData;
+        const cardData = buildCardSlides(item);
+        const { cleanQ, optA, optB, correct, cardLang, slides } = cardData;
 
         const isCurrentCard = currentIndex === index;
         const currentSlideIdx = cardSlideIndex[index] || 0;
@@ -665,7 +695,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const userGuess = userGuesses[index];
         const isPollRevealed = Boolean(revealedPolls[index]);
         const correctChoice = correct;
-        const secondsLeft = pollTimeRemaining[index] ?? 3;
+        const secondsLeft = pollTimeRemaining[index]; // null = listening, 3..0 = countdown
         const isMastered = !!masteredCards[index];
 
         return (
@@ -715,18 +745,25 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                         </View>
                     </View>
 
-                    {/* 3. STORY INTERACTION AREA (Tap Left = Rewind, Tap Right = Forward) */}
-                    <TouchableWithoutFeedback onPress={(e) => handleStoryTap(index, e)}>
-                        <View style={styles.storySlideBody}>
-                            {/* SLIDE 0: QUESTION & 2-OPTION GUESS CHALLENGE */}
-                            {activeSlide.type === 'poll' ? (
-                                <View style={styles.pollSlideContainer}>
-                                    {/* QUESTION TEXT (BOLD, CLEAN, NO LABELS) */}
-                                    <View style={styles.questionContainer}>
-                                        <Text style={styles.cleanQuestionText}>{cleanQ}</Text>
-                                    </View>
+                    {/* 3. PERMANENT TOP QUESTION CARD (CONSTANT ACROSS ALL SLIDES!) */}
+                    <View style={styles.constantQuestionCard}>
+                        <View style={styles.questionBadgeRow}>
+                            <Ionicons name="help-circle" size={15} color="#38bdf8" />
+                            <Text style={styles.questionBadgeLabel}>
+                                {cardLang === 'mr' ? 'प्रश्न' : 'QUESTION'}
+                            </Text>
+                        </View>
+                        <Text style={styles.constantQuestionText}>
+                            {cleanQ}
+                        </Text>
+                    </View>
 
-                                    {/* 2-OPTION BUTTONS */}
+                    {/* 4. DYNAMIC LOWER STAGE (Story interaction: Tap left=back, tap right=next) */}
+                    <TouchableWithoutFeedback onPress={(e) => handleStoryTap(index, e)}>
+                        <View style={styles.dynamicStageContainer}>
+                            {/* SLIDE 0: 2-OPTION GUESS CHALLENGE */}
+                            {activeSlide.type === 'poll' ? (
+                                <View style={styles.pollStageWrap}>
                                     <View style={styles.optionsWrap}>
                                         {/* OPTION A */}
                                         <TouchableOpacity
@@ -791,39 +828,50 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                         </TouchableOpacity>
                                     </View>
 
-                                    {/* 5-SECOND COUNTDOWN STATUS */}
+                                    {/* STATUS / TIMER BADGE */}
                                     <View style={styles.timerBadge}>
-                                        <Ionicons name="timer-outline" size={16} color={secondsLeft <= 2 ? '#f87171' : '#38bdf8'} />
-                                        <Text style={[styles.timerBadgeText, secondsLeft <= 2 && { color: '#f87171' }]}>
-                                            {isPollRevealed
-                                                ? (language === 'mr' ? '✓ बरोबर उत्तर' : '✓ Correct Answer')
-                                                : `${secondsLeft} ${language === 'mr' ? 'सेकंदात उत्तर निवडा' : 'seconds left'}`}
-                                        </Text>
+                                        {secondsLeft === null ? (
+                                            <>
+                                                <Ionicons name="volume-medium-outline" size={16} color="#38bdf8" />
+                                                <Text style={styles.timerBadgeText}>
+                                                    {cardLang === 'mr' ? '🎙️ प्रश्न ऐका...' : '🎙️ Listen to question...'}
+                                                </Text>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Ionicons name="timer-outline" size={16} color={secondsLeft <= 1 ? '#f87171' : '#38bdf8'} />
+                                                <Text style={[styles.timerBadgeText, secondsLeft <= 1 && { color: '#f87171' }]}>
+                                                    {isPollRevealed
+                                                        ? (cardLang === 'mr' ? '✓ बरोबर उत्तर' : '✓ Correct Answer')
+                                                        : `${secondsLeft} ${cardLang === 'mr' ? 'सेकंदात उत्तर निवडा' : 'seconds to answer'}`}
+                                                </Text>
+                                            </>
+                                        )}
                                     </View>
                                 </View>
                             ) : (
-                                /* SLIDE 1, 2, 3: EXPLANATION STEP SLIDE */
-                                <View style={styles.explanationSlideContainer}>
-                                    {/* PINNED QUESTION CAPSULE AT TOP */}
-                                    <View style={styles.pinnedQuestionPill}>
-                                        <Ionicons name="help-circle" size={14} color="#38bdf8" />
-                                        <Text style={styles.pinnedQuestionText} numberOfLines={1}>
-                                            {cleanQ}
-                                        </Text>
-                                    </View>
-
-                                    {/* CENTER FOCUSED STEP CONTENT */}
+                                /* SLIDE 1, 2, 3: STEP EXPLANATION STAGE */
+                                <View style={styles.stepStageWrap}>
                                     <View
                                         style={[
-                                            styles.stepFocusedCard,
+                                            styles.stepContentCard,
                                             { borderColor: activeSlide.accent || '#34d399' },
                                         ]}
                                     >
-                                        <View style={[styles.stepIconWrap, { backgroundColor: `${activeSlide.accent}20` }]}>
-                                            <Ionicons name={activeSlide.icon || 'bulb-outline'} size={32} color={activeSlide.accent || '#34d399'} />
+                                        <View style={styles.stepHeaderLine}>
+                                            <View style={[styles.stepIconSmall, { backgroundColor: `${activeSlide.accent}20` }]}>
+                                                <Ionicons name={activeSlide.icon || 'bulb-outline'} size={18} color={activeSlide.accent || '#34d399'} />
+                                            </View>
+                                            <Text style={[styles.stepTitleLabel, { color: activeSlide.accent || '#34d399' }]}>
+                                                {activeSlide.stepNum === 1
+                                                    ? (cardLang === 'mr' ? 'पायरी १: सोपी संकल्पना' : 'STEP 1: KEY CONCEPT')
+                                                    : activeSlide.stepNum === 2
+                                                    ? (cardLang === 'mr' ? 'पायरी २: शास्त्रीय नियम व सूत्र' : 'STEP 2: RULE & FORMULA')
+                                                    : (cardLang === 'mr' ? 'पायरी ३: परीक्षेची टीप' : 'STEP 3: EXAM TIP')}
+                                            </Text>
                                         </View>
 
-                                        {/* PURE STEP EXPLANATION TEXT (LARGE & CLEAR) */}
+                                        {/* PURE STEP EXPLANATION TEXT */}
                                         <Text style={styles.stepExplanationText}>
                                             {activeSlide.text}
                                         </Text>
@@ -832,15 +880,15 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                     {/* BOTTOM STEP HINT */}
                                     <Text style={styles.bottomTapHint}>
                                         {currentSlideIdx + 1 === slides.length
-                                            ? (language === 'mr' ? 'पुढच्या प्रश्नासाठी वर स्वाइप करा ⬆️' : 'Swipe up for next card ⬆️')
-                                            : (language === 'mr' ? 'उजवीकडे टॅप करा ⏭️' : 'Tap right to continue ⏭️')}
+                                            ? (cardLang === 'mr' ? 'पुढच्या प्रश्नासाठी वर स्वाइप करा ⬆️' : 'Swipe up for next question ⬆️')
+                                            : (cardLang === 'mr' ? 'उजवीकडे टॅप करा ⏭️' : 'Tap right to continue ⏭️')}
                                     </Text>
                                 </View>
                             )}
                         </View>
                     </TouchableWithoutFeedback>
 
-                    {/* 4. FOOTER CONTROLS */}
+                    {/* 5. FOOTER CONTROLS */}
                     <View style={styles.bottomBarRow}>
                         <TouchableOpacity
                             onPress={() => playSlide(index, currentSlideIdx)}
@@ -848,7 +896,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                         >
                             <Ionicons name="volume-high" size={18} color="#34d399" />
                             <Text style={styles.replaySlideText}>
-                                {language === 'mr' ? 'पुन्हा ऐका' : 'Replay Voice'}
+                                {cardLang === 'mr' ? 'पुन्हा ऐका' : 'Replay Voice'}
                             </Text>
                         </TouchableOpacity>
 
@@ -859,7 +907,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                                 style={styles.nextReelBtn}
                             >
                                 <Text style={styles.nextReelBtnText}>
-                                    {language === 'mr' ? 'पुढचा प्रश्न ⏭️' : 'Next Question ⏭️'}
+                                    {cardLang === 'mr' ? 'पुढचा प्रश्न ⏭️' : 'Next Question ⏭️'}
                                 </Text>
                             </TouchableOpacity>
                         )}
@@ -1068,35 +1116,49 @@ const styles = StyleSheet.create({
     speedChipText: { color: '#34d399', fontSize: 12, fontWeight: '700' },
     starBtn: { padding: 4 },
 
-    /* Story Body */
-    storySlideBody: {
+    /* PERMANENT TOP QUESTION CARD */
+    constantQuestionCard: {
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(56,189,248,0.25)',
+        marginBottom: 10,
+    },
+    questionBadgeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        marginBottom: 6,
+    },
+    questionBadgeLabel: {
+        fontSize: 11,
+        fontWeight: 'bold',
+        color: '#38bdf8',
+        letterSpacing: 0.5,
+    },
+    constantQuestionText: {
+        fontSize: 17,
+        lineHeight: 25,
+        fontWeight: 'bold',
+        color: '#ffffff',
+    },
+
+    /* DYNAMIC STAGE CONTAINER */
+    dynamicStageContainer: {
         flex: 1,
         justifyContent: 'center',
     },
 
-    /* Slide 0: Poll */
-    pollSlideContainer: {
+    /* Poll Stage */
+    pollStageWrap: {
         flex: 1,
-        justifyContent: 'space-around',
-        paddingVertical: 10,
-    },
-    questionContainer: {
-        backgroundColor: 'rgba(255,255,255,0.06)',
-        padding: 18,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: 'rgba(56,189,248,0.3)',
-    },
-    cleanQuestionText: {
-        fontSize: 20,
-        lineHeight: 30,
-        fontWeight: 'bold',
-        color: '#ffffff',
-        textAlign: 'center',
+        justifyContent: 'center',
+        gap: 12,
     },
     optionsWrap: {
         gap: 12,
-        marginTop: 10,
     },
     cleanOptionBtn: {
         flexDirection: 'row',
@@ -1104,7 +1166,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#123828',
         borderRadius: 16,
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingVertical: 13,
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.15)',
     },
@@ -1117,16 +1179,16 @@ const styles = StyleSheet.create({
         borderColor: '#ef4444',
     },
     letterCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
         backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
-    letterText: { color: '#ffffff', fontSize: 15, fontWeight: 'bold' },
-    optionText: { flex: 1, color: '#f1f5f9', fontSize: 16, fontWeight: '600' },
+    letterText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
+    optionText: { flex: 1, color: '#f1f5f9', fontSize: 15, fontWeight: '600' },
 
     timerBadge: {
         flexDirection: 'row',
@@ -1137,52 +1199,46 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 6,
         borderRadius: 16,
-        marginTop: 10,
+        marginTop: 8,
     },
     timerBadgeText: { color: '#38bdf8', fontSize: 13, fontWeight: '700', marginLeft: 6 },
 
-    /* Slide 1, 2, 3: Explanation */
-    explanationSlideContainer: {
+    /* Step Explanation Stage */
+    stepStageWrap: {
         flex: 1,
         justifyContent: 'space-between',
-        paddingVertical: 8,
+        paddingVertical: 6,
     },
-    pinnedQuestionPill: {
+    stepContentCard: {
+        backgroundColor: '#103324',
+        borderRadius: 18,
+        padding: 18,
+        borderWidth: 1.5,
+        marginVertical: 8,
+    },
+    stepHeaderLine: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        gap: 8,
+        marginBottom: 12,
+    },
+    stepIconSmall: {
+        width: 28,
+        height: 28,
         borderRadius: 14,
-        alignSelf: 'center',
-        maxWidth: '92%',
-        gap: 6,
-    },
-    pinnedQuestionText: { color: '#cbd5e1', fontSize: 12, fontWeight: '600' },
-
-    stepFocusedCard: {
-        backgroundColor: '#103324',
-        borderRadius: 20,
-        padding: 24,
-        borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: 16,
-    },
-    stepIconWrap: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+    },
+    stepTitleLabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     stepExplanationText: {
-        fontSize: 20,
-        lineHeight: 32,
+        fontSize: 17,
+        lineHeight: 27,
         fontWeight: 'bold',
         color: '#ffffff',
-        textAlign: 'center',
     },
     bottomTapHint: {
         textAlign: 'center',

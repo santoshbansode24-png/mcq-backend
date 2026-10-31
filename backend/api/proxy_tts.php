@@ -1,5 +1,5 @@
 <?php
-// proxy_tts.php - Securely proxy Sarvam AI & Google TTS requests with Server-Side Permanent Disk Cache
+// proxy_tts.php - Securely proxy Sarvam AI & Google TTS requests with Server-Side Permanent Disk Cache & Direct MP3 URLs
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
@@ -34,7 +34,7 @@ $googleKey = trim($googleKey ?? '');
 // 2. Health & Diagnostic Check Endpoint (GET ?check=1 or ?status=1)
 if (isset($_GET['check']) || isset($_GET['status']) || isset($_REQUEST['check'])) {
     $cacheDir = __DIR__ . '/../../uploads/tts_cache';
-    $cacheCount = is_dir($cacheDir) ? count(glob($cacheDir . '/*.b64') ?: []) : 0;
+    $cacheCount = is_dir($cacheDir) ? count(glob($cacheDir . '/*.mp3') ?: []) : 0;
     echo json_encode([
         'status' => 'ok',
         'sarvam_active' => !empty($sarvamKey),
@@ -81,6 +81,18 @@ if ($hasDevanagari && ($languageCode === 'en-IN' || $languageCode === 'en')) {
     $languageCode = 'mr-IN';
 }
 
+// Determine best speaker
+$speaker = isset($input['speaker']) ? trim($input['speaker']) : (isset($_REQUEST['speaker']) ? trim($_REQUEST['speaker']) : '');
+if (empty($speaker)) {
+    if ($languageCode === 'mr-IN' || $languageCode === 'mr') {
+        $speaker = 'rupali'; // Native Marathi female teacher
+    } elseif ($languageCode === 'hi-IN' || $languageCode === 'hi') {
+        $speaker = 'ritu';   // Natural Hindi female teacher
+    } else {
+        $speaker = 'kavya';  // Indian English female educator
+    }
+}
+
 // 4. ZERO-COST PERMANENT SERVER-SIDE DISK CACHING
 $cacheDir = __DIR__ . '/../../uploads/tts_cache';
 if (!is_dir($cacheDir)) {
@@ -88,16 +100,27 @@ if (!is_dir($cacheDir)) {
 }
 
 $engine = (!empty($sarvamKey)) ? 'sarvam' : 'google';
-$cacheHash = md5($text . '_' . $languageCode . '_' . $engine . '_' . number_format($speed, 2));
+$cacheHash = md5($text . '_' . $languageCode . '_' . $engine . '_' . $speaker . '_' . number_format($speed, 2));
 $cacheFilePath = $cacheDir . '/' . $cacheHash . '.b64';
+$mp3FilePath = $cacheDir . '/' . $cacheHash . '.mp3';
 
-// If already synthesized previously, return cached audio instantly (0 API calls, ₹0 cost)
+// Direct MP3 URL
+$scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'api.veeruapp.in';
+$audioUrl = $scheme . '://' . $host . '/uploads/tts_cache/' . $cacheHash . '.mp3';
+
+// If already synthesized previously, return cached audio instantly
 if (file_exists($cacheFilePath) && filesize($cacheFilePath) > 100) {
     $cachedAudio = file_get_contents($cacheFilePath);
+    if (!file_exists($mp3FilePath) || filesize($mp3FilePath) < 100) {
+        @file_put_contents($mp3FilePath, base64_decode($cachedAudio));
+    }
     echo json_encode([
         'status' => 'success',
         'source' => 'disk_cache',
         'engine' => $engine,
+        'speaker' => $speaker,
+        'audioUrl' => $audioUrl,
         'audioContent' => $cachedAudio
     ]);
     exit();
@@ -109,12 +132,10 @@ if (file_exists($cacheFilePath) && filesize($cacheFilePath) > 100) {
 $sarvamErrorDetails = null;
 if (!empty($sarvamKey)) {
     $sarvamLang = 'mr-IN';
-    $speaker = isset($input['speaker']) ? trim($input['speaker']) : (isset($_REQUEST['speaker']) ? trim($_REQUEST['speaker']) : 'ritu');
     if ($languageCode === 'hi-IN' || $languageCode === 'hi') {
         $sarvamLang = 'hi-IN';
     } elseif ($languageCode === 'en-IN' || $languageCode === 'en') {
         $sarvamLang = 'en-IN';
-        if ($speaker === 'ritu') $speaker = 'kavya';
     }
 
     $sarvamPayload = [
@@ -152,10 +173,13 @@ if (!empty($sarvamKey)) {
         if (!empty($sarvamDecoded['audios'][0])) {
             $audioBase64 = $sarvamDecoded['audios'][0];
             @file_put_contents($cacheFilePath, $audioBase64);
+            @file_put_contents($mp3FilePath, base64_decode($audioBase64));
             echo json_encode([
                 'status' => 'success',
                 'source' => 'sarvam_ai',
                 'engine' => 'sarvam',
+                'speaker' => $speaker,
+                'audioUrl' => $audioUrl,
                 'audioContent' => $audioBase64
             ]);
             exit();
@@ -211,10 +235,12 @@ if (!empty($googleKey)) {
         if (!empty($googleDecoded['audioContent'])) {
             $audioBase64 = $googleDecoded['audioContent'];
             @file_put_contents($cacheFilePath, $audioBase64);
+            @file_put_contents($mp3FilePath, base64_decode($audioBase64));
             echo json_encode([
                 'status' => 'success',
                 'source' => 'google_tts',
                 'engine' => 'google',
+                'audioUrl' => $audioUrl,
                 'audioContent' => $audioBase64
             ]);
             exit();

@@ -1,2 +1,2 @@
-1.0.73-LIVE
-// Android AAB & APK live server configuration release (Student Build 73) with Sarvam AI Teacher Voice, Pedagogical Explanations (not just sentence reading), and Zero-Lag Audio Prefetching.
+1.0.74
+74

@@ -84,21 +84,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $rowNum++;
             if (empty($data) || count($data) < 2) continue;
 
-            $q = trim($data[0] ?? '');
-            $a = trim($data[1] ?? '');
-            $e = trim($data[2] ?? '');
+            $col0 = trim($data[0] ?? '');
+            $col1 = trim($data[1] ?? '');
 
             // Skip header row
-            if ($rowNum === 1 && (strtolower($q) === 'question' || strtolower($a) === 'answer')) {
+            if ($rowNum === 1 && (strtolower($col0) === 'question' || strtolower($col1) === 'answer' || strtolower($col1) === 'option a' || strtolower($col1) === 'option_a')) {
                 continue;
             }
 
-            if (!empty($q) && !empty($a)) {
-                $key_points[] = [
-                    'q' => sanitizeInput($q), 
-                    'a' => sanitizeInput($a),
-                    'e' => sanitizeInput($e)
-                ];
+            if (count($data) >= 5) {
+                // Interactive 2-Option Poll format: Question, Option A, Option B, Correct (A/B), Explanation
+                $q = trim($data[0] ?? '');
+                $opt_a = trim($data[1] ?? '');
+                $opt_b = trim($data[2] ?? '');
+                $correct = strtoupper(trim($data[3] ?? 'A'));
+                $e = trim($data[4] ?? '');
+                $a = ($correct === 'B') ? $opt_b : $opt_a;
+
+                if (!empty($q) && (!empty($opt_a) || !empty($a))) {
+                    $key_points[] = [
+                        'q' => sanitizeInput($q),
+                        'a' => sanitizeInput($a),
+                        'opt_a' => sanitizeInput($opt_a),
+                        'opt_b' => sanitizeInput($opt_b),
+                        'correct' => ($correct === 'B') ? 'B' : 'A',
+                        'e' => sanitizeInput($e)
+                    ];
+                }
+            } else {
+                // Classic format: Question, Answer, Explanation
+                $q = trim($data[0] ?? '');
+                $a = trim($data[1] ?? '');
+                $e = trim($data[2] ?? '');
+
+                if (!empty($q) && !empty($a)) {
+                    $key_points[] = [
+                        'q' => sanitizeInput($q), 
+                        'a' => sanitizeInput($a),
+                        'e' => sanitizeInput($e)
+                    ];
+                }
             }
         }
         fclose($stream);

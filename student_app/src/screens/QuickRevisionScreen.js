@@ -78,44 +78,117 @@ const extractKeywords = (question, answer) => {
  * Explains the question first in simple words (not robotic reading),
  * then explains the answer naturally, then gives the key memory tip.
  */
+/**
+ * Smartboard Breakdown Parser:
+ * Splits explanation into pedagogical classroom steps:
+ * Step 1: Core Concept / सोपी संकल्पना
+ * Step 2: Scientific Rule & Formula / वैज्ञानिक नियम व सूत्र
+ * Step 3: Exam Hack / परीक्षेचा गुरुमंत्र
+ */
+const parseSmartboardSteps = (item, cleanA, cleanE, lang = 'mr') => {
+    if (cleanE && (cleanE.includes('|') || /step\s*\d+/i.test(cleanE))) {
+        const rawParts = cleanE.split(/\||(?=step\s*\d+:?)/i)
+            .map(p => p.replace(/^step\s*\d+:?\s*/i, '').trim())
+            .filter(Boolean);
+
+        if (rawParts.length >= 2) {
+            return [
+                {
+                    stepNum: 1,
+                    tag: lang === 'mr' ? 'Step 1: सोपी संकल्पना' : 'Step 1: Core Concept',
+                    text: rawParts[0],
+                    accent: '#38bdf8',
+                    icon: 'bulb-outline',
+                },
+                {
+                    stepNum: 2,
+                    tag: lang === 'mr' ? 'Step 2: वैज्ञानिक नियम व सूत्र' : 'Step 2: Scientific Rule / Formula',
+                    text: rawParts[1],
+                    accent: '#34d399',
+                    icon: 'calculator-outline',
+                },
+                {
+                    stepNum: 3,
+                    tag: lang === 'mr' ? 'Step 3: परीक्षेचा गुरुमंत्र' : 'Step 3: Exam Hack',
+                    text: rawParts[2] || (lang === 'mr' ? 'परीक्षेत हा मुख्य मुद्दा अचूक लिहा, पूर्ण गुण मिळतील!' : 'Write this key definition for full marks!'),
+                    accent: '#fbbf24',
+                    icon: 'star-outline',
+                },
+            ];
+        }
+    }
+
+    // Default 3-Step Smartboard Breakdown (Works 100% with any existing database content)
+    return [
+        {
+            stepNum: 1,
+            tag: lang === 'mr' ? 'Step 1: मुख्य उत्तर' : 'Step 1: Key Answer',
+            text: cleanA,
+            accent: '#34d399',
+            icon: 'checkmark-circle-outline',
+        },
+        {
+            stepNum: 2,
+            tag: lang === 'mr' ? 'Step 2: संकल्पना व स्पष्टीकरण' : 'Step 2: Concept Explanation',
+            text: cleanE || (lang === 'mr' ? 'ही संकल्पना नेहमी लक्षात ठेवा.' : 'Remember this concept.'),
+            accent: '#38bdf8',
+            icon: 'school-outline',
+        },
+        {
+            stepNum: 3,
+            tag: lang === 'mr' ? 'Step 3: परीक्षेचा गुरुमंत्र' : 'Step 3: Exam Hack',
+            text: lang === 'mr' 
+                ? 'परीक्षेत ही व्याख्या किंवा सूत्र अचूक लिहिल्यास पैकीच्या पैकी गुण मिळतात!' 
+                : 'Write this key term in exams for full marks!',
+            accent: '#fbbf24',
+            icon: 'star-outline',
+        },
+    ];
+};
+
+/**
+ * Formats Conversational Indian Teacher Script:
+ * Synthesizes 1 unified continuous teacher narration per card (0ms lag)
+ */
 const buildConversationalTeacherScript = (item, lang = 'mr') => {
     const cleanQ = sanitizeCleanText(item.q || item.Question || '');
     const cleanA = sanitizeCleanText(item.a || item.Answer || '');
     const cleanE = sanitizeCleanText(item.e || item.Explanation || '');
+    const optA = sanitizeCleanText(item.opt_a || '');
+    const optB = sanitizeCleanText(item.opt_b || '');
+    const correct = (item.correct || 'A').toUpperCase();
+    const correctText = correct === 'B' ? (optB || cleanA) : (optA || cleanA);
 
-    let questionScript = cleanQ;
-    let answerScript = cleanA;
-    let explanationScript = cleanE;
-    let fullTeacherScript = `${cleanQ}. ${cleanA}`;
+    let fullTeacherScript = '';
 
     if (lang === 'mr') {
-        // Natural Indian Marathi Teacher voice (Ritu)
-        questionScript = `लक्ष द्या विद्यार्थ्यांनो, प्रश्न समजून घ्या — ${cleanQ}.`;
-        answerScript = `याचं सोपं आणि नेमकं उत्तर आहे — ${cleanA}.`;
-        explanationScript = cleanE ? `परीक्षेसाठी ही महत्त्वाची टीप नक्की लक्षात ठेवा: ${cleanE}` : '';
-        fullTeacherScript = `${questionScript} ${answerScript} ${explanationScript}`.trim();
+        if (optA && optB) {
+            fullTeacherScript = `विद्यार्थ्यांनो, विचार करा — ${cleanQ}. याचं अचूक उत्तर आहे: ${correctText}. चला हे सोप्या भाषेत समजून घेऊया. ${cleanA}. ${cleanE ? 'परीक्षेसाठी ही महत्त्वाची टीप नक्की लक्षात ठेवा: ' + cleanE : ''}`;
+        } else {
+            fullTeacherScript = `लक्ष द्या विद्यार्थ्यांनो, प्रश्न समजून घ्या — ${cleanQ}. याचं सोपं आणि नेमकं उत्तर आहे — ${cleanA}. ${cleanE ? 'परीक्षेसाठी ही महत्त्वाची टीप नक्की लक्षात ठेवा: ' + cleanE : ''}`;
+        }
     } else if (lang === 'hi') {
-        // Natural Indian Hindi Teacher voice
-        questionScript = `प्यारे बच्चों, आइए यह सवाल समझते हैं: ${cleanQ}.`;
-        answerScript = `इसका सीधा और आसान उत्तर है: ${cleanA}.`;
-        explanationScript = cleanE ? `परीक्षा के लिए यह खास बात याद रखिएगा: ${cleanE}` : '';
-        fullTeacherScript = `${questionScript} ${answerScript} ${explanationScript}`.trim();
+        if (optA && optB) {
+            fullTeacherScript = `प्यारे बच्चों, सोचिए — ${cleanQ}. इसका सही उत्तर है: ${correctText}. आइए इसे समझते हैं: ${cleanA}. ${cleanE ? 'परीक्षा के लिए यह खास बात याद रखिएगा: ' + cleanE : ''}`;
+        } else {
+            fullTeacherScript = `प्यारे बच्चों, आइए यह सवाल समझते हैं: ${cleanQ}. इसका सीधा और आसान उत्तर है: ${cleanA}. ${cleanE ? 'परीक्षा के लिए यह खास बात याद रखिएगा: ' + cleanE : ''}`;
+        }
     } else {
-        // Natural Indian English Teacher voice
-        questionScript = `Students, let's understand this question: ${cleanQ}.`;
-        answerScript = `Here is the clear explanation: ${cleanA}.`;
-        explanationScript = cleanE ? `Key exam tip to remember: ${cleanE}` : '';
-        fullTeacherScript = `${questionScript} ${answerScript} ${explanationScript}`.trim();
+        if (optA && optB) {
+            fullTeacherScript = `Students, think about this — ${cleanQ}. The correct answer is: ${correctText}. Let's break it down: ${cleanA}. ${cleanE ? 'Exam tip to remember: ' + cleanE : ''}`;
+        } else {
+            fullTeacherScript = `Students, let's understand this question: ${cleanQ}. Here is the clear explanation: ${cleanA}. ${cleanE ? 'Key exam tip to remember: ' + cleanE : ''}`;
+        }
     }
 
     return {
         cleanQ,
         cleanA,
         cleanE,
-        questionScript,
-        answerScript,
-        explanationScript,
-        fullTeacherScript,
+        optA,
+        optB,
+        correct,
+        fullTeacherScript: fullTeacherScript.trim(),
         keywords: [],
     };
 };
@@ -174,6 +247,8 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const [playingIndex, setPlayingIndex] = useState(null);
     const [activePhase, setActivePhase] = useState(null);
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+    const [userGuesses, setUserGuesses] = useState({});
+    const [revealedPolls, setRevealedPolls] = useState({});
     const [speechSpeed, setSpeechSpeed] = useState(0.92); // 0.85x, 0.92x, 1.1x
     const [masteredCards, setMasteredCards] = useState({});
     const [showConfetti, setShowConfetti] = useState(false);
@@ -464,6 +539,21 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         }
     };
 
+    const handleSelectOption = (cardIdx, choice, correctChoice) => {
+        const isCorrect = choice === correctChoice;
+        if (isCorrect) {
+            HapticManager.triggerSuccess();
+        } else {
+            HapticManager.triggerWarning();
+        }
+        setUserGuesses(prev => ({ ...prev, [cardIdx]: choice }));
+        setRevealedPolls(prev => ({ ...prev, [cardIdx]: true }));
+
+        if (playingIndex !== cardIdx) {
+            playConversationalTTS(revisionDataRef.current[cardIdx], cardIdx);
+        }
+    };
+
     const toggleSpeed = () => {
         HapticManager.triggerLight();
         setSpeechSpeed((prev) => {
@@ -526,7 +616,7 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const renderCard = ({ item, index }) => {
         const themePreset = REEL_THEMES[index % REEL_THEMES.length];
         const scriptData = buildConversationalTeacherScript(item, language);
-        const { cleanQ, cleanA, cleanE } = scriptData;
+        const { cleanQ, cleanA, cleanE, optA, optB, correct } = scriptData;
 
         const isCurrentCard = currentIndex === index;
         const isPlayingThis = playingIndex === index;
@@ -535,6 +625,13 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         const isQuestionActive = isPlayingThis && activePhase === 'question';
         const isAnswerActive = isPlayingThis && activePhase === 'answer';
         const isExplanationActive = isPlayingThis && activePhase === 'explanation';
+
+        const hasPoll = Boolean(optA && optB);
+        const userGuess = userGuesses[index];
+        const isPollRevealed = Boolean(revealedPolls[index]);
+        const correctChoice = correct === 'B' ? 'B' : 'A';
+
+        const smartSteps = parseSmartboardSteps(item, cleanA, cleanE, language);
 
         return (
             <View style={[styles.cardWrapper, { height: containerHeight }]}>
@@ -640,54 +737,115 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                             <Text style={styles.questionMainText}>{cleanQ}</Text>
                         </TouchableOpacity>
 
-                        {/* 2. KEY ANSWER SECTION (DIRECT & VISIBLE - NO TIMERS) */}
-                        <TouchableOpacity
-                            activeOpacity={0.88}
-                            onPress={() => playConversationalTTS(item, index)}
-                            style={[
-                                styles.answerBox,
-                                {
-                                    backgroundColor: isAnswerActive ? 'rgba(52,211,153,0.22)' : '#153a2b',
-                                    borderColor: isAnswerActive ? '#34d399' : 'rgba(52,211,153,0.3)',
-                                },
-                            ]}
-                        >
-                            <View style={styles.sectionHeaderLine}>
-                                <Ionicons name="bulb" size={16} color="#34d399" />
-                                <Text style={styles.sectionHeadingA}>KEY ANSWER / मुख्य उत्तर</Text>
-                                {isAnswerActive && (
-                                    <View style={[styles.liveVoiceBadge, { backgroundColor: '#34d399' }]}>
-                                        <Text style={styles.liveVoiceBadgeText}>EXPLAINING</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <Text style={styles.answerMainText}>
-                                {cleanA}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {/* 3. EXAM PRO TIP / MEMORY HOOK */}
-                        {cleanE ? (
-                            <TouchableOpacity
-                                activeOpacity={0.88}
-                                onPress={() => playConversationalTTS(item, index)}
-                                style={[
-                                    styles.hookBox,
-                                    {
-                                        backgroundColor: isExplanationActive ? 'rgba(251,191,36,0.22)' : '#262208',
-                                        borderColor: isExplanationActive ? '#fbbf24' : '#f59e0b',
-                                    },
-                                ]}
-                            >
-                                <View style={styles.hookHeader}>
-                                    <Ionicons name="star" size={16} color="#fbbf24" />
-                                    <Text style={styles.hookTitle}>EXAM PRO TIP / परीक्षेची टीप</Text>
+                        {/* 2. INTERACTIVE 2-OPTION POLL (GUESS & WIN) */}
+                        {hasPoll && (
+                            <View style={styles.pollSection}>
+                                <View style={styles.pollHeaderRow}>
+                                    <Ionicons name="game-controller-outline" size={16} color="#34d399" />
+                                    <Text style={styles.pollHeaderTitle}>
+                                        {language === 'mr' ? 'अंदाज लावा! योग्य पर्याय निवडा:' : 'QUICK GUESS CHALLENGE:'}
+                                    </Text>
                                 </View>
-                                <Text style={styles.hookText}>
-                                    {cleanE}
+
+                                {/* OPTION A BUTTON */}
+                                <TouchableOpacity
+                                    activeOpacity={0.85}
+                                    onPress={() => handleSelectOption(index, 'A', correctChoice)}
+                                    style={[
+                                        styles.pollOptionBtn,
+                                        isPollRevealed && correctChoice === 'A' && styles.pollOptionCorrect,
+                                        isPollRevealed && userGuess === 'A' && correctChoice !== 'A' && styles.pollOptionWrong,
+                                    ]}
+                                >
+                                    <View style={[
+                                        styles.optionLetterBadge,
+                                        isPollRevealed && correctChoice === 'A' && { backgroundColor: '#34d399' },
+                                        isPollRevealed && userGuess === 'A' && correctChoice !== 'A' && { backgroundColor: '#ef4444' },
+                                    ]}>
+                                        <Text style={styles.optionLetterText}>A</Text>
+                                    </View>
+                                    <Text style={styles.optionMainText}>{optA}</Text>
+                                    {isPollRevealed && correctChoice === 'A' && (
+                                        <Ionicons name="checkmark-circle" size={20} color="#34d399" style={styles.pollStatusIcon} />
+                                    )}
+                                    {isPollRevealed && userGuess === 'A' && correctChoice !== 'A' && (
+                                        <Ionicons name="close-circle" size={20} color="#ef4444" style={styles.pollStatusIcon} />
+                                    )}
+                                </TouchableOpacity>
+
+                                {/* OPTION B BUTTON */}
+                                <TouchableOpacity
+                                    activeOpacity={0.85}
+                                    onPress={() => handleSelectOption(index, 'B', correctChoice)}
+                                    style={[
+                                        styles.pollOptionBtn,
+                                        isPollRevealed && correctChoice === 'B' && styles.pollOptionCorrect,
+                                        isPollRevealed && userGuess === 'B' && correctChoice !== 'B' && styles.pollOptionWrong,
+                                    ]}
+                                >
+                                    <View style={[
+                                        styles.optionLetterBadge,
+                                        isPollRevealed && correctChoice === 'B' && { backgroundColor: '#34d399' },
+                                        isPollRevealed && userGuess === 'B' && correctChoice !== 'B' && { backgroundColor: '#ef4444' },
+                                    ]}>
+                                        <Text style={styles.optionLetterText}>B</Text>
+                                    </View>
+                                    <Text style={styles.optionMainText}>{optB}</Text>
+                                    {isPollRevealed && correctChoice === 'B' && (
+                                        <Ionicons name="checkmark-circle" size={20} color="#34d399" style={styles.pollStatusIcon} />
+                                    )}
+                                    {isPollRevealed && userGuess === 'B' && correctChoice !== 'B' && (
+                                        <Ionicons name="close-circle" size={20} color="#ef4444" style={styles.pollStatusIcon} />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* 3. DIGITAL SMARTBOARD STEP-BY-STEP BREAKDOWN */}
+                        <View style={styles.smartboardSection}>
+                            <View style={styles.smartboardHeaderLine}>
+                                <Ionicons name="easel-outline" size={16} color="#34d399" />
+                                <Text style={styles.smartboardSectionHeading}>
+                                    {language === 'mr' ? 'डिजिटल स्मार्टबोर्ड स्पष्टीकरण' : 'SMARTBOARD STEP-BY-STEP'}
                                 </Text>
-                            </TouchableOpacity>
-                        ) : null}
+                            </View>
+
+                            {smartSteps.map((step, sIdx) => {
+                                const isStepActive = isPlayingThis && (
+                                    (sIdx === 0 && activePhase === 'question') ||
+                                    (sIdx === 1 && activePhase === 'answer') ||
+                                    (sIdx === 2 && activePhase === 'explanation')
+                                );
+
+                                return (
+                                    <TouchableOpacity
+                                        key={sIdx}
+                                        activeOpacity={0.88}
+                                        onPress={() => playConversationalTTS(item, index)}
+                                        style={[
+                                            styles.smartStepCard,
+                                            {
+                                                borderColor: isStepActive ? step.accent : 'rgba(255,255,255,0.14)',
+                                                backgroundColor: isStepActive ? 'rgba(16,45,34,0.95)' : '#102a20',
+                                            },
+                                        ]}
+                                    >
+                                        <View style={styles.stepHeaderRow}>
+                                            <View style={[styles.stepTagPill, { backgroundColor: `${step.accent}25` }]}>
+                                                <Ionicons name={step.icon} size={13} color={step.accent} />
+                                                <Text style={[styles.stepTagText, { color: step.accent }]}>{step.tag}</Text>
+                                            </View>
+                                            {isStepActive && (
+                                                <View style={[styles.liveVoiceBadge, { backgroundColor: step.accent }]}>
+                                                    <Text style={styles.liveVoiceBadgeText}>TEACHING</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                        <Text style={styles.stepBodyText}>{step.text}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
                     </ScrollView>
 
                     {/* BOTTOM REEL ACTIONS BAR */}
@@ -1030,6 +1188,116 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '800',
         color: '#ffffff',
+    },
+    pollSection: {
+        marginBottom: 14,
+        padding: 12,
+        borderRadius: 14,
+        backgroundColor: '#0a1d15',
+        borderWidth: 1,
+        borderColor: 'rgba(52,211,153,0.25)',
+    },
+    pollHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+    },
+    pollHeaderTitle: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#34d399',
+        letterSpacing: 0.5,
+    },
+    pollOptionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        backgroundColor: '#123325',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.15)',
+        marginBottom: 8,
+    },
+    pollOptionCorrect: {
+        backgroundColor: 'rgba(52,211,153,0.22)',
+        borderColor: '#34d399',
+    },
+    pollOptionWrong: {
+        backgroundColor: 'rgba(239,68,68,0.20)',
+        borderColor: '#ef4444',
+    },
+    optionLetterBadge: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    optionLetterText: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    optionMainText: {
+        flex: 1,
+        color: '#f8fafc',
+        fontSize: 16,
+        fontWeight: '600',
+        lineHeight: 22,
+    },
+    pollStatusIcon: {
+        marginLeft: 8,
+    },
+    smartboardSection: {
+        marginTop: 4,
+        marginBottom: 14,
+    },
+    smartboardHeaderLine: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+    },
+    smartboardSectionHeading: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#34d399',
+        letterSpacing: 0.8,
+    },
+    smartStepCard: {
+        padding: 14,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        marginBottom: 10,
+    },
+    stepHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    stepTagPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    stepTagText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        letterSpacing: 0.3,
+    },
+    stepBodyText: {
+        color: '#ffffff',
+        fontSize: 16,
+        lineHeight: 24,
+        fontWeight: '500',
     },
     cardScroll: {
         flex: 1,

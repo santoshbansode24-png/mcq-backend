@@ -100,11 +100,15 @@ try {
                 $e = html_entity_decode(trim($e), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
                 if (!empty($q) || !empty($a)) {
-                    $normalizedPoints[] = [
+                    $pointArr = [
                         'q' => $q ?: $a,
                         'a' => $a ?: $q,
                         'e' => $e
                     ];
+                    if (!empty($point['opt_a'])) $pointArr['opt_a'] = html_entity_decode(trim($point['opt_a']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    if (!empty($point['opt_b'])) $pointArr['opt_b'] = html_entity_decode(trim($point['opt_b']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    if (!empty($point['correct'])) $pointArr['correct'] = trim($point['correct']);
+                    $normalizedPoints[] = $pointArr;
                 }
             }
         }

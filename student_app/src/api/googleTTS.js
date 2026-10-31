@@ -1,53 +1,85 @@
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
+import * as FileSystem from 'expo-file-system';
 import { API_URL } from './config';
 import { getBestVoice } from '../utils/voiceUtils';
 
 // In-memory high-speed cache: Map<cacheKey, base64Audio>
 const audioMemoryCache = new Map();
+// Local file URI cache: Map<cacheKey, localFileUri>
+const audioFileUriCache = new Map();
 // Set of currently active prefetch promises to prevent duplicate simultaneous fetches
 const activeFetches = new Map();
-// Cache server availability status: null = unknown, true = available, false = unavailable
+// Server TTS availability status: null = unknown, true = available, false = unavailable
 let isServerTTSAvailable = null;
 
 /**
- * Generates unique cache key for a given text, language and speed
+ * Generates unique cache key for a given text, language, speaker and speed
  */
-const getCacheKey = (text, languageCode = 'mr-IN', speed = 0.88) => {
-    return `${languageCode}_${speed.toFixed(2)}_${text.trim()}`;
+const getCacheKey = (text, languageCode = 'mr-IN', speed = 0.92, speaker = 'rupali') => {
+    return `${languageCode}_${speaker}_${speed.toFixed(2)}_${text.trim()}`;
 };
 
 /**
- * Checks if audio is already available in the memory cache
+ * Generates a clean alphanumeric local filename in Expo cache
  */
-export const isAudioCached = (text, languageCode = 'mr-IN', speed = 0.88) => {
+const getLocalFileUri = (cacheKey) => {
+    let hash = 0;
+    for (let i = 0; i < cacheKey.length; i++) {
+        hash = ((hash << 5) - hash) + cacheKey.charCodeAt(i);
+        hash |= 0;
+    }
+    const safeHash = Math.abs(hash).toString(36);
+    return `${FileSystem.cacheDirectory}tts_${safeHash}.mp3`;
+};
+
+/**
+ * Saves Base64 audio string to a real local MP3 file for Android MediaPlayer compatibility
+ */
+const saveBase64ToFile = async (cacheKey, base64Data) => {
+    try {
+        const fileUri = getLocalFileUri(cacheKey);
+        const info = await FileSystem.getInfoAsync(fileUri);
+        if (!info.exists || info.size === 0) {
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+        }
+        audioFileUriCache.set(cacheKey, fileUri);
+        return fileUri;
+    } catch (e) {
+        console.warn('[TTS] Failed to cache audio to file system:', e);
+        return null;
+    }
+};
+
+/**
+ * Checks if audio is already available in the memory/file cache
+ */
+export const isAudioCached = (text, languageCode = 'mr-IN', speed = 0.92, speaker = 'rupali') => {
     if (!text) return false;
-    const key = getCacheKey(text, languageCode, speed);
-    return audioMemoryCache.has(key);
+    const key = getCacheKey(text, languageCode, speed, speaker);
+    return audioMemoryCache.has(key) || audioFileUriCache.has(key);
 };
 
 /**
- * Pre-fetches audio in the background and saves into memory cache.
- * Completely non-blocking, silent, and zero-lag.
+ * Pre-fetches audio in the background and saves into file cache for instant 0ms playback
  */
-export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) => {
+export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.92, speaker = 'rupali') => {
     if (!text || typeof text !== 'string') return false;
     const cleanText = text.trim();
     if (!cleanText) return false;
 
-    // If server TTS was already confirmed unavailable due to missing keys, don't spam
     if (isServerTTSAvailable === false) {
         return false;
     }
 
-    const cacheKey = getCacheKey(cleanText, languageCode, speed);
+    const cacheKey = getCacheKey(cleanText, languageCode, speed, speaker);
 
-    // If already in memory cache, nothing to do!
-    if (audioMemoryCache.has(cacheKey)) {
+    if (audioFileUriCache.has(cacheKey)) {
         return true;
     }
 
-    // If already being fetched, wait for existing promise
     if (activeFetches.has(cacheKey)) {
         return activeFetches.get(cacheKey);
     }
@@ -59,10 +91,11 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
                 text: cleanText,
                 languageCode: languageCode,
                 speed: speed,
+                speaker: speaker,
             };
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             const response = await fetch(PROXY_URL, {
                 method: 'POST',
@@ -75,14 +108,17 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
             });
             clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                return false;
-            }
+            if (!response.ok) return false;
 
             const data = await response.json();
             if (data?.audioContent) {
                 isServerTTSAvailable = true;
                 audioMemoryCache.set(cacheKey, data.audioContent);
+                await saveBase64ToFile(cacheKey, data.audioContent);
+                return true;
+            } else if (data?.audioUrl) {
+                isServerTTSAvailable = true;
+                audioFileUriCache.set(cacheKey, data.audioUrl);
                 return true;
             } else {
                 if (data?.error && (data.error.includes('No TTS API') || data.error.includes('not configured'))) {
@@ -91,7 +127,6 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
                 return false;
             }
         } catch (e) {
-            // Network failure or timeout (silent)
             return false;
         } finally {
             activeFetches.delete(cacheKey);
@@ -103,31 +138,33 @@ export const prefetchGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.
 };
 
 /**
- * Plays TTS audio with Zero-Lag:
- * 1. Uses pre-fetched audio instantly if available (0ms latency)
- * 2. If server TTS is available, fetches from server with server-side permanent disk cache (₹0)
- * 3. Instant, reliable fallback to high-quality on-device native speech (0ms latency, native onDone tracking)
+ * Plays ultra-realistic Sarvam AI TTS audio with 0ms latency:
+ * 1. Plays from local cached MP3 file on Android (ExoPlayer/MediaPlayer compatible)
+ * 2. If not cached, fetches from Railway server disk cache
+ * 3. Graceful fallback to on-device speech only in extreme network outage
  */
-export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) => {
+export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.92, speaker = 'rupali') => {
     if (!text || typeof text !== 'string') return null;
     const cleanText = text.trim();
     if (!cleanText) return null;
 
-    const cacheKey = getCacheKey(cleanText, languageCode, speed);
+    const cacheKey = getCacheKey(cleanText, languageCode, speed, speaker);
+    let playUri = audioFileUriCache.get(cacheKey);
     let audioBase64 = audioMemoryCache.get(cacheKey);
 
-    // 1. Fetch from server if not cached and server is not disabled
-    if (!audioBase64 && isServerTTSAvailable !== false) {
+    // 1. Fetch from server if not cached
+    if (!playUri && !audioBase64 && isServerTTSAvailable !== false) {
         try {
             const PROXY_URL = `${API_URL}/proxy_tts.php`;
             const payload = {
                 text: cleanText,
                 languageCode: languageCode,
                 speed: speed,
+                speaker: speaker,
             };
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             const response = await fetch(PROXY_URL, {
                 method: 'POST',
@@ -146,30 +183,40 @@ export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) 
                     audioBase64 = data.audioContent;
                     audioMemoryCache.set(cacheKey, audioBase64);
                     isServerTTSAvailable = true;
+                    playUri = await saveBase64ToFile(cacheKey, audioBase64);
+                } else if (data?.audioUrl) {
+                    playUri = data.audioUrl;
+                    audioFileUriCache.set(cacheKey, playUri);
+                    isServerTTSAvailable = true;
                 } else if (data?.error && (data.error.includes('No TTS API') || data.error.includes('not configured'))) {
                     isServerTTSAvailable = false;
                 }
             }
         } catch (netErr) {
-            console.warn('[TTS] Network timeout, using instant on-device speech fallback');
+            console.warn('[TTS] Network timeout, checking local fallback');
         }
     }
 
-    // 2. Play Server Natural Audio if Base64 available (Sarvam AI / Google Cloud)
-    if (audioBase64) {
+    // If we have base64 but not saved to file yet, save to file now
+    if (!playUri && audioBase64) {
+        playUri = await saveBase64ToFile(cacheKey, audioBase64);
+    }
+
+    // 2. Play Server Natural Audio via local file URI (100% Android compatible)
+    if (playUri) {
         try {
             await Speech.stop();
             const { sound } = await Audio.Sound.createAsync(
-                { uri: `data:audio/mp3;base64,${audioBase64}` },
+                { uri: playUri },
                 { shouldPlay: true }
             );
             return sound;
         } catch (audioErr) {
-            console.warn('[TTS] Audio playback error, falling back to Speech:', audioErr);
+            console.warn('[TTS] Error playing file URI:', audioErr);
         }
     }
 
-    // 3. High-Performance On-Device Native Speech (Zero lag, works offline, native event-driven)
+    // 3. Fallback: High-Quality On-Device Speech
     try {
         const speechLang = languageCode === 'mr-IN' ? 'mr-IN' : (languageCode === 'hi-IN' ? 'hi-IN' : 'en-IN');
         await Speech.stop();
@@ -192,7 +239,6 @@ export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) 
             }
         };
 
-        // Safety upper-bound timer in case device TTS engine fails to fire onDone
         const safetyDurationMs = Math.max(3500, cleanText.length * 110);
         safetyTimer = setTimeout(() => {
             notifyDone();
@@ -203,9 +249,7 @@ export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) 
             voice: indianVoiceId || undefined,
             pitch: 1.05,
             rate: speed || 0.92,
-            onDone: () => {
-                notifyDone();
-            },
+            onDone: () => notifyDone(),
             onStopped: () => {
                 isCompleted = true;
                 if (safetyTimer) clearTimeout(safetyTimer);
@@ -223,26 +267,23 @@ export const playGoogleTTS = async (text, languageCode = 'mr-IN', speed = 0.88) 
             stopAsync: async () => {
                 isCompleted = true;
                 if (safetyTimer) clearTimeout(safetyTimer);
-                try {
-                    await Speech.stop();
-                } catch (e) {}
+                await Speech.stop();
             },
             unloadAsync: async () => {
                 isCompleted = true;
                 if (safetyTimer) clearTimeout(safetyTimer);
-                try {
-                    await Speech.stop();
-                } catch (e) {}
+                await Speech.stop();
             },
+            getStatusAsync: async () => ({ isPlaying: !isCompleted, isLoaded: true }),
         };
-    } catch (speechErr) {
-        console.error('[TTS] Speech fallback failed:', speechErr);
+    } catch (err) {
+        console.warn('[TTS] Native speech failed:', err);
         return null;
     }
 };
 
 /**
- * Stop any ongoing on-device speech
+ * Stops all currently playing audio
  */
 export const stopAllTTS = async () => {
     try {

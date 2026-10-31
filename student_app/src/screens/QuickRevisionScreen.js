@@ -173,7 +173,6 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     // Audio & Phase Synchronization: 'question' | 'answer' | 'explanation' | null
     const [playingIndex, setPlayingIndex] = useState(null);
     const [activePhase, setActivePhase] = useState(null);
-    const [countdownVal, setCountdownVal] = useState(null);
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
     const [speechSpeed, setSpeechSpeed] = useState(0.92); // 0.85x, 0.92x, 1.1x
     const [masteredCards, setMasteredCards] = useState({});
@@ -349,7 +348,6 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     /* ---------------- STOP TTS ---------------- */
     const stopTTS = async () => {
         activePlayTokenRef.current++;
-        setCountdownVal(null);
         if (soundRef.current) {
             try {
                 await soundRef.current.stopAsync();
@@ -642,54 +640,31 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                             <Text style={styles.questionMainText}>{cleanQ}</Text>
                         </TouchableOpacity>
 
-                        {/* INTERACTIVE TEACHER TRANSITION DISPLAY */}
-                        {isPlayingThis && activePhase === 'countdown' && (
-                            <View style={styles.countdownBox}>
-                                <Text style={styles.countdownTitle}>💡 उत्तर स्पष्टीकरण सुरु होत आहे...</Text>
-                                <View style={styles.countdownCircle}>
-                                    <Ionicons name="sparkles" size={24} color="#34d399" />
-                                </View>
-                                <Text style={styles.countdownSubtitle}>शिक्षकांचे सोपे स्पष्टीकरण ऐका!</Text>
+                        {/* 2. KEY ANSWER SECTION (DIRECT & VISIBLE - NO TIMERS) */}
+                        <TouchableOpacity
+                            activeOpacity={0.88}
+                            onPress={() => playConversationalTTS(item, index)}
+                            style={[
+                                styles.answerBox,
+                                {
+                                    backgroundColor: isAnswerActive ? 'rgba(52,211,153,0.22)' : '#153a2b',
+                                    borderColor: isAnswerActive ? '#34d399' : 'rgba(52,211,153,0.3)',
+                                },
+                            ]}
+                        >
+                            <View style={styles.sectionHeaderLine}>
+                                <Ionicons name="bulb" size={16} color="#34d399" />
+                                <Text style={styles.sectionHeadingA}>KEY ANSWER / मुख्य उत्तर</Text>
+                                {isAnswerActive && (
+                                    <View style={[styles.liveVoiceBadge, { backgroundColor: '#34d399' }]}>
+                                        <Text style={styles.liveVoiceBadgeText}>EXPLAINING</Text>
+                                    </View>
+                                )}
                             </View>
-                        )}
-
-                        {/* 2. KEY ANSWER SECTION */}
-                        {isPlayingThis && (activePhase === 'question' || activePhase === 'countdown') ? (
-                            <View style={[styles.answerBox, styles.answerBoxVeiled]}>
-                                <View style={styles.sectionHeaderLine}>
-                                    <Ionicons name="bulb-outline" size={16} color="#34d399" />
-                                    <Text style={styles.sectionHeadingA}>ANSWER / उत्तर (विचार करा)</Text>
-                                </View>
-                                <Text style={styles.veiledText}>
-                                    🔒 प्रश्न ऐकून आधी स्वतः उत्तर आठवा... टायमर संपताच उत्तर उलगडेल!
-                                </Text>
-                            </View>
-                        ) : (
-                            <TouchableOpacity
-                                activeOpacity={0.88}
-                                onPress={() => playConversationalTTS(item, index)}
-                                style={[
-                                    styles.answerBox,
-                                    {
-                                        backgroundColor: isAnswerActive ? 'rgba(52,211,153,0.22)' : '#153a2b',
-                                        borderColor: isAnswerActive ? '#34d399' : 'rgba(52,211,153,0.3)',
-                                    },
-                                ]}
-                            >
-                                <View style={styles.sectionHeaderLine}>
-                                    <Ionicons name="bulb" size={16} color="#34d399" />
-                                    <Text style={styles.sectionHeadingA}>KEY ANSWER / मुख्य उत्तर</Text>
-                                    {isAnswerActive && (
-                                        <View style={[styles.liveVoiceBadge, { backgroundColor: '#34d399' }]}>
-                                            <Text style={styles.liveVoiceBadgeText}>EXPLAINING</Text>
-                                        </View>
-                                    )}
-                                </View>
-                                <Text style={styles.answerMainText}>
-                                    {cleanA}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
+                            <Text style={styles.answerMainText}>
+                                {cleanA}
+                            </Text>
+                        </TouchableOpacity>
 
                         {/* 3. EXAM PRO TIP / MEMORY HOOK */}
                         {cleanE ? (

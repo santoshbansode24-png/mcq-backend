@@ -309,8 +309,13 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 if (stored) setMasteredCards(JSON.parse(stored));
             } catch (e) {}
 
-            if (Array.isArray(initialData) && initialData.length > 0) {
-                const valid = cleanPoints(initialData);
+            if (initialData) {
+                const rawInit = Array.isArray(initialData?.key_points)
+                    ? initialData.key_points
+                    : Array.isArray(initialData)
+                    ? (Array.isArray(initialData[0]?.key_points) ? initialData[0].key_points : initialData)
+                    : [];
+                const valid = cleanPoints(rawInit);
                 if (valid.length > 0) {
                     setRevisionData(valid);
                     setLoading(false);
@@ -365,16 +370,35 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         try {
             setLoading(true);
             setError(null);
-            const res = await fetchQuickRevision(chapterId);
-            if (res && res.status === 'success' && Array.isArray(res.data)) {
-                const cleaned = cleanPoints(res.data);
+            const res = await fetchQuickRevision(chapterId, force);
+
+            let rawPoints = null;
+            if (res && res.status === 'success') {
+                if (Array.isArray(res.data?.key_points)) {
+                    rawPoints = res.data.key_points;
+                } else if (Array.isArray(res.data)) {
+                    if (res.data.length > 0 && Array.isArray(res.data[0]?.key_points)) {
+                        rawPoints = res.data[0].key_points;
+                    } else {
+                        rawPoints = res.data;
+                    }
+                }
+            }
+
+            if (rawPoints && rawPoints.length > 0) {
+                const cleaned = cleanPoints(rawPoints);
                 if (cleaned.length > 0) {
                     setRevisionData(cleaned);
+                    setError(null);
                 } else {
                     setError('No revision cards found for this chapter.');
                 }
             } else {
-                setError(res?.message || 'Failed to load Quick Revision.');
+                if (res?.status === 'success') {
+                    setError('No revision cards found for this chapter.');
+                } else {
+                    setError(res?.message || 'Failed to load Quick Revision.');
+                }
             }
         } catch (err) {
             setError('Network error. Please try again.');

@@ -86,28 +86,26 @@ const buildConversationalTeacherScript = (item, lang = 'mr') => {
     let questionScript = cleanQ;
     let answerScript = cleanA;
     let explanationScript = cleanE;
+    let fullTeacherScript = `${cleanQ}. ${cleanA}`;
 
     if (lang === 'mr') {
-        // Teacher tone for Marathi: Explains pedagogically with teacher guidance
-        questionScript = `लक्ष द्या विद्यार्थ्यांनो, प्रश्न समजून घ्या — ${cleanQ}`;
-        answerScript = `याचं सोपं आणि नेमकं उत्तर आहे — ${cleanA}`;
-        if (cleanE) {
-            explanationScript = `परीक्षेसाठी ही महत्त्वाची टीप नक्की लक्षात ठेवा: ${cleanE}`;
-        }
+        // Natural Indian Marathi Teacher voice (Ritu)
+        questionScript = `लक्ष द्या विद्यार्थ्यांनो, प्रश्न समजून घ्या — ${cleanQ}.`;
+        answerScript = `याचं सोपं आणि नेमकं उत्तर आहे — ${cleanA}.`;
+        explanationScript = cleanE ? `परीक्षेसाठी ही महत्त्वाची टीप नक्की लक्षात ठेवा: ${cleanE}` : '';
+        fullTeacherScript = `${questionScript} ${answerScript} ${explanationScript}`.trim();
     } else if (lang === 'hi') {
-        // Teacher tone for Hindi
-        questionScript = `प्यारे बच्चों, आइए यह सवाल समझते हैं: ${cleanQ}`;
-        answerScript = `इसका सीधा और आसान उत्तर है: ${cleanA}`;
-        if (cleanE) {
-            explanationScript = `परीक्षा के लिए यह खास बात याद रखिएगा: ${cleanE}`;
-        }
+        // Natural Indian Hindi Teacher voice
+        questionScript = `प्यारे बच्चों, आइए यह सवाल समझते हैं: ${cleanQ}.`;
+        answerScript = `इसका सीधा और आसान उत्तर है: ${cleanA}.`;
+        explanationScript = cleanE ? `परीक्षा के लिए यह खास बात याद रखिएगा: ${cleanE}` : '';
+        fullTeacherScript = `${questionScript} ${answerScript} ${explanationScript}`.trim();
     } else {
-        // Teacher tone for English
-        questionScript = `Students, let's understand this question: ${cleanQ}`;
-        answerScript = `Here is the clear explanation: ${cleanA}`;
-        if (cleanE) {
-            explanationScript = `Key exam tip to remember: ${cleanE}`;
-        }
+        // Natural Indian English Teacher voice
+        questionScript = `Students, let's understand this question: ${cleanQ}.`;
+        answerScript = `Here is the clear explanation: ${cleanA}.`;
+        explanationScript = cleanE ? `Key exam tip to remember: ${cleanE}` : '';
+        fullTeacherScript = `${questionScript} ${answerScript} ${explanationScript}`.trim();
     }
 
     return {
@@ -117,6 +115,7 @@ const buildConversationalTeacherScript = (item, lang = 'mr') => {
         questionScript,
         answerScript,
         explanationScript,
+        fullTeacherScript,
         keywords: [],
     };
 };
@@ -217,13 +216,11 @@ const QuickRevisionScreen = ({ navigation, route }) => {
     const prefetchCardAudio = useCallback((item) => {
         if (!item) return;
         const scripts = buildConversationalTeacherScript(item, language);
-        const { questionScript, answerScript, explanationScript } = scripts;
+        const { fullTeacherScript } = scripts;
         const currentSpeed = speechSpeedRef.current;
         const langCode = preferredLanguage.current;
 
-        if (questionScript) prefetchGoogleTTS(questionScript, langCode, currentSpeed);
-        if (answerScript) prefetchGoogleTTS(answerScript, langCode, currentSpeed);
-        if (explanationScript) prefetchGoogleTTS(explanationScript, langCode, currentSpeed);
+        if (fullTeacherScript) prefetchGoogleTTS(fullTeacherScript, langCode, currentSpeed);
     }, [language]);
 
     useEffect(() => {
@@ -384,95 +381,68 @@ const QuickRevisionScreen = ({ navigation, route }) => {
         await stopTTS();
         const thisToken = ++activePlayTokenRef.current;
         setPlayingIndex(index);
+        setActivePhase('question');
+        HapticManager.triggerLight();
 
         const scripts = buildConversationalTeacherScript(item, language);
-        const { questionScript, answerScript, explanationScript } = scripts;
+        const { fullTeacherScript } = scripts;
         const currentSpeed = speechSpeedRef.current;
 
-        // Helper to play a single phase and wait for its natural completion
-        const runPhase = (phaseName, scriptText) => {
-            return new Promise(async (resolve) => {
-                if (thisToken !== activePlayTokenRef.current || !scriptText) {
-                    return resolve(false);
-                }
-
-                setActivePhase(phaseName);
-                HapticManager.triggerLight();
-
-                try {
-                    const soundObj = await playGoogleTTS(scriptText, preferredLanguage.current, currentSpeed);
-
-                    if (thisToken !== activePlayTokenRef.current) {
-                        if (soundObj && soundObj.unloadAsync) soundObj.unloadAsync().catch(() => {});
-                        return resolve(false);
-                    }
-
-                    if (!soundObj) {
-                        return resolve(true);
-                    }
-
-                    soundRef.current = soundObj;
-                    soundObj.setOnPlaybackStatusUpdate((status) => {
-                        if (thisToken !== activePlayTokenRef.current) return;
-                        if (status.didJustFinish) {
-                            if (soundObj.unloadAsync) soundObj.unloadAsync().catch(() => {});
-                            soundRef.current = null;
-                            resolve(true);
-                        }
-                    });
-                } catch (err) {
-                    resolve(true);
-                }
-            });
-        };
-
-        // --- SEQUENCE EXECUTION (Question -> 3s Countdown -> Answer Reveal) ---
         try {
-            // Phase 1: Question Understanding
-            setCountdownVal(null);
-            const qDone = await runPhase('question', questionScript);
-            if (!qDone || thisToken !== activePlayTokenRef.current) return;
+            // Plays ultra-natural continuous single-take human teacher audio (0ms latency with prefetch)
+            const soundObj = await playGoogleTTS(fullTeacherScript, preferredLanguage.current, currentSpeed);
 
-            // Phase 2: Brisk, seamless teacher transition pause (700ms - no awkward delay)
-            setActivePhase('countdown');
-            setCountdownVal(1);
-            HapticManager.triggerLight();
-            await new Promise((r) => setTimeout(r, 700));
-            if (thisToken !== activePlayTokenRef.current) return;
-            setCountdownVal(null);
-
-            // Phase 3: Core Concept & Answer Explanation with Chalk Reveal
-            const aDone = await runPhase('answer', answerScript);
-            if (!aDone || thisToken !== activePlayTokenRef.current) return;
-
-            // Phase 3: Memory Hook / Exam Tip (if exists)
-            if (explanationScript) {
-                const eDone = await runPhase('explanation', explanationScript);
-                if (!eDone || thisToken !== activePlayTokenRef.current) return;
+            if (thisToken !== activePlayTokenRef.current) {
+                if (soundObj?.unloadAsync) soundObj.unloadAsync().catch(() => {});
+                return;
             }
 
-            // Sequence Complete
-            if (thisToken === activePlayTokenRef.current) {
+            if (!soundObj) {
                 setPlayingIndex(null);
                 setActivePhase(null);
+                return;
+            }
 
-                // Auto-advance if Auto-Play is active
-                if (isAutoPlayingRef.current) {
-                    const nextIndex = index + 1;
-                    const total = revisionDataRef.current.length;
-                    if (nextIndex < total) {
-                        isProgrammaticScrollRef.current = true;
-                        scrollToIndex(nextIndex);
-                        setTimeout(() => {
-                            if (isAutoPlayingRef.current) {
-                                playConversationalTTS(revisionDataRef.current[nextIndex], nextIndex, true);
-                            }
-                        }, 500);
+            soundRef.current = soundObj;
+            soundObj.setOnPlaybackStatusUpdate((status) => {
+                if (thisToken !== activePlayTokenRef.current) return;
+
+                // Dynamically sync visual chalk highlight with natural teacher speech
+                if (status.isPlaying && status.durationMillis > 0) {
+                    const ratio = status.positionMillis / status.durationMillis;
+                    if (ratio < 0.35) {
+                        setActivePhase('question');
+                    } else if (ratio < 0.80) {
+                        setActivePhase('answer');
                     } else {
-                        setIsAutoPlaying(false);
+                        setActivePhase('explanation');
                     }
                 }
-            }
+
+                if (status.didJustFinish) {
+                    if (soundObj?.unloadAsync) soundObj.unloadAsync().catch(() => {});
+                    soundRef.current = null;
+                    setPlayingIndex(null);
+                    setActivePhase(null);
+
+                    // Auto-advance smoothly to next reel
+                    if (isAutoPlayingRef.current) {
+                        const nextIndex = index + 1;
+                        const total = revisionDataRef.current.length;
+                        if (nextIndex < total) {
+                            isProgrammaticScrollRef.current = true;
+                            scrollToIndex(nextIndex);
+                            setTimeout(() => {
+                                if (isAutoPlayingRef.current) {
+                                    playConversationalTTS(revisionDataRef.current[nextIndex], nextIndex, true);
+                                }
+                            }, 400);
+                        } else {
+                            setIsAutoPlaying(false);
+                        }
+                    }
+                }
+            });
         } catch (e) {
             if (thisToken === activePlayTokenRef.current) {
                 setPlayingIndex(null);

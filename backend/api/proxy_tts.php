@@ -109,13 +109,12 @@ if (file_exists($cacheFilePath) && filesize($cacheFilePath) > 100) {
 $sarvamErrorDetails = null;
 if (!empty($sarvamKey)) {
     $sarvamLang = 'mr-IN';
-    $speaker = 'rupali'; // Natural Indian female teacher voice
+    $speaker = isset($input['speaker']) ? trim($input['speaker']) : (isset($_REQUEST['speaker']) ? trim($_REQUEST['speaker']) : 'ritu');
     if ($languageCode === 'hi-IN' || $languageCode === 'hi') {
         $sarvamLang = 'hi-IN';
-        $speaker = 'pooja';
     } elseif ($languageCode === 'en-IN' || $languageCode === 'en') {
         $sarvamLang = 'en-IN';
-        $speaker = 'kavya';
+        if ($speaker === 'ritu') $speaker = 'kavya';
     }
 
     $sarvamPayload = [

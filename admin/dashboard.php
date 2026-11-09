@@ -364,6 +364,7 @@ try {
     <nav class="nav">
         <ul>
             <li><a href="dashboard.php" class="active">Dashboard</a></li>
+            <li><a href="scholarship_exams.php" style="color: #667eea; font-weight: 700;">🏆 Scholarship Exams</a></li>
             <li><a href="users.php">Users</a></li>
             <li><a href="classes.php">Classes</a></li>
             <li><a href="subjects.php">Subjects</a></li>

@@ -286,16 +286,26 @@ const MyExamTestScreen = ({ navigation, route }) => {
 
     // Fetch dual rankings if this was a live exam
     useEffect(() => {
-        if (showResults && route.params?.update_id) {
+        if (showResults && (route.params?.update_id || route.params?.examId)) {
             const fetchRankings = async () => {
                 try {
                     const userDataStr = await AsyncStorage.getItem('user_data');
                     const userData = userDataStr ? JSON.parse(userDataStr) : null;
                     const userId = userData?.user_id || userData?.id;
 
-                    const res = await axios.get(`${API_URL}/teacher/get_live_exam_leaderboard.php?live_exam_id=${route.params.update_id}`);
+                    const endpoint = route.params?.examId ? `${API_URL}/get_scholarship_leaderboard.php?exam_id=${route.params.examId}&user_id=${userId}` : `${API_URL}/teacher/get_live_exam_leaderboard.php?live_exam_id=${route.params.update_id}`;
+                    const res = await axios.get(endpoint);
                     if (res.data && res.data.status === 'success' && res.data.data) {
-                        const leaderboard = res.data.data;
+                        if (route.params?.examId && res.data.data.user_rank) {
+                            const uRank = res.data.data.user_rank;
+                            setLiveExamRanks({
+                                examRank: uRank.rank,
+                                overallRank: uRank.percentile ? `${uRank.percentile}%ile` : `#${uRank.rank}`,
+                                totalStudents: res.data.data.total_participants || 1,
+                                overallScore: uRank.net_score
+                            });
+                        }
+                        const leaderboard = Array.isArray(res.data.data) ? res.data.data : [];
                         const myEntry = leaderboard.find(st => Number(st.id) === Number(userId));
                         if (myEntry) {
                             setLiveExamRanks({
@@ -312,7 +322,7 @@ const MyExamTestScreen = ({ navigation, route }) => {
             };
             fetchRankings();
         }
-    }, [showResults, route.params?.update_id]);
+    }, [showResults, route.params?.update_id, route.params?.examId]);
 
     // Back button guard
     useEffect(() => {
@@ -413,8 +423,8 @@ const MyExamTestScreen = ({ navigation, route }) => {
                         chapter_ids: route.params?.chapterIds?.join(',') || (route.params?.chapter_id ? String(route.params.chapter_id) : ''),
                         answers: formattedAnswers,
                         time_spent_seconds: finalTimeRef.current,
-                        positive_marks: 4,
-                        negative_marks: 1
+                        positive_marks: route.params?.positiveMarks !== undefined ? Number(route.params.positiveMarks) : 4,
+                        negative_marks: route.params?.negativeMarks !== undefined ? Number(route.params.negativeMarks) : 1
                     });
                 } catch (errAttempt) {
                     console.log('[Exam] Attempt submit error:', errAttempt);
@@ -459,10 +469,13 @@ const MyExamTestScreen = ({ navigation, route }) => {
             else if (ans === q.correct_answer) correct++;
             else incorrect++;
         });
-        const posScore = correct * 4;
-        const negDeduction = incorrect * 1;
+        const posPerQ = route.params?.positiveMarks !== undefined ? Number(route.params.positiveMarks) : 4;
+        const negPerQ = route.params?.negativeMarks !== undefined ? Number(route.params.negativeMarks) : 1;
+        const posScore = correct * posPerQ;
+        const negDeduction = incorrect * negPerQ;
         const netScore = posScore - negDeduction;
-        const maxScore = questions.length * 4;
+        const maxScore = questions.length * posPerQ;
+
         return { correct, incorrect, unanswered, posScore, negDeduction, netScore, maxScore };
     }, [selectedAnswers, questions]);
 

@@ -191,6 +191,7 @@ try {
     <nav class="nav">
         <ul>
             <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="scholarship_exams.php" style="color:#d63031; font-weight:700;"><i class="fa-solid fa-trophy"></i> Live Exams</a></li>
             <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
             <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
             <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>

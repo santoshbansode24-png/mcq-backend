@@ -350,6 +350,7 @@ const PerformanceReportScreen = ({ navigation, route, user }) => {
 
     // Derive Data
     const summary = performanceData?.summary || {};
+    const syllabusSummary = performanceData?.syllabus_summary || {};
     const overall = performanceData?.overall_performance || {};
     const rawSubjects = performanceData?.subjects || [];
     // Deduplicate subjects by normalized name so duplicate subject cards (e.g. 2 Science) never appear

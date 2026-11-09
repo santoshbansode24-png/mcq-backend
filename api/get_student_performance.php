@@ -303,6 +303,26 @@ try {
             }
         }
 
+        // Pre-fetch all user chapter stats in 1 query for ultra-fast performance
+        $stmtAllChStats = $pdo->prepare("
+            SELECT 
+                chapter_id,
+                COUNT(*) as total_att,
+                IFNULL(SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END), 0) as total_corr
+            FROM (
+                SELECT chapter_id, is_correct FROM mcq_attempts WHERE user_id = ?
+                UNION ALL
+                SELECT chapter_id, is_correct FROM exam_attempt_answers WHERE user_id = ? AND is_correct IN (0, 1)
+            ) combined_att
+            WHERE chapter_id IS NOT NULL AND chapter_id > 0
+            GROUP BY chapter_id
+        ");
+        $stmtAllChStats->execute([$user_id, $user_id]);
+        $userChapterStats = [];
+        while ($cRow = $stmtAllChStats->fetch(PDO::FETCH_ASSOC)) {
+            $userChapterStats[intval($cRow['chapter_id'])] = $cRow;
+        }
+
         foreach ($subjectsByName as $subGroup) {
             $subIds = $subGroup['subject_ids'];
             $idPlaceholders = implode(',', array_fill(0, count($subIds), '?'));

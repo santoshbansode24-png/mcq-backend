@@ -26,6 +26,7 @@ try {
             `total_questions` INT DEFAULT 0,
             `is_live` TINYINT(1) DEFAULT 0,
             `is_scholarship` TINYINT(1) DEFAULT 1,
+            `category_slug` VARCHAR(50) DEFAULT 'scholarship',
             `start_time` DATETIME DEFAULT NULL,
             `end_time` DATETIME DEFAULT NULL,
             `instructions` TEXT DEFAULT NULL,
@@ -34,7 +35,8 @@ try {
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX (`class_id`),
             INDEX (`is_live`),
-            INDEX (`is_scholarship`)
+            INDEX (`is_scholarship`),
+            INDEX (`category_slug`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
 
@@ -42,6 +44,7 @@ try {
     $needed = [
         'is_live' => "ALTER TABLE `exams` ADD COLUMN `is_live` TINYINT(1) DEFAULT 0",
         'is_scholarship' => "ALTER TABLE `exams` ADD COLUMN `is_scholarship` TINYINT(1) DEFAULT 1",
+        'category_slug' => "ALTER TABLE `exams` ADD COLUMN `category_slug` VARCHAR(50) DEFAULT 'scholarship'",
         'start_time' => "ALTER TABLE `exams` ADD COLUMN `start_time` DATETIME DEFAULT NULL",
         'end_time' => "ALTER TABLE `exams` ADD COLUMN `end_time` DATETIME DEFAULT NULL",
         'instructions' => "ALTER TABLE `exams` ADD COLUMN `instructions` TEXT DEFAULT NULL",
@@ -64,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create_exam') {
         $title = trim($_POST['title'] ?? '');
+        $category_slug = trim($_POST['category_slug'] ?? 'scholarship');
         $class_id = intval($_POST['class_id'] ?? 38);
         $duration = intval($_POST['duration_minutes'] ?? 60);
         $pos_marks = floatval($_POST['positive_marks'] ?? 2.00);
@@ -98,15 +102,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stmtInsert = $pdo->prepare("
                     INSERT INTO exams 
-                    (title, class_id, duration_minutes, positive_marks, negative_marks, total_questions, is_live, is_scholarship, start_time, end_time, instructions, question_ids, selected_chapters, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, NOW())
+                    (title, class_id, category_slug, duration_minutes, positive_marks, negative_marks, total_questions, is_live, is_scholarship, start_time, end_time, instructions, question_ids, selected_chapters, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, NOW())
                 ");
                 $stmtInsert->execute([
-                    $title, $class_id, $duration, $pos_marks, $neg_marks, $total_q,
+                    $title, $class_id, $category_slug, $duration, $pos_marks, $neg_marks, $total_q,
                     $start_time, $end_time, $instructions, $question_ids_str, $chapter_ids_str
                 ]);
 
-                $message = "Scholarship Live Exam '$title' created successfully with $total_q questions!";
+                $message = "Scholarship/Competitive Exam '$title' created successfully with $total_q questions!";
             } catch (Exception $e) {
                 $error = "Failed to create exam: " . $e->getMessage();
             }
@@ -165,18 +169,67 @@ try {
     }
 } catch (Exception $e) {}
 
+// Competitive & Scholarship Categories Definition
+$CATEGORIES = [
+    'scholarship' => [
+        'name' => 'महाराष्ट्र राज्य शिष्यवृत्ती (5th & 8th)',
+        'badge' => '📜 राज्य शिष्यवृत्ती',
+        'color' => '#4F46E5',
+        'bg' => '#EEF2FF',
+        'desc' => 'PUP (५वी) व PSS (८वी) पेपर १ व पेपर २ सराव'
+    ],
+    'navodaya' => [
+        'name' => 'जवाहर नवोदय विद्यालय (JNVST)',
+        'badge' => '🏛️ नवोदय विद्यालय',
+        'color' => '#0284C7',
+        'bg' => '#E0F2FE',
+        'desc' => 'इयत्ता ६वी व ९वी प्रवेश परीक्षा (मानसिक क्षमता, अंकगणित, भाषा)'
+    ],
+    'sainik' => [
+        'name' => 'सैनिक शाळा प्रवेश परीक्षा (AISSEE)',
+        'badge' => '🎖️ सैनिक शाळा',
+        'color' => '#15803D',
+        'bg' => '#DCFCE7',
+        'desc' => 'इयत्ता ६वी व ९वी सैनिक स्कूल ऑल इंडिया प्रवेश परीक्षा'
+    ],
+    'olympiad' => [
+        'name' => 'ऑलिम्पियाड स्पर्धा परीक्षा (SOF/Homi Bhabha)',
+        'badge' => '🏆 ऑलिम्पियाड',
+        'color' => '#D97706',
+        'bg' => '#FEF3C7',
+        'desc' => 'गणित (IMO), विज्ञान (NSO), इंग्रजी (IEO), होमी भाभा'
+    ],
+    'mts' => [
+        'name' => 'MTS / NMMS प्रज्ञाशोध परीक्षा',
+        'badge' => '💡 MTS / NMMS',
+        'color' => '#7C3AED',
+        'bg' => '#F3E8FF',
+        'desc' => 'महाराष्ट्र टॅलेंट सर्च (MTS) व NMMS राष्ट्रीय शिष्यवृत्ती'
+    ],
+];
+
+$selected_cat = $_GET['cat'] ?? 'all';
+
 // Fetch all scholarship exams
 $exams = [];
 try {
-    $exams = $pdo->query("
+    $whereClause = "e.is_scholarship = 1";
+    $params = [];
+    if ($selected_cat !== 'all') {
+        $whereClause .= " AND (e.category_slug = ? OR (e.category_slug IS NULL AND ? = 'scholarship'))";
+        $params = [$selected_cat, $selected_cat];
+    }
+    $stmt = $pdo->prepare("
         SELECT e.*, c.class_name,
                (SELECT COUNT(*) FROM exam_attempts ea WHERE ea.exam_id = e.exam_id) as total_attempts,
                (SELECT AVG(ea.net_score) FROM exam_attempts ea WHERE ea.exam_id = e.exam_id) as avg_score
         FROM exams e
         LEFT JOIN classes c ON e.class_id = c.class_id
-        WHERE e.is_scholarship = 1
+        WHERE $whereClause
         ORDER BY e.exam_id DESC
-    ")->fetchAll();
+    ");
+    $stmt->execute($params);
+    $exams = $stmt->fetchAll();
 } catch (Exception $e) {}
 
 $admin_name = $_SESSION['admin_name'] ?? 'Admin';
@@ -227,6 +280,12 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
         .btn-toggle { background: #f1f2f6; color: #2d3436; }
         .btn-delete { background: #ffeaa7; color: #d63031; }
         
+        /* Category Filter Tabs */
+        .cat-filter-tabs { display: flex; gap: 10px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 6px; }
+        .cat-tab { padding: 10px 18px; border-radius: 50px; background: white; color: #555; text-decoration: none; font-size: 13px; font-weight: 600; border: 1.5px solid #e2e8f0; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
+        .cat-tab:hover { border-color: #667eea; color: #667eea; }
+        .cat-tab.active { background: #667eea; color: white; border-color: #667eea; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; overflow-y: auto; padding: 40px 20px; }
         .modal-content { background: white; max-width: 750px; margin: auto; border-radius: 16px; padding: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
@@ -252,6 +311,7 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
 <nav class="nav">
     <ul>
         <li><a href="dashboard.php">Dashboard</a></li>
+        <li><a href="scholarship_hub.php" style="color: #8E2DE2; font-weight: 700;">✨ Scholarship Studio (AI)</a></li>
         <li><a href="scholarship_exams.php" class="active">🏆 Scholarship Live Exams</a></li>
         <li><a href="mcqs.php">MCQs</a></li>
         <li><a href="subjects.php">Subjects</a></li>
@@ -270,10 +330,22 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
 
     <div class="top-bar">
         <div>
-            <h2>सर्व शिष्यवृत्ती लाईव्ह परीक्षा (Total: <?php echo count($exams); ?>)</h2>
-            <p style="color: #666; font-size: 14px;">येथून नवीन परीक्षा शेड्युल करा, प्रश्न जोडा आणि थेट WhatsApp वर लिंक शेअर करा.</p>
+            <h2>सर्व शिष्यवृत्ती व स्पर्धा परीक्षा (Total: <?php echo count($exams); ?>)</h2>
+            <p style="color: #666; font-size: 14px;">नवोदय, सैनिक शाळा, ऑलिम्पियाड, MTS व राज्य शिष्यवृत्ती परीक्षांचे एकाच ठिकाणाहून नियंत्रण.</p>
         </div>
-        <button onclick="openModal()" class="btn-create">➕ नवीन Live Exam तयार करा</button>
+        <div style="display: flex; gap: 10px;">
+            <a href="scholarship_hub.php" class="btn-create" style="background: linear-gradient(135deg, #8E2DE2, #4A00E0); box-shadow: 0 4px 12px rgba(142, 45, 226, 0.3);">✨ AI Question Studio</a>
+            <button onclick="openModal()" class="btn-create">➕ नवीन Live Exam तयार करा</button>
+        </div>
+    </div>
+
+    <div class="cat-filter-tabs">
+        <a href="scholarship_exams.php?cat=all" class="cat-tab <?php echo $selected_cat === 'all' ? 'active' : ''; ?>">🌟 सर्व परीक्षा (All)</a>
+        <?php foreach ($CATEGORIES as $key => $cat): ?>
+            <a href="scholarship_exams.php?cat=<?php echo $key; ?>" class="cat-tab <?php echo $selected_cat === $key ? 'active' : ''; ?>">
+                <?php echo $cat['badge']; ?>
+            </a>
+        <?php endforeach; ?>
     </div>
 
     <?php if (empty($exams)): ?>
@@ -310,7 +382,10 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
                     $badge_class = 'badge-live';
                 }
 
-                $shareText = "🏆 *महाराष्ट्र राज्य शिष्यवृत्ती सराव परीक्षा*\n" .
+                $cat_key = $ex['category_slug'] ?? 'scholarship';
+                $cat_info = $CATEGORIES[$cat_key] ?? $CATEGORIES['scholarship'];
+
+                $shareText = "🏆 *{$cat_info['name']}*\n" .
                              "📝 *{$ex['title']}*\n" .
                              "⏱️ वेळ: " . ($ex['duration_minutes'] ?? 60) . " मिनिटे | प्रश्न: " . ($ex['total_questions'] ?? 50) . "\n" .
                              "📅 दिनांक: " . (!empty($ex['start_time']) ? date('d M Y, h:i A', strtotime($ex['start_time'])) : 'लवकरच') . "\n" .
@@ -319,7 +394,10 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
             ?>
                 <div class="exam-card <?php echo $status_class; ?>">
                     <div>
-                        <span class="badge <?php echo $badge_class; ?>"><?php echo $badge_text; ?></span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span class="badge" style="background: <?php echo $cat_info['bg']; ?>; color: <?php echo $cat_info['color']; ?>; border: 1px solid <?php echo $cat_info['color']; ?>;"><?php echo $cat_info['badge']; ?></span>
+                            <span class="badge <?php echo $badge_class; ?>"><?php echo $badge_text; ?></span>
+                        </div>
                         <h3 class="exam-title"><?php echo htmlspecialchars($ex['title']); ?></h3>
                         
                         <div class="exam-meta">
@@ -382,14 +460,19 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
         <form method="POST">
             <input type="hidden" name="action" value="create_exam">
 
-            <div class="form-group">
-                <label>परीक्षेचे नाव (Exam Title) *</label>
-                <input type="text" name="title" class="form-control" required placeholder="उदा. महाराष्ट्र राज्य ५वी शिष्यवृत्ती महा-सराव परीक्षा - १">
-            </div>
-
             <div class="form-row">
                 <div class="form-group">
-                    <label>इयत्ता / वर्ग (Class)</label>
+                    <label>परीक्षेचा प्रकार / कॅटेगरी (Exam Category) *</label>
+                    <select name="category_slug" class="form-control" required>
+                        <?php foreach ($CATEGORIES as $ckey => $cval): ?>
+                            <option value="<?php echo $ckey; ?>">
+                                <?php echo $cval['badge'] . ' - ' . $cval['name']; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>इयत्ता / वर्ग (Class) *</label>
                     <select name="class_id" class="form-control">
                         <?php foreach ($classes as $c): ?>
                             <option value="<?php echo $c['class_id']; ?>" <?php echo ($c['class_id'] == 38 || strpos($c['class_name'], 'Scholarship') !== false) ? 'selected' : ''; ?>>
@@ -398,6 +481,12 @@ $board_name = $_SESSION['board_name'] ?? 'Scholarship';
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label>परीक्षेचे नाव (Exam Title) *</label>
+                <input type="text" name="title" class="form-control" required placeholder="उदा. नवोदय विद्यालय ५वी प्रवेश महा-सराव परीक्षा - १">
+            </div>
                 <div class="form-group">
                     <label>कालावधी (Duration in Minutes)</label>
                     <input type="number" name="duration_minutes" class="form-control" value="60" required>

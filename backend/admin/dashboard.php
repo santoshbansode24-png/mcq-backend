@@ -191,6 +191,7 @@ try {
     <nav class="nav">
         <ul>
             <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="scholarship_hub.php" style="color:#8E2DE2; font-weight:700;"><i class="fa-solid fa-wand-magic-sparkles"></i> Scholarship Studio (AI)</a></li>
             <li><a href="scholarship_exams.php" style="color:#d63031; font-weight:700;"><i class="fa-solid fa-trophy"></i> Live Exams</a></li>
             <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
             <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
@@ -225,6 +226,25 @@ try {
         </div>
         <?php endif; ?>
         
+        <!-- Scholarship Studio Banner Card -->
+        <div style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); padding: 25px 30px; border-radius: 18px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 10px 25px rgba(142, 45, 226, 0.25);">
+            <div>
+                <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+                    ✨ Competitive Exam & Scholarship Studio (AI)
+                    <span style="background: rgba(255,255,255,0.25); font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700;">GEMINI 2.5</span>
+                </h2>
+                <p style="font-size: 14px; opacity: 0.95; margin: 0;">Generate questions for Navodaya, Sainik School, Olympiad, MTS/NMMS, and 5th & 8th Scholarship exams with AI.</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <a href="scholarship_hub.php" style="background: white; color: #4A00E0; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 14px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    🚀 Open AI Studio
+                </a>
+                <a href="scholarship_exams.php" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px; white-space: nowrap;">
+                    🏆 Live Exams
+                </a>
+            </div>
+        </div>
+
         <!-- Statistics -->
         <div class="stats-grid">
             <div class="stat-card">

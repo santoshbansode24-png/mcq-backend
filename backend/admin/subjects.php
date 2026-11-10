@@ -120,6 +120,8 @@ $classes = $classes_query->fetchAll();
     <nav class="nav">
         <ul>
             <li><a href="dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="scholarship_hub.php" style="color:#8E2DE2; font-weight:700;"><i class="fa-solid fa-wand-magic-sparkles"></i> Scholarship Studio (AI)</a></li>
+            <li><a href="scholarship_exams.php" style="color:#667eea; font-weight:700;"><i class="fa-solid fa-trophy"></i> Live Exams</a></li>
             <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
             <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
             <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>

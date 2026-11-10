@@ -31,6 +31,85 @@ import { fetchChapters } from '../api/chapters';
 
 const { width } = Dimensions.get('window');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPETITIVE & SCHOLARSHIP EXAM CATEGORIES MASTER
+// ─────────────────────────────────────────────────────────────────────────────
+const COMPETITIVE_CATEGORIES = [
+    {
+        id: 'all',
+        title: 'सर्व परीक्षा',
+        badge: '🌟 All Exams',
+        icon: 'apps-outline',
+        gradient: ['#8E2DE2', '#4A00E0'],
+        blueprint: null
+    },
+    {
+        id: 'scholarship',
+        title: 'राज्य शिष्यवृत्ती',
+        badge: '📜 ५वी व ८वी शिष्यवृत्ती',
+        icon: 'ribbon-outline',
+        gradient: ['#4F46E5', '#3730A3'],
+        blueprint: {
+            title: 'महाराष्ट्र राज्य परीक्षा परिषद (MSCE) शिष्यवृत्ती',
+            subtitle: 'इयत्ता ५वी (PUP) व ८वी (PSS) महा-सराव',
+            papers: '• पेपर १: प्रथम भाषा (२५ प्रश्न - ५० गुण) + गणित (५० प्रश्न - १०० गुण) = १५० गुण\n• पेपर २: तृतीय भाषा (२५ प्रश्न - ५० गुण) + बुद्धिमत्ता चाचणी (५० प्रश्न - १०० गुण) = १५० गुण',
+            tip: '⏱️ वेळ: प्रत्येक पेपरला ९० मिनिटे | दररोज ५० प्रश्नांचा टाईम्ड सराव आवश्यक.'
+        }
+    },
+    {
+        id: 'navodaya',
+        title: 'नवोदय (JNVST)',
+        badge: '🏛️ नवोदय विद्यालय',
+        icon: 'school-outline',
+        gradient: ['#0284C7', '#0369A1'],
+        blueprint: {
+            title: 'जवाहर नवोदय विद्यालय निवड चाचणी (JNVST)',
+            subtitle: 'इयत्ता ६वी व ९वी प्रवेश परीक्षा',
+            papers: '१. मानसिक क्षमता चाचणी (MAT): ४० प्रश्न (५० गुण - ६० मिनिटे)\n२. अंकगणित चाचणी: २० प्रश्न (२५ गुण - ३० मिनिटे)\n३. भाषा चाचणी (उतारे): २० प्रश्न (२५ गुण - ३० मिनिटे)',
+            tip: '🎯 एकूण ८० प्रश्न | १०० गुण | वेळ: २ तास | निगेटिव्ह मार्किंग नाही.'
+        }
+    },
+    {
+        id: 'sainik',
+        title: 'सैनिक स्कूल',
+        badge: '🎖️ सैनिक शाळा (AISSEE)',
+        icon: 'shield-checkmark-outline',
+        gradient: ['#15803D', '#166534'],
+        blueprint: {
+            title: 'ऑल इंडिया सैनिक स्कूल प्रवेश परीक्षा (AISSEE)',
+            subtitle: 'इयत्ता ६वी व ९वी सैनिक स्कूल प्रवेश',
+            papers: '• गणित: ५० प्रश्न (१५० गुण - ३ गुण प्रति प्रश्न)\n• बुद्धिमत्ता: २५ प्रश्न (५० गुण)\n• भाषा: २५ प्रश्न (५० गुण)\n• सामान्य ज्ञान (GK): २५ प्रश्न (५० गुण)',
+            tip: '🏆 एकूण १२५ प्रश्न | ३०० गुण | वेळ: १५० मिनिटे | गणितात ५०% गुण आवश्यक.'
+        }
+    },
+    {
+        id: 'olympiad',
+        title: 'ऑलिम्पियाड',
+        badge: '🏆 ऑलिम्पियाड',
+        icon: 'trophy-outline',
+        gradient: ['#D97706', '#B45309'],
+        blueprint: {
+            title: 'राष्ट्रीय व आंतरराष्ट्रीय ऑलिम्पियाड स्पर्धा परीक्षा',
+            subtitle: 'SOF (IMO, NSO, IEO) व डॉ. होमी भाभा बालवैज्ञानिक',
+            papers: '• Section 1: Logical Reasoning (तर्क व विचार चाचणी)\n• Section 2: Mathematical / Science Concepts (शालेय अभ्यासक्रम)\n• Section 3: Achievers Section (HOTS - उच्च दर्जाचे विचार प्रश्न - २x/३x गुण)',
+            tip: '💡 संकल्पनात्मक अचूकतेवर भर द्या, Achievers Section मध्ये सर्वाधिक रँक ठरते.'
+        }
+    },
+    {
+        id: 'mts',
+        title: 'MTS / NMMS',
+        badge: '💡 MTS / NMMS प्रज्ञाशोध',
+        icon: 'bulb-outline',
+        gradient: ['#7C3AED', '#6D28D9'],
+        blueprint: {
+            title: 'महाराष्ट्र टॅलेंट सर्च (MTS) व NMMS प्रज्ञाशोध परीक्षा',
+            subtitle: 'इयत्ता ८वी, ९वी व १०वी प्रज्ञाशोध परीक्षा',
+            papers: '• MAT: मानसिक क्षमता चाचणी (९० प्रश्न / ९० गुण - ९० मिनिटे)\n• SAT: शालेय अभियोग्यता चाचणी (विज्ञान, समाजशास्त्र, गणित - ९० प्रश्न / ९० गुण)',
+            tip: '🏅 राष्ट्रीय पातळीवरील मानाची शिष्यवृत्ती मिळवण्यासाठी वेळेचे अचूक नियोजन ठेवा.'
+        }
+    }
+];
+
 const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const scholarshipClassId = route.params?.scholarshipClassId || 38;
     const levelTitle = route.params?.levelTitle || "Scholarship & Olympiad";
@@ -38,6 +117,9 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     // 4 Core Tabs: 'live' | 'subjects' | 'performance' | 'practice'
     const [activeTab, setActiveTab] = useState('live');
     const [selectedLanguage, setSelectedLanguage] = useState('marathi');
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [categoryCounts, setCategoryCounts] = useState({});
+    const [categoryLoading, setCategoryLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [userId, setUserId] = useState(0);
@@ -91,11 +173,11 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         }
     };
 
-    const loadAllData = async (uid = userId, force = false) => {
+    const loadAllData = async (uid = userId, force = false, cat = selectedCategory) => {
         if (force) setRefreshing(true);
         try {
             await Promise.all([
-                loadLiveExams(uid),
+                loadLiveExams(uid, cat),
                 loadSubjectsData(),
                 loadPerformance(uid)
             ]);
@@ -111,14 +193,26 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         await saveLanguagePreference(language);
     };
 
+    const handleCategorySelect = async (catId) => {
+        if (catId === selectedCategory) return;
+        setSelectedCategory(catId);
+        setCategoryLoading(true);
+        await loadLiveExams(userId, catId);
+        setCategoryLoading(false);
+    };
+
     // ─────────────────────────────────────────────────────────────────────────────
     // 1. LIVE EXAM FUNCTIONS
     // ─────────────────────────────────────────────────────────────────────────────
-    const loadLiveExams = async (uid = userId) => {
+    const loadLiveExams = async (uid = userId, cat = selectedCategory) => {
         try {
-            const res = await axios.get(`${API_URL}/get_scholarship_live_exams.php?user_id=${uid}&class_id=${scholarshipClassId}`);
+            const catParam = cat && cat !== 'all' ? `&category=${cat}` : '';
+            const res = await axios.get(`${API_URL}/get_scholarship_live_exams.php?user_id=${uid}&class_id=${scholarshipClassId}${catParam}`);
             if (res.data?.status === 'success') {
                 setLiveExamsData(res.data.data);
+                if (res.data.data?.category_counts) {
+                    setCategoryCounts(res.data.data.category_counts);
+                }
             }
         } catch (err) {
             console.log('Error loading live exams:', err);
@@ -462,19 +556,48 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     // TAB 1: LIVE EXAM RENDER
     const renderLiveExamTab = () => {
         const { spotlight_exam, live_and_upcoming = [], past_exams = [] } = liveExamsData || {};
+        const activeCatData = COMPETITIVE_CATEGORIES.find(c => c.id === selectedCategory) || COMPETITIVE_CATEGORIES[0];
 
         return (
             <ScrollView
                 style={styles.tabContentScroll}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true, selectedCategory)} />}
             >
+                {/* Category Blueprint & Exam Guide Card */}
+                {activeCatData?.blueprint && (
+                    <LinearGradient colors={activeCatData.gradient} style={styles.blueprintCard}>
+                        <View style={styles.blueprintHeaderRow}>
+                            <View style={styles.blueprintIconCircle}>
+                                <Ionicons name={activeCatData.icon} size={22} color="white" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 10 }}>
+                                <Text style={styles.blueprintTitle}>{activeCatData.blueprint.title}</Text>
+                                <Text style={styles.blueprintSubtitle}>{activeCatData.blueprint.subtitle}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.blueprintDivider} />
+                        <Text style={styles.blueprintPatternHeader}>📋 परीक्षा पॅटर्न व गुण विभागणी:</Text>
+                        <Text style={styles.blueprintPatternText}>{activeCatData.blueprint.papers}</Text>
+                        <View style={styles.blueprintTipBox}>
+                            <Text style={styles.blueprintTipText}>{activeCatData.blueprint.tip}</Text>
+                        </View>
+                    </LinearGradient>
+                )}
+
                 {/* Spotlight Exam Banner */}
                 {spotlight_exam && (
                     <LinearGradient colors={['#FF416C', '#FF4B2B']} style={styles.spotlightCard}>
-                        <View style={styles.spotlightBadge}>
-                            <Text style={styles.spotlightBadgeText}>
-                                {spotlight_exam.status === 'live_now' ? '🔴 LIVE NOW' : '⏳ UPCOMING EXAM'}
-                            </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <View style={styles.spotlightBadge}>
+                                <Text style={styles.spotlightBadgeText}>
+                                    {spotlight_exam.status === 'live_now' ? '🔴 LIVE NOW' : '⏳ UPCOMING EXAM'}
+                                </Text>
+                            </View>
+                            {spotlight_exam.category_badge && (
+                                <View style={styles.spotlightCatBadge}>
+                                    <Text style={styles.spotlightCatBadgeText}>{spotlight_exam.category_badge}</Text>
+                                </View>
+                            )}
                         </View>
                         <Text style={styles.spotlightTitle}>{spotlight_exam.title}</Text>
                         <Text style={styles.spotlightSubtitle}>
@@ -512,20 +635,45 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                 )}
 
                 {/* Upcoming / Active Live Exams */}
-                <Text style={styles.sectionHeader}>🔴 आगामी व चालू परीक्षा (Live & Upcoming)</Text>
-                {live_and_upcoming.length === 0 ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={styles.sectionHeader}>🔴 आगामी व चालू परीक्षा (Live & Upcoming)</Text>
+                    {activeCatData.id !== 'all' && (
+                        <Text style={[styles.filterIndicator, { color: activeCatData.gradient[0] }]}>
+                            {activeCatData.badge}
+                        </Text>
+                    )}
+                </View>
+                {categoryLoading ? (
                     <View style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>सध्या कोणतीही नवीन परीक्षा शेड्युल केलेली नाही.</Text>
+                        <ActivityIndicator size="small" color={activeCatData.gradient[0]} style={{ marginBottom: 6 }} />
+                        <Text style={styles.emptyText}>परीक्षा लोड होत आहेत...</Text>
+                    </View>
+                ) : live_and_upcoming.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                        <Ionicons name="calendar-outline" size={32} color="#cbd5e1" style={{ marginBottom: 6 }} />
+                        <Text style={styles.emptyText}>या कॅटेगरीमध्ये सध्या कोणतीही नवीन परीक्षा शेड्युल केलेली नाही.</Text>
+                        {selectedCategory !== 'all' && (
+                            <TouchableOpacity style={styles.btnShowAllExams} onPress={() => handleCategorySelect('all')}>
+                                <Text style={styles.btnShowAllExamsText}>🌟 सर्व उपलब्ध परीक्षा पहा</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 ) : (
                     live_and_upcoming.map(exam => (
-                        <View key={exam.exam_id} style={styles.examCard}>
+                        <View key={exam.exam_id} style={[styles.examCard, { borderLeftColor: exam.category_color || '#8E2DE2' }]}>
                             <View style={{ flex: 1 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                     <View style={[styles.statusDot, { backgroundColor: exam.status === 'live_now' ? '#10b981' : '#3b82f6' }]} />
                                     <Text style={styles.examStatusText}>
                                         {exam.status === 'live_now' ? 'चालू आहे' : 'लवकरच'}
                                     </Text>
+                                    {exam.category_badge && (
+                                        <View style={[styles.examCatBadge, { borderColor: exam.category_color || '#8E2DE2' }]}>
+                                            <Text style={[styles.examCatBadgeText, { color: exam.category_color || '#8E2DE2' }]}>
+                                                {exam.category_badge}
+                                            </Text>
+                                        </View>
+                                    )}
                                 </View>
                                 <Text style={styles.examCardTitle}>{exam.title}</Text>
                                 <Text style={styles.examCardMeta}>
@@ -534,7 +682,7 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 8 }}>
                                 <TouchableOpacity
-                                    style={[styles.btnActionSmall, { backgroundColor: '#8E2DE2' }]}
+                                    style={[styles.btnActionSmall, { backgroundColor: exam.category_color || '#8E2DE2' }]}
                                     onPress={() => startLiveExam(exam.exam_id)}
                                 >
                                     <Text style={styles.btnActionText}>परीक्षेला बसा</Text>
@@ -561,7 +709,16 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                     past_exams.map(exam => (
                         <View key={exam.exam_id} style={styles.pastExamCard}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.pastExamTitle}>{exam.title}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                    <Text style={styles.pastExamTitle}>{exam.title}</Text>
+                                    {exam.category_badge && (
+                                        <View style={[styles.examCatBadge, { borderColor: exam.category_color || '#8E2DE2', paddingVertical: 1, paddingHorizontal: 6 }]}>
+                                            <Text style={[styles.examCatBadgeText, { color: exam.category_color || '#8E2DE2', fontSize: 9 }]}>
+                                                {exam.category_badge}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
                                 {exam.has_attempted ? (
                                     <View style={styles.rankPill}>
                                         <Text style={styles.rankPillText}>
@@ -595,6 +752,7 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
             ['#F2994A', '#F2C94C'],
             ['#11998e', '#38ef7d']
         ];
+        const activeCatData = COMPETITIVE_CATEGORIES.find(c => c.id === selectedCategory) || COMPETITIVE_CATEGORIES[0];
 
         return (
             <FlatList
@@ -604,6 +762,19 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                 columnWrapperStyle={styles.subjectRow}
                 contentContainerStyle={{ padding: 16 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+                ListHeaderComponent={
+                    activeCatData.id !== 'all' ? (
+                        <View style={styles.subjectCatHeaderBox}>
+                            <View style={[styles.subjectCatIconBox, { backgroundColor: activeCatData.gradient[0] }]}>
+                                <Ionicons name={activeCatData.icon} size={18} color="white" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 10 }}>
+                                <Text style={styles.subjectCatHeaderTitle}>{activeCatData.badge} अभ्यासक्रम</Text>
+                                <Text style={styles.subjectCatHeaderSubtitle}>या परीक्षेसाठी आवश्यक असणारे सर्व विषय व सराव घटक खालीलप्रमाणे आहेत:</Text>
+                            </View>
+                        </View>
+                    ) : null
+                }
                 renderItem={({ item, index }) => (
                     <TouchableOpacity
                         style={styles.subjectCard}
@@ -924,7 +1095,7 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                         </TouchableOpacity>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.headerTitle}>{levelTitle}</Text>
-                            <Text style={styles.headerSubtitle}>इयत्ता ५ वी व ८ वी महा-सराव</Text>
+                            <Text style={styles.headerSubtitle}>नवोदय • सैनिक शाळा • ऑलिम्पियाड • शिष्यवृत्ती</Text>
                         </View>
                         <LanguageToggle
                             selectedLanguage={selectedLanguage}
@@ -970,6 +1141,54 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                             </Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Competitive Exam Horizontal Category Selector */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryScrollContainer}
+                    >
+                        {COMPETITIVE_CATEGORIES.map(cat => {
+                            const isSelected = selectedCategory === cat.id;
+                            const count = categoryCounts[cat.id] ?? 0;
+                            return (
+                                <TouchableOpacity
+                                    key={cat.id}
+                                    style={[
+                                        styles.categoryPill,
+                                        isSelected && styles.categoryPillActive
+                                    ]}
+                                    onPress={() => handleCategorySelect(cat.id)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons
+                                        name={cat.icon}
+                                        size={14}
+                                        color={isSelected ? '#4A00E0' : 'rgba(255,255,255,0.9)'}
+                                    />
+                                    <Text style={[
+                                        styles.categoryPillText,
+                                        isSelected && styles.categoryPillTextActive
+                                    ]}>
+                                        {cat.title}
+                                    </Text>
+                                    {count > 0 && (
+                                        <View style={[
+                                            styles.categoryCountBadge,
+                                            isSelected && styles.categoryCountBadgeActive
+                                        ]}>
+                                            <Text style={[
+                                                styles.categoryCountText,
+                                                isSelected && styles.categoryCountTextActive
+                                            ]}>
+                                                {count}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </ScrollView>
                 </SafeAreaView>
             </LinearGradient>
 
@@ -1069,6 +1288,44 @@ const styles = StyleSheet.create({
     btnShareSpotlightText: { color: 'white', fontWeight: 'bold', fontSize: 13 },
     attemptedBadge: { flex: 1, backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 10 },
     attemptedText: { color: 'white', fontSize: 12, fontWeight: '600' },
+
+    /* Category Selector (Header) */
+    categoryScrollContainer: { paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' },
+    categoryPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+    categoryPillActive: { backgroundColor: 'white', borderColor: 'white', elevation: 2 },
+    categoryPillText: { fontSize: 12, fontWeight: '600', color: 'white', marginLeft: 4 },
+    categoryPillTextActive: { color: '#4A00E0', fontWeight: 'bold' },
+    categoryCountBadge: { marginLeft: 6, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
+    categoryCountBadgeActive: { backgroundColor: '#4A00E0' },
+    categoryCountText: { fontSize: 10, color: 'white', fontWeight: 'bold' },
+    categoryCountTextActive: { color: 'white' },
+
+    /* Category Blueprint Card */
+    blueprintCard: { borderRadius: 16, padding: 16, marginBottom: 18, elevation: 3 },
+    blueprintHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+    blueprintIconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
+    blueprintTitle: { color: 'white', fontSize: 15, fontWeight: 'bold' },
+    blueprintSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 1 },
+    blueprintDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 12 },
+    blueprintPatternHeader: { color: 'white', fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
+    blueprintPatternText: { color: 'rgba(255,255,255,0.95)', fontSize: 12, lineHeight: 18, marginBottom: 8 },
+    blueprintTipBox: { backgroundColor: 'rgba(0,0,0,0.18)', padding: 8, borderRadius: 8, marginTop: 4 },
+    blueprintTipText: { color: 'white', fontSize: 11, fontWeight: '500' },
+
+    /* Exam Category Badges */
+    filterIndicator: { fontSize: 11, fontWeight: 'bold' },
+    spotlightCatBadge: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+    spotlightCatBadgeText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
+    examCatBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: '#f8fafc' },
+    examCatBadgeText: { fontSize: 10, fontWeight: 'bold' },
+    btnShowAllExams: { marginTop: 12, backgroundColor: '#8E2DE2', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+    btnShowAllExamsText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+
+    /* Subject Category Header Box */
+    subjectCatHeaderBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 12, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', elevation: 1 },
+    subjectCatIconBox: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+    subjectCatHeaderTitle: { fontSize: 13, fontWeight: 'bold', color: '#1e293b' },
+    subjectCatHeaderSubtitle: { fontSize: 11, color: '#64748b', marginTop: 2 },
 
     /* Exam Cards */
     examCard: { flexDirection: 'row', backgroundColor: 'white', padding: 16, borderRadius: 12, marginBottom: 12, alignItems: 'center', borderLeftWidth: 4, borderLeftColor: '#8E2DE2', elevation: 1 },

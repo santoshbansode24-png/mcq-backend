@@ -188,7 +188,12 @@ try {
     $past_exams = [];
 
     foreach ($allExams as $exam) {
+        if (($exam['exam_status'] ?? '') === 'draft') {
+            continue;
+        }
         $exam_id = $exam['exam_id'];
+        $exam['total_marks'] = isset($exam['total_marks']) ? floatval($exam['total_marks']) : (intval($exam['total_questions']) * floatval($exam['positive_marks']));
+        $exam['selected_subjects_list'] = json_decode($exam['selected_subjects'] ?? '[]', true) ?: [];
         $has_attempted = isset($userAttempts[$exam_id]);
         $attempt_data = $has_attempted ? $userAttempts[$exam_id] : null;
 

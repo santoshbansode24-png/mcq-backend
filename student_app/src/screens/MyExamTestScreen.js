@@ -21,6 +21,8 @@ import { API_URL, BASE_URL } from '../api/config';
 import MathJaxWebView from '../components/MathJaxWebView';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 const { width } = Dimensions.get('window');
 
@@ -505,6 +507,25 @@ const MyExamTestScreen = ({ navigation, route }) => {
         const { correct, incorrect, unanswered, posScore, negDeduction, netScore, maxScore } = results;
         const percentage = ((correct / questions.length) * 100).toFixed(1);
 
+        // Compute Subject-wise Performance
+        const subjectBreakdown = {};
+        questions.forEach((q, idx) => {
+            const sub = q.subject_name || 'General';
+            if (!subjectBreakdown[sub]) {
+                subjectBreakdown[sub] = { total: 0, correct: 0, wrong: 0 };
+            }
+            subjectBreakdown[sub].total += 1;
+            const ans = selectedAnswers[idx];
+            if (ans) {
+                if (ans.toLowerCase() === (q.correct_answer || '').toLowerCase()) {
+                    subjectBreakdown[sub].correct += 1;
+                } else {
+                    subjectBreakdown[sub].wrong += 1;
+                }
+            }
+        });
+        const subjectEntries = Object.entries(subjectBreakdown);
+
         const renderReviewItem = ({ item, index }) => (
             <ReviewCard question={item} index={index} userAnswer={selectedAnswers[index]} />
         );
@@ -570,9 +591,87 @@ const MyExamTestScreen = ({ navigation, route }) => {
                     </View>
                 </View>
 
+                {subjectEntries.length > 0 && (
+                    <View style={{ backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 16, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                        <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginBottom: 10 }}>📊 Subject-wise Performance</Text>
+                        {subjectEntries.map(([subName, stat]) => {
+                            const acc = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
+                            return (
+                                <View key={subName} style={{ marginBottom: 10 }}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155' }}>{subName}</Text>
+                                        <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4f46e5' }}>{stat.correct}/{stat.total} ({acc}%)</Text>
+                                    </View>
+                                    <View style={{ height: 6, backgroundColor: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                                        <View style={{ height: '100%', width: `${acc}%`, backgroundColor: acc >= 70 ? '#16a34a' : acc >= 40 ? '#f59e0b' : '#dc2626' }} />
+                                    </View>
+                                </View>
+                            );
+                        })}
+                    </View>
+                )}
+
+                <TouchableOpacity
+                    onPress={downloadExamPaperPDF}
+                    activeOpacity={0.85}
+                    style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+                >
+                    <Ionicons name="document-text-outline" size={20} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>📄 Download Exam Paper PDF</Text>
+                </TouchableOpacity>
+
                 <Text style={styles.reviewTitle}>Review Answers</Text>
             </>
         );
+
+        const downloadExamPaperPDF = async () => {
+            try {
+                const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const rankLine = liveExamRanks?.examRank ? ` | Rank: #${liveExamRanks.examRank}` : '';
+                const qHtml = questions.map((q, idx) => {
+                    const userAns = selectedAnswers[idx] ? selectedAnswers[idx].toUpperCase() : 'Skipped';
+                    const corrAns = (q.correct_answer || '').toUpperCase();
+                    return `
+                        <div style="margin-bottom:14px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;page-break-inside:avoid;">
+                            <div style="font-weight:bold;margin-bottom:6px;">Q${idx + 1}. ${escapeHtml(q.question)}</div>
+                            <div style="font-size:13px;line-height:1.6;">
+                                <div>(A) ${escapeHtml(q.option_a)}</div>
+                                <div>(B) ${escapeHtml(q.option_b)}</div>
+                                <div>(C) ${escapeHtml(q.option_c)}</div>
+                                <div>(D) ${escapeHtml(q.option_d)}</div>
+                            </div>
+                            <div style="margin-top:6px;font-size:12px;color:#334155;">
+                                <strong>Your Answer:</strong> ${userAns} &nbsp;|&nbsp;
+                                <strong style="color:#15803d;">Correct Answer:</strong> ${corrAns}
+                            </div>
+                            ${q.explanation ? `<div style="margin-top:4px;font-size:12px;color:#475569;"><em>Explanation: ${escapeHtml(q.explanation)}</em></div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                const html = `
+                    <html>
+                    <head><meta charset="utf-8" /></head>
+                    <body style="font-family:sans-serif;padding:24px;color:#1e293b;">
+                        <h2 style="margin-bottom:4px;">${escapeHtml(subjectName || 'Veeru Live Exam Paper')}</h2>
+                        <p style="color:#475569;font-size:13px;margin-bottom:16px;">
+                            Score: ${netScore} / ${maxScore} | Accuracy: ${percentage}%${rankLine} | Time: ${formatTime(finalTimeRef.current)}
+                        </p>
+                        <hr style="border:none;border-top:1px solid #cbd5e1;margin-bottom:16px;" />
+                        ${qHtml}
+                    </body>
+                    </html>
+                `;
+                const { uri } = await Print.printToFileAsync({ html });
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Download Exam Paper PDF' });
+                } else {
+                    Alert.alert('PDF Ready', `Saved to: ${uri}`);
+                }
+            } catch (err) {
+                Alert.alert('Error', 'PDF तयार करताना त्रुटी आली.');
+            }
+        };
 
         const ListFooter = (
             <TouchableOpacity

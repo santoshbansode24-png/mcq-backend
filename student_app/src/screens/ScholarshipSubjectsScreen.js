@@ -133,6 +133,20 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const [leaderboardModalVisible, setLeaderboardModalVisible] = useState(false);
     const [selectedExamLeaderboard, setSelectedExamLeaderboard] = useState(null);
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+    const [elapsedTicks, setElapsedTicks] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => setElapsedTicks(t => t + 1), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatCountdown = (baseSeconds) => {
+        const rem = Math.max(0, (baseSeconds || 0) - elapsedTicks);
+        const hrs = Math.floor(rem / 3600);
+        const mins = Math.floor((rem % 3600) / 60);
+        const secs = rem % 60;
+        return `${hrs}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+    };
 
     // Tab 2: Subjects State
     const [subjects, setSubjects] = useState([]);
@@ -268,6 +282,53 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
             Alert.alert('Error', 'लीडरबोर्ड लोड करताना त्रुटी आली.');
         } finally {
             setLeaderboardLoading(false);
+        }
+    };
+
+    const downloadPastExamPDF = async (exam) => {
+        try {
+            setLoading(true);
+            const res = await axios.get(`${API_URL}/get_scholarship_exam_questions.php?exam_id=${exam.exam_id}`);
+            const questions = res.data?.data?.questions || [];
+            if (!questions.length) {
+                Alert.alert('Notice', 'या परीक्षेचे प्रश्न उपलब्ध नाहीत.');
+                return;
+            }
+            const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const qHtml = questions.map((q, idx) => `
+                <div style="margin-bottom:14px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;page-break-inside:avoid;">
+                    <div style="font-weight:bold;margin-bottom:6px;">Q${idx + 1}. ${esc(q.question)}</div>
+                    <div style="font-size:13px;line-height:1.6;">
+                        <div>(A) ${esc(q.option_a)}</div>
+                        <div>(B) ${esc(q.option_b)}</div>
+                        <div>(C) ${esc(q.option_c)}</div>
+                        <div>(D) ${esc(q.option_d)}</div>
+                    </div>
+                    <div style="margin-top:6px;font-size:12px;color:#15803d;"><strong>Correct Answer:</strong> ${(q.correct_answer || '').toUpperCase()}</div>
+                    ${q.explanation ? `<div style="margin-top:4px;font-size:12px;color:#475569;"><em>Explanation: ${esc(q.explanation)}</em></div>` : ''}
+                </div>
+            `).join('');
+            const html = `
+                <html><head><meta charset="utf-8" /></head>
+                <body style="font-family:sans-serif;padding:24px;color:#1e293b;">
+                    <h2>${esc(exam.title)}</h2>
+                    <p style="color:#475569;font-size:13px;margin-bottom:16px;">
+                        ${exam.has_attempted ? `तुमचा रँक: #${exam.user_rank || '-'} | गुण: ${exam.user_score}` : `एकूण प्रश्न: ${questions.length}`}
+                    </p>
+                    <hr style="border:none;border-top:1px solid #cbd5e1;margin-bottom:16px;" />
+                    ${qHtml}
+                </body></html>
+            `;
+            const { uri } = await Print.printToFileAsync({ html });
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Download Exam Paper PDF' });
+            } else {
+                Alert.alert('PDF Ready', `Saved to: ${uri}`);
+            }
+        } catch (e) {
+            Alert.alert('Error', 'PDF तयार करताना त्रुटी आली.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -677,16 +738,32 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                                 </View>
                                 <Text style={styles.examCardTitle}>{exam.title}</Text>
                                 <Text style={styles.examCardMeta}>
-                                    {exam.duration_minutes} मिनिटे • {exam.total_questions} प्रश्न • {exam.total_participants} विद्यार्थी
+                                    {exam.duration_minutes} मिनिटे • {exam.total_questions} प्रश्न {exam.total_marks ? `• ${exam.total_marks} गुण` : ''} • {exam.total_participants} विद्यार्थी
                                 </Text>
+                                {Array.isArray(exam.selected_subjects_list) && exam.selected_subjects_list.length > 0 && (
+                                    <Text style={[styles.examCardMeta, { color: '#4F46E5', fontWeight: '600', marginTop: 2 }]} numberOfLines={1}>
+                                        📚 {exam.selected_subjects_list.join(' • ')}
+                                    </Text>
+                                )}
+                                {exam.status === 'upcoming' && exam.seconds_to_start > elapsedTicks && (
+                                    <Text style={[styles.examCardMeta, { color: '#0284C7', fontWeight: 'bold', marginTop: 2 }]}>
+                                        ⏳ सुरू होण्यास: {formatCountdown(exam.seconds_to_start)}
+                                    </Text>
+                                )}
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                                <TouchableOpacity
-                                    style={[styles.btnActionSmall, { backgroundColor: exam.category_color || '#8E2DE2' }]}
-                                    onPress={() => startLiveExam(exam.exam_id)}
-                                >
-                                    <Text style={styles.btnActionText}>परीक्षेला बसा</Text>
-                                </TouchableOpacity>
+                                {exam.status === 'upcoming' && exam.seconds_to_start > elapsedTicks ? (
+                                    <View style={[styles.btnActionSmall, { backgroundColor: '#94a3b8' }]}>
+                                        <Text style={styles.btnActionText}>लवकरच सुरू</Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={[styles.btnActionSmall, { backgroundColor: exam.category_color || '#8E2DE2' }]}
+                                        onPress={() => startLiveExam(exam.exam_id)}
+                                    >
+                                        <Text style={styles.btnActionText}>परीक्षेला बसा</Text>
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity
                                     style={[styles.btnActionSmall, { backgroundColor: '#25D366' }]}
                                     onPress={() => shareExamOnWhatsApp(exam.share_text)}
@@ -729,13 +806,22 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                                     <Text style={styles.notAttemptedText}>तुम्ही ही परीक्षा दिली नव्हती</Text>
                                 )}
                             </View>
-                            <TouchableOpacity
-                                style={styles.btnLeaderboard}
-                                onPress={() => openLeaderboard(exam.exam_id)}
-                            >
-                                <Ionicons name="trophy" size={16} color="#4A00E0" />
-                                <Text style={styles.btnLeaderboardText}>लीडरबोर्ड</Text>
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', gap: 6 }}>
+                                <TouchableOpacity
+                                    style={[styles.btnLeaderboard, { backgroundColor: '#dcfce7' }]}
+                                    onPress={() => downloadPastExamPDF(exam)}
+                                >
+                                    <Ionicons name="document-text-outline" size={16} color="#15803d" />
+                                    <Text style={[styles.btnLeaderboardText, { color: '#15803d' }]}>PDF</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.btnLeaderboard}
+                                    onPress={() => openLeaderboard(exam.exam_id)}
+                                >
+                                    <Ionicons name="trophy" size={16} color="#4A00E0" />
+                                    <Text style={styles.btnLeaderboardText}>लीडरबोर्ड</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     ))
                 )}

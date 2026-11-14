@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Scholarship & Competitive Exam Content Studio (Veeru Admin)
  * AI Question Generator, CSV Bulk Upload & Question Bank Organizer

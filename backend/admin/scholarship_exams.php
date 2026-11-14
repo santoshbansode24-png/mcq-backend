@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin Dynamic Live Exam Creation & Management System
  * Veeru

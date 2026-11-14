@@ -52,6 +52,9 @@ if (!defined('GEMINI_API_URL')) {
  */
 if (!function_exists('callGeminiAPI')) {
     function callGeminiAPI($prompt, $options = []) {
+        if (empty(GEMINI_API_KEY)) {
+            throw new Exception("GEMINI_API_KEY is missing or empty.");
+        }
         $genConfig = [
             'temperature' => $options['temperature'] ?? 0.7,
             'maxOutputTokens' => $options['maxOutputTokens'] ?? 1024
@@ -73,7 +76,8 @@ if (!function_exists('callGeminiAPI')) {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
             $host = $_SERVER['HTTP_HOST'] ?? '';
             $isLocal = (strpos(GEMINI_API_URL, 'localhost') !== false || in_array($host, ['localhost', '127.0.0.1', '::1']) || strpos($host, 'localhost:') === 0 || strpos($host, '127.0.0.1:') === 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocal);
@@ -81,7 +85,13 @@ if (!function_exists('callGeminiAPI')) {
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            $curlErrno = curl_errno($ch);
             curl_close($ch);
+            
+            if ($response === false || $httpCode === 0) {
+                throw new Exception("Network/cURL Error ($curlErrno): " . ($curlErr ?: 'Empty response from Gemini API'));
+            }
             
             if ($httpCode === 429 && $attempt < $maxRetries) {
                 sleep($retryDelay);

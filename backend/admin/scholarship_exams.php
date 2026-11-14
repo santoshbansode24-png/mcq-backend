@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Admin Dynamic Live Exam Creation & Management System
  * Veeru
@@ -156,9 +156,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
     exit();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 1. SELF-HEALING SCHEMA & DYNAMIC EXAM/SUBJECT TABLES
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS `exams` (
@@ -247,50 +247,50 @@ try {
         $defaults = [
             [
                 'slug' => 'navodaya',
-                'name' => 'नवोदय प्रवेश परीक्षा (Navodaya Exam)',
-                'badge' => '🏛️ नवोदय विद्यालय',
+                'name' => 'à¤¨à¤µà¥‹à¤¦à¤¯ à¤ªà¥à¤°à¤µà¥‡à¤¶ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ (Navodaya Exam)',
+                'badge' => 'ðŸ›ï¸ à¤¨à¤µà¥‹à¤¦à¤¯ à¤µà¤¿à¤¦à¥à¤¯à¤¾à¤²à¤¯',
                 'color' => '#0284C7',
-                'description' => 'JNVST इयत्ता ६वी व ९वी प्रवेश परीक्षा',
+                'description' => 'JNVST à¤‡à¤¯à¤¤à¥à¤¤à¤¾ à¥¬à¤µà¥€ à¤µ à¥¯à¤µà¥€ à¤ªà¥à¤°à¤µà¥‡à¤¶ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾',
                 'subjects' => ['Mental Ability Test', 'Mathematics', 'English Grammar', 'Marathi Grammar']
             ],
             [
                 'slug' => 'nmms',
                 'name' => 'NMMS Exam',
-                'badge' => '💡 NMMS प्रज्ञाशोध',
+                'badge' => 'ðŸ’¡ NMMS à¤ªà¥à¤°à¤œà¥à¤žà¤¾à¤¶à¥‹à¤§',
                 'color' => '#7C3AED',
-                'description' => 'राष्ट्रीय आर्थिक दुर्बल घटक शिष्यवृत्ती (MAT + SAT)',
+                'description' => 'à¤°à¤¾à¤·à¥à¤Ÿà¥à¤°à¥€à¤¯ à¤†à¤°à¥à¤¥à¤¿à¤• à¤¦à¥à¤°à¥à¤¬à¤² à¤˜à¤Ÿà¤• à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€ (MAT + SAT)',
                 'subjects' => ['Mental Ability Test (MAT)', 'Mathematics', 'Science', 'Social Science']
             ],
             [
                 'slug' => 'scholarship',
                 'name' => 'Scholarship Exam',
-                'badge' => '📜 राज्य शिष्यवृत्ती',
+                'badge' => 'ðŸ“œ à¤°à¤¾à¤œà¥à¤¯ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€',
                 'color' => '#4F46E5',
-                'description' => 'महाराष्ट्र राज्य शिष्यवृत्ती इयत्ता ५वी (PUP) व ८वी (PSS)',
-                'subjects' => ['Marathi (प्रथम भाषा)', 'Mathematics (गणित)', 'English (तृतीय भाषा)', 'Intelligence Test (बुद्धिमत्ता)']
+                'description' => 'à¤®à¤¹à¤¾à¤°à¤¾à¤·à¥à¤Ÿà¥à¤° à¤°à¤¾à¤œà¥à¤¯ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€ à¤‡à¤¯à¤¤à¥à¤¤à¤¾ à¥«à¤µà¥€ (PUP) à¤µ à¥®à¤µà¥€ (PSS)',
+                'subjects' => ['Marathi (à¤ªà¥à¤°à¤¥à¤® à¤­à¤¾à¤·à¤¾)', 'Mathematics (à¤—à¤£à¤¿à¤¤)', 'English (à¤¤à¥ƒà¤¤à¥€à¤¯ à¤­à¤¾à¤·à¤¾)', 'Intelligence Test (à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾)']
             ],
             [
                 'slug' => 'mts',
                 'name' => 'MTS Exam',
-                'badge' => '🌟 MTS प्रज्ञाशोध',
+                'badge' => 'ðŸŒŸ MTS à¤ªà¥à¤°à¤œà¥à¤žà¤¾à¤¶à¥‹à¤§',
                 'color' => '#9333EA',
-                'description' => 'महाराष्ट्र टॅलेंट सर्च (MTS) परीक्षा',
+                'description' => 'à¤®à¤¹à¤¾à¤°à¤¾à¤·à¥à¤Ÿà¥à¤° à¤Ÿà¥…à¤²à¥‡à¤‚à¤Ÿ à¤¸à¤°à¥à¤š (MTS) à¤ªà¤°à¥€à¤•à¥à¤·à¤¾',
                 'subjects' => ['Mental Ability Test', 'Mathematics', 'General Science', 'Social Studies']
             ],
             [
                 'slug' => 'sainik',
-                'name' => 'सैनिक शाळा (Sainik School)',
-                'badge' => '🎖️ सैनिक शाळा',
+                'name' => 'à¤¸à¥ˆà¤¨à¤¿à¤• à¤¶à¤¾à¤³à¤¾ (Sainik School)',
+                'badge' => 'ðŸŽ–ï¸ à¤¸à¥ˆà¤¨à¤¿à¤• à¤¶à¤¾à¤³à¤¾',
                 'color' => '#15803D',
-                'description' => 'AISSEE अखिल भारतीय सैनिक शाळा प्रवेश परीक्षा',
+                'description' => 'AISSEE à¤…à¤–à¤¿à¤² à¤­à¤¾à¤°à¤¤à¥€à¤¯ à¤¸à¥ˆà¤¨à¤¿à¤• à¤¶à¤¾à¤³à¤¾ à¤ªà¥à¤°à¤µà¥‡à¤¶ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾',
                 'subjects' => ['Mathematics', 'Intelligence', 'Language', 'General Knowledge']
             ],
             [
                 'slug' => 'olympiad',
-                'name' => 'ऑलिम्पियाड (Olympiad)',
-                'badge' => '🏆 ऑलिम्पियाड',
+                'name' => 'à¤‘à¤²à¤¿à¤®à¥à¤ªà¤¿à¤¯à¤¾à¤¡ (Olympiad)',
+                'badge' => 'ðŸ† à¤‘à¤²à¤¿à¤®à¥à¤ªà¤¿à¤¯à¤¾à¤¡',
                 'color' => '#D97706',
-                'description' => 'SOF (IMO, NSO, IEO) व होमी भाभा स्पर्धा परीक्षा',
+                'description' => 'SOF (IMO, NSO, IEO) à¤µ à¤¹à¥‹à¤®à¥€ à¤­à¤¾à¤­à¤¾ à¤¸à¥à¤ªà¤°à¥à¤§à¤¾ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾',
                 'subjects' => ['Logical Reasoning', 'Mathematics', 'Science', 'English']
             ]
         ];
@@ -401,9 +401,9 @@ function pickDynamicMCQs($pdo, $selected_subjects, $subject_distribution, $chapt
     return array_slice($picked_mcq_ids, 0, $total_questions_limit);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 2. POST ACTION HANDLERS
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -441,7 +441,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($title)) {
             $error = 'Exam Title is required.';
         } elseif (empty($selected_subjects)) {
-            $error = 'कृपया किमान एक विषय (Subject) निवडा.';
+            $error = 'à¤•à¥ƒà¤ªà¤¯à¤¾ à¤•à¤¿à¤®à¤¾à¤¨ à¤à¤• à¤µà¤¿à¤·à¤¯ (Subject) à¤¨à¤¿à¤µà¤¡à¤¾.';
         } else {
             try {
                 $picked_mcq_ids = pickDynamicMCQs($pdo, $selected_subjects, $subject_distribution, $chapter_ids, $total_questions_limit, $difficulty_level, $category_slug);
@@ -469,7 +469,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $start_time, $end_time, $instructions, $question_ids_str, $chapter_ids_str,
                         $exam_id
                     ]);
-                    $message = "Live Exam '$title' यशस्वीरित्या अपडेट झाले!";
+                    $message = "Live Exam '$title' à¤¯à¤¶à¤¸à¥à¤µà¥€à¤°à¤¿à¤¤à¥à¤¯à¤¾ à¤…à¤ªà¤¡à¥‡à¤Ÿ à¤à¤¾à¤²à¥‡!";
                 } else {
                     $stmtInsert = $pdo->prepare("
                         INSERT INTO exams
@@ -481,7 +481,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $exam_status, $difficulty_level, $neg_enabled, $subjects_json, $dist_json,
                         $start_time, $end_time, $instructions, $question_ids_str, $chapter_ids_str
                     ]);
-                    $message = "Live Exam '$title' ($total_marks गुण | $total_q प्रश्न) यशस्वीरित्या तयार झाले!";
+                    $message = "Live Exam '$title' ($total_marks à¤—à¥à¤£ | $total_q à¤ªà¥à¤°à¤¶à¥à¤¨) à¤¯à¤¶à¤¸à¥à¤µà¥€à¤°à¤¿à¤¤à¥à¤¯à¤¾ à¤¤à¤¯à¤¾à¤° à¤à¤¾à¤²à¥‡!";
                 }
             } catch (Exception $e) {
                 $error = "Failed to save exam: " . $e->getMessage();
@@ -541,7 +541,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'save_exam_type') {
         $tid = intval($_POST['exam_type_id'] ?? 0);
         $name = trim($_POST['type_name'] ?? '');
-        $badge = trim($_POST['type_badge'] ?? '📘 Exam');
+        $badge = trim($_POST['type_badge'] ?? 'ðŸ“˜ Exam');
         $color = trim($_POST['type_color'] ?? '#4F46E5');
         $desc = trim($_POST['type_desc'] ?? '');
         $slug = trim($_POST['type_slug'] ?? '');
@@ -602,9 +602,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3. LOAD DYNAMIC DATA FOR DASHBOARD & WIZARD
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $classes = [];
 try {
     $classes = $pdo->query("SELECT class_id, class_name FROM classes ORDER BY class_id ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -817,41 +817,41 @@ foreach ($exams as $ex) {
 <body>
 
 <div class="header">
-    <h1>🏆 Dynamic Live Exam व्यवस्थापन</h1>
+    <h1>ðŸ† Dynamic Live Exam à¤µà¥à¤¯à¤µà¤¸à¥à¤¥à¤¾à¤ªà¤¨</h1>
     <div class="header-actions">
-        <button onclick="openManageModal()" class="btn-back">⚙️ परीक्षा व विषय Manage करा</button>
-        <a href="dashboard.php" class="btn-back">⬅ मुख्य डॅशबोर्ड</a>
+        <button onclick="openManageModal()" class="btn-back">âš™ï¸ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤µ à¤µà¤¿à¤·à¤¯ Manage à¤•à¤°à¤¾</button>
+        <a href="dashboard.php" class="btn-back">â¬… à¤®à¥à¤–à¥à¤¯ à¤¡à¥…à¤¶à¤¬à¥‹à¤°à¥à¤¡</a>
     </div>
 </div>
 
 <nav class="nav">
     <ul>
         <li><a href="dashboard.php">Dashboard</a></li>
-        <li><a href="scholarship_hub.php" style="color: #7C3AED; font-weight: 700;">✨ Scholarship Studio (AI)</a></li>
-        <li><a href="scholarship_exams.php" class="active">🏆 Dynamic Live Exams</a></li>
-        <li><a href="mcqs.php">MCQs</a></li>
+        <li><a href="scholarship_exams.php" class="active">🏆 Live Exams</a></li>
+        <li><a href="scholarship_hub.php" style="color: #7C3AED; font-weight: 700;">✨ AI Question Studio</a></li>
         <li><a href="subjects.php">Subjects</a></li>
         <li><a href="chapters.php">Chapters</a></li>
-        <li><a href="users.php">Users</a></li>
+        <li><a href="mcqs.php">MCQs</a></li>
+        <li><a href="users.php">Students</a></li>
     </ul>
 </nav>
 
 <div class="container">
     <?php if (!empty($message)): ?>
-        <div class="alert alert-success">✅ <?php echo htmlspecialchars($message); ?></div>
+        <div class="alert alert-success">âœ… <?php echo htmlspecialchars($message); ?></div>
     <?php endif; ?>
     <?php if (!empty($error)): ?>
-        <div class="alert alert-error">❌ <?php echo htmlspecialchars($error); ?></div>
+        <div class="alert alert-error">âŒ <?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
 
     <div class="top-bar">
         <div>
             <h2 style="font-size: 21px;">Live Exam Dashboard</h2>
-            <p style="font-size: 13px; color: #64748b;">Dynamic परीक्षा निवडा, विषय सेट करा, Marks व Question Distribution ठरवा आणि Live Publish करा.</p>
+            <p style="font-size: 13px; color: #64748b;">Dynamic à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¿à¤µà¤¡à¤¾, à¤µà¤¿à¤·à¤¯ à¤¸à¥‡à¤Ÿ à¤•à¤°à¤¾, Marks à¤µ Question Distribution à¤ à¤°à¤µà¤¾ à¤†à¤£à¤¿ Live Publish à¤•à¤°à¤¾.</p>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button onclick="openManageModal()" class="btn-manage">📚 Exams & Subjects</button>
-            <button onclick="openCreateWizard()" class="btn-create">➕ Create Live Exam</button>
+            <button onclick="openManageModal()" class="btn-manage">ðŸ“š Exams & Subjects</button>
+            <button onclick="openCreateWizard()" class="btn-create">âž• Create Live Exam</button>
         </div>
     </div>
 
@@ -859,19 +859,19 @@ foreach ($exams as $ex) {
     <?php $totalAllAttempts = array_sum(array_map(fn($x) => intval($x['total_attempts'] ?? 0), $exams)); ?>
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
         <div style="background:white;padding:16px;border-radius:14px;border:1px solid #e2e8f0;border-left:4px solid #4F46E5;">
-            <div style="font-size:12px;color:#64748b;font-weight:600;">एकूण परीक्षा (Total)</div>
+            <div style="font-size:12px;color:#64748b;font-weight:600;">à¤à¤•à¥‚à¤£ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ (Total)</div>
             <div style="font-size:24px;font-weight:700;color:#0f172a;"><?php echo $statusCounts['all']; ?></div>
         </div>
         <div style="background:white;padding:16px;border-radius:14px;border:1px solid #e2e8f0;border-left:4px solid #10b981;">
-            <div style="font-size:12px;color:#64748b;font-weight:600;">🔴 सध्या Live</div>
+            <div style="font-size:12px;color:#64748b;font-weight:600;">ðŸ”´ à¤¸à¤§à¥à¤¯à¤¾ Live</div>
             <div style="font-size:24px;font-weight:700;color:#15803d;"><?php echo $statusCounts['live']; ?></div>
         </div>
         <div style="background:white;padding:16px;border-radius:14px;border:1px solid #e2e8f0;border-left:4px solid #3b82f6;">
-            <div style="font-size:12px;color:#64748b;font-weight:600;">📅 Upcoming</div>
+            <div style="font-size:12px;color:#64748b;font-weight:600;">ðŸ“… Upcoming</div>
             <div style="font-size:24px;font-weight:700;color:#1d4ed8;"><?php echo $statusCounts['upcoming']; ?></div>
         </div>
         <div style="background:white;padding:16px;border-radius:14px;border:1px solid #e2e8f0;border-left:4px solid #7C3AED;">
-            <div style="font-size:12px;color:#64748b;font-weight:600;">👥 विद्यार्थी सहभाग</div>
+            <div style="font-size:12px;color:#64748b;font-weight:600;">ðŸ‘¥ à¤µà¤¿à¤¦à¥à¤¯à¤¾à¤°à¥à¤¥à¥€ à¤¸à¤¹à¤­à¤¾à¤—</div>
             <div style="font-size:24px;font-weight:700;color:#6d28d9;"><?php echo $totalAllAttempts; ?></div>
         </div>
     </div>
@@ -879,15 +879,15 @@ foreach ($exams as $ex) {
     <!-- Status Filter Tabs -->
     <div class="status-tabs">
         <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=all" class="status-tab <?php echo $selected_status === 'all' ? 'active' : ''; ?>">All (<?php echo $statusCounts['all']; ?>)</a>
-        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=live" class="status-tab <?php echo $selected_status === 'live' ? 'active' : ''; ?>">🔴 Live Exams (<?php echo $statusCounts['live']; ?>)</a>
-        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=upcoming" class="status-tab <?php echo $selected_status === 'upcoming' ? 'active' : ''; ?>">📅 Upcoming Exams (<?php echo $statusCounts['upcoming']; ?>)</a>
-        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=completed" class="status-tab <?php echo $selected_status === 'completed' ? 'active' : ''; ?>">✅ Completed Exams (<?php echo $statusCounts['completed']; ?>)</a>
-        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=draft" class="status-tab <?php echo $selected_status === 'draft' ? 'active' : ''; ?>">📝 Draft Exams (<?php echo $statusCounts['draft']; ?>)</a>
+        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=live" class="status-tab <?php echo $selected_status === 'live' ? 'active' : ''; ?>">ðŸ”´ Live Exams (<?php echo $statusCounts['live']; ?>)</a>
+        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=upcoming" class="status-tab <?php echo $selected_status === 'upcoming' ? 'active' : ''; ?>">ðŸ“… Upcoming Exams (<?php echo $statusCounts['upcoming']; ?>)</a>
+        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=completed" class="status-tab <?php echo $selected_status === 'completed' ? 'active' : ''; ?>">âœ… Completed Exams (<?php echo $statusCounts['completed']; ?>)</a>
+        <a href="?cat=<?php echo urlencode($selected_cat); ?>&status=draft" class="status-tab <?php echo $selected_status === 'draft' ? 'active' : ''; ?>">ðŸ“ Draft Exams (<?php echo $statusCounts['draft']; ?>)</a>
     </div>
 
     <!-- Category Filter Pills -->
     <div class="cat-filter-tabs">
-        <a href="?cat=all&status=<?php echo urlencode($selected_status); ?>" class="cat-tab <?php echo $selected_cat === 'all' ? 'active' : ''; ?>">🌟 सर्व परीक्षा</a>
+        <a href="?cat=all&status=<?php echo urlencode($selected_status); ?>" class="cat-tab <?php echo $selected_cat === 'all' ? 'active' : ''; ?>">ðŸŒŸ à¤¸à¤°à¥à¤µ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾</a>
         <?php foreach ($examTypes as $et): ?>
             <a href="?cat=<?php echo urlencode($et['slug']); ?>&status=<?php echo urlencode($selected_status); ?>" class="cat-tab <?php echo $selected_cat === $et['slug'] ? 'active' : ''; ?>">
                 <?php echo htmlspecialchars($et['badge']); ?>
@@ -897,16 +897,16 @@ foreach ($exams as $ex) {
 
     <?php if (empty($filteredExams)): ?>
         <div style="text-align: center; padding: 50px 20px; background: white; border-radius: 16px; border: 1px solid #e2e8f0;">
-            <div style="font-size: 44px; margin-bottom: 12px;">🏆</div>
-            <h3>या विभागात सध्या कोणतीही परीक्षा नाही</h3>
-            <p style="color: #64748b; font-size: 13px; margin: 8px 0 18px;">नवीन Dynamic Live Exam तयार करण्यासाठी खालील बटनावर क्लिक करा.</p>
-            <button onclick="openCreateWizard()" class="btn-create">➕ Create Live Exam</button>
+            <div style="font-size: 44px; margin-bottom: 12px;">ðŸ†</div>
+            <h3>à¤¯à¤¾ à¤µà¤¿à¤­à¤¾à¤—à¤¾à¤¤ à¤¸à¤§à¥à¤¯à¤¾ à¤•à¥‹à¤£à¤¤à¥€à¤¹à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¾à¤¹à¥€</h3>
+            <p style="color: #64748b; font-size: 13px; margin: 8px 0 18px;">à¤¨à¤µà¥€à¤¨ Dynamic Live Exam à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤£à¥à¤¯à¤¾à¤¸à¤¾à¤ à¥€ à¤–à¤¾à¤²à¥€à¤² à¤¬à¤Ÿà¤¨à¤¾à¤µà¤° à¤•à¥à¤²à¤¿à¤• à¤•à¤°à¤¾.</p>
+            <button onclick="openCreateWizard()" class="btn-create">âž• Create Live Exam</button>
         </div>
     <?php else: ?>
         <div class="exams-grid">
             <?php foreach ($filteredExams as $ex):
                 $eff = $ex['effective_status'];
-                $catMeta = $CATEGORIES[$ex['category_slug']] ?? ['badge' => '📜 Exam', 'color' => '#4F46E5'];
+                $catMeta = $CATEGORIES[$ex['category_slug']] ?? ['badge' => 'ðŸ“œ Exam', 'color' => '#4F46E5'];
                 $subs = json_decode($ex['selected_subjects'] ?? '[]', true) ?: [];
                 $totMarks = floatval($ex['total_marks'] ?? ($ex['total_questions'] * $ex['positive_marks']));
                 $exJson = htmlspecialchars(json_encode($ex, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
@@ -915,7 +915,7 @@ foreach ($exams as $ex) {
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
                         <span class="badge badge-<?php echo $eff; ?>">
-                            <?php echo $eff === 'live' ? '🔴 LIVE' : ($eff === 'upcoming' ? '📅 UPCOMING' : ($eff === 'completed' ? '✅ COMPLETED' : '📝 DRAFT')); ?>
+                            <?php echo $eff === 'live' ? 'ðŸ”´ LIVE' : ($eff === 'upcoming' ? 'ðŸ“… UPCOMING' : ($eff === 'completed' ? 'âœ… COMPLETED' : 'ðŸ“ DRAFT')); ?>
                         </span>
                         <span style="font-size:11px; font-weight:700; color:<?php echo $catMeta['color']; ?>; background:#f8fafc; padding:3px 9px; border-radius:50px; border:1px solid #e2e8f0;">
                             <?php echo htmlspecialchars($catMeta['badge']); ?>
@@ -933,8 +933,8 @@ foreach ($exams as $ex) {
                     <?php endif; ?>
 
                     <div class="exam-meta">
-                        <span>📅 Date: <?php echo $ex['start_time'] ? date('d M Y', strtotime($ex['start_time'])) : 'Anytime'; ?> | ⏰ <?php echo $ex['start_time'] ? date('h:i A', strtotime($ex['start_time'])) : '-'; ?> - <?php echo $ex['end_time'] ? date('h:i A', strtotime($ex['end_time'])) : '-'; ?></span>
-                        <span>⏱️ Duration: <?php echo intval($ex['duration_minutes']); ?> मिनिटे | 🎯 Difficulty: <?php echo ucfirst($ex['difficulty_level'] ?? 'mixed'); ?></span>
+                        <span>ðŸ“… Date: <?php echo $ex['start_time'] ? date('d M Y', strtotime($ex['start_time'])) : 'Anytime'; ?> | â° <?php echo $ex['start_time'] ? date('h:i A', strtotime($ex['start_time'])) : '-'; ?> - <?php echo $ex['end_time'] ? date('h:i A', strtotime($ex['end_time'])) : '-'; ?></span>
+                        <span>â±ï¸ Duration: <?php echo intval($ex['duration_minutes']); ?> à¤®à¤¿à¤¨à¤¿à¤Ÿà¥‡ | ðŸŽ¯ Difficulty: <?php echo ucfirst($ex['difficulty_level'] ?? 'mixed'); ?></span>
                     </div>
 
                     <div class="stats-row">
@@ -946,32 +946,32 @@ foreach ($exams as $ex) {
                 </div>
 
                 <div class="card-actions">
-                    <button type="button" onclick='openStudentsModal(<?php echo $ex['exam_id']; ?>, <?php echo json_encode($ex['title'], JSON_UNESCAPED_UNICODE); ?>)' class="btn-action" style="background:#eef2ff;color:#4338ca;">👥 Students (<?php echo intval($ex['total_attempts']); ?>)</button>
-                    <button type="button" onclick='viewExamDetails(<?php echo $exJson; ?>)' class="btn-action">👁️ View</button>
-                    <button type="button" onclick='editExamWizard(<?php echo $exJson; ?>)' class="btn-action">✏️ Edit</button>
+                    <button type="button" onclick='openStudentsModal(<?php echo $ex['exam_id']; ?>, <?php echo json_encode($ex['title'], JSON_UNESCAPED_UNICODE); ?>)' class="btn-action" style="background:#eef2ff;color:#4338ca;">ðŸ‘¥ Students (<?php echo intval($ex['total_attempts']); ?>)</button>
+                    <button type="button" onclick='viewExamDetails(<?php echo $exJson; ?>)' class="btn-action">ðŸ‘ï¸ View</button>
+                    <button type="button" onclick='editExamWizard(<?php echo $exJson; ?>)' class="btn-action">âœï¸ Edit</button>
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="duplicate_exam">
                         <input type="hidden" name="exam_id" value="<?php echo $ex['exam_id']; ?>">
-                        <button type="submit" class="btn-action">📋 Duplicate</button>
+                        <button type="submit" class="btn-action">ðŸ“‹ Duplicate</button>
                     </form>
                     <?php if ($eff !== 'live'): ?>
                         <form method="POST" style="display:inline;">
                             <input type="hidden" name="action" value="publish_exam">
                             <input type="hidden" name="exam_id" value="<?php echo $ex['exam_id']; ?>">
-                            <button type="submit" class="btn-action btn-publish">🚀 Publish</button>
+                            <button type="submit" class="btn-action btn-publish">ðŸš€ Publish</button>
                         </form>
                     <?php else: ?>
                         <form method="POST" style="display:inline;">
                             <input type="hidden" name="action" value="toggle_live">
                             <input type="hidden" name="exam_id" value="<?php echo $ex['exam_id']; ?>">
                             <input type="hidden" name="current_status" value="1">
-                            <button type="submit" class="btn-action">⏸️ Draft</button>
+                            <button type="submit" class="btn-action">â¸ï¸ Draft</button>
                         </form>
                     <?php endif; ?>
-                    <form method="POST" style="display:inline;" onsubmit="return confirm('ही परीक्षा कायमची डिलीट करायची का?');">
+                    <form method="POST" style="display:inline;" onsubmit="return confirm('à¤¹à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤•à¤¾à¤¯à¤®à¤šà¥€ à¤¡à¤¿à¤²à¥€à¤Ÿ à¤•à¤°à¤¾à¤¯à¤šà¥€ à¤•à¤¾?');">
                         <input type="hidden" name="action" value="delete_exam">
                         <input type="hidden" name="exam_id" value="<?php echo $ex['exam_id']; ?>">
-                        <button type="submit" class="btn-action btn-delete">🗑️ Delete</button>
+                        <button type="submit" class="btn-action btn-delete">ðŸ—‘ï¸ Delete</button>
                     </form>
                 </div>
             </div>
@@ -984,15 +984,15 @@ foreach ($exams as $ex) {
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="wizardModalTitle">➕ नवीन Dynamic Live Exam तयार करा</h2>
+            <h2 id="wizardModalTitle">âž• à¤¨à¤µà¥€à¤¨ Dynamic Live Exam à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾</h2>
             <button onclick="closeModal('createModal')" class="close-btn">&times;</button>
         </div>
 
         <div class="stepper">
-            <div class="step-pill active" onclick="goToStep(1)" id="pill-1">1. परीक्षा निवडा</div>
-            <div class="step-pill" onclick="goToStep(2)" id="pill-2">2. विषय (Subjects)</div>
-            <div class="step-pill" onclick="goToStep(3)" id="pill-3">3. Marks निवडा</div>
-            <div class="step-pill" onclick="goToStep(4)" id="pill-4">4. प्रश्न सेटिंग</div>
+            <div class="step-pill active" onclick="goToStep(1)" id="pill-1">1. à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¿à¤µà¤¡à¤¾</div>
+            <div class="step-pill" onclick="goToStep(2)" id="pill-2">2. à¤µà¤¿à¤·à¤¯ (Subjects)</div>
+            <div class="step-pill" onclick="goToStep(3)" id="pill-3">3. Marks à¤¨à¤¿à¤µà¤¡à¤¾</div>
+            <div class="step-pill" onclick="goToStep(4)" id="pill-4">4. à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¸à¥‡à¤Ÿà¤¿à¤‚à¤—</div>
             <div class="step-pill" onclick="goToStep(5)" id="pill-5">5. Date & Publish</div>
         </div>
 
@@ -1004,8 +1004,8 @@ foreach ($exams as $ex) {
             <!-- STEP 1: SELECT EXAM -->
             <div class="wizard-step active" id="step-1">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <label style="font-weight:700;">१. परीक्षा निवडा (Select Exam) *</label>
-                    <button type="button" onclick="openManageModal()" style="font-size:12px; color:#4F46E5; background:none; border:none; cursor:pointer; font-weight:600;">+ नवीन परीक्षा जोडा</button>
+                    <label style="font-weight:700;">à¥§. à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¿à¤µà¤¡à¤¾ (Select Exam) *</label>
+                    <button type="button" onclick="openManageModal()" style="font-size:12px; color:#4F46E5; background:none; border:none; cursor:pointer; font-weight:600;">+ à¤¨à¤µà¥€à¤¨ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤œà¥‹à¤¡à¤¾</button>
                 </div>
                 <div class="choice-grid" id="examChoiceGrid">
                     <?php foreach ($examTypes as $et): ?>
@@ -1017,7 +1017,7 @@ foreach ($exams as $ex) {
                     <?php endforeach; ?>
                 </div>
                 <div class="form-group">
-                    <label>इयत्ता / वर्ग (Class)</label>
+                    <label>à¤‡à¤¯à¤¤à¥à¤¤à¤¾ / à¤µà¤°à¥à¤— (Class)</label>
                     <select name="class_id" id="wizardClassId" class="form-control">
                         <?php foreach ($classes as $c): ?>
                             <option value="<?php echo $c['class_id']; ?>" <?php echo ($c['class_id'] == 38 || strpos($c['class_name'], 'Scholarship') !== false) ? 'selected' : ''; ?>>
@@ -1031,12 +1031,12 @@ foreach ($exams as $ex) {
             <!-- STEP 2: SELECT SUBJECTS -->
             <div class="wizard-step" id="step-2">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <label style="font-weight:700;">२. परीक्षेचे विषय निवडा (Select Subjects) *</label>
-                    <button type="button" onclick="openManageModal()" style="font-size:12px; color:#4F46E5; background:none; border:none; cursor:pointer; font-weight:600;">+ विषय Add/Edit करा</button>
+                    <label style="font-weight:700;">à¥¨. à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¥‡ à¤µà¤¿à¤·à¤¯ à¤¨à¤¿à¤µà¤¡à¤¾ (Select Subjects) *</label>
+                    <button type="button" onclick="openManageModal()" style="font-size:12px; color:#4F46E5; background:none; border:none; cursor:pointer; font-weight:600;">+ à¤µà¤¿à¤·à¤¯ Add/Edit à¤•à¤°à¤¾</button>
                 </div>
                 <div id="dynamicSubjectsContainer" class="choice-grid"></div>
                 <div class="form-group" style="margin-top:12px;">
-                    <label>अभ्यासक्रमाचे धडे (Optional Chapter Filter for MCQs)</label>
+                    <label>à¤…à¤­à¥à¤¯à¤¾à¤¸à¤•à¥à¤°à¤®à¤¾à¤šà¥‡ à¤§à¤¡à¥‡ (Optional Chapter Filter for MCQs)</label>
                     <div style="max-height:140px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:8px; padding:10px; background:#f8fafc;">
                         <?php foreach ($chapters as $ch): ?>
                             <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:400; margin-bottom:5px;">
@@ -1050,7 +1050,7 @@ foreach ($exams as $ex) {
 
             <!-- STEP 3: SELECT EXAM MARKS -->
             <div class="wizard-step" id="step-3">
-                <label style="font-weight:700; display:block; margin-bottom:10px;">३. परीक्षेचे एकूण गुण निवडा (Select Exam Marks) *</label>
+                <label style="font-weight:700; display:block; margin-bottom:10px;">à¥©. à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¥‡ à¤à¤•à¥‚à¤£ à¤—à¥à¤£ à¤¨à¤¿à¤µà¤¡à¤¾ (Select Exam Marks) *</label>
                 <div class="marks-grid">
                     <div class="marks-card" onclick="selectMarksPreset(30, this)">30<br><span style="font-size:11px;font-weight:500;">Marks</span></div>
                     <div class="marks-card" onclick="selectMarksPreset(50, this)">50<br><span style="font-size:11px;font-weight:500;">Marks</span></div>
@@ -1059,7 +1059,7 @@ foreach ($exams as $ex) {
                     <div class="marks-card" onclick="selectMarksPreset('custom', this)">Custom<br><span style="font-size:11px;font-weight:500;">Marks</span></div>
                 </div>
                 <div class="form-group">
-                    <label>एकूण गुण (Total Exam Marks)</label>
+                    <label>à¤à¤•à¥‚à¤£ à¤—à¥à¤£ (Total Exam Marks)</label>
                     <input type="number" step="1" min="5" max="500" name="total_marks" id="wizardTotalMarks" class="form-control" value="100" oninput="recalcQuestionConfig()">
                 </div>
             </div>
@@ -1068,11 +1068,11 @@ foreach ($exams as $ex) {
             <div class="wizard-step" id="step-4">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>एकूण प्रश्न (Total Questions)</label>
+                        <label>à¤à¤•à¥‚à¤£ à¤ªà¥à¤°à¤¶à¥à¤¨ (Total Questions)</label>
                         <input type="number" min="1" max="200" name="question_limit" id="wizardQuestionLimit" class="form-control" value="50" oninput="recalcFromQuestions()">
                     </div>
                     <div class="form-group">
-                        <label>प्रत्येक प्रश्नाला गुण (Marks per Question)</label>
+                        <label>à¤ªà¥à¤°à¤¤à¥à¤¯à¥‡à¤• à¤ªà¥à¤°à¤¶à¥à¤¨à¤¾à¤²à¤¾ à¤—à¥à¤£ (Marks per Question)</label>
                         <input type="number" step="0.25" min="0.25" name="positive_marks" id="wizardPosMarks" class="form-control" value="2.00" oninput="recalcTotalCheck()">
                     </div>
                 </div>
@@ -1088,27 +1088,27 @@ foreach ($exams as $ex) {
                     <div class="form-group">
                         <label>Difficulty Level</label>
                         <select name="difficulty_level" id="wizardDifficulty" class="form-control">
-                            <option value="mixed">Mixed (सर्व प्रकारचे)</option>
-                            <option value="easy">Easy (सोपे)</option>
-                            <option value="medium">Medium (मध्यम)</option>
-                            <option value="hard">Hard (कठीण)</option>
+                            <option value="mixed">Mixed (à¤¸à¤°à¥à¤µ à¤ªà¥à¤°à¤•à¤¾à¤°à¤šà¥‡)</option>
+                            <option value="easy">Easy (à¤¸à¥‹à¤ªà¥‡)</option>
+                            <option value="medium">Medium (à¤®à¤§à¥à¤¯à¤®)</option>
+                            <option value="hard">Hard (à¤•à¤ à¥€à¤£)</option>
                         </select>
                     </div>
                 </div>
 
                 <div id="marksMatchBanner" style="padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600; margin-bottom:14px; background:#dcfce7; color:#166534;">
-                    ✅ जुळले: 50 प्रश्न × 2 गुण = 100 गुण
+                    âœ… à¤œà¥à¤³à¤²à¥‡: 50 à¤ªà¥à¤°à¤¶à¥à¤¨ Ã— 2 à¤—à¥à¤£ = 100 à¤—à¥à¤£
                 </div>
 
-                <label style="font-weight:700; display:block; margin-bottom:8px;">Subject-wise Question Distribution (विषयनिहाय प्रश्न संख्या)</label>
+                <label style="font-weight:700; display:block; margin-bottom:8px;">Subject-wise Question Distribution (à¤µà¤¿à¤·à¤¯à¤¨à¤¿à¤¹à¤¾à¤¯ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¸à¤‚à¤–à¥à¤¯à¤¾)</label>
                 <div id="subjectDistributionList"></div>
             </div>
 
             <!-- STEP 5: DATE, TIME & PUBLISH -->
             <div class="wizard-step" id="step-5">
                 <div class="form-group">
-                    <label>परीक्षेचे नाव (Exam Title) *</label>
-                    <input type="text" name="title" id="wizardTitle" class="form-control" required placeholder="उदा. नवोदय महा-सराव परीक्षा - १">
+                    <label>à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¥‡ à¤¨à¤¾à¤µ (Exam Title) *</label>
+                    <input type="text" name="title" id="wizardTitle" class="form-control" required placeholder="à¤‰à¤¦à¤¾. à¤¨à¤µà¥‹à¤¦à¤¯ à¤®à¤¹à¤¾-à¤¸à¤°à¤¾à¤µ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ - à¥§">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -1133,23 +1133,23 @@ foreach ($exams as $ex) {
                 <div class="form-group">
                     <label>Exam Status</label>
                     <select name="exam_status" id="wizardStatus" class="form-control">
-                        <option value="scheduled">📅 Scheduled (वेळेवर सुरू होईल)</option>
-                        <option value="live">🔴 Live Now (लगेच लाइव्ह करा)</option>
-                        <option value="draft">📝 Draft (मसुदा म्हणून सेव्ह करा)</option>
-                        <option value="completed">✅ Completed</option>
+                        <option value="scheduled">ðŸ“… Scheduled (à¤µà¥‡à¤³à¥‡à¤µà¤° à¤¸à¥à¤°à¥‚ à¤¹à¥‹à¤ˆà¤²)</option>
+                        <option value="live">ðŸ”´ Live Now (à¤²à¤—à¥‡à¤š à¤²à¤¾à¤‡à¤µà¥à¤¹ à¤•à¤°à¤¾)</option>
+                        <option value="draft">ðŸ“ Draft (à¤®à¤¸à¥à¤¦à¤¾ à¤®à¥à¤¹à¤£à¥‚à¤¨ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¾)</option>
+                        <option value="completed">âœ… Completed</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Exam Instructions</label>
-                    <textarea name="instructions" id="wizardInstructions" class="form-control" rows="3" placeholder="विद्यार्थ्यांसाठी सूचना..."></textarea>
+                    <textarea name="instructions" id="wizardInstructions" class="form-control" rows="3" placeholder="à¤µà¤¿à¤¦à¥à¤¯à¤¾à¤°à¥à¤¥à¥à¤¯à¤¾à¤‚à¤¸à¤¾à¤ à¥€ à¤¸à¥‚à¤šà¤¨à¤¾..."></textarea>
                 </div>
             </div>
 
             <div class="wizard-footer">
-                <button type="button" class="btn-secondary" id="btnPrevStep" onclick="prevStep()">⬅ मागे</button>
+                <button type="button" class="btn-secondary" id="btnPrevStep" onclick="prevStep()">â¬… à¤®à¤¾à¤—à¥‡</button>
                 <div style="display:flex; gap:10px;">
-                    <button type="button" class="btn-primary" id="btnNextStep" onclick="nextStep()">पुढे ➔</button>
-                    <button type="submit" class="btn-create" id="btnSubmitWizard" style="display:none;">🚀 Create Live Exam</button>
+                    <button type="button" class="btn-primary" id="btnNextStep" onclick="nextStep()">à¤ªà¥à¤¢à¥‡ âž”</button>
+                    <button type="submit" class="btn-create" id="btnSubmitWizard" style="display:none;">ðŸš€ Create Live Exam</button>
                 </div>
             </div>
         </form>
@@ -1160,7 +1160,7 @@ foreach ($exams as $ex) {
 <div id="viewModal" class="modal">
     <div class="modal-content" style="max-width:620px;">
         <div class="modal-header">
-            <h2 id="viewModalTitle">👁️ Exam Details</h2>
+            <h2 id="viewModalTitle">ðŸ‘ï¸ Exam Details</h2>
             <button onclick="closeModal('viewModal')" class="close-btn">&times;</button>
         </div>
         <div id="viewModalBody" style="font-size:14px; line-height:1.7;"></div>
@@ -1171,9 +1171,9 @@ foreach ($exams as $ex) {
 <div id="studentsModal" class="modal">
     <div class="modal-content" style="max-width:920px;">
         <div class="modal-header">
-            <h2 id="studentsModalTitle">👥 Live Exam Student Database</h2>
+            <h2 id="studentsModalTitle">ðŸ‘¥ Live Exam Student Database</h2>
             <div style="display:flex;gap:10px;align-items:center;">
-                <button type="button" onclick="exportStudentsCSV()" class="btn-primary" style="padding:7px 14px;font-size:12px;">📥 Export CSV</button>
+                <button type="button" onclick="exportStudentsCSV()" class="btn-primary" style="padding:7px 14px;font-size:12px;">ðŸ“¥ Export CSV</button>
                 <button onclick="closeModal('studentsModal')" class="close-btn">&times;</button>
             </div>
         </div>
@@ -1185,32 +1185,32 @@ foreach ($exams as $ex) {
 <div id="manageModal" class="modal">
     <div class="modal-content" style="max-width:780px;">
         <div class="modal-header">
-            <h2>⚙️ परीक्षा व विषय व्यवस्थापन (Dynamic Admin)</h2>
+            <h2>âš™ï¸ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤µ à¤µà¤¿à¤·à¤¯ à¤µà¥à¤¯à¤µà¤¸à¥à¤¥à¤¾à¤ªà¤¨ (Dynamic Admin)</h2>
             <button onclick="closeModal('manageModal')" class="close-btn">&times;</button>
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
             <div>
-                <h3 style="font-size:15px; margin-bottom:10px;">➕ नवीन परीक्षा प्रकार जोडा</h3>
+                <h3 style="font-size:15px; margin-bottom:10px;">âž• à¤¨à¤µà¥€à¤¨ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤ªà¥à¤°à¤•à¤¾à¤° à¤œà¥‹à¤¡à¤¾</h3>
                 <form method="POST" style="background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:14px;">
                     <input type="hidden" name="action" value="save_exam_type">
-                    <div class="form-group"><label>परीक्षेचे नाव *</label><input type="text" name="type_name" class="form-control" required placeholder="उदा. MPSC / NTS Exam"></div>
+                    <div class="form-group"><label>à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¥‡ à¤¨à¤¾à¤µ *</label><input type="text" name="type_name" class="form-control" required placeholder="à¤‰à¤¦à¤¾. MPSC / NTS Exam"></div>
                     <div class="form-row">
-                        <div class="form-group"><label>Badge</label><input type="text" name="type_badge" class="form-control" value="📘 Exam"></div>
+                        <div class="form-group"><label>Badge</label><input type="text" name="type_badge" class="form-control" value="ðŸ“˜ Exam"></div>
                         <div class="form-group"><label>Color</label><input type="color" name="type_color" class="form-control" value="#4F46E5" style="height:40px;"></div>
                     </div>
-                    <div class="form-group"><label>वर्णन</label><input type="text" name="type_desc" class="form-control" placeholder="थोडक्यात माहिती"></div>
+                    <div class="form-group"><label>à¤µà¤°à¥à¤£à¤¨</label><input type="text" name="type_desc" class="form-control" placeholder="à¤¥à¥‹à¤¡à¤•à¥à¤¯à¤¾à¤¤ à¤®à¤¾à¤¹à¤¿à¤¤à¥€"></div>
                     <button type="submit" class="btn-primary" style="width:100%;">Save Exam Type</button>
                 </form>
 
                 <div style="max-height:220px; overflow-y:auto;">
                     <?php foreach ($examTypes as $et): ?>
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-bottom:1px solid #e2e8f0; font-size:13px;">
-                            <span><strong><?php echo htmlspecialchars($et['name']); ?></strong> (<?php echo count($et['subjects']); ?> विषय)</span>
-                            <form method="POST" onsubmit="return confirm('हा परीक्षा प्रकार डिलीट करायचा का?');">
+                            <span><strong><?php echo htmlspecialchars($et['name']); ?></strong> (<?php echo count($et['subjects']); ?> à¤µà¤¿à¤·à¤¯)</span>
+                            <form method="POST" onsubmit="return confirm('à¤¹à¤¾ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤ªà¥à¤°à¤•à¤¾à¤° à¤¡à¤¿à¤²à¥€à¤Ÿ à¤•à¤°à¤¾à¤¯à¤šà¤¾ à¤•à¤¾?');">
                                 <input type="hidden" name="action" value="delete_exam_type">
                                 <input type="hidden" name="exam_type_id" value="<?php echo $et['exam_type_id']; ?>">
-                                <button type="submit" class="btn-action btn-delete">🗑️</button>
+                                <button type="submit" class="btn-action btn-delete">ðŸ—‘ï¸</button>
                             </form>
                         </div>
                     <?php endforeach; ?>
@@ -1218,18 +1218,18 @@ foreach ($exams as $ex) {
             </div>
 
             <div>
-                <h3 style="font-size:15px; margin-bottom:10px;">📚 परीक्षेचे विषय (Subjects) Manage करा</h3>
+                <h3 style="font-size:15px; margin-bottom:10px;">ðŸ“š à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¥‡ à¤µà¤¿à¤·à¤¯ (Subjects) Manage à¤•à¤°à¤¾</h3>
                 <form method="POST" style="background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:14px;">
                     <input type="hidden" name="action" value="save_exam_subject">
                     <div class="form-group">
-                        <label>परीक्षा निवडा *</label>
+                        <label>à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¿à¤µà¤¡à¤¾ *</label>
                         <select name="exam_type_id" id="manageSubjectExamSelect" class="form-control" onchange="renderManageSubjectsList()">
                             <?php foreach ($examTypes as $et): ?>
                                 <option value="<?php echo $et['exam_type_id']; ?>"><?php echo htmlspecialchars($et['name']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group"><label>नवीन विषयाचे नाव *</label><input type="text" name="subject_name" class="form-control" required placeholder="उदा. Logical Reasoning"></div>
+                    <div class="form-group"><label>à¤¨à¤µà¥€à¤¨ à¤µà¤¿à¤·à¤¯à¤¾à¤šà¥‡ à¤¨à¤¾à¤µ *</label><input type="text" name="subject_name" class="form-control" required placeholder="à¤‰à¤¦à¤¾. Logical Reasoning"></div>
                     <div class="form-group">
                         <label>Link to MCQ Bank Subject (Optional)</label>
                         <select name="linked_subject_id" class="form-control">
@@ -1259,7 +1259,7 @@ let selectedSubjects = [];
 let customDist = {};
 
 function openCreateWizard() {
-    document.getElementById('wizardModalTitle').textContent = '➕ नवीन Dynamic Live Exam तयार करा';
+    document.getElementById('wizardModalTitle').textContent = 'âž• à¤¨à¤µà¥€à¤¨ Dynamic Live Exam à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾';
     document.getElementById('wizardAction').value = 'create_exam';
     document.getElementById('wizardExamId').value = '0';
     document.getElementById('examWizardForm').reset();
@@ -1271,7 +1271,7 @@ function openCreateWizard() {
 }
 
 function editExamWizard(ex) {
-    document.getElementById('wizardModalTitle').textContent = '✏️ Edit Live Exam: ' + ex.title;
+    document.getElementById('wizardModalTitle').textContent = 'âœï¸ Edit Live Exam: ' + ex.title;
     document.getElementById('wizardAction').value = 'update_exam';
     document.getElementById('wizardExamId').value = ex.exam_id;
     document.getElementById('wizardTitle').value = ex.title || '';
@@ -1324,7 +1324,7 @@ function renderSubjectsForExam() {
     const et = EXAM_TYPES.find(x => x.slug === selectedSlug) || EXAM_TYPES[0];
     const container = document.getElementById('dynamicSubjectsContainer');
     if (!et || !et.subjects.length) {
-        container.innerHTML = '<div style="color:#64748b;font-size:13px;">या परीक्षेसाठी अद्याप विषय जोडलेले नाहीत. कृपया "+ विषय Add/Edit करा" वर क्लिक करा.</div>';
+        container.innerHTML = '<div style="color:#64748b;font-size:13px;">à¤¯à¤¾ à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤¸à¤¾à¤ à¥€ à¤…à¤¦à¥à¤¯à¤¾à¤ª à¤µà¤¿à¤·à¤¯ à¤œà¥‹à¤¡à¤²à¥‡à¤²à¥‡ à¤¨à¤¾à¤¹à¥€à¤¤. à¤•à¥ƒà¤ªà¤¯à¤¾ "+ à¤µà¤¿à¤·à¤¯ Add/Edit à¤•à¤°à¤¾" à¤µà¤° à¤•à¥à¤²à¤¿à¤• à¤•à¤°à¤¾.</div>';
         return;
     }
     container.innerHTML = et.subjects.map(s => {
@@ -1390,10 +1390,10 @@ function recalcTotalCheck() {
     const banner = document.getElementById('marksMatchBanner');
     if (Math.abs(calc - totalMarks) < 0.01) {
         banner.style.background = '#dcfce7'; banner.style.color = '#166534';
-        banner.textContent = `✅ जुळले: ${q} प्रश्न × ${pos} गुण = ${calc} गुण`;
+        banner.textContent = `âœ… à¤œà¥à¤³à¤²à¥‡: ${q} à¤ªà¥à¤°à¤¶à¥à¤¨ Ã— ${pos} à¤—à¥à¤£ = ${calc} à¤—à¥à¤£`;
     } else {
         banner.style.background = '#fef3c7'; banner.style.color = '#92400e';
-        banner.textContent = `⚠️ टीप: ${q} प्रश्न × ${pos} गुण = ${calc} (निवडलेले एकूण गुण: ${totalMarks})`;
+        banner.textContent = `âš ï¸ à¤Ÿà¥€à¤ª: ${q} à¤ªà¥à¤°à¤¶à¥à¤¨ Ã— ${pos} à¤—à¥à¤£ = ${calc} (à¤¨à¤¿à¤µà¤¡à¤²à¥‡à¤²à¥‡ à¤à¤•à¥‚à¤£ à¤—à¥à¤£: ${totalMarks})`;
     }
 }
 
@@ -1405,7 +1405,7 @@ function renderSubjectDistribution() {
     const list = document.getElementById('subjectDistributionList');
     const qLimit = parseInt(document.getElementById('wizardQuestionLimit').value) || 0;
     if (!selectedSubjects.length) {
-        list.innerHTML = '<div style="font-size:12.5px;color:#64748b;">Step 2 मध्ये विषय निवडल्यावर येथे विषयनिहाय प्रश्न संख्या सेट करता येईल.</div>';
+        list.innerHTML = '<div style="font-size:12.5px;color:#64748b;">Step 2 à¤®à¤§à¥à¤¯à¥‡ à¤µà¤¿à¤·à¤¯ à¤¨à¤¿à¤µà¤¡à¤²à¥à¤¯à¤¾à¤µà¤° à¤¯à¥‡à¤¥à¥‡ à¤µà¤¿à¤·à¤¯à¤¨à¤¿à¤¹à¤¾à¤¯ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¸à¤‚à¤–à¥à¤¯à¤¾ à¤¸à¥‡à¤Ÿ à¤•à¤°à¤¤à¤¾ à¤¯à¥‡à¤ˆà¤².</div>';
         return;
     }
     const et = EXAM_TYPES.find(x => x.slug === selectedSlug) || EXAM_TYPES[0];
@@ -1422,13 +1422,13 @@ function renderSubjectDistribution() {
                 <div>
                     <div style="font-size:13px;font-weight:600;">${escapeHtml(sub)}</div>
                     <div style="font-size:11.5px;color:${missing > 0 ? '#dc2626' : '#15803d'};font-weight:600;">
-                        Available: ${avail} MCQs ${missing > 0 ? `(⚠️ ${missing} प्रश्न कमी आहेत)` : '✅ पुरेसे आहेत'}
+                        Available: ${avail} MCQs ${missing > 0 ? `(âš ï¸ ${missing} à¤ªà¥à¤°à¤¶à¥à¤¨ à¤•à¤®à¥€ à¤†à¤¹à¥‡à¤¤)` : 'âœ… à¤ªà¥à¤°à¥‡à¤¸à¥‡ à¤†à¤¹à¥‡à¤¤'}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    ${missing > 0 ? `<button type="button" onclick="autoGenerateMissingMCQs('${escapeHtml(sub)}', ${subObj.id || 0}, ${subObj.linked_subject_id || 0}, ${genCount}, this)" class="btn-action" style="background:#7C3AED;color:white;font-size:11.5px;">✨ AI ने ${genCount} प्रश्न तयार करा</button>` : ''}
+                    ${missing > 0 ? `<button type="button" onclick="autoGenerateMissingMCQs('${escapeHtml(sub)}', ${subObj.id || 0}, ${subObj.linked_subject_id || 0}, ${genCount}, this)" class="btn-action" style="background:#7C3AED;color:white;font-size:11.5px;">âœ¨ AI à¤¨à¥‡ ${genCount} à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾</button>` : ''}
                     <input type="number" min="0" name="subject_dist[${escapeHtml(sub)}]" value="${defVal}" class="form-control" style="width:85px;padding:6px 10px;" onchange="customDist['${escapeHtml(sub)}']=parseInt(this.value||0);renderSubjectDistribution();">
-                    <span style="font-size:12px;color:#64748b;">प्रश्न</span>
+                    <span style="font-size:12px;color:#64748b;">à¤ªà¥à¤°à¤¶à¥à¤¨</span>
                 </div>
             </div>
         `;
@@ -1438,7 +1438,7 @@ function renderSubjectDistribution() {
 async function autoGenerateMissingMCQs(subName, subMapId, linkedSubId, count, btn) {
     const origText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '⏳ AI तयार करत आहे...';
+    btn.textContent = 'â³ AI à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¤ à¤†à¤¹à¥‡...';
     try {
         const fd = new FormData();
         fd.append('action', 'ajax_generate_missing_mcqs');
@@ -1460,14 +1460,14 @@ async function autoGenerateMissingMCQs(subName, subMapId, linkedSubId, count, bt
             }
             renderSubjectsForExam();
             renderSubjectDistribution();
-            alert(`✅ ${json.added} नवीन MCQs यशस्वीरित्या तयार व सेव्ह केले!`);
+            alert(`âœ… ${json.added} à¤¨à¤µà¥€à¤¨ MCQs à¤¯à¤¶à¤¸à¥à¤µà¥€à¤°à¤¿à¤¤à¥à¤¯à¤¾ à¤¤à¤¯à¤¾à¤° à¤µ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¥‡à¤²à¥‡!`);
         } else {
-            alert('❌ AI Error: ' + (json.message || 'Failed'));
+            alert('âŒ AI Error: ' + (json.message || 'Failed'));
             btn.disabled = false;
             btn.textContent = origText;
         }
     } catch (e) {
-        alert('❌ Network error while generating MCQs.');
+        alert('âŒ Network error while generating MCQs.');
         btn.disabled = false;
         btn.textContent = origText;
     }
@@ -1494,7 +1494,7 @@ function nextStep() {
     if (currentStep === 2) {
         selectedSubjects = Array.from(document.querySelectorAll('input[name="selected_subjects[]"]:checked')).map(x => x.value);
         if (!selectedSubjects.length) {
-            alert('कृपया किमान एक विषय (Subject) निवडा.');
+            alert('à¤•à¥ƒà¤ªà¤¯à¤¾ à¤•à¤¿à¤®à¤¾à¤¨ à¤à¤• à¤µà¤¿à¤·à¤¯ (Subject) à¤¨à¤¿à¤µà¤¡à¤¾.');
             return;
         }
     }
@@ -1505,7 +1505,7 @@ function prevStep() { if (currentStep > 1) goToStep(currentStep - 1); }
 function viewExamDetails(ex) {
     const subs = JSON.parse(ex.selected_subjects || '[]') || [];
     const dist = JSON.parse(ex.subject_distribution || '{}') || {};
-    document.getElementById('viewModalTitle').textContent = '👁️ ' + ex.title;
+    document.getElementById('viewModalTitle').textContent = 'ðŸ‘ï¸ ' + ex.title;
     document.getElementById('viewModalBody').innerHTML = `
         <p><strong>Category:</strong> ${escapeHtml(ex.category_slug || '-')}</p>
         <p><strong>Total Marks:</strong> ${ex.total_marks || 100} | <strong>Questions:</strong> ${ex.total_questions}</p>
@@ -1515,7 +1515,7 @@ function viewExamDetails(ex) {
         <div style="margin-top:10px;background:#f8fafc;padding:12px;border-radius:10px;">
             <strong>Subject-wise Distribution:</strong>
             <ul style="margin-left:18px;margin-top:6px;">
-                ${Object.entries(dist).map(([k, v]) => `<li>${escapeHtml(k)}: ${v} प्रश्न</li>`).join('') || '<li>Auto</li>'}
+                ${Object.entries(dist).map(([k, v]) => `<li>${escapeHtml(k)}: ${v} à¤ªà¥à¤°à¤¶à¥à¤¨</li>`).join('') || '<li>Auto</li>'}
             </ul>
         </div>
         <p style="margin-top:10px;"><strong>Instructions:</strong> ${escapeHtml(ex.instructions || 'None')}</p>
@@ -1533,7 +1533,7 @@ function renderManageSubjectsList() {
     const et = EXAM_TYPES.find(x => parseInt(x.exam_type_id) === tid);
     const container = document.getElementById('manageSubjectsList');
     if (!et || !et.subjects.length) {
-        container.innerHTML = '<div style="color:#64748b;font-size:13px;">कोणतेही विषय नाहीत.</div>';
+        container.innerHTML = '<div style="color:#64748b;font-size:13px;">à¤•à¥‹à¤£à¤¤à¥‡à¤¹à¥€ à¤µà¤¿à¤·à¤¯ à¤¨à¤¾à¤¹à¥€à¤¤.</div>';
         return;
     }
     container.innerHTML = et.subjects.map(s => {
@@ -1548,12 +1548,12 @@ function renderManageSubjectsList() {
                 <input type="hidden" name="subject_map_id" value="${s.id}">
                 <input type="text" name="subject_name" value="${escapeHtml(s.subject_name)}" class="form-control" style="padding:5px 8px;font-size:12px;flex:1;">
                 <select name="linked_subject_id" class="form-control" style="padding:5px 6px;font-size:11.5px;width:140px;">${opts}</select>
-                <button type="submit" class="btn-action">💾</button>
+                <button type="submit" class="btn-action">ðŸ’¾</button>
             </form>
-            <form method="POST" onsubmit="return confirm('विषय हटवायचा का?');">
+            <form method="POST" onsubmit="return confirm('à¤µà¤¿à¤·à¤¯ à¤¹à¤Ÿà¤µà¤¾à¤¯à¤šà¤¾ à¤•à¤¾?');">
                 <input type="hidden" name="action" value="delete_exam_subject">
                 <input type="hidden" name="subject_map_id" value="${s.id}">
-                <button type="submit" class="btn-action btn-delete">🗑️</button>
+                <button type="submit" class="btn-action btn-delete">ðŸ—‘ï¸</button>
             </form>
         </div>
     `}).join('');
@@ -1568,16 +1568,16 @@ let currentStudentsExamTitle = '';
 
 async function openStudentsModal(examId, title) {
     currentStudentsExamTitle = title || 'Live_Exam';
-    document.getElementById('studentsModalTitle').textContent = '👥 Students Database: ' + currentStudentsExamTitle;
+    document.getElementById('studentsModalTitle').textContent = 'ðŸ‘¥ Students Database: ' + currentStudentsExamTitle;
     const body = document.getElementById('studentsModalBody');
-    body.innerHTML = '<div style="padding:30px;text-align:center;color:#64748b;">लोड होत आहे...</div>';
+    body.innerHTML = '<div style="padding:30px;text-align:center;color:#64748b;">à¤²à¥‹à¤¡ à¤¹à¥‹à¤¤ à¤†à¤¹à¥‡...</div>';
     document.getElementById('studentsModal').style.display = 'block';
     try {
         const res = await fetch('?ajax_students=' + examId);
         const json = await res.json();
         currentStudentsData = json.data || [];
         if (!currentStudentsData.length) {
-            body.innerHTML = '<div style="padding:30px;text-align:center;color:#64748b;">अद्याप कोणत्याही विद्यार्थ्याने ही परीक्षा दिलेली नाही.</div>';
+            body.innerHTML = '<div style="padding:30px;text-align:center;color:#64748b;">à¤…à¤¦à¥à¤¯à¤¾à¤ª à¤•à¥‹à¤£à¤¤à¥à¤¯à¤¾à¤¹à¥€ à¤µà¤¿à¤¦à¥à¤¯à¤¾à¤°à¥à¤¥à¥à¤¯à¤¾à¤¨à¥‡ à¤¹à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¦à¤¿à¤²à¥‡à¤²à¥€ à¤¨à¤¾à¤¹à¥€.</div>';
             return;
         }
         body.innerHTML = `
@@ -1601,7 +1601,7 @@ async function openStudentsModal(examId, title) {
                             <td style="padding:10px;font-weight:600;">${escapeHtml(r.student_name)}</td>
                             <td style="padding:10px;color:#64748b;font-size:12px;">${escapeHtml(r.phone || r.email || '-')}</td>
                             <td style="padding:10px;font-weight:700;color:#15803d;">${r.net_score} / ${r.max_possible_score}</td>
-                            <td style="padding:10px;">✅${r.correct_count} ❌${r.wrong_count} ⏭️${r.unattempted_count}</td>
+                            <td style="padding:10px;">âœ…${r.correct_count} âŒ${r.wrong_count} â­ï¸${r.unattempted_count}</td>
                             <td style="padding:10px;">${r.accuracy_percentage}%</td>
                             <td style="padding:10px;">${Math.floor(r.time_spent_seconds/60)}m ${r.time_spent_seconds%60}s</td>
                             <td style="padding:10px;font-size:12px;color:#64748b;">${escapeHtml(r.created_at)}</td>
@@ -1611,7 +1611,7 @@ async function openStudentsModal(examId, title) {
             </table>
         `;
     } catch (err) {
-        body.innerHTML = '<div style="padding:20px;color:#dc2626;">डेटा लोड करताना त्रुटी आली.</div>';
+        body.innerHTML = '<div style="padding:20px;color:#dc2626;">à¤¡à¥‡à¤Ÿà¤¾ à¤²à¥‹à¤¡ à¤•à¤°à¤¤à¤¾à¤¨à¤¾ à¤¤à¥à¤°à¥à¤Ÿà¥€ à¤†à¤²à¥€.</div>';
     }
 }
 

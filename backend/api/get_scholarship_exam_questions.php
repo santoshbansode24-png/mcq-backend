@@ -42,7 +42,7 @@ try {
     $question_ids_str = trim($exam['question_ids'] ?? '');
 
     if (!empty($question_ids_str)) {
-        $clean_ids = array_filter(array_map('intval', explode(',', $question_ids_str)));
+        $clean_ids = array_values(array_filter(array_map('intval', explode(',', $question_ids_str))));
         if (!empty($clean_ids)) {
             $inPlaceholders = implode(',', array_fill(0, count($clean_ids), '?'));
             $sql = "
@@ -61,7 +61,7 @@ try {
 
     // Fallback: if questions empty, fetch from selected chapters
     if (empty($questions) && !empty($exam['selected_chapters'])) {
-        $ch_ids = array_filter(array_map('intval', explode(',', $exam['selected_chapters'])));
+        $ch_ids = array_values(array_filter(array_map('intval', explode(',', $exam['selected_chapters']))));
         if (!empty($ch_ids)) {
             $inPlaceholders = implode(',', array_fill(0, count($ch_ids), '?'));
             $limit = intval($exam['total_questions'] > 0 ? $exam['total_questions'] : 50);

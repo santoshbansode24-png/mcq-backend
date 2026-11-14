@@ -77,41 +77,10 @@ $CATEGORIES_MAP = [
 ];
 
 try {
-    // 1. Ensure table and category_slug column exist
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `exams` (
-            `exam_id` INT AUTO_INCREMENT PRIMARY KEY,
-            `title` VARCHAR(255) NOT NULL,
-            `class_id` INT NOT NULL,
-            `subject_id` INT DEFAULT NULL,
-            `duration_minutes` INT DEFAULT 60,
-            `positive_marks` DECIMAL(5,2) DEFAULT 2.00,
-            `negative_marks` DECIMAL(5,2) DEFAULT 0.00,
-            `total_questions` INT DEFAULT 0,
-            `is_live` TINYINT(1) DEFAULT 0,
-            `is_scholarship` TINYINT(1) DEFAULT 1,
-            `category_slug` VARCHAR(50) DEFAULT 'scholarship',
-            `start_time` DATETIME DEFAULT NULL,
-            `end_time` DATETIME DEFAULT NULL,
-            `instructions` TEXT DEFAULT NULL,
-            `question_ids` MEDIUMTEXT DEFAULT NULL,
-            `selected_chapters` TEXT DEFAULT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX (`class_id`),
-            INDEX (`is_live`),
-            INDEX (`is_scholarship`),
-            INDEX (`category_slug`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ");
-
-    try {
-        $pdo->exec("ALTER TABLE `exams` ADD COLUMN `category_slug` VARCHAR(50) DEFAULT 'scholarship'");
-    } catch (Exception $e) {}
-
     $now = date('Y-m-d H:i:s');
 
-    // Filter by category if requested
-    $whereClause = "WHERE e.is_scholarship = 1";
+    // Filter by category if requested (exclude drafts)
+    $whereClause = "WHERE e.is_scholarship = 1 AND (e.exam_status IS NULL OR e.exam_status != 'draft')";
     $whereParams = [];
 
     if (!empty($category) && $category !== 'all') {
@@ -123,12 +92,21 @@ try {
     $orderParams = [$now, $now, $now];
     $queryParams = array_merge($whereParams, $orderParams);
 
-    // Fetch scholarship/competitive exams
+    // Fetch scholarship/competitive exams (exclude heavy question_ids/instructions from list)
     $stmt = $pdo->prepare("
-        SELECT e.*, c.class_name,
-               (SELECT COUNT(*) FROM exam_attempts ea WHERE ea.exam_id = e.exam_id) as total_participants
+        SELECT e.exam_id, e.title, e.class_id, e.subject_id, e.duration_minutes,
+               e.positive_marks, e.negative_marks, e.total_questions, e.total_marks,
+               e.is_live, e.is_scholarship, e.category_slug, e.exam_status,
+               e.selected_subjects, e.start_time, e.end_time, e.created_at,
+               c.class_name,
+               COALESCE(ea_cnt.total_participants, 0) as total_participants
         FROM exams e
         LEFT JOIN classes c ON e.class_id = c.class_id
+        LEFT JOIN (
+            SELECT exam_id, COUNT(*) as total_participants
+            FROM exam_attempts
+            GROUP BY exam_id
+        ) ea_cnt ON ea_cnt.exam_id = e.exam_id
         $whereClause
         ORDER BY 
             CASE 
@@ -142,7 +120,7 @@ try {
     $stmt->execute($queryParams);
     $allExams = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Fetch counts per category for UI badge counts
+    // Fetch counts per category for UI badge counts (matching non-draft filter)
     $catCounts = ['all' => 0];
     foreach (array_keys($CATEGORIES_MAP) as $ck) {
         $catCounts[$ck] = 0;
@@ -151,7 +129,7 @@ try {
         $countStmt = $pdo->query("
             SELECT COALESCE(category_slug, 'scholarship') as cat, COUNT(*) as cnt 
             FROM exams 
-            WHERE is_scholarship = 1 
+            WHERE is_scholarship = 1 AND (exam_status IS NULL OR exam_status != 'draft')
             GROUP BY COALESCE(category_slug, 'scholarship')
         ");
         $allCount = 0;

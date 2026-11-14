@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Scholarship & Competitive Exam Content Studio (Veeru Admin)
  * AI Question Generator, CSV Bulk Upload & Question Bank Organizer
@@ -17,9 +17,9 @@ if (file_exists('../config/ai_config.php')) {
     require_once '../backend/config/ai_config.php';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 1. SELF-HEALING DATABASE MIGRATION
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 try {
     $mcqCols = $pdo->query("SHOW COLUMNS FROM `mcqs`")->fetchAll(PDO::FETCH_COLUMN);
     if (!in_array('category_slug', $mcqCols)) {
@@ -30,57 +30,57 @@ try {
     }
 } catch (Exception $e) {}
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 2. EXAM CATEGORIES MASTER
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $CATEGORIES = [
     'scholarship' => [
-        'name' => 'महाराष्ट्र राज्य शिष्यवृत्ती (5th & 8th)',
-        'badge' => '📜 राज्य शिष्यवृत्ती',
+        'name' => 'à¤®à¤¹à¤¾à¤°à¤¾à¤·à¥à¤Ÿà¥à¤° à¤°à¤¾à¤œà¥à¤¯ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€ (5th & 8th)',
+        'badge' => 'ðŸ“œ à¤°à¤¾à¤œà¥à¤¯ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€',
         'color' => '#4F46E5',
         'bg' => '#EEF2FF',
-        'subjects' => ['मराठी / प्रथम भाषा', 'गणित (Mathematics)', 'तृतीय भाषा (English)', 'बुद्धिमत्ता चाचणी (Mental Ability)']
+        'subjects' => ['à¤®à¤°à¤¾à¤ à¥€ / à¤ªà¥à¤°à¤¥à¤® à¤­à¤¾à¤·à¤¾', 'à¤—à¤£à¤¿à¤¤ (Mathematics)', 'à¤¤à¥ƒà¤¤à¥€à¤¯ à¤­à¤¾à¤·à¤¾ (English)', 'à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Mental Ability)']
     ],
     'navodaya' => [
-        'name' => 'जवाहर नवोदय विद्यालय (JNVST)',
-        'badge' => '🏛️ नवोदय विद्यालय',
+        'name' => 'à¤œà¤µà¤¾à¤¹à¤° à¤¨à¤µà¥‹à¤¦à¤¯ à¤µà¤¿à¤¦à¥à¤¯à¤¾à¤²à¤¯ (JNVST)',
+        'badge' => 'ðŸ›ï¸ à¤¨à¤µà¥‹à¤¦à¤¯ à¤µà¤¿à¤¦à¥à¤¯à¤¾à¤²à¤¯',
         'color' => '#0284C7',
         'bg' => '#E0F2FE',
-        'subjects' => ['मानसिक क्षमता चाचणी (Mental Ability)', 'अंकगणित (Arithmetic)', 'भाषा चाचणी (Language / Marathi / English)']
+        'subjects' => ['à¤®à¤¾à¤¨à¤¸à¤¿à¤• à¤•à¥à¤·à¤®à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Mental Ability)', 'à¤…à¤‚à¤•à¤—à¤£à¤¿à¤¤ (Arithmetic)', 'à¤­à¤¾à¤·à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Language / Marathi / English)']
     ],
     'sainik' => [
-        'name' => 'सैनिक शाळा प्रवेश परीक्षा (AISSEE)',
-        'badge' => '🎖️ सैनिक शाळा',
+        'name' => 'à¤¸à¥ˆà¤¨à¤¿à¤• à¤¶à¤¾à¤³à¤¾ à¤ªà¥à¤°à¤µà¥‡à¤¶ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ (AISSEE)',
+        'badge' => 'ðŸŽ–ï¸ à¤¸à¥ˆà¤¨à¤¿à¤• à¤¶à¤¾à¤³à¤¾',
         'color' => '#15803D',
         'bg' => '#DCFCE7',
-        'subjects' => ['गणित (Mathematics - 150 गुण)', 'बुद्धिमत्ता चाचणी (Intelligence)', 'इंग्रजी व्याकरण (English Grammar)', 'सामान्य ज्ञान (General Knowledge)']
+        'subjects' => ['à¤—à¤£à¤¿à¤¤ (Mathematics - 150 à¤—à¥à¤£)', 'à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Intelligence)', 'à¤‡à¤‚à¤—à¥à¤°à¤œà¥€ à¤µà¥à¤¯à¤¾à¤•à¤°à¤£ (English Grammar)', 'à¤¸à¤¾à¤®à¤¾à¤¨à¥à¤¯ à¤œà¥à¤žà¤¾à¤¨ (General Knowledge)']
     ],
     'olympiad' => [
-        'name' => 'ऑलिम्पियाड स्पर्धा परीक्षा (SOF/Homi Bhabha)',
-        'badge' => '🏆 ऑलिम्पियाड',
+        'name' => 'à¤‘à¤²à¤¿à¤®à¥à¤ªà¤¿à¤¯à¤¾à¤¡ à¤¸à¥à¤ªà¤°à¥à¤§à¤¾ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ (SOF/Homi Bhabha)',
+        'badge' => 'ðŸ† à¤‘à¤²à¤¿à¤®à¥à¤ªà¤¿à¤¯à¤¾à¤¡',
         'color' => '#D97706',
         'bg' => '#FEF3C7',
         'subjects' => ['IMO - Mathematics', 'NSO - Science', 'IEO - English Grammar', 'Logical Reasoning', 'Achievers Section (HOTS)']
     ],
     'mts' => [
-        'name' => 'MTS / NMMS प्रज्ञाशोध परीक्षा',
-        'badge' => '💡 MTS / NMMS',
+        'name' => 'MTS / NMMS à¤ªà¥à¤°à¤œà¥à¤žà¤¾à¤¶à¥‹à¤§ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾',
+        'badge' => 'ðŸ’¡ MTS / NMMS',
         'color' => '#7C3AED',
         'bg' => '#F3E8FF',
-        'subjects' => ['MAT - मानसिक क्षमता चाचणी', 'SAT - विज्ञान (Science)', 'SAT - सामाजिक शास्त्रे', 'SAT - गणित (Mathematics)']
+        'subjects' => ['MAT - à¤®à¤¾à¤¨à¤¸à¤¿à¤• à¤•à¥à¤·à¤®à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€', 'SAT - à¤µà¤¿à¤œà¥à¤žà¤¾à¤¨ (Science)', 'SAT - à¤¸à¤¾à¤®à¤¾à¤œà¤¿à¤• à¤¶à¤¾à¤¸à¥à¤¤à¥à¤°à¥‡', 'SAT - à¤—à¤£à¤¿à¤¤ (Mathematics)']
     ]
 ];
 
 // Pre-packaged high-yield topic recommendations for quick AI generation
 $QUICK_TOPICS = [
-    'Logical Reasoning' => ['अक्षरमाला (Alphabet Series)', 'संख्यामाला (Number Series)', 'सांकेतिक भाषा (Coding-Decoding)', 'नातेसंबंध (Blood Relations)', 'दिशा ज्ञान (Directions)', 'विजोड पद (Odd-Man Out)', 'समसंबंध (Analogy)', 'वेन आकृत्या (Venn Diagrams)', 'दिनदर्शिका व घड्याळ (Calendar & Clock)'],
+    'Logical Reasoning' => ['à¤…à¤•à¥à¤·à¤°à¤®à¤¾à¤²à¤¾ (Alphabet Series)', 'à¤¸à¤‚à¤–à¥à¤¯à¤¾à¤®à¤¾à¤²à¤¾ (Number Series)', 'à¤¸à¤¾à¤‚à¤•à¥‡à¤¤à¤¿à¤• à¤­à¤¾à¤·à¤¾ (Coding-Decoding)', 'à¤¨à¤¾à¤¤à¥‡à¤¸à¤‚à¤¬à¤‚à¤§ (Blood Relations)', 'à¤¦à¤¿à¤¶à¤¾ à¤œà¥à¤žà¤¾à¤¨ (Directions)', 'à¤µà¤¿à¤œà¥‹à¤¡ à¤ªà¤¦ (Odd-Man Out)', 'à¤¸à¤®à¤¸à¤‚à¤¬à¤‚à¤§ (Analogy)', 'à¤µà¥‡à¤¨ à¤†à¤•à¥ƒà¤¤à¥à¤¯à¤¾ (Venn Diagrams)', 'à¤¦à¤¿à¤¨à¤¦à¤°à¥à¤¶à¤¿à¤•à¤¾ à¤µ à¤˜à¤¡à¥à¤¯à¤¾à¤³ (Calendar & Clock)'],
     'English Grammar' => ['Tenses & Correct Verb Forms', 'Prepositions & Articles', 'Active & Passive Voice', 'Direct & Indirect Speech', 'Synonyms & Antonyms', 'One Word Substitution', 'Spotting Common Errors', 'Jumbled Words & Sentences', 'Idioms & Proverbs'],
-    'Mathematics' => ['अपूर्णांक (Fractions & Decimals)', 'लसावि व मसावि (LCM & HCF)', 'शेकडेवारी (Percentages)', 'नफा व तोटा (Profit & Loss)', 'सरळव्याज (Simple Interest)', 'गुणोत्तर व प्रमाण (Ratio & Proportion)', 'क्षेत्रफळ व परिमिती (Perimeter & Area)', 'काळ, काम व वेग (Speed & Distance)']
+    'Mathematics' => ['à¤…à¤ªà¥‚à¤°à¥à¤£à¤¾à¤‚à¤• (Fractions & Decimals)', 'à¤²à¤¸à¤¾à¤µà¤¿ à¤µ à¤®à¤¸à¤¾à¤µà¤¿ (LCM & HCF)', 'à¤¶à¥‡à¤•à¤¡à¥‡à¤µà¤¾à¤°à¥€ (Percentages)', 'à¤¨à¤«à¤¾ à¤µ à¤¤à¥‹à¤Ÿà¤¾ (Profit & Loss)', 'à¤¸à¤°à¤³à¤µà¥à¤¯à¤¾à¤œ (Simple Interest)', 'à¤—à¥à¤£à¥‹à¤¤à¥à¤¤à¤° à¤µ à¤ªà¥à¤°à¤®à¤¾à¤£ (Ratio & Proportion)', 'à¤•à¥à¤·à¥‡à¤¤à¥à¤°à¤«à¤³ à¤µ à¤ªà¤°à¤¿à¤®à¤¿à¤¤à¥€ (Perimeter & Area)', 'à¤•à¤¾à¤³, à¤•à¤¾à¤® à¤µ à¤µà¥‡à¤— (Speed & Distance)']
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3. AJAX HANDLER: AI MCQ GENERATION
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (isset($_POST['action']) && $_POST['action'] === 'ai_generate_mcqs') {
     header('Content-Type: application/json; charset=UTF-8');
     
@@ -168,9 +168,9 @@ RULES:
     exit();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 4. ACTION HANDLERS: SAVE AI MCQS, BULK CSV, DELETE
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $message = '';
 $messageType = '';
 
@@ -184,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $approved_questions = $_POST['questions'] ?? [];
     
     if (empty($approved_questions) || !is_array($approved_questions)) {
-        $message = "कोणताही प्रश्न सेव्ह करण्यासाठी निवडलेला नाही.";
+        $message = "à¤•à¥‹à¤£à¤¤à¤¾à¤¹à¥€ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤£à¥à¤¯à¤¾à¤¸à¤¾à¤ à¥€ à¤¨à¤¿à¤µà¤¡à¤²à¥‡à¤²à¤¾ à¤¨à¤¾à¤¹à¥€.";
         $messageType = "error";
     } else {
         $savedCount = 0;
@@ -247,11 +247,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $savedCount++;
             }
             $pdo->commit();
-            $message = "🎉 अभिनंदन! $savedCount प्रश्न घटक (#$chapter_id - $topic_name) मध्ये सेव्ह झाले.";
+            $message = "ðŸŽ‰ à¤…à¤­à¤¿à¤¨à¤‚à¤¦à¤¨! $savedCount à¤ªà¥à¤°à¤¶à¥à¤¨ à¤˜à¤Ÿà¤• (#$chapter_id - $topic_name) à¤®à¤§à¥à¤¯à¥‡ à¤¸à¥‡à¤µà¥à¤¹ à¤à¤¾à¤²à¥‡.";
             $messageType = "success";
         } catch (Exception $e) {
             $pdo->rollBack();
-            $message = "प्रश्न सेव्ह करताना त्रुटी: " . $e->getMessage();
+            $message = "à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¤à¤¾à¤¨à¤¾ à¤¤à¥à¤°à¥à¤Ÿà¥€: " . $e->getMessage();
             $messageType = "error";
         }
     }
@@ -264,10 +264,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $medium = trim($_POST['medium'] ?? 'marathi');
     
     if ($chapter_id <= 0) {
-        $message = "कृपया प्रश्न अपलोड करण्यासाठी घटक / धडा निवडा.";
+        $message = "à¤•à¥ƒà¤ªà¤¯à¤¾ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤…à¤ªà¤²à¥‹à¤¡ à¤•à¤°à¤£à¥à¤¯à¤¾à¤¸à¤¾à¤ à¥€ à¤˜à¤Ÿà¤• / à¤§à¤¡à¤¾ à¤¨à¤¿à¤µà¤¡à¤¾.";
         $messageType = "error";
     } elseif (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== 0) {
-        $message = "कृपया वैध CSV फाईल निवडा.";
+        $message = "à¤•à¥ƒà¤ªà¤¯à¤¾ à¤µà¥ˆà¤§ CSV à¤«à¤¾à¤ˆà¤² à¤¨à¤¿à¤µà¤¡à¤¾.";
         $messageType = "error";
     } else {
         $file = $_FILES['csv_file']['tmp_name'];
@@ -301,11 +301,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             fclose($handle);
             $pdo->commit();
-            $message = "📁 CSV मधून एकूण $count प्रश्न यशस्वीरित्या इंपोर्ट झाले!";
+            $message = "ðŸ“ CSV à¤®à¤§à¥‚à¤¨ à¤à¤•à¥‚à¤£ $count à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¯à¤¶à¤¸à¥à¤µà¥€à¤°à¤¿à¤¤à¥à¤¯à¤¾ à¤‡à¤‚à¤ªà¥‹à¤°à¥à¤Ÿ à¤à¤¾à¤²à¥‡!";
             $messageType = "success";
         } catch (Exception $e) {
             $pdo->rollBack();
-            $message = "CSV इंपोर्ट त्रुटी: " . $e->getMessage();
+            $message = "CSV à¤‡à¤‚à¤ªà¥‹à¤°à¥à¤Ÿ à¤¤à¥à¤°à¥à¤Ÿà¥€: " . $e->getMessage();
             $messageType = "error";
         }
     }
@@ -317,10 +317,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_sample_csv') {
     header('Content-Disposition: attachment; filename="scholarship_mcq_sample.csv"');
     $out = fopen('php://output', 'w');
     fputs($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-    fputcsv($out, ['Question (प्रश्न)', 'Option A (पर्याय अ)', 'Option B (पर्याय ब)', 'Option C (पर्याय क)', 'Option D (पर्याय ड)', 'Correct Answer (a/b/c/d)', 'Explanation (स्पष्टीकरण)', 'Difficulty (easy/medium/hard)']);
-    fputcsv($out, ['खालीलपैकी विजोड पद ओळखा: 11, 13, 15, 17', '11', '13', '15', '17', 'c', '15 ही संयुक्त संख्या आहे, बाकी सर्व मूळ संख्या आहेत.', 'medium']);
+    fputcsv($out, ['Question (à¤ªà¥à¤°à¤¶à¥à¤¨)', 'Option A (à¤ªà¤°à¥à¤¯à¤¾à¤¯ à¤…)', 'Option B (à¤ªà¤°à¥à¤¯à¤¾à¤¯ à¤¬)', 'Option C (à¤ªà¤°à¥à¤¯à¤¾à¤¯ à¤•)', 'Option D (à¤ªà¤°à¥à¤¯à¤¾à¤¯ à¤¡)', 'Correct Answer (a/b/c/d)', 'Explanation (à¤¸à¥à¤ªà¤·à¥à¤Ÿà¥€à¤•à¤°à¤£)', 'Difficulty (easy/medium/hard)']);
+    fputcsv($out, ['à¤–à¤¾à¤²à¥€à¤²à¤ªà¥ˆà¤•à¥€ à¤µà¤¿à¤œà¥‹à¤¡ à¤ªà¤¦ à¤“à¤³à¤–à¤¾: 11, 13, 15, 17', '11', '13', '15', '17', 'c', '15 à¤¹à¥€ à¤¸à¤‚à¤¯à¥à¤•à¥à¤¤ à¤¸à¤‚à¤–à¥à¤¯à¤¾ à¤†à¤¹à¥‡, à¤¬à¤¾à¤•à¥€ à¤¸à¤°à¥à¤µ à¤®à¥‚à¤³ à¤¸à¤‚à¤–à¥à¤¯à¤¾ à¤†à¤¹à¥‡à¤¤.', 'medium']);
     fputcsv($out, ['Choose the correct preposition: She is fond ___ classical music.', 'with', 'of', 'for', 'in', 'b', 'The adjective fond always takes the preposition of.', 'easy']);
-    fputcsv($out, ['जर CAT = 24 तर DOG = ?', '26', '28', '30', '32', 'a', 'D(4) + O(15) + G(7) = 26', 'medium']);
+    fputcsv($out, ['à¤œà¤° CAT = 24 à¤¤à¤° DOG = ?', '26', '28', '30', '32', 'a', 'D(4) + O(15) + G(7) = 26', 'medium']);
     fclose($out);
     exit();
 }
@@ -330,17 +330,17 @@ if (isset($_GET['delete_mcq'])) {
     $mcq_id = intval($_GET['delete_mcq']);
     try {
         $pdo->prepare("DELETE FROM mcqs WHERE mcq_id = ?")->execute([$mcq_id]);
-        $message = "प्रश्न यशस्वीरित्या डिलीट केला.";
+        $message = "à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¯à¤¶à¤¸à¥à¤µà¥€à¤°à¤¿à¤¤à¥à¤¯à¤¾ à¤¡à¤¿à¤²à¥€à¤Ÿ à¤•à¥‡à¤²à¤¾.";
         $messageType = "success";
     } catch (Exception $e) {
-        $message = "डिलीट करताना त्रुटी: " . $e->getMessage();
+        $message = "à¤¡à¤¿à¤²à¥€à¤Ÿ à¤•à¤°à¤¤à¤¾à¤¨à¤¾ à¤¤à¥à¤°à¥à¤Ÿà¥€: " . $e->getMessage();
         $messageType = "error";
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 5. DATA FOR VIEW (Chapters & Question Bank Explorer)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $selected_cat = $_GET['cat'] ?? 'all';
 $search_q = trim($_GET['search'] ?? '');
 
@@ -482,21 +482,22 @@ try {
 <body>
 
 <div class="header">
-    <h1>✨ स्पर्धा परीक्षा प्रश्न व अभ्यासक्रम स्टुडिओ (AI Studio)</h1>
+    <h1>âœ¨ à¤¸à¥à¤ªà¤°à¥à¤§à¤¾ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤µ à¤…à¤­à¥à¤¯à¤¾à¤¸à¤•à¥à¤°à¤® à¤¸à¥à¤Ÿà¥à¤¡à¤¿à¤“ (AI Studio)</h1>
     <div style="display: flex; gap: 12px;">
-        <a href="scholarship_exams.php" class="btn-header">🏆 Live Mock Exams</a>
-        <a href="dashboard.php" class="btn-header">⬅ Dashboard</a>
+        <a href="scholarship_exams.php" class="btn-header">ðŸ† Live Mock Exams</a>
+        <a href="dashboard.php" class="btn-header">â¬… Dashboard</a>
     </div>
 </div>
 
 <nav class="nav">
     <ul>
         <li><a href="dashboard.php">Dashboard</a></li>
-        <li><a href="scholarship_hub.php" class="active">✨ Scholarship Studio (AI)</a></li>
-        <li><a href="scholarship_exams.php">🏆 Scholarship Live Exams</a></li>
-        <li><a href="mcqs.php">Standard MCQs</a></li>
+        <li><a href="scholarship_exams.php">🏆 Live Exams</a></li>
+        <li><a href="scholarship_hub.php" class="active">✨ AI Question Studio</a></li>
         <li><a href="subjects.php">Subjects</a></li>
         <li><a href="chapters.php">Chapters</a></li>
+        <li><a href="mcqs.php">MCQs</a></li>
+        <li><a href="users.php">Students</a></li>
     </ul>
 </nav>
 
@@ -509,7 +510,7 @@ try {
     <div class="stats-bar">
         <div class="stat-box">
             <div>
-                <div class="title">एकूण स्पर्धा प्रश्न</div>
+                <div class="title">à¤à¤•à¥‚à¤£ à¤¸à¥à¤ªà¤°à¥à¤§à¤¾ à¤ªà¥à¤°à¤¶à¥à¤¨</div>
                 <div class="value"><?php echo $catCounts['all']; ?></div>
             </div>
             <span class="badge-pill" style="background:#e0e7ff; color:#4338ca;">All Exams</span>
@@ -518,7 +519,7 @@ try {
             <div class="stat-box">
                 <div>
                     <div class="title"><?php echo htmlspecialchars($cdata['badge']); ?></div>
-                    <div class="value"><?php echo $catCounts[$ck] ?? 0; ?> प्रश्न</div>
+                    <div class="value"><?php echo $catCounts[$ck] ?? 0; ?> à¤ªà¥à¤°à¤¶à¥à¤¨</div>
                 </div>
                 <span class="badge-pill" style="background:<?php echo $cdata['bg']; ?>; color:<?php echo $cdata['color']; ?>;">
                     <?php echo $ck; ?>
@@ -530,7 +531,7 @@ try {
     <!-- Category Switcher Filter -->
     <div class="cat-scroll">
         <a href="scholarship_hub.php?cat=all" class="cat-btn <?php echo $selected_cat === 'all' ? 'active' : ''; ?>">
-            🌟 सर्व परीक्षा (All)
+            ðŸŒŸ à¤¸à¤°à¥à¤µ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ (All)
         </a>
         <?php foreach ($CATEGORIES as $ck => $cdata): ?>
             <a href="scholarship_hub.php?cat=<?php echo $ck; ?>" class="cat-btn <?php echo $selected_cat === $ck ? 'active' : ''; ?>">
@@ -542,33 +543,33 @@ try {
     <!-- 3 Studio Action Tabs -->
     <div class="hub-tabs-row">
         <button class="hub-tab-btn active" onclick="switchHubTab('ai_tab', this)">
-            🤖 AI Question Studio (Instant Generator)
+            ðŸ¤– AI Question Studio (Instant Generator)
         </button>
         <button class="hub-tab-btn" onclick="switchHubTab('bulk_tab', this)">
-            📁 CSV / Excel Bulk Upload
+            ðŸ“ CSV / Excel Bulk Upload
         </button>
         <button class="hub-tab-btn" onclick="switchHubTab('explorer_tab', this)">
-            📋 Question Bank Explorer (<?php echo count($explorerMCQs); ?>)
+            ðŸ“‹ Question Bank Explorer (<?php echo count($explorerMCQs); ?>)
         </button>
     </div>
 
-    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <!-- TAB 1: AI QUESTION GENERATOR -->
-    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="ai_tab" class="studio-card">
         <div style="margin-bottom: 20px;">
             <h2 style="font-size: 18px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                🤖 AI द्वारे उच्च दर्जाचे MCQ प्रश्न तयार करा
+                ðŸ¤– AI à¤¦à¥à¤µà¤¾à¤°à¥‡ à¤‰à¤šà¥à¤š à¤¦à¤°à¥à¤œà¤¾à¤šà¥‡ MCQ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾
             </h2>
             <p style="color: #64748b; font-size: 13px; margin-top: 4px;">
-                बुद्धिमत्ता चाचणी (Logical Reasoning), इंग्रजी व्याकरण (English Grammar), अंकगणित (Arithmetic) व सामान्य ज्ञान या विषयांचे परीक्षा-मानक प्रश्न अवघ्या काही सेकंदात तयार करा.
+                à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Logical Reasoning), à¤‡à¤‚à¤—à¥à¤°à¤œà¥€ à¤µà¥à¤¯à¤¾à¤•à¤°à¤£ (English Grammar), à¤…à¤‚à¤•à¤—à¤£à¤¿à¤¤ (Arithmetic) à¤µ à¤¸à¤¾à¤®à¤¾à¤¨à¥à¤¯ à¤œà¥à¤žà¤¾à¤¨ à¤¯à¤¾ à¤µà¤¿à¤·à¤¯à¤¾à¤‚à¤šà¥‡ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾-à¤®à¤¾à¤¨à¤• à¤ªà¥à¤°à¤¶à¥à¤¨ à¤…à¤µà¤˜à¥à¤¯à¤¾ à¤•à¤¾à¤¹à¥€ à¤¸à¥‡à¤•à¤‚à¤¦à¤¾à¤¤ à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾.
             </p>
         </div>
 
         <form id="aiGenForm" onsubmit="handleAIGenerate(event)">
             <div class="form-row">
                 <div class="form-group">
-                    <label>परीक्षेचा प्रकार (Exam Category)</label>
+                    <label>à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¤¾ à¤ªà¥à¤°à¤•à¤¾à¤° (Exam Category)</label>
                     <select id="aiCategory" class="form-control" onchange="updateSubjectsForCategory()">
                         <?php foreach ($CATEGORIES as $ck => $cdata): ?>
                             <option value="<?php echo $ck; ?>" <?php echo $selected_cat === $ck ? 'selected' : ''; ?>>
@@ -579,28 +580,28 @@ try {
                 </div>
 
                 <div class="form-group">
-                    <label>इयत्ता / वर्ग (Target Grade)</label>
+                    <label>à¤‡à¤¯à¤¤à¥à¤¤à¤¾ / à¤µà¤°à¥à¤— (Target Grade)</label>
                     <select id="aiGrade" class="form-control">
-                        <option value="5" selected>Class 5 (५वी - नवोदय / ५वी शिष्यवृत्ती / AISSEE 6th)</option>
-                        <option value="8">Class 8 (८वी - ८वी शिष्यवृत्ती / AISSEE 9th / NMMS)</option>
+                        <option value="5" selected>Class 5 (à¥«à¤µà¥€ - à¤¨à¤µà¥‹à¤¦à¤¯ / à¥«à¤µà¥€ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€ / AISSEE 6th)</option>
+                        <option value="8">Class 8 (à¥®à¤µà¥€ - à¥®à¤µà¥€ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€ / AISSEE 9th / NMMS)</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>विषय (Subject)</label>
+                    <label>à¤µà¤¿à¤·à¤¯ (Subject)</label>
                     <select id="aiSubject" class="form-control" onchange="updateTopicChips()">
-                        <option value="Logical Reasoning" selected>बुद्धिमत्ता चाचणी (Mental Ability & Logic)</option>
-                        <option value="English Grammar">इंग्रजी व्याकरण (English Grammar)</option>
-                        <option value="Mathematics">अंकगणित व गणित (Arithmetic & Math)</option>
-                        <option value="General Knowledge">सामान्य ज्ञान (General Knowledge)</option>
+                        <option value="Logical Reasoning" selected>à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Mental Ability & Logic)</option>
+                        <option value="English Grammar">à¤‡à¤‚à¤—à¥à¤°à¤œà¥€ à¤µà¥à¤¯à¤¾à¤•à¤°à¤£ (English Grammar)</option>
+                        <option value="Mathematics">à¤…à¤‚à¤•à¤—à¤£à¤¿à¤¤ à¤µ à¤—à¤£à¤¿à¤¤ (Arithmetic & Math)</option>
+                        <option value="General Knowledge">à¤¸à¤¾à¤®à¤¾à¤¨à¥à¤¯ à¤œà¥à¤žà¤¾à¤¨ (General Knowledge)</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>काठिण्य पातळी (Difficulty)</label>
+                    <label>à¤•à¤¾à¤ à¤¿à¤£à¥à¤¯ à¤ªà¤¾à¤¤à¤³à¥€ (Difficulty)</label>
                     <select id="aiDifficulty" class="form-control">
-                        <option value="easy">Easy (प्राथमिक सराव)</option>
-                        <option value="medium" selected>Medium (परीक्षा पातळी)</option>
+                        <option value="easy">Easy (à¤ªà¥à¤°à¤¾à¤¥à¤®à¤¿à¤• à¤¸à¤°à¤¾à¤µ)</option>
+                        <option value="medium" selected>Medium (à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤ªà¤¾à¤¤à¤³à¥€)</option>
                         <option value="hard">Hard (Achievers / HOTS)</option>
                     </select>
                 </div>
@@ -608,36 +609,36 @@ try {
 
             <div class="form-row">
                 <div class="form-group" style="grid-column: span 2;">
-                    <label>घटक / टॉपिकचे नाव (Topic Name):</label>
-                    <input type="text" id="aiTopic" class="form-control" value="सांकेतिक भाषा (Coding-Decoding)" required placeholder="उदा. नातेसंबंध, काळ व क्रियापद, अपूर्णांक">
+                    <label>à¤˜à¤Ÿà¤• / à¤Ÿà¥‰à¤ªà¤¿à¤•à¤šà¥‡ à¤¨à¤¾à¤µ (Topic Name):</label>
+                    <input type="text" id="aiTopic" class="form-control" value="à¤¸à¤¾à¤‚à¤•à¥‡à¤¤à¤¿à¤• à¤­à¤¾à¤·à¤¾ (Coding-Decoding)" required placeholder="à¤‰à¤¦à¤¾. à¤¨à¤¾à¤¤à¥‡à¤¸à¤‚à¤¬à¤‚à¤§, à¤•à¤¾à¤³ à¤µ à¤•à¥à¤°à¤¿à¤¯à¤¾à¤ªà¤¦, à¤…à¤ªà¥‚à¤°à¥à¤£à¤¾à¤‚à¤•">
                     <div class="topic-chips" id="topicChips">
                         <!-- Populated by JS -->
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>माध्यम (Language / Medium)</label>
+                    <label>à¤®à¤¾à¤§à¥à¤¯à¤® (Language / Medium)</label>
                     <select id="aiLanguage" class="form-control">
-                        <option value="Marathi" selected>मराठी (Marathi Medium)</option>
+                        <option value="Marathi" selected>à¤®à¤°à¤¾à¤ à¥€ (Marathi Medium)</option>
                         <option value="English">English Medium</option>
-                        <option value="Semi-English">Semi-English (द्विभाषिक)</option>
+                        <option value="Semi-English">Semi-English (à¤¦à¥à¤µà¤¿à¤­à¤¾à¤·à¤¿à¤•)</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>प्रश्नांची संख्या</label>
+                    <label>à¤ªà¥à¤°à¤¶à¥à¤¨à¤¾à¤‚à¤šà¥€ à¤¸à¤‚à¤–à¥à¤¯à¤¾</label>
                     <select id="aiCount" class="form-control">
-                        <option value="5" selected>५ प्रश्न (Quick 5)</option>
-                        <option value="10">१० प्रश्न (Standard 10)</option>
-                        <option value="15">१५ प्रश्न (15 Questions)</option>
-                        <option value="20">२० प्रश्न (Full Section 20)</option>
+                        <option value="5" selected>à¥« à¤ªà¥à¤°à¤¶à¥à¤¨ (Quick 5)</option>
+                        <option value="10">à¥§à¥¦ à¤ªà¥à¤°à¤¶à¥à¤¨ (Standard 10)</option>
+                        <option value="15">à¥§à¥« à¤ªà¥à¤°à¤¶à¥à¤¨ (15 Questions)</option>
+                        <option value="20">à¥¨à¥¦ à¤ªà¥à¤°à¤¶à¥à¤¨ (Full Section 20)</option>
                     </select>
                 </div>
             </div>
 
             <div style="margin-top: 10px;">
                 <button type="submit" id="btnGenerateAI" class="btn-ai-generate">
-                    <span>⚡ AI द्वारे प्रश्न जनरेट करा</span>
+                    <span>âš¡ AI à¤¦à¥à¤µà¤¾à¤°à¥‡ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤œà¤¨à¤°à¥‡à¤Ÿ à¤•à¤°à¤¾</span>
                 </button>
             </div>
         </form>
@@ -646,11 +647,11 @@ try {
         <div id="aiResultsBox" class="generated-box">
             <div class="generated-header">
                 <div>
-                    <h3 style="font-size: 16px; color: #1e293b;">📋 जनरेट झालेले प्रश्न (Review & Approve):</h3>
-                    <p style="font-size: 12px; color: #64748b;">खालील प्रश्नांची तपासणी करा, आवश्यक असल्यास दुरुस्ती करा आणि थेट डेटाबेसमध्ये सेव्ह करा.</p>
+                    <h3 style="font-size: 16px; color: #1e293b;">ðŸ“‹ à¤œà¤¨à¤°à¥‡à¤Ÿ à¤à¤¾à¤²à¥‡à¤²à¥‡ à¤ªà¥à¤°à¤¶à¥à¤¨ (Review & Approve):</h3>
+                    <p style="font-size: 12px; color: #64748b;">à¤–à¤¾à¤²à¥€à¤² à¤ªà¥à¤°à¤¶à¥à¤¨à¤¾à¤‚à¤šà¥€ à¤¤à¤ªà¤¾à¤¸à¤£à¥€ à¤•à¤°à¤¾, à¤†à¤µà¤¶à¥à¤¯à¤• à¤…à¤¸à¤²à¥à¤¯à¤¾à¤¸ à¤¦à¥à¤°à¥à¤¸à¥à¤¤à¥€ à¤•à¤°à¤¾ à¤†à¤£à¤¿ à¤¥à¥‡à¤Ÿ à¤¡à¥‡à¤Ÿà¤¾à¤¬à¥‡à¤¸à¤®à¤§à¥à¤¯à¥‡ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¾.</p>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <button type="button" onclick="selectAllAIQuestions(true)" class="btn-header" style="background:#e2e8f0; color:#334155;">सर्व निवडा</button>
+                    <button type="button" onclick="selectAllAIQuestions(true)" class="btn-header" style="background:#e2e8f0; color:#334155;">à¤¸à¤°à¥à¤µ à¤¨à¤¿à¤µà¤¡à¤¾</button>
                 </div>
             </div>
 
@@ -663,9 +664,9 @@ try {
 
                 <div class="form-row" style="background: #f1f5f9; padding: 14px; border-radius: 10px; margin-bottom: 20px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>कोणत्या धड्यात / घटकात सेव्ह करायचे? (Select Chapter to Save): *</label>
+                        <label>à¤•à¥‹à¤£à¤¤à¥à¤¯à¤¾ à¤§à¤¡à¥à¤¯à¤¾à¤¤ / à¤˜à¤Ÿà¤•à¤¾à¤¤ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¾à¤¯à¤šà¥‡? (Select Chapter to Save): *</label>
                         <select name="chapter_id" class="form-control" required>
-                            <option value="auto_create" selected>✨ नवीन घटक आपोआप तयार करा (Auto-create Chapter for Topic)</option>
+                            <option value="auto_create" selected>âœ¨ à¤¨à¤µà¥€à¤¨ à¤˜à¤Ÿà¤• à¤†à¤ªà¥‹à¤†à¤ª à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾ (Auto-create Chapter for Topic)</option>
                             <?php foreach ($chaptersList as $ch): ?>
                                 <option value="<?php echo $ch['chapter_id']; ?>">
                                     [<?php echo htmlspecialchars($ch['subject_name']); ?>] <?php echo htmlspecialchars($ch['chapter_name']); ?> (<?php echo htmlspecialchars($ch['class_name']); ?>)
@@ -681,24 +682,24 @@ try {
 
                 <div style="margin-top: 24px; text-align: right;">
                     <button type="submit" class="btn-ai-generate" style="background: #10b981;">
-                        💾 निवडलेले सर्व प्रश्न डेटाबेसमध्ये सेव्ह करा
+                        ðŸ’¾ à¤¨à¤¿à¤µà¤¡à¤²à¥‡à¤²à¥‡ à¤¸à¤°à¥à¤µ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¡à¥‡à¤Ÿà¤¾à¤¬à¥‡à¤¸à¤®à¤§à¥à¤¯à¥‡ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¾
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <!-- TAB 2: BULK CSV UPLOAD -->
-    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="bulk_tab" class="studio-card" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
-                <h2 style="font-size: 18px; color: #1e293b;">📁 CSV / Excel द्वारे मोठ्या प्रमाणात प्रश्न अपलोड करा</h2>
-                <p style="color: #64748b; font-size: 13px;">एकाच वेळी १००+ प्रश्न थेट Excel किंवा CSV फाईलवरून अपलोड करा.</p>
+                <h2 style="font-size: 18px; color: #1e293b;">ðŸ“ CSV / Excel à¤¦à¥à¤µà¤¾à¤°à¥‡ à¤®à¥‹à¤ à¥à¤¯à¤¾ à¤ªà¥à¤°à¤®à¤¾à¤£à¤¾à¤¤ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤…à¤ªà¤²à¥‹à¤¡ à¤•à¤°à¤¾</h2>
+                <p style="color: #64748b; font-size: 13px;">à¤à¤•à¤¾à¤š à¤µà¥‡à¤³à¥€ à¥§à¥¦à¥¦+ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¥à¥‡à¤Ÿ Excel à¤•à¤¿à¤‚à¤µà¤¾ CSV à¤«à¤¾à¤ˆà¤²à¤µà¤°à¥‚à¤¨ à¤…à¤ªà¤²à¥‹à¤¡ à¤•à¤°à¤¾.</p>
             </div>
             <a href="scholarship_hub.php?action=download_sample_csv" class="btn-header" style="background: #4A00E0; color: white;">
-                📥 नमुना CSV फाईल डाऊनलोड करा
+                ðŸ“¥ à¤¨à¤®à¥à¤¨à¤¾ CSV à¤«à¤¾à¤ˆà¤² à¤¡à¤¾à¤Šà¤¨à¤²à¥‹à¤¡ à¤•à¤°à¤¾
             </a>
         </div>
 
@@ -707,7 +708,7 @@ try {
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>परीक्षेचा प्रकार (Exam Category)</label>
+                    <label>à¤ªà¤°à¥€à¤•à¥à¤·à¥‡à¤šà¤¾ à¤ªà¥à¤°à¤•à¤¾à¤° (Exam Category)</label>
                     <select name="category_slug" class="form-control">
                         <?php foreach ($CATEGORIES as $ck => $cdata): ?>
                             <option value="<?php echo $ck; ?>"><?php echo $cdata['badge']; ?></option>
@@ -716,9 +717,9 @@ try {
                 </div>
 
                 <div class="form-group">
-                    <label>घटक / धडा (Chapter)</label>
+                    <label>à¤˜à¤Ÿà¤• / à¤§à¤¡à¤¾ (Chapter)</label>
                     <select name="chapter_id" class="form-control" required>
-                        <option value="">-- घटक निवडा --</option>
+                        <option value="">-- à¤˜à¤Ÿà¤• à¤¨à¤¿à¤µà¤¡à¤¾ --</option>
                         <?php foreach ($chaptersList as $ch): ?>
                             <option value="<?php echo $ch['chapter_id']; ?>">
                                 [<?php echo htmlspecialchars($ch['subject_name']); ?>] <?php echo htmlspecialchars($ch['chapter_name']); ?>
@@ -728,7 +729,7 @@ try {
                 </div>
 
                 <div class="form-group">
-                    <label>माध्यम (Medium)</label>
+                    <label>à¤®à¤¾à¤§à¥à¤¯à¤® (Medium)</label>
                     <select name="medium" class="form-control">
                         <option value="marathi">Marathi</option>
                         <option value="english">English</option>
@@ -738,35 +739,35 @@ try {
             </div>
 
             <div class="form-group" style="margin-top: 10px;">
-                <label>CSV फाईल निवडा (.csv format)</label>
+                <label>CSV à¤«à¤¾à¤ˆà¤² à¤¨à¤¿à¤µà¤¡à¤¾ (.csv format)</label>
                 <input type="file" name="csv_file" accept=".csv" class="form-control" required>
-                <small style="color: #64748b; margin-top: 4px; display: block;">मराठी फॉन्ट व्यवस्थित येण्यासाठी फाईल UTF-8 एन्कोडिंगमध्ये सेव्ह करा.</small>
+                <small style="color: #64748b; margin-top: 4px; display: block;">à¤®à¤°à¤¾à¤ à¥€ à¤«à¥‰à¤¨à¥à¤Ÿ à¤µà¥à¤¯à¤µà¤¸à¥à¤¥à¤¿à¤¤ à¤¯à¥‡à¤£à¥à¤¯à¤¾à¤¸à¤¾à¤ à¥€ à¤«à¤¾à¤ˆà¤² UTF-8 à¤à¤¨à¥à¤•à¥‹à¤¡à¤¿à¤‚à¤—à¤®à¤§à¥à¤¯à¥‡ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¾.</small>
             </div>
 
             <div style="margin-top: 20px;">
                 <button type="submit" class="btn-ai-generate" style="background: #0284C7;">
-                    📤 CSV अपलोड व सेव्ह करा
+                    ðŸ“¤ CSV à¤…à¤ªà¤²à¥‹à¤¡ à¤µ à¤¸à¥‡à¤µà¥à¤¹ à¤•à¤°à¤¾
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <!-- TAB 3: QUESTION BANK EXPLORER -->
-    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div id="explorer_tab" class="studio-card" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="font-size: 18px; color: #1e293b;">📋 उपलब्ध प्रश्नसंच (Total Displayed: <?php echo count($explorerMCQs); ?>)</h2>
+            <h2 style="font-size: 18px; color: #1e293b;">ðŸ“‹ à¤‰à¤ªà¤²à¤¬à¥à¤§ à¤ªà¥à¤°à¤¶à¥à¤¨à¤¸à¤‚à¤š (Total Displayed: <?php echo count($explorerMCQs); ?>)</h2>
             <form method="GET" style="display: flex; gap: 8px;">
                 <input type="hidden" name="cat" value="<?php echo htmlspecialchars($selected_cat); ?>">
-                <input type="text" name="search" value="<?php echo htmlspecialchars($search_q); ?>" placeholder="प्रश्नात शोधा..." class="form-control" style="width: 250px;">
-                <button type="submit" class="btn-header" style="background: #8E2DE2; border:none; cursor:pointer;">शोधा</button>
+                <input type="text" name="search" value="<?php echo htmlspecialchars($search_q); ?>" placeholder="à¤ªà¥à¤°à¤¶à¥à¤¨à¤¾à¤¤ à¤¶à¥‹à¤§à¤¾..." class="form-control" style="width: 250px;">
+                <button type="submit" class="btn-header" style="background: #8E2DE2; border:none; cursor:pointer;">à¤¶à¥‹à¤§à¤¾</button>
             </form>
         </div>
 
         <?php if (empty($explorerMCQs)): ?>
             <div style="padding: 40px; text-align: center; color: #94a3b8;">
-                कोणतेही प्रश्न उपलब्ध नाहीत. AI द्वारे नवीन प्रश्न तयार करा किंवा CSV अपलोड करा.
+                à¤•à¥‹à¤£à¤¤à¥‡à¤¹à¥€ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤‰à¤ªà¤²à¤¬à¥à¤§ à¤¨à¤¾à¤¹à¥€à¤¤. AI à¤¦à¥à¤µà¤¾à¤°à¥‡ à¤¨à¤µà¥€à¤¨ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¾ à¤•à¤¿à¤‚à¤µà¤¾ CSV à¤…à¤ªà¤²à¥‹à¤¡ à¤•à¤°à¤¾.
             </div>
         <?php else: ?>
             <div style="overflow-x: auto;">
@@ -774,18 +775,18 @@ try {
                     <thead>
                         <tr>
                             <th style="width: 5%;">ID</th>
-                            <th style="width: 12%;">कॅटेगरी</th>
-                            <th style="width: 18%;">विषय / धडा</th>
-                            <th>प्रश्न व पर्याय</th>
-                            <th style="width: 10%;">अचूक उत्तर</th>
-                            <th style="width: 8%;">काठिण्य</th>
-                            <th style="width: 6%;">कृती</th>
+                            <th style="width: 12%;">à¤•à¥…à¤Ÿà¥‡à¤—à¤°à¥€</th>
+                            <th style="width: 18%;">à¤µà¤¿à¤·à¤¯ / à¤§à¤¡à¤¾</th>
+                            <th>à¤ªà¥à¤°à¤¶à¥à¤¨ à¤µ à¤ªà¤°à¥à¤¯à¤¾à¤¯</th>
+                            <th style="width: 10%;">à¤…à¤šà¥‚à¤• à¤‰à¤¤à¥à¤¤à¤°</th>
+                            <th style="width: 8%;">à¤•à¤¾à¤ à¤¿à¤£à¥à¤¯</th>
+                            <th style="width: 6%;">à¤•à¥ƒà¤¤à¥€</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($explorerMCQs as $m): 
                             $cKey = $m['category_slug'] ?? 'scholarship';
-                            $cBadge = $CATEGORIES[$cKey]['badge'] ?? '📜 शिष्यवृत्ती';
+                            $cBadge = $CATEGORIES[$cKey]['badge'] ?? 'ðŸ“œ à¤¶à¤¿à¤·à¥à¤¯à¤µà¥ƒà¤¤à¥à¤¤à¥€';
                             $cBg = $CATEGORIES[$cKey]['bg'] ?? '#f1f5f9';
                             $cCol = $CATEGORIES[$cKey]['color'] ?? '#333';
                         ?>
@@ -820,8 +821,8 @@ try {
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="scholarship_hub.php?delete_mcq=<?php echo $m['mcq_id']; ?>&cat=<?php echo $selected_cat; ?>" onclick="return confirm('हा प्रश्न नक्की डिलीट करायचा?');" class="btn-del">
-                                        🗑️
+                                    <a href="scholarship_hub.php?delete_mcq=<?php echo $m['mcq_id']; ?>&cat=<?php echo $selected_cat; ?>" onclick="return confirm('à¤¹à¤¾ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¨à¤•à¥à¤•à¥€ à¤¡à¤¿à¤²à¥€à¤Ÿ à¤•à¤°à¤¾à¤¯à¤šà¤¾?');" class="btn-del">
+                                        ðŸ—‘ï¸
                                     </a>
                                 </td>
                             </tr>
@@ -836,11 +837,11 @@ try {
 <script>
 const QUICK_TOPICS = <?php echo json_encode($QUICK_TOPICS); ?>;
 const CATEGORY_SUBJECTS = {
-    'scholarship': ['बुद्धिमत्ता चाचणी (Mental Ability)', 'गणित (Mathematics)', 'तृतीय भाषा (English Grammar)', 'मराठी / प्रथम भाषा'],
-    'navodaya': ['मानसिक क्षमता चाचणी (Mental Ability)', 'अंकगणित (Arithmetic)', 'भाषा चाचणी (Language Reading)'],
-    'sainik': ['गणित (Mathematics)', 'बुद्धिमत्ता चाचणी (Intelligence)', 'इंग्रजी व्याकरण (English Grammar)', 'सामान्य ज्ञान (General Knowledge)'],
+    'scholarship': ['à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Mental Ability)', 'à¤—à¤£à¤¿à¤¤ (Mathematics)', 'à¤¤à¥ƒà¤¤à¥€à¤¯ à¤­à¤¾à¤·à¤¾ (English Grammar)', 'à¤®à¤°à¤¾à¤ à¥€ / à¤ªà¥à¤°à¤¥à¤® à¤­à¤¾à¤·à¤¾'],
+    'navodaya': ['à¤®à¤¾à¤¨à¤¸à¤¿à¤• à¤•à¥à¤·à¤®à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Mental Ability)', 'à¤…à¤‚à¤•à¤—à¤£à¤¿à¤¤ (Arithmetic)', 'à¤­à¤¾à¤·à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Language Reading)'],
+    'sainik': ['à¤—à¤£à¤¿à¤¤ (Mathematics)', 'à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€ (Intelligence)', 'à¤‡à¤‚à¤—à¥à¤°à¤œà¥€ à¤µà¥à¤¯à¤¾à¤•à¤°à¤£ (English Grammar)', 'à¤¸à¤¾à¤®à¤¾à¤¨à¥à¤¯ à¤œà¥à¤žà¤¾à¤¨ (General Knowledge)'],
     'olympiad': ['IMO - Mathematics', 'NSO - Science', 'IEO - English Grammar', 'Logical Reasoning'],
-    'mts': ['MAT - मानसिक क्षमता चाचणी', 'SAT - विज्ञान (Science)', 'SAT - सामाजिक शास्त्रे', 'SAT - गणित (Mathematics)']
+    'mts': ['MAT - à¤®à¤¾à¤¨à¤¸à¤¿à¤• à¤•à¥à¤·à¤®à¤¤à¤¾ à¤šà¤¾à¤šà¤£à¥€', 'SAT - à¤µà¤¿à¤œà¥à¤žà¤¾à¤¨ (Science)', 'SAT - à¤¸à¤¾à¤®à¤¾à¤œà¤¿à¤• à¤¶à¤¾à¤¸à¥à¤¤à¥à¤°à¥‡', 'SAT - à¤—à¤£à¤¿à¤¤ (Mathematics)']
 };
 
 function switchHubTab(tabId, btn) {
@@ -874,9 +875,9 @@ function updateTopicChips() {
     chipsBox.innerHTML = '';
     
     let list = QUICK_TOPICS['Logical Reasoning'];
-    if (sub.includes('English') || sub.includes('भाषा') || sub.includes('IEO')) {
+    if (sub.includes('English') || sub.includes('à¤­à¤¾à¤·à¤¾') || sub.includes('IEO')) {
         list = QUICK_TOPICS['English Grammar'];
-    } else if (sub.includes('Math') || sub.includes('गणित') || sub.includes('अंकगणित') || sub.includes('IMO')) {
+    } else if (sub.includes('Math') || sub.includes('à¤—à¤£à¤¿à¤¤') || sub.includes('à¤…à¤‚à¤•à¤—à¤£à¤¿à¤¤') || sub.includes('IMO')) {
         list = QUICK_TOPICS['Mathematics'];
     }
     
@@ -899,7 +900,7 @@ async function handleAIGenerate(e) {
     const btn = document.getElementById('btnGenerateAI');
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳ AI प्रश्न तयार करत आहे... (कृपया १०-१५ सेकंद थांबा)</span>';
+    btn.innerHTML = '<span>â³ AI à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¤à¤¯à¤¾à¤° à¤•à¤°à¤¤ à¤†à¤¹à¥‡... (à¤•à¥ƒà¤ªà¤¯à¤¾ à¥§à¥¦-à¥§à¥« à¤¸à¥‡à¤•à¤‚à¤¦ à¤¥à¤¾à¤‚à¤¬à¤¾)</span>';
 
     const formData = new FormData();
     formData.append('action', 'ai_generate_mcqs');
@@ -918,10 +919,10 @@ async function handleAIGenerate(e) {
         if (json.status === 'success' && json.data?.length > 0) {
             renderAIGeneratedQuestions(json.data, document.getElementById('aiCategory').value);
         } else {
-            alert('त्रुटी: ' + (json.message || 'प्रश्न जनरेट होऊ शकले नाहीत.'));
+            alert('à¤¤à¥à¤°à¥à¤Ÿà¥€: ' + (json.message || 'à¤ªà¥à¤°à¤¶à¥à¤¨ à¤œà¤¨à¤°à¥‡à¤Ÿ à¤¹à¥‹à¤Š à¤¶à¤•à¤²à¥‡ à¤¨à¤¾à¤¹à¥€à¤¤.'));
         }
     } catch (err) {
-        alert('सर्व्हरशी संपर्क करताना त्रुटी आली: ' + err.message);
+        alert('à¤¸à¤°à¥à¤µà¥à¤¹à¤°à¤¶à¥€ à¤¸à¤‚à¤ªà¤°à¥à¤• à¤•à¤°à¤¤à¤¾à¤¨à¤¾ à¤¤à¥à¤°à¥à¤Ÿà¥€ à¤†à¤²à¥€: ' + err.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -955,7 +956,7 @@ function renderAIGeneratedQuestions(questions, categorySlug) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <label style="font-weight:700; color:#8E2DE2; cursor:pointer;">
                     <input type="checkbox" name="questions[${idx}][selected]" value="1" checked onchange="toggleCardSelect(${idx}, this)">
-                    प्रश्न #${idx + 1}
+                    à¤ªà¥à¤°à¤¶à¥à¤¨ #${idx + 1}
                 </label>
                 <span style="font-size:11px; background:#e0e7ff; color:#4338ca; padding:2px 8px; border-radius:4px; font-weight:600;">
                     ${escapeHtmlAttr(q.difficulty || 'medium')}
@@ -984,7 +985,7 @@ function renderAIGeneratedQuestions(questions, categorySlug) {
             </div>
 
             <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
-                <div style="font-size:12px; font-weight:600; color:#334155;">अचूक उत्तर:</div>
+                <div style="font-size:12px; font-weight:600; color:#334155;">à¤…à¤šà¥‚à¤• à¤‰à¤¤à¥à¤¤à¤°:</div>
                 ${['a', 'b', 'c', 'd'].map(opt => `
                     <label style="font-size:12px; cursor:pointer;">
                         <input type="radio" name="questions[${idx}][correct_answer]" value="${opt}" ${q.correct_answer === opt ? 'checked' : ''}>
@@ -994,7 +995,7 @@ function renderAIGeneratedQuestions(questions, categorySlug) {
             </div>
 
             <div style="margin-top:10px;">
-                <label style="font-size:11px; font-weight:600; color:#64748b;">स्पष्टीकरण (Explanation):</label>
+                <label style="font-size:11px; font-weight:600; color:#64748b;">à¤¸à¥à¤ªà¤·à¥à¤Ÿà¥€à¤•à¤°à¤£ (Explanation):</label>
                 <input type="text" name="questions[${idx}][explanation]" value="${escapeHtmlAttr(q.explanation || '')}" class="form-control" style="font-size:12px;">
             </div>
             <input type="hidden" name="questions[${idx}][difficulty]" value="${escapeHtmlAttr(q.difficulty || 'medium')}">

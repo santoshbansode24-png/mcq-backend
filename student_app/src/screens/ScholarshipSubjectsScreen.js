@@ -10,12 +10,10 @@ import {
     SafeAreaView,
     Platform,
     ScrollView,
-    TextInput,
     RefreshControl,
     Modal,
     Share,
-    Alert,
-    Dimensions
+    Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,102 +27,140 @@ import { getLanguagePreference, saveLanguagePreference } from '../utils/language
 import { fetchSubjects } from '../api/subjects';
 import { fetchChapters } from '../api/chapters';
 
-const { width } = Dimensions.get('window');
-
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPETITIVE & SCHOLARSHIP EXAM CATEGORIES MASTER
+// COMPETITIVE EXAMS MASTER (Minimal Grid)
 // ─────────────────────────────────────────────────────────────────────────────
 const COMPETITIVE_CATEGORIES = [
-    {
-        id: 'all',
-        title: 'सर्व परीक्षा',
-        badge: '🌟 All Exams',
-        icon: 'apps-outline',
-        gradient: ['#8E2DE2', '#4A00E0'],
-        blueprint: null
-    },
-    {
-        id: 'scholarship',
-        title: 'राज्य शिष्यवृत्ती',
-        badge: '📜 ५वी व ८वी शिष्यवृत्ती',
-        icon: 'ribbon-outline',
-        gradient: ['#4F46E5', '#3730A3'],
-        blueprint: {
-            title: 'महाराष्ट्र राज्य परीक्षा परिषद (MSCE) शिष्यवृत्ती',
-            subtitle: 'इयत्ता ५वी (PUP) व ८वी (PSS) महा-सराव',
-            papers: '• पेपर १: प्रथम भाषा (२५ प्रश्न - ५० गुण) + गणित (५० प्रश्न - १०० गुण) = १५० गुण\n• पेपर २: तृतीय भाषा (२५ प्रश्न - ५० गुण) + बुद्धिमत्ता चाचणी (५० प्रश्न - १०० गुण) = १५० गुण',
-            tip: '⏱️ वेळ: प्रत्येक पेपरला ९० मिनिटे | दररोज ५० प्रश्नांचा टाईम्ड सराव आवश्यक.'
-        }
-    },
-    {
-        id: 'navodaya',
-        title: 'नवोदय (JNVST)',
-        badge: '🏛️ नवोदय विद्यालय',
-        icon: 'school-outline',
-        gradient: ['#0284C7', '#0369A1'],
-        blueprint: {
-            title: 'जवाहर नवोदय विद्यालय निवड चाचणी (JNVST)',
-            subtitle: 'इयत्ता ६वी व ९वी प्रवेश परीक्षा',
-            papers: '१. मानसिक क्षमता चाचणी (MAT): ४० प्रश्न (५० गुण - ६० मिनिटे)\n२. अंकगणित चाचणी: २० प्रश्न (२५ गुण - ३० मिनिटे)\n३. भाषा चाचणी (उतारे): २० प्रश्न (२५ गुण - ३० मिनिटे)',
-            tip: '🎯 एकूण ८० प्रश्न | १०० गुण | वेळ: २ तास | निगेटिव्ह मार्किंग नाही.'
-        }
-    },
-    {
-        id: 'sainik',
-        title: 'सैनिक स्कूल',
-        badge: '🎖️ सैनिक शाळा (AISSEE)',
-        icon: 'shield-checkmark-outline',
-        gradient: ['#15803D', '#166534'],
-        blueprint: {
-            title: 'ऑल इंडिया सैनिक स्कूल प्रवेश परीक्षा (AISSEE)',
-            subtitle: 'इयत्ता ६वी व ९वी सैनिक स्कूल प्रवेश',
-            papers: '• गणित: ५० प्रश्न (१५० गुण - ३ गुण प्रति प्रश्न)\n• बुद्धिमत्ता: २५ प्रश्न (५० गुण)\n• भाषा: २५ प्रश्न (५० गुण)\n• सामान्य ज्ञान (GK): २५ प्रश्न (५० गुण)',
-            tip: '🏆 एकूण १२५ प्रश्न | ३०० गुण | वेळ: १५० मिनिटे | गणितात ५०% गुण आवश्यक.'
-        }
-    },
-    {
-        id: 'olympiad',
-        title: 'ऑलिम्पियाड',
-        badge: '🏆 ऑलिम्पियाड',
-        icon: 'trophy-outline',
-        gradient: ['#D97706', '#B45309'],
-        blueprint: {
-            title: 'राष्ट्रीय व आंतरराष्ट्रीय ऑलिम्पियाड स्पर्धा परीक्षा',
-            subtitle: 'SOF (IMO, NSO, IEO) व डॉ. होमी भाभा बालवैज्ञानिक',
-            papers: '• Section 1: Logical Reasoning (तर्क व विचार चाचणी)\n• Section 2: Mathematical / Science Concepts (शालेय अभ्यासक्रम)\n• Section 3: Achievers Section (HOTS - उच्च दर्जाचे विचार प्रश्न - २x/३x गुण)',
-            tip: '💡 संकल्पनात्मक अचूकतेवर भर द्या, Achievers Section मध्ये सर्वाधिक रँक ठरते.'
-        }
-    },
-    {
-        id: 'mts',
-        title: 'MTS / NMMS',
-        badge: '💡 MTS / NMMS प्रज्ञाशोध',
-        icon: 'bulb-outline',
-        gradient: ['#7C3AED', '#6D28D9'],
-        blueprint: {
-            title: 'महाराष्ट्र टॅलेंट सर्च (MTS) व NMMS प्रज्ञाशोध परीक्षा',
-            subtitle: 'इयत्ता ८वी, ९वी व १०वी प्रज्ञाशोध परीक्षा',
-            papers: '• MAT: मानसिक क्षमता चाचणी (९० प्रश्न / ९० गुण - ९० मिनिटे)\n• SAT: शालेय अभियोग्यता चाचणी (विज्ञान, समाजशास्त्र, गणित - ९० प्रश्न / ९० गुण)',
-            tip: '🏅 राष्ट्रीय पातळीवरील मानाची शिष्यवृत्ती मिळवण्यासाठी वेळेचे अचूक नियोजन ठेवा.'
-        }
-    }
+    { id: 'all', title: 'All Exams', icon: 'apps', gradient: ['#6366F1', '#4338CA'], tint: '#EEF2FF' },
+    { id: 'scholarship', title: 'State Scholarship', icon: 'ribbon', gradient: ['#4F46E5', '#3730A3'], tint: '#EEF2FF' },
+    { id: 'navodaya', title: 'Navodaya', icon: 'school', gradient: ['#0284C7', '#0369A1'], tint: '#E0F2FE' },
+    { id: 'sainik', title: 'Sainik School', icon: 'shield-checkmark', gradient: ['#15803D', '#166534'], tint: '#DCFCE7' },
+    { id: 'olympiad', title: 'Olympiad', icon: 'trophy', gradient: ['#D97706', '#B45309'], tint: '#FEF3C7' },
+    { id: 'mts', title: 'MTS / NMMS', icon: 'bulb', gradient: ['#7C3AED', '#6D28D9'], tint: '#F3E8FF' }
 ];
+
+const SUBJECT_GRADIENTS = [
+    ['#6366F1', '#4F46E5'],
+    ['#EC4899', '#DB2777'],
+    ['#0EA5E9', '#0284C7'],
+    ['#F59E0B', '#D97706'],
+    ['#10B981', '#059669']
+];
+
+const escapeHtml = (s) =>
+    String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+const formatCountdownSeconds = (rem) => {
+    const safeRem = Math.max(0, rem || 0);
+    const hrs = Math.floor(safeRem / 3600);
+    const mins = Math.floor((safeRem % 3600) / 60);
+    const secs = safeRem % 60;
+    return `${hrs}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+};
+
+// Isolated memoized card so 1s countdown ticks only re-render the affected upcoming exam card
+const LiveExamCard = React.memo(({ exam, onStart, onShare }) => {
+    const initialSeconds = exam.status === 'upcoming' ? Math.max(0, exam.seconds_to_start || 0) : 0;
+    const [remainingSecs, setRemainingSecs] = useState(initialSeconds);
+
+    useEffect(() => {
+        setRemainingSecs(exam.status === 'upcoming' ? Math.max(0, exam.seconds_to_start || 0) : 0);
+    }, [exam.exam_id, exam.status, exam.seconds_to_start]);
+
+    useEffect(() => {
+        if (exam.status !== 'upcoming' || remainingSecs <= 0) return;
+        const timer = setInterval(() => {
+            setRemainingSecs((prev) => (prev <= 1 ? 0 : prev - 1));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [exam.status, remainingSecs > 0]);
+
+    const isWaitingToStart = exam.status === 'upcoming' && remainingSecs > 0;
+
+    return (
+        <View style={[styles.examCard, { borderLeftColor: exam.category_color || '#6366F1' }]}>
+            <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <View style={[styles.statusDot, { backgroundColor: exam.status === 'live_now' || !isWaitingToStart ? '#10b981' : '#3b82f6' }]} />
+                    <Text style={styles.examStatusText}>
+                        {exam.status === 'live_now' || !isWaitingToStart ? 'LIVE' : 'UPCOMING'}
+                    </Text>
+                </View>
+                <Text style={styles.examCardTitle}>{exam.title}</Text>
+                <Text style={styles.examCardMeta}>
+                    {exam.duration_minutes}m • {exam.total_questions} Qs {exam.total_marks ? `• ${exam.total_marks} Marks` : ''}
+                </Text>
+                {isWaitingToStart && (
+                    <Text style={[styles.examCardMeta, { color: '#0284C7', fontWeight: 'bold', marginTop: 4 }]}>
+                        ⏳ {formatCountdownSeconds(remainingSecs)}
+                    </Text>
+                )}
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                {isWaitingToStart ? (
+                    <View style={[styles.btnActionSmall, { backgroundColor: '#94a3b8' }]}>
+                        <Text style={styles.btnActionText}>Soon</Text>
+                    </View>
+                ) : (
+                    <TouchableOpacity
+                        style={[styles.btnActionSmall, { backgroundColor: exam.category_color || '#6366F1' }]}
+                        onPress={() => onStart(exam.exam_id)}
+                    >
+                        <Text style={styles.btnActionText}>Start</Text>
+                    </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                    style={[styles.btnActionSmall, { backgroundColor: '#25D366' }]}
+                    onPress={() => onShare(exam.share_text)}
+                >
+                    <Ionicons name="logo-whatsapp" size={14} color="white" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+});
+
+// Clean reusable Grid Tile
+const GridTile = ({ title, icon, gradient, badge, onPress }) => (
+    <TouchableOpacity style={styles.gridTile} activeOpacity={0.85} onPress={onPress}>
+        <View style={styles.gridTileTop}>
+            <LinearGradient colors={gradient} style={styles.gridIconBox}>
+                <Ionicons name={icon} size={24} color="white" />
+            </LinearGradient>
+            {badge ? (
+                <View style={styles.gridBadge}>
+                    <Text style={styles.gridBadgeText}>{badge}</Text>
+                </View>
+            ) : (
+                <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+            )}
+        </View>
+        <Text style={styles.gridTileTitle} numberOfLines={2}>{title}</Text>
+    </TouchableOpacity>
+);
 
 const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const scholarshipClassId = route.params?.scholarshipClassId || 38;
-    const levelTitle = route.params?.levelTitle || "Scholarship & Olympiad";
+    const baseTitle = route.params?.levelTitle || 'Scholarship';
 
-    // 4 Core Tabs: 'live' | 'subjects' | 'performance' | 'practice'
-    const [activeTab, setActiveTab] = useState('live');
+    // Page-by-page drill-down navigation stack
+    // Pages: 'home' | 'live_menu' | 'live_ongoing' | 'live_history' | 'exam_list' | 'exam_menu' | 'subjects' | 'performance_menu' | 'perf_weak' | 'perf_negative' | 'perf_syllabus' | 'practice_menu' | 'practice_generator' | 'practice_exam' | 'practice_pdfs'
+    const [pageStack, setPageStack] = useState(['home']);
+    const currentPage = pageStack[pageStack.length - 1];
+
+    const [selectedExamCategory, setSelectedExamCategory] = useState(null);
     const [selectedLanguage, setSelectedLanguage] = useState('marathi');
-    const [selectedCategory, setSelectedCategory] = useState('all');
     const [categoryCounts, setCategoryCounts] = useState({});
-    const [categoryLoading, setCategoryLoading] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [userId, setUserId] = useState(0);
 
-    // Tab 1: Live Exam States
+    // Live Exam States
     const [liveExamsData, setLiveExamsData] = useState({
         spotlight_exam: null,
         live_and_upcoming: [],
@@ -133,37 +169,49 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     const [leaderboardModalVisible, setLeaderboardModalVisible] = useState(false);
     const [selectedExamLeaderboard, setSelectedExamLeaderboard] = useState(null);
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
-    const [elapsedTicks, setElapsedTicks] = useState(0);
 
-    useEffect(() => {
-        const timer = setInterval(() => setElapsedTicks(t => t + 1), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const formatCountdown = (baseSeconds) => {
-        const rem = Math.max(0, (baseSeconds || 0) - elapsedTicks);
-        const hrs = Math.floor(rem / 3600);
-        const mins = Math.floor((rem % 3600) / 60);
-        const secs = rem % 60;
-        return `${hrs}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
-    };
-
-    // Tab 2: Subjects State
+    // Subjects State
     const [subjects, setSubjects] = useState([]);
 
-    // Tab 3: Performance & Syllabus Tracker States
+    // Performance States
     const [performanceData, setPerformanceData] = useState(null);
     const [expandedSubjectId, setExpandedSubjectId] = useState(null);
     const [resolvingId, setResolvingId] = useState(null);
     const [negativeBasketList, setNegativeBasketList] = useState([]);
     const [negativeCount, setNegativeCount] = useState(0);
 
-    // Tab 4: Practice Zone / Exam Paper Generator States
+    // Practice Zone States
     const [practiceChapters, setPracticeChapters] = useState([]);
     const [selectedPracticeSubjects, setSelectedPracticeSubjects] = useState([]);
     const [selectedPracticeChapters, setSelectedPracticeChapters] = useState([]);
     const [practiceLimit, setPracticeLimit] = useState('25');
     const [loadingPracticeChapters, setLoadingPracticeChapters] = useState(false);
+
+    const chaptersCacheRef = useRef({});
+
+    const pushPage = useCallback((page) => {
+        setPageStack((prev) => [...prev, page]);
+    }, []);
+
+    const popPage = useCallback(() => {
+        if (pageStack.length > 1) {
+            setPageStack((prev) => prev.slice(0, -1));
+            return true;
+        }
+        return false;
+    }, [pageStack.length]);
+
+    // Hardware back button pops internal drill-down stack first
+    useEffect(() => {
+        if (navigation?.registerBackInterceptor) {
+            navigation.registerBackInterceptor(() => popPage());
+        }
+        return () => {
+            if (navigation?.unregisterBackInterceptor) {
+                navigation.unregisterBackInterceptor();
+            }
+        };
+    }, [navigation, popPage]);
 
     useEffect(() => {
         initScreen();
@@ -187,11 +235,11 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         }
     };
 
-    const loadAllData = async (uid = userId, force = false, cat = selectedCategory) => {
+    const loadAllData = async (uid = userId, force = false) => {
         if (force) setRefreshing(true);
         try {
             await Promise.all([
-                loadLiveExams(uid, cat),
+                loadLiveExams(uid),
                 loadSubjectsData(),
                 loadPerformance(uid)
             ]);
@@ -207,21 +255,12 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         await saveLanguagePreference(language);
     };
 
-    const handleCategorySelect = async (catId) => {
-        if (catId === selectedCategory) return;
-        setSelectedCategory(catId);
-        setCategoryLoading(true);
-        await loadLiveExams(userId, catId);
-        setCategoryLoading(false);
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // 1. LIVE EXAM FUNCTIONS
-    // ─────────────────────────────────────────────────────────────────────────────
-    const loadLiveExams = async (uid = userId, cat = selectedCategory) => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // API HANDLERS
+    // ─────────────────────────────────────────────────────────────────────────
+    const loadLiveExams = async (uid = userId) => {
         try {
-            const catParam = cat && cat !== 'all' ? `&category=${cat}` : '';
-            const res = await axios.get(`${API_URL}/get_scholarship_live_exams.php?user_id=${uid}&class_id=${scholarshipClassId}${catParam}`);
+            const res = await axios.get(`${API_URL}/get_scholarship_live_exams.php?user_id=${uid}&class_id=${scholarshipClassId}`);
             if (res.data?.status === 'success') {
                 setLiveExamsData(res.data.data);
                 if (res.data.data?.category_counts) {
@@ -233,9 +272,9 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         }
     };
 
-    const startLiveExam = async (examId) => {
+    const startLiveExam = useCallback(async (examId) => {
         try {
-            setLoading(true);
+            setActionLoading(true);
             const res = await axios.get(`${API_URL}/get_scholarship_exam_questions.php?exam_id=${examId}`);
             if (res.data?.status === 'success' && res.data.data?.questions?.length > 0) {
                 const exam = res.data.data.exam;
@@ -250,25 +289,22 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                     negativeMarks: exam.negative_marks
                 });
             } else {
-                Alert.alert('Notice', 'या परीक्षेसाठी अद्याप प्रश्न उपलब्ध नाहीत. कृपया नंतर पुन्हा प्रयत्न करा.');
+                Alert.alert('Notice', 'या परीक्षेसाठी अद्याप प्रश्न उपलब्ध नाहीत.');
             }
         } catch (err) {
             Alert.alert('Error', 'परीक्षेचे प्रश्न लोड करताना त्रुटी आली.');
         } finally {
-            setLoading(false);
+            setActionLoading(false);
         }
-    };
+    }, [navigation]);
 
-    const shareExamOnWhatsApp = async (shareText) => {
+    const shareExamOnWhatsApp = useCallback(async (shareText) => {
         try {
-            await Share.share({
-                message: shareText,
-                title: 'शिष्यवृत्ती सराव परीक्षा'
-            });
+            await Share.share({ message: shareText, title: 'Live Exam' });
         } catch (e) {
             console.log('Share error:', e);
         }
-    };
+    }, []);
 
     const openLeaderboard = async (examId) => {
         try {
@@ -287,33 +323,32 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
 
     const downloadPastExamPDF = async (exam) => {
         try {
-            setLoading(true);
+            setActionLoading(true);
             const res = await axios.get(`${API_URL}/get_scholarship_exam_questions.php?exam_id=${exam.exam_id}`);
             const questions = res.data?.data?.questions || [];
             if (!questions.length) {
                 Alert.alert('Notice', 'या परीक्षेचे प्रश्न उपलब्ध नाहीत.');
                 return;
             }
-            const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const qHtml = questions.map((q, idx) => `
                 <div style="margin-bottom:14px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;page-break-inside:avoid;">
-                    <div style="font-weight:bold;margin-bottom:6px;">Q${idx + 1}. ${esc(q.question)}</div>
+                    <div style="font-weight:bold;margin-bottom:6px;">Q${idx + 1}. ${escapeHtml(q.question)}</div>
                     <div style="font-size:13px;line-height:1.6;">
-                        <div>(A) ${esc(q.option_a)}</div>
-                        <div>(B) ${esc(q.option_b)}</div>
-                        <div>(C) ${esc(q.option_c)}</div>
-                        <div>(D) ${esc(q.option_d)}</div>
+                        <div>(A) ${escapeHtml(q.option_a)}</div>
+                        <div>(B) ${escapeHtml(q.option_b)}</div>
+                        <div>(C) ${escapeHtml(q.option_c)}</div>
+                        <div>(D) ${escapeHtml(q.option_d)}</div>
                     </div>
                     <div style="margin-top:6px;font-size:12px;color:#15803d;"><strong>Correct Answer:</strong> ${(q.correct_answer || '').toUpperCase()}</div>
-                    ${q.explanation ? `<div style="margin-top:4px;font-size:12px;color:#475569;"><em>Explanation: ${esc(q.explanation)}</em></div>` : ''}
+                    ${q.explanation ? `<div style="margin-top:4px;font-size:12px;color:#475569;"><em>Explanation: ${escapeHtml(q.explanation)}</em></div>` : ''}
                 </div>
             `).join('');
             const html = `
                 <html><head><meta charset="utf-8" /></head>
                 <body style="font-family:sans-serif;padding:24px;color:#1e293b;">
-                    <h2>${esc(exam.title)}</h2>
+                    <h2>${escapeHtml(exam.title)}</h2>
                     <p style="color:#475569;font-size:13px;margin-bottom:16px;">
-                        ${exam.has_attempted ? `तुमचा रँक: #${exam.user_rank || '-'} | गुण: ${exam.user_score}` : `एकूण प्रश्न: ${questions.length}`}
+                        ${exam.has_attempted ? `Rank: #${exam.user_rank || '-'} | Score: ${exam.user_score}` : `Total Questions: ${questions.length}`}
                     </p>
                     <hr style="border:none;border-top:1px solid #cbd5e1;margin-bottom:16px;" />
                     ${qHtml}
@@ -328,19 +363,16 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         } catch (e) {
             Alert.alert('Error', 'PDF तयार करताना त्रुटी आली.');
         } finally {
-            setLoading(false);
+            setActionLoading(false);
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // 2. SUBJECTS FUNCTIONS
-    // ─────────────────────────────────────────────────────────────────────────────
     const loadSubjectsData = async () => {
         try {
             const response = await fetchSubjects(scholarshipClassId);
             if (response && (response.status === 'success' || Array.isArray(response))) {
                 const allData = response.data || response;
-                const regular = allData.filter(s => !s.subject_name.includes("Mock Test") && !s.subject_name.includes("Previous Paper"));
+                const regular = allData.filter(s => !s.subject_name.includes('Mock Test') && !s.subject_name.includes('Previous Paper'));
                 setSubjects(regular);
             }
         } catch (err) {
@@ -348,9 +380,6 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // 3. PERFORMANCE & SYLLABUS TRACKER FUNCTIONS
-    // ─────────────────────────────────────────────────────────────────────────────
     const loadPerformance = async (uid = userId) => {
         if (!uid) return;
         try {
@@ -369,7 +398,6 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         setExpandedSubjectId(prev => prev === subId ? null : subId);
     };
 
-    // Inline Re-solve of Negative Basket Question
     const handleResolveNegativeQuestion = async (item, selectedOption) => {
         if (resolvingId) return;
         const qId = item.question_id || item.mcq_id;
@@ -384,15 +412,14 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
             });
 
             if (res.data?.status === 'success' && res.data.data?.is_correct) {
-                // Correct! Show alert & dynamically remove from list
-                Alert.alert("🎉 अप्रतिम!", "तुमचे उत्तर बरोबर आहे! हा प्रश्न निगेटिव्ह बास्केटमधून क्लिअर झाला आहे.");
+                Alert.alert('🎉 बरोबर!', 'हा प्रश्न निगेटिव्ह बास्केटमधून क्लिअर झाला आहे.');
                 setNegativeBasketList(prev => prev.filter(q => (q.question_id || q.mcq_id) !== qId));
                 setNegativeCount(prev => Math.max(0, prev - 1));
             } else {
-                Alert.alert("❌ चूक", `हे उत्तर चुकीचे आहे.\n\nस्पष्टीकरण: ${res.data?.data?.explanation || 'पुन्हा प्रयत्न करा.'}`);
+                Alert.alert('❌ चूक', res.data?.data?.explanation || 'पुन्हा प्रयत्न करा.');
             }
         } catch (e) {
-            Alert.alert("Error", "प्रश्न सोडवताना त्रुटी आली.");
+            Alert.alert('Error', 'प्रश्न सोडवताना त्रुटी आली.');
         } finally {
             setResolvingId(null);
         }
@@ -400,10 +427,9 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
 
     const practiceAllMistakes = () => {
         if (!negativeBasketList || negativeBasketList.length === 0) {
-            Alert.alert("अभिनंदन!", "सध्या तुमच्याकडे कोणतेही चुकलेले प्रश्न नाहीत!");
+            Alert.alert('अभिनंदन!', 'कोणतेही चुकलेले प्रश्न नाहीत!');
             return;
         }
-
         const quizQuestions = negativeBasketList.map(q => ({
             mcq_id: q.question_id || q.mcq_id,
             question: q.question,
@@ -415,21 +441,22 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
             explanation: q.explanation,
             chapter_name: q.chapter_name
         }));
-
         navigation.navigate('MyExamTest', {
             questions: quizQuestions,
             totalQuestions: quizQuestions.length,
-            subjectName: 'चुकलेल्या प्रश्नांचा सराव'
+            subjectName: 'Negative Bank Practice'
         });
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // 4. PRACTICE ZONE (Exam Paper Generator & Custom Test)
-    // ─────────────────────────────────────────────────────────────────────────────
     const togglePracticeSubject = (subject) => {
         setSelectedPracticeSubjects(prev => {
             const exists = prev.find(s => s.subject_id === subject.subject_id);
             if (exists) {
+                const cached = chaptersCacheRef.current[subject.subject_id] || [];
+                if (cached.length > 0) {
+                    const removedIds = new Set(cached.map(c => c.chapter_id));
+                    setSelectedPracticeChapters(chPrev => chPrev.filter(id => !removedIds.has(id)));
+                }
                 return prev.filter(s => s.subject_id !== subject.subject_id);
             } else {
                 return [...prev, subject];
@@ -447,24 +474,38 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
     }, [selectedPracticeSubjects]);
 
     const loadPracticeChapters = async () => {
-        setLoadingPracticeChapters(true);
-        try {
-            const promises = selectedPracticeSubjects.map(sub =>
-                fetchChapters(sub.subject_id)
-                    .then(res => ({
-                        subjectName: sub.subject_name,
-                        subjectId: sub.subject_id,
-                        data: res.status === 'success' ? res.data : []
-                    }))
-                    .catch(() => ({ subjectName: sub.subject_name, subjectId: sub.subject_id, data: [] }))
-            );
-            const results = await Promise.all(promises);
-            setPracticeChapters(results.filter(r => r.data.length > 0));
-        } catch (e) {
-            console.error('Load chapters error:', e);
-        } finally {
-            setLoadingPracticeChapters(false);
+        const missingSubjects = selectedPracticeSubjects.filter(
+            sub => !chaptersCacheRef.current[sub.subject_id]
+        );
+        if (missingSubjects.length > 0) {
+            setLoadingPracticeChapters(true);
+            try {
+                await Promise.all(
+                    missingSubjects.map(sub =>
+                        fetchChapters(sub.subject_id)
+                            .then(res => {
+                                chaptersCacheRef.current[sub.subject_id] =
+                                    res.status === 'success' && Array.isArray(res.data) ? res.data : [];
+                            })
+                            .catch(() => {
+                                chaptersCacheRef.current[sub.subject_id] = [];
+                            })
+                    )
+                );
+            } catch (e) {
+                console.error('Load chapters error:', e);
+            } finally {
+                setLoadingPracticeChapters(false);
+            }
         }
+        const assembled = selectedPracticeSubjects
+            .map(sub => ({
+                subjectName: sub.subject_name,
+                subjectId: sub.subject_id,
+                data: chaptersCacheRef.current[sub.subject_id] || []
+            }))
+            .filter(r => r.data.length > 0);
+        setPracticeChapters(assembled);
     };
 
     const togglePracticeChapter = (chId) => {
@@ -488,7 +529,7 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
             return;
         }
         try {
-            setLoading(true);
+            setActionLoading(true);
             const res = await axios.post(`${API_URL}/generate_custom_test.php`, {
                 chapter_ids: selectedPracticeChapters.join(','),
                 limit: parseInt(practiceLimit) || 25
@@ -505,99 +546,66 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         } catch (e) {
             Alert.alert('Error', 'टेस्ट सुरू करताना त्रुटी आली.');
         } finally {
-            setLoading(false);
+            setActionLoading(false);
         }
     };
 
     const generateExamPaperPDF = async () => {
         if (selectedPracticeChapters.length === 0) {
-            Alert.alert('Notice', 'कृपया पेपर तयार करण्यासाठी किमान एक धडा निवडा.');
+            Alert.alert('Notice', 'कृपया किमान एक धडा निवडा.');
             return;
         }
         try {
-            setLoading(true);
+            setActionLoading(true);
             const res = await axios.post(`${API_URL}/generate_custom_test.php`, {
                 chapter_ids: selectedPracticeChapters.join(','),
                 limit: parseInt(practiceLimit) || 25
             });
-
             if (res.data?.status === 'success') {
                 const questions = res.data.data;
                 const dateStr = new Date().toLocaleDateString('mr-IN');
-                const subTitle = selectedPracticeSubjects.map(s => s.subject_name).join(' व ');
-
+                const subTitle = escapeHtml(selectedPracticeSubjects.map(s => s.subject_name).join(' व '));
                 const html = `
-                    <html>
-                        <head>
-                            <meta charset="utf-8">
-                            <style>
-                                body { font-family: 'Helvetica', sans-serif; padding: 30px; color: #222; }
-                                .header { text-align: center; border-bottom: 2px solid #8E2DE2; padding-bottom: 15px; margin-bottom: 25px; }
-                                .app-name { font-size: 22px; font-weight: bold; color: #4A00E0; margin: 0; }
-                                .exam-title { font-size: 18px; font-weight: bold; margin-top: 5px; }
-                                .meta { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 8px; }
-                                .q-card { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
-                                .q-text { font-size: 15px; font-weight: bold; margin-bottom: 8px; line-height: 1.4; }
-                                .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; }
-                                .opt { background: #f8fafc; padding: 6px 10px; border-radius: 4px; border: 1px solid #e2e8f0; }
-                                .page-break { page-break-before: always; }
-                                .key-header { color: #8E2DE2; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
-                                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-                                th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-                                th { background-color: #f1f5f9; font-weight: bold; }
-                                .correct-ans { color: #16a34a; font-weight: bold; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="header">
-                                <div class="app-name">Veeru Learning App</div>
-                                <div class="exam-title">शिष्यवृत्ती सराव प्रश्नपत्रिका - ${subTitle}</div>
-                                <div class="meta">
-                                    <span>दिनांक: ${dateStr}</span>
-                                    <span>एकूण प्रश्न: ${questions.length}</span>
-                                    <span>वेळ: ${questions.length * 1.5} मिनिटे</span>
+                    <html><head><meta charset="utf-8"><style>
+                        body { font-family: 'Helvetica', sans-serif; padding: 30px; color: #222; }
+                        .header { text-align: center; border-bottom: 2px solid #4F46E5; padding-bottom: 15px; margin-bottom: 25px; }
+                        .app-name { font-size: 22px; font-weight: bold; color: #4A00E0; }
+                        .exam-title { font-size: 18px; font-weight: bold; margin-top: 5px; }
+                        .meta { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 8px; }
+                        .q-card { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #eee; page-break-inside: avoid; }
+                        .q-text { font-size: 15px; font-weight: bold; margin-bottom: 8px; }
+                        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; }
+                        .opt { background: #f8fafc; padding: 6px 10px; border-radius: 4px; border: 1px solid #e2e8f0; }
+                        .page-break { page-break-before: always; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+                        th { background-color: #f1f5f9; }
+                    </style></head><body>
+                        <div class="header">
+                            <div class="app-name">Veeru Learning App</div>
+                            <div class="exam-title">${subTitle}</div>
+                            <div class="meta"><span>Date: ${dateStr}</span><span>Questions: ${questions.length}</span></div>
+                        </div>
+                        <div>${questions.map((q, idx) => `
+                            <div class="q-card">
+                                <div class="q-text">Q${idx + 1}. ${escapeHtml(q.question)}</div>
+                                <div class="options-grid">
+                                    <div class="opt">(A) ${escapeHtml(q.option_a)}</div>
+                                    <div class="opt">(B) ${escapeHtml(q.option_b)}</div>
+                                    <div class="opt">(C) ${escapeHtml(q.option_c)}</div>
+                                    <div class="opt">(D) ${escapeHtml(q.option_d)}</div>
                                 </div>
-                            </div>
-
-                            <div class="questions">
-                                ${questions.map((q, idx) => `
-                                    <div class="q-card">
-                                        <div class="q-text">प्र. ${idx + 1}. ${q.question}</div>
-                                        <div class="options-grid">
-                                            <div class="opt">(A) ${q.option_a || ''}</div>
-                                            <div class="opt">(B) ${q.option_b || ''}</div>
-                                            <div class="opt">(C) ${q.option_c || ''}</div>
-                                            <div class="opt">(D) ${q.option_d || ''}</div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-
-                            <div class="page-break"></div>
-
-                            <div class="key-header">उत्तरतालिका व सविस्तर स्पष्टीकरण (Answer Key & Solutions)</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width: 10%;">प्र.क्र.</th>
-                                        <th style="width: 15%;">अचूक उत्तर</th>
-                                        <th>मराठी स्पष्टीकरण</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${questions.map((q, idx) => `
-                                        <tr>
-                                            <td>${idx + 1}</td>
-                                            <td class="correct-ans">${(q.correct_answer || '').toUpperCase()}</td>
-                                            <td>${q.explanation || 'स्पष्टीकरण उपलब्ध नाही.'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </body>
-                    </html>
+                            </div>`).join('')}
+                        </div>
+                        <div class="page-break"></div>
+                        <h3>Answer Key</h3>
+                        <table><thead><tr><th>#</th><th>Ans</th><th>Explanation</th></tr></thead><tbody>
+                            ${questions.map((q, idx) => `
+                                <tr><td>${idx + 1}</td><td><strong>${escapeHtml((q.correct_answer || '').toUpperCase())}</strong></td><td>${escapeHtml(q.explanation || '-')}</td></tr>
+                            `).join('')}
+                        </tbody></table>
+                    </body></html>
                 `;
-
                 const { uri } = await Print.printToFileAsync({ html });
                 await Sharing.shareAsync(uri);
             } else {
@@ -606,221 +614,211 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         } catch (e) {
             Alert.alert('Error', 'PDF तयार करताना त्रुटी आली.');
         } finally {
-            setLoading(false);
+            setActionLoading(false);
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RENDER TAB CONTENTS
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // HEADER TITLE HELPER
+    // ─────────────────────────────────────────────────────────────────────────
+    const getHeaderTitle = () => {
+        switch (currentPage) {
+            case 'home': return baseTitle;
+            case 'live_menu': return 'Live Exam';
+            case 'live_ongoing': return 'Live Now';
+            case 'live_history': return 'Exam History';
+            case 'exam_list': return 'Competitive Exams';
+            case 'exam_menu': return selectedExamCategory?.title || 'Competitive Exams';
+            case 'subjects': return 'Subjects';
+            case 'performance_menu': return 'Performance';
+            case 'perf_weak': return 'Weak Chapters';
+            case 'perf_negative': return 'Negative Bank';
+            case 'perf_syllabus': return 'Syllabus Tracker';
+            case 'practice_menu': return 'Practice Zone';
+            case 'practice_generator': return 'Paper Generator';
+            case 'practice_exam': return 'Practice Exam';
+            case 'practice_pdfs': return 'Previous PDFs';
+            default: return baseTitle;
+        }
+    };
 
-    // TAB 1: LIVE EXAM RENDER
-    const renderLiveExamTab = () => {
-        const { spotlight_exam, live_and_upcoming = [], past_exams = [] } = liveExamsData || {};
-        const activeCatData = COMPETITIVE_CATEGORIES.find(c => c.id === selectedCategory) || COMPETITIVE_CATEGORIES[0];
+    // ─────────────────────────────────────────────────────────────────────────
+    // PAGE RENDERERS (ALL GRID-BASED, MINIMAL TEXT, SEPARATE PAGES)
+    // ─────────────────────────────────────────────────────────────────────────
 
+    // Page 1: Home (2-Card Grid: Live Exam | Competitive Exams)
+    const renderHomePage = () => {
+        const liveCount = liveExamsData?.live_and_upcoming?.length || 0;
         return (
             <ScrollView
-                style={styles.tabContentScroll}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true, selectedCategory)} />}
+                style={styles.pageScroll}
+                contentContainerStyle={styles.gridContainer}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
             >
-                {/* Category Blueprint & Exam Guide Card */}
-                {activeCatData?.blueprint && (
-                    <LinearGradient colors={activeCatData.gradient} style={styles.blueprintCard}>
-                        <View style={styles.blueprintHeaderRow}>
-                            <View style={styles.blueprintIconCircle}>
-                                <Ionicons name={activeCatData.icon} size={22} color="white" />
-                            </View>
-                            <View style={{ flex: 1, marginLeft: 10 }}>
-                                <Text style={styles.blueprintTitle}>{activeCatData.blueprint.title}</Text>
-                                <Text style={styles.blueprintSubtitle}>{activeCatData.blueprint.subtitle}</Text>
-                            </View>
-                        </View>
-                        <View style={styles.blueprintDivider} />
-                        <Text style={styles.blueprintPatternHeader}>📋 परीक्षा पॅटर्न व गुण विभागणी:</Text>
-                        <Text style={styles.blueprintPatternText}>{activeCatData.blueprint.papers}</Text>
-                        <View style={styles.blueprintTipBox}>
-                            <Text style={styles.blueprintTipText}>{activeCatData.blueprint.tip}</Text>
-                        </View>
-                    </LinearGradient>
-                )}
+                <View style={styles.gridWrap}>
+                    <GridTile
+                        title="Live Exam"
+                        icon="radio"
+                        gradient={['#F43F5E', '#E11D48']}
+                        badge={liveCount > 0 ? `${liveCount} Live` : null}
+                        onPress={() => pushPage('live_menu')}
+                    />
+                    <GridTile
+                        title="Competitive Exams"
+                        icon="school"
+                        gradient={['#6366F1', '#4F46E5']}
+                        badge="6 Exams"
+                        onPress={() => pushPage('exam_list')}
+                    />
+                </View>
+            </ScrollView>
+        );
+    };
 
-                {/* Spotlight Exam Banner */}
-                {spotlight_exam && (
-                    <LinearGradient colors={['#FF416C', '#FF4B2B']} style={styles.spotlightCard}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+    // Page 2A: Live Exam Menu (2-Card Grid: Live Now | History)
+    const renderLiveMenuPage = () => {
+        const liveCount = liveExamsData?.live_and_upcoming?.length || 0;
+        const pastCount = liveExamsData?.past_exams?.length || 0;
+        return (
+            <ScrollView
+                style={styles.pageScroll}
+                contentContainerStyle={styles.gridContainer}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+            >
+                <View style={styles.gridWrap}>
+                    <GridTile
+                        title="Live Now"
+                        icon="flash"
+                        gradient={['#FF416C', '#FF4B2B']}
+                        badge={liveCount > 0 ? `${liveCount}` : null}
+                        onPress={() => pushPage('live_ongoing')}
+                    />
+                    <GridTile
+                        title="History & Rank"
+                        icon="trophy"
+                        gradient={['#8E2DE2', '#4A00E0']}
+                        badge={pastCount > 0 ? `${pastCount}` : null}
+                        onPress={() => pushPage('live_history')}
+                    />
+                </View>
+            </ScrollView>
+        );
+    };
+
+    // Page 3A: Live Ongoing Exams (Banner + Click to Start)
+    const renderLiveOngoingPage = () => {
+        const { spotlight_exam, live_and_upcoming = [] } = liveExamsData || {};
+        return (
+            <ScrollView
+                style={styles.pageScroll}
+                contentContainerStyle={styles.listPadding}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+            >
+                {spotlight_exam ? (
+                    <TouchableOpacity
+                        activeOpacity={0.92}
+                        onPress={() => !spotlight_exam.has_attempted && startLiveExam(spotlight_exam.exam_id)}
+                    >
+                        <LinearGradient colors={['#FF416C', '#FF4B2B']} style={styles.spotlightCard}>
                             <View style={styles.spotlightBadge}>
                                 <Text style={styles.spotlightBadgeText}>
-                                    {spotlight_exam.status === 'live_now' ? '🔴 LIVE NOW' : '⏳ UPCOMING EXAM'}
+                                    {spotlight_exam.status === 'live_now' ? '🔴 LIVE NOW' : '⏳ UPCOMING'}
                                 </Text>
                             </View>
-                            {spotlight_exam.category_badge && (
-                                <View style={styles.spotlightCatBadge}>
-                                    <Text style={styles.spotlightCatBadgeText}>{spotlight_exam.category_badge}</Text>
-                                </View>
-                            )}
-                        </View>
-                        <Text style={styles.spotlightTitle}>{spotlight_exam.title}</Text>
-                        <Text style={styles.spotlightSubtitle}>
-                            ⏱️ {spotlight_exam.duration_minutes} मिनिटे | 🎯 {spotlight_exam.total_questions} प्रश्न | +{spotlight_exam.positive_marks} गुण
-                        </Text>
-                        {spotlight_exam.start_time && (
-                            <Text style={styles.spotlightTime}>
-                                📅 {spotlight_exam.start_time}
+                            <Text style={styles.spotlightTitle}>{spotlight_exam.title}</Text>
+                            <Text style={styles.spotlightSubtitle}>
+                                {spotlight_exam.duration_minutes}m • {spotlight_exam.total_questions} Qs • +{spotlight_exam.positive_marks} Marks
                             </Text>
-                        )}
-                        <View style={styles.spotlightActions}>
-                            {spotlight_exam.has_attempted ? (
-                                <View style={styles.attemptedBadge}>
-                                    <Text style={styles.attemptedText}>
-                                        ✔ तुम्ही परीक्षा दिली आहे (गुण: {spotlight_exam.user_score} | रँक: #{spotlight_exam.user_rank || '-'})
-                                    </Text>
-                                </View>
-                            ) : (
-                                <TouchableOpacity
-                                    style={styles.btnStartSpotlight}
-                                    onPress={() => startLiveExam(spotlight_exam.exam_id)}
-                                >
-                                    <Text style={styles.btnStartSpotlightText}>🚀 आताच परीक्षा द्या</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                style={styles.btnShareSpotlight}
-                                onPress={() => shareExamOnWhatsApp(spotlight_exam.share_text)}
-                            >
-                                <Ionicons name="logo-whatsapp" size={18} color="white" />
-                                <Text style={styles.btnShareSpotlightText}>शेअर</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </LinearGradient>
-                )}
-
-                {/* Upcoming / Active Live Exams */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <Text style={styles.sectionHeader}>🔴 आगामी व चालू परीक्षा (Live & Upcoming)</Text>
-                    {activeCatData.id !== 'all' && (
-                        <Text style={[styles.filterIndicator, { color: activeCatData.gradient[0] }]}>
-                            {activeCatData.badge}
-                        </Text>
-                    )}
-                </View>
-                {categoryLoading ? (
-                    <View style={styles.emptyCard}>
-                        <ActivityIndicator size="small" color={activeCatData.gradient[0]} style={{ marginBottom: 6 }} />
-                        <Text style={styles.emptyText}>परीक्षा लोड होत आहेत...</Text>
-                    </View>
-                ) : live_and_upcoming.length === 0 ? (
-                    <View style={styles.emptyCard}>
-                        <Ionicons name="calendar-outline" size={32} color="#cbd5e1" style={{ marginBottom: 6 }} />
-                        <Text style={styles.emptyText}>या कॅटेगरीमध्ये सध्या कोणतीही नवीन परीक्षा शेड्युल केलेली नाही.</Text>
-                        {selectedCategory !== 'all' && (
-                            <TouchableOpacity style={styles.btnShowAllExams} onPress={() => handleCategorySelect('all')}>
-                                <Text style={styles.btnShowAllExamsText}>🌟 सर्व उपलब्ध परीक्षा पहा</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                ) : (
-                    live_and_upcoming.map(exam => (
-                        <View key={exam.exam_id} style={[styles.examCard, { borderLeftColor: exam.category_color || '#8E2DE2' }]}>
-                            <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                                    <View style={[styles.statusDot, { backgroundColor: exam.status === 'live_now' ? '#10b981' : '#3b82f6' }]} />
-                                    <Text style={styles.examStatusText}>
-                                        {exam.status === 'live_now' ? 'चालू आहे' : 'लवकरच'}
-                                    </Text>
-                                    {exam.category_badge && (
-                                        <View style={[styles.examCatBadge, { borderColor: exam.category_color || '#8E2DE2' }]}>
-                                            <Text style={[styles.examCatBadgeText, { color: exam.category_color || '#8E2DE2' }]}>
-                                                {exam.category_badge}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                                <Text style={styles.examCardTitle}>{exam.title}</Text>
-                                <Text style={styles.examCardMeta}>
-                                    {exam.duration_minutes} मिनिटे • {exam.total_questions} प्रश्न {exam.total_marks ? `• ${exam.total_marks} गुण` : ''} • {exam.total_participants} विद्यार्थी
-                                </Text>
-                                {Array.isArray(exam.selected_subjects_list) && exam.selected_subjects_list.length > 0 && (
-                                    <Text style={[styles.examCardMeta, { color: '#4F46E5', fontWeight: '600', marginTop: 2 }]} numberOfLines={1}>
-                                        📚 {exam.selected_subjects_list.join(' • ')}
-                                    </Text>
-                                )}
-                                {exam.status === 'upcoming' && exam.seconds_to_start > elapsedTicks && (
-                                    <Text style={[styles.examCardMeta, { color: '#0284C7', fontWeight: 'bold', marginTop: 2 }]}>
-                                        ⏳ सुरू होण्यास: {formatCountdown(exam.seconds_to_start)}
-                                    </Text>
-                                )}
-                            </View>
-                            <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                                {exam.status === 'upcoming' && exam.seconds_to_start > elapsedTicks ? (
-                                    <View style={[styles.btnActionSmall, { backgroundColor: '#94a3b8' }]}>
-                                        <Text style={styles.btnActionText}>लवकरच सुरू</Text>
+                            <View style={styles.spotlightActions}>
+                                {spotlight_exam.has_attempted ? (
+                                    <View style={styles.attemptedBadge}>
+                                        <Text style={styles.attemptedText}>
+                                            ✔ Score: {spotlight_exam.user_score} | Rank: #{spotlight_exam.user_rank || '-'}
+                                        </Text>
                                     </View>
                                 ) : (
                                     <TouchableOpacity
-                                        style={[styles.btnActionSmall, { backgroundColor: exam.category_color || '#8E2DE2' }]}
-                                        onPress={() => startLiveExam(exam.exam_id)}
+                                        style={styles.btnStartSpotlight}
+                                        onPress={() => startLiveExam(spotlight_exam.exam_id)}
                                     >
-                                        <Text style={styles.btnActionText}>परीक्षेला बसा</Text>
+                                        <Text style={styles.btnStartSpotlightText}>🚀 Start Live Exam</Text>
                                     </TouchableOpacity>
                                 )}
                                 <TouchableOpacity
-                                    style={[styles.btnActionSmall, { backgroundColor: '#25D366' }]}
-                                    onPress={() => shareExamOnWhatsApp(exam.share_text)}
+                                    style={styles.btnShareSpotlight}
+                                    onPress={() => shareExamOnWhatsApp(spotlight_exam.share_text)}
                                 >
-                                    <Ionicons name="logo-whatsapp" size={14} color="white" />
-                                    <Text style={styles.btnActionText}>शेअर</Text>
+                                    <Ionicons name="logo-whatsapp" size={18} color="white" />
                                 </TouchableOpacity>
                             </View>
-                        </View>
-                    ))
+                        </LinearGradient>
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.emptyCard}>
+                        <Ionicons name="radio-outline" size={34} color="#cbd5e1" style={{ marginBottom: 8 }} />
+                        <Text style={styles.emptyText}>No live exam right now.</Text>
+                    </View>
                 )}
 
-                {/* Past Exams & Leaderboard */}
-                <Text style={[styles.sectionHeader, { marginTop: 24 }]}>🏆 मागील परीक्षांचे निकाल व रँकिंग (Past Results)</Text>
+                {live_and_upcoming.map(exam => (
+                    <LiveExamCard
+                        key={exam.exam_id}
+                        exam={exam}
+                        onStart={startLiveExam}
+                        onShare={shareExamOnWhatsApp}
+                    />
+                ))}
+            </ScrollView>
+        );
+    };
+
+    // Page 3B: History of Live Exams (Rank + Download Paper PDF)
+    const renderLiveHistoryPage = () => {
+        const past_exams = liveExamsData?.past_exams || [];
+        return (
+            <ScrollView
+                style={styles.pageScroll}
+                contentContainerStyle={styles.listPadding}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+            >
                 {past_exams.length === 0 ? (
                     <View style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>अद्याप कोणतीही पूर्ण झालेली परीक्षा नाही.</Text>
+                        <Ionicons name="time-outline" size={34} color="#cbd5e1" style={{ marginBottom: 8 }} />
+                        <Text style={styles.emptyText}>No past exams yet.</Text>
                     </View>
                 ) : (
                     past_exams.map(exam => (
                         <View key={exam.exam_id} style={styles.pastExamCard}>
                             <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                                    <Text style={styles.pastExamTitle}>{exam.title}</Text>
-                                    {exam.category_badge && (
-                                        <View style={[styles.examCatBadge, { borderColor: exam.category_color || '#8E2DE2', paddingVertical: 1, paddingHorizontal: 6 }]}>
-                                            <Text style={[styles.examCatBadgeText, { color: exam.category_color || '#8E2DE2', fontSize: 9 }]}>
-                                                {exam.category_badge}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
+                                <Text style={styles.pastExamTitle}>{exam.title}</Text>
+                                <Text style={styles.examCardMeta}>
+                                    {exam.total_questions} Qs • {exam.duration_minutes}m
+                                </Text>
                                 {exam.has_attempted ? (
                                     <View style={styles.rankPill}>
                                         <Text style={styles.rankPillText}>
-                                            🏅 तुमचा रँक: #{exam.user_rank || '-'} | गुण: {exam.user_score}
+                                            🏅 Rank: #{exam.user_rank || '-'} • Score: {exam.user_score}
                                         </Text>
                                     </View>
                                 ) : (
-                                    <Text style={styles.notAttemptedText}>तुम्ही ही परीक्षा दिली नव्हती</Text>
+                                    <Text style={styles.notAttemptedText}>Not attempted</Text>
                                 )}
-                            </View>
-                            <View style={{ flexDirection: 'row', gap: 6 }}>
-                                <TouchableOpacity
-                                    style={[styles.btnLeaderboard, { backgroundColor: '#dcfce7' }]}
-                                    onPress={() => downloadPastExamPDF(exam)}
-                                >
-                                    <Ionicons name="document-text-outline" size={16} color="#15803d" />
-                                    <Text style={[styles.btnLeaderboardText, { color: '#15803d' }]}>PDF</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.btnLeaderboard}
-                                    onPress={() => openLeaderboard(exam.exam_id)}
-                                >
-                                    <Ionicons name="trophy" size={16} color="#4A00E0" />
-                                    <Text style={styles.btnLeaderboardText}>लीडरबोर्ड</Text>
-                                </TouchableOpacity>
+                                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                                    <TouchableOpacity
+                                        style={[styles.btnHistoryAction, { backgroundColor: '#dcfce7' }]}
+                                        onPress={() => downloadPastExamPDF(exam)}
+                                    >
+                                        <Ionicons name="download-outline" size={15} color="#15803d" />
+                                        <Text style={[styles.btnHistoryActionText, { color: '#15803d' }]}>Download Paper</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.btnHistoryAction, { backgroundColor: '#f3e8ff' }]}
+                                        onPress={() => openLeaderboard(exam.exam_id)}
+                                    >
+                                        <Ionicons name="trophy-outline" size={15} color="#4A00E0" />
+                                        <Text style={[styles.btnHistoryActionText, { color: '#4A00E0' }]}>Rank List</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
                     ))
@@ -829,93 +827,210 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
         );
     };
 
-    // TAB 2: SUBJECTS RENDER
-    const renderSubjectsTab = () => {
-        const gradients = [
-            ['#DA22FF', '#9733EE'],
-            ['#EA384D', '#D31027'],
-            ['#00C6FF', '#0072FF'],
-            ['#F2994A', '#F2C94C'],
-            ['#11998e', '#38ef7d']
-        ];
-        const activeCatData = COMPETITIVE_CATEGORIES.find(c => c.id === selectedCategory) || COMPETITIVE_CATEGORIES[0];
+    // Page 2B: Competitive Exams Grid (Minimal: Icon + Short Name)
+    const renderExamListPage = () => (
+        <ScrollView
+            style={styles.pageScroll}
+            contentContainerStyle={styles.gridContainer}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+        >
+            <View style={styles.gridWrap}>
+                {COMPETITIVE_CATEGORIES.map((cat) => {
+                    const count = categoryCounts[cat.id] ?? 0;
+                    return (
+                        <GridTile
+                            key={cat.id}
+                            title={cat.title}
+                            icon={cat.icon}
+                            gradient={cat.gradient}
+                            badge={count > 0 ? `${count}` : null}
+                            onPress={() => {
+                                setSelectedExamCategory(cat);
+                                pushPage('exam_menu');
+                            }}
+                        />
+                    );
+                })}
+            </View>
+        </ScrollView>
+    );
 
+    // Page 3C: Selected Exam Menu (3-Card Grid: Subjects | Performance | Practice Zone)
+    const renderExamMenuPage = () => (
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.gridContainer}>
+            <View style={styles.gridWrap}>
+                <GridTile
+                    title="Subjects"
+                    icon="book"
+                    gradient={['#4F46E5', '#6366F1']}
+                    badge={subjects.length > 0 ? `${subjects.length}` : null}
+                    onPress={() => pushPage('subjects')}
+                />
+                <GridTile
+                    title="Performance"
+                    icon="bar-chart"
+                    gradient={['#8E2DE2', '#4A00E0']}
+                    badge={performanceData?.readiness_percentage ? `${performanceData.readiness_percentage}%` : null}
+                    onPress={() => pushPage('performance_menu')}
+                />
+                <GridTile
+                    title="Practice Zone"
+                    icon="layers"
+                    gradient={['#0D9488', '#14B8A6']}
+                    onPress={() => pushPage('practice_menu')}
+                />
+            </View>
+        </ScrollView>
+    );
+
+    // Page 4A: Subjects Grid (English, Maths, etc.)
+    const renderSubjectsPage = () => (
+        <FlatList
+            data={subjects}
+            keyExtractor={item => item.subject_id.toString()}
+            numColumns={2}
+            columnWrapperStyle={styles.subjectRow}
+            contentContainerStyle={styles.gridContainer}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
+            renderItem={({ item, index }) => (
+                <GridTile
+                    title={item.subject_name}
+                    icon="library"
+                    gradient={SUBJECT_GRADIENTS[index % SUBJECT_GRADIENTS.length]}
+                    onPress={() => navigation.navigate('ScholarshipChapters', {
+                        subjectId: item.subject_id,
+                        subjectName: item.subject_name,
+                        selectedLanguage: selectedLanguage
+                    })}
+                />
+            )}
+            ListEmptyComponent={
+                <View style={styles.emptyCard}>
+                    <Text style={styles.emptyText}>No subjects available.</Text>
+                </View>
+            }
+        />
+    );
+
+    // Page 4B: Performance Menu (3-Card Grid: Weak Chapter | Negative Bank | Syllabus Tracker)
+    const renderPerformanceMenuPage = () => {
+        const weakCount = performanceData?.weak_chapters?.length || 0;
+        const compPct = performanceData?.syllabus_summary?.completion_percentage || 0;
         return (
-            <FlatList
-                data={subjects}
-                keyExtractor={item => item.subject_id.toString()}
-                numColumns={2}
-                columnWrapperStyle={styles.subjectRow}
-                contentContainerStyle={{ padding: 16 }}
+            <ScrollView
+                style={styles.pageScroll}
+                contentContainerStyle={styles.gridContainer}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
-                ListHeaderComponent={
-                    activeCatData.id !== 'all' ? (
-                        <View style={styles.subjectCatHeaderBox}>
-                            <View style={[styles.subjectCatIconBox, { backgroundColor: activeCatData.gradient[0] }]}>
-                                <Ionicons name={activeCatData.icon} size={18} color="white" />
-                            </View>
-                            <View style={{ flex: 1, marginLeft: 10 }}>
-                                <Text style={styles.subjectCatHeaderTitle}>{activeCatData.badge} अभ्यासक्रम</Text>
-                                <Text style={styles.subjectCatHeaderSubtitle}>या परीक्षेसाठी आवश्यक असणारे सर्व विषय व सराव घटक खालीलप्रमाणे आहेत:</Text>
-                            </View>
-                        </View>
-                    ) : null
-                }
-                renderItem={({ item, index }) => (
-                    <TouchableOpacity
-                        style={styles.subjectCard}
-                        onPress={() => navigation.navigate('ScholarshipChapters', {
-                            subjectId: item.subject_id,
-                            subjectName: item.subject_name,
-                            selectedLanguage: selectedLanguage
-                        })}
-                    >
-                        <LinearGradient colors={gradients[index % gradients.length]} style={styles.subjectCardGradient}>
-                            <Text style={styles.subjectInitial}>{item.subject_name.charAt(0)}</Text>
-                            <Text style={styles.subjectCardTitle}>{item.subject_name}</Text>
-                            <View style={styles.subjectArrow}>
-                                <Ionicons name="arrow-forward" size={18} color="white" />
-                            </View>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
-                ListEmptyComponent={<Text style={styles.emptyText}>कोणतेही विषय उपलब्ध नाहीत.</Text>}
-            />
+            >
+                <View style={styles.gridWrap}>
+                    <GridTile
+                        title="Weak Chapters"
+                        icon="alert-circle"
+                        gradient={['#F43F5E', '#E11D48']}
+                        badge={`${weakCount}`}
+                        onPress={() => pushPage('perf_weak')}
+                    />
+                    <GridTile
+                        title="Negative Bank"
+                        icon="close-circle"
+                        gradient={['#F59E0B', '#D97706']}
+                        badge={`${negativeCount}`}
+                        onPress={() => pushPage('perf_negative')}
+                    />
+                    <GridTile
+                        title="Syllabus Tracker"
+                        icon="checkmark-done-circle"
+                        gradient={['#10B981', '#059669']}
+                        badge={`${compPct}%`}
+                        onPress={() => pushPage('perf_syllabus')}
+                    />
+                </View>
+            </ScrollView>
         );
     };
 
-    // TAB 3: PERFORMANCE & SYLLABUS TRACKER RENDER
-    const renderPerformanceTab = () => {
-        const summary = performanceData?.syllabus_summary;
-        const subjectsList = performanceData?.subjects || [];
+    // Page 5A: Weak Chapters
+    const renderPerfWeakPage = () => {
         const weakList = performanceData?.weak_chapters || [];
-        const readiness = performanceData?.readiness_percentage || 0;
-
         return (
-            <ScrollView
-                style={styles.tabContentScroll}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
-            >
-                {/* Readiness Meter Card */}
-                <LinearGradient colors={['#8E2DE2', '#4A00E0']} style={styles.readinessCard}>
-                    <Text style={styles.readinessLabel}>⚡ शिष्यवृत्ती तयारी स्तर (Scholarship Readiness)</Text>
-                    <View style={styles.readinessRow}>
-                        <Text style={styles.readinessNumber}>{readiness}%</Text>
-                        <View style={{ flex: 1, marginLeft: 16 }}>
-                            <Text style={styles.readinessSub}>
-                                एकूण सिलॅबस पूर्ण: {summary?.completion_percentage || 0}%
-                            </Text>
-                            <Text style={styles.readinessSub}>
-                                {summary?.completed_chapters || 0} पूर्ण • {summary?.pending_chapters || 0} बाकी
-                            </Text>
-                        </View>
+            <ScrollView style={styles.pageScroll} contentContainerStyle={styles.listPadding}>
+                {weakList.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                        <Text style={styles.emptyText}>No weak chapters! Great job.</Text>
                     </View>
-                </LinearGradient>
+                ) : (
+                    weakList.map(w => (
+                        <View key={w.chapter_id} style={styles.weakCard}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.weakTitle}>{w.chapter_name}</Text>
+                                <Text style={styles.weakMeta}>
+                                    {w.subject_name} • <Text style={{ color: '#dc2626', fontWeight: 'bold' }}>{w.accuracy_percentage}%</Text>
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.btnWeakPractice}
+                                onPress={() => navigation.navigate('ScholarshipChapters', {
+                                    subjectId: w.subject_id || 0,
+                                    subjectName: w.subject_name,
+                                    selectedLanguage: selectedLanguage
+                                })}
+                            >
+                                <Text style={styles.btnWeakPracticeText}>Practice</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
+            </ScrollView>
+        );
+    };
 
-                {/* 1. Chapter-wise Syllabus Tracker */}
-                <Text style={styles.sectionHeader}>📖 १. सिलॅबस ट्रॅकर: किती अभ्यास बाकी आहे?</Text>
-                <Text style={styles.sectionSubtext}>खालील कोणत्याही विषयावर क्लिक करून धड्यांची स्थिती पहा:</Text>
+    // Page 5B: Negative Question Bank
+    const renderPerfNegativePage = () => (
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.listPadding}>
+            {negativeCount > 0 && (
+                <TouchableOpacity style={[styles.btnGeneratePDF, { backgroundColor: '#8E2DE2', marginBottom: 14 }]} onPress={practiceAllMistakes}>
+                    <Ionicons name="play" size={18} color="white" />
+                    <Text style={styles.btnActionLargeText}>Practice All ({negativeCount})</Text>
+                </TouchableOpacity>
+            )}
+            {negativeBasketList.length === 0 ? (
+                <View style={styles.emptyCard}>
+                    <Text style={styles.emptyText}>🎉 Negative Bank is empty!</Text>
+                </View>
+            ) : (
+                negativeBasketList.map(item => {
+                    const qId = item.question_id || item.mcq_id;
+                    return (
+                        <View key={qId} style={styles.basketQuestionCard}>
+                            <Text style={styles.basketQText}>{item.question}</Text>
+                            <View style={styles.basketOptionsGrid}>
+                                {['a', 'b', 'c', 'd'].map(opt => {
+                                    const optText = item[`option_${opt}`];
+                                    if (!optText) return null;
+                                    return (
+                                        <TouchableOpacity
+                                            key={opt}
+                                            style={styles.basketOptBtn}
+                                            disabled={resolvingId === qId}
+                                            onPress={() => handleResolveNegativeQuestion(item, opt)}
+                                        >
+                                            <Text style={styles.basketOptBtnText}>({opt.toUpperCase()}) {optText}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    );
+                })
+            )}
+        </ScrollView>
+    );
 
+    // Page 5C: Syllabus Tracker
+    const renderPerfSyllabusPage = () => {
+        const subjectsList = performanceData?.subjects || [];
+        return (
+            <ScrollView style={styles.pageScroll} contentContainerStyle={styles.listPadding}>
                 {subjectsList.map(sub => {
                     const isExpanded = expandedSubjectId === sub.subject_id;
                     return (
@@ -927,14 +1042,14 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.accordionTitle}>{sub.subject_name}</Text>
                                     <Text style={styles.accordionMeta}>
-                                        {sub.completed_chapters}/{sub.total_chapters} धडे पूर्ण ({sub.completion_percentage}%)
+                                        {sub.completed_chapters}/{sub.total_chapters} ({sub.completion_percentage}%)
                                     </Text>
                                 </View>
                                 <View style={styles.accordionRight}>
                                     <View style={styles.miniProgressBar}>
                                         <View style={[styles.miniProgressFill, { width: `${sub.completion_percentage}%` }]} />
                                     </View>
-                                    <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#666" />
+                                    <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
                                 </View>
                             </TouchableOpacity>
 
@@ -943,14 +1058,13 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                                     {sub.chapters.map(ch => {
                                         const isCompleted = ch.status === 'completed';
                                         const isInProgress = ch.status === 'in_progress';
-                                        const statusBadge = isCompleted ? '🟢 पूर्ण' : (isInProgress ? '🟡 चालू' : '⚪ बाकी');
-
+                                        const statusBadge = isCompleted ? 'Done' : (isInProgress ? 'In Progress' : 'Pending');
                                         return (
                                             <View key={ch.chapter_id} style={styles.chapterStatusRow}>
                                                 <View style={{ flex: 1 }}>
                                                     <Text style={styles.chapterStatusName}>{ch.chapter_name}</Text>
                                                     <Text style={styles.chapterStatusMeta}>
-                                                        {ch.total_mcqs} प्रश्न {ch.tests_taken > 0 ? `• अचूकता: ${ch.accuracy_percentage}%` : ''}
+                                                        {ch.total_mcqs} Qs {ch.tests_taken > 0 ? `• ${ch.accuracy_percentage}%` : ''}
                                                     </Text>
                                                 </View>
                                                 <View style={[
@@ -974,319 +1088,227 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                         </View>
                     );
                 })}
+            </ScrollView>
+        );
+    };
 
-                {/* 2. Weak Chapters Alert */}
-                <Text style={[styles.sectionHeader, { marginTop: 24 }]}>🚨 २. कमकुवत घटक अलर्ट (Weak Chapters)</Text>
-                {weakList.length === 0 ? (
-                    <View style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>उत्तम! सध्या कोणताही कमकुवत घटक नाही.</Text>
-                    </View>
-                ) : (
-                    weakList.map(w => (
-                        <View key={w.chapter_id} style={styles.weakCard}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.weakTitle}>{w.chapter_name}</Text>
-                                <Text style={styles.weakMeta}>
-                                    विषय: {w.subject_name} • अचूकता: <Text style={{ color: '#dc2626', fontWeight: 'bold' }}>{w.accuracy_percentage}%</Text>
-                                </Text>
-                            </View>
-                            <TouchableOpacity
-                                style={styles.btnWeakPractice}
-                                onPress={() => navigation.navigate('ScholarshipChapters', {
-                                    subjectId: w.subject_id || 0,
-                                    subjectName: w.subject_name
-                                })}
-                            >
-                                <Text style={styles.btnWeakPracticeText}>⚡ सराव करा</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ))
-                )}
+    // Page 4C: Practice Zone Menu (3-Card Grid: Paper Generator | Practice Exam | Previous PDFs)
+    const renderPracticeMenuPage = () => (
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.gridContainer}>
+            <View style={styles.gridWrap}>
+                <GridTile
+                    title="Paper Generator"
+                    icon="print"
+                    gradient={['#10B981', '#059669']}
+                    onPress={() => pushPage('practice_generator')}
+                />
+                <GridTile
+                    title="Practice Exam"
+                    icon="play-circle"
+                    gradient={['#4F46E5', '#7C3AED']}
+                    onPress={() => pushPage('practice_exam')}
+                />
+                <GridTile
+                    title="Previous PDFs"
+                    icon="document-text"
+                    gradient={['#0284C7', '#0369A1']}
+                    onPress={() => pushPage('practice_pdfs')}
+                />
+            </View>
+        </ScrollView>
+    );
 
-                {/* 3. Negative Basket with Dynamic Inline Clearing */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 8 }}>
-                    <Text style={styles.sectionHeader}>🗑️ ३. निगेटिव्ह बास्केट ({negativeCount})</Text>
-                    {negativeCount > 0 && (
-                        <TouchableOpacity style={styles.btnPracticeAllMistakes} onPress={practiceAllMistakes}>
-                            <Text style={styles.btnPracticeAllMistakesText}>🚀 सर्व चुकांची टेस्ट द्या</Text>
+    // Shared Practice Selector for Paper Generator & Practice Exam
+    const renderPracticeSelectorPage = (mode) => (
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.listPadding}>
+            <Text style={styles.sectionHeader}>1. Subjects</Text>
+            <View style={styles.practiceSubjectGrid}>
+                {subjects.map(sub => {
+                    const isSelected = selectedPracticeSubjects.some(s => s.subject_id === sub.subject_id);
+                    return (
+                        <TouchableOpacity
+                            key={sub.subject_id}
+                            style={[styles.practiceSubBtn, isSelected && styles.practiceSubBtnSelected]}
+                            onPress={() => togglePracticeSubject(sub)}
+                        >
+                            <Text style={[styles.practiceSubBtnText, isSelected && { color: 'white', fontWeight: 'bold' }]}>
+                                {sub.subject_name}
+                            </Text>
+                            {isSelected && <Ionicons name="checkmark-circle" size={16} color="white" />}
                         </TouchableOpacity>
-                    )}
-                </View>
+                    );
+                })}
+            </View>
 
-                {negativeBasketList.length === 0 ? (
-                    <View style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>🎉 अभिनंदन! निगेटिव्ह बास्केट पूर्णपणे क्लिअर आहे.</Text>
+            {selectedPracticeSubjects.length > 0 && (
+                <View style={{ marginTop: 18 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={styles.sectionHeader}>2. Chapters</Text>
+                        <TouchableOpacity onPress={selectAllPracticeChapters}>
+                            <Text style={styles.selectAllText}>Select All</Text>
+                        </TouchableOpacity>
                     </View>
-                ) : (
-                    negativeBasketList.slice(0, 5).map(item => {
-                        const qId = item.question_id || item.mcq_id;
-                        return (
-                            <View key={qId} style={styles.basketQuestionCard}>
-                                <Text style={styles.basketQText}>{item.question}</Text>
-                                <View style={styles.basketOptionsGrid}>
-                                    {['a', 'b', 'c', 'd'].map(opt => {
-                                        const optText = item[`option_${opt}`];
-                                        if (!optText) return null;
+                    {loadingPracticeChapters ? (
+                        <ActivityIndicator color="#8E2DE2" style={{ marginVertical: 12 }} />
+                    ) : (
+                        <View style={styles.practiceChaptersBox}>
+                            {practiceChapters.map(group => (
+                                <View key={group.subjectId} style={{ marginBottom: 12 }}>
+                                    <Text style={styles.practiceGroupHeader}>{group.subjectName}</Text>
+                                    {group.data.map(ch => {
+                                        const isChecked = selectedPracticeChapters.includes(ch.chapter_id);
                                         return (
                                             <TouchableOpacity
-                                                key={opt}
-                                                style={styles.basketOptBtn}
-                                                disabled={resolvingId === qId}
-                                                onPress={() => handleResolveNegativeQuestion(item, opt)}
+                                                key={ch.chapter_id}
+                                                style={styles.practiceChapterRow}
+                                                onPress={() => togglePracticeChapter(ch.chapter_id)}
                                             >
-                                                <Text style={styles.basketOptBtnText}>({opt.toUpperCase()}) {optText}</Text>
+                                                <Ionicons
+                                                    name={isChecked ? 'checkbox' : 'square-outline'}
+                                                    size={20}
+                                                    color={isChecked ? '#4F46E5' : '#94a3b8'}
+                                                />
+                                                <Text style={[styles.practiceChapterName, isChecked && { fontWeight: '600', color: '#4F46E5' }]}>
+                                                    {ch.chapter_name}
+                                                </Text>
                                             </TouchableOpacity>
                                         );
                                     })}
                                 </View>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            )}
+
+            {selectedPracticeChapters.length > 0 && (
+                <View style={{ marginTop: 18 }}>
+                    <Text style={styles.sectionHeader}>3. Questions</Text>
+                    <View style={styles.limitRow}>
+                        {['15', '25', '50'].map(num => (
+                            <TouchableOpacity
+                                key={num}
+                                style={[styles.limitBtn, practiceLimit === num && styles.limitBtnSelected]}
+                                onPress={() => setPracticeLimit(num)}
+                            >
+                                <Text style={[styles.limitBtnText, practiceLimit === num && styles.limitBtnTextSelected]}>
+                                    {num}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {mode === 'generator' ? (
+                        <TouchableOpacity style={styles.btnGeneratePDF} onPress={generateExamPaperPDF}>
+                            <Ionicons name="print-outline" size={20} color="white" />
+                            <Text style={styles.btnActionLargeText}>Generate PDF</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.btnGeneratePDF, { backgroundColor: '#4F46E5' }]}
+                            onPress={startCustomOnlineTest}
+                        >
+                            <Ionicons name="play-circle-outline" size={20} color="white" />
+                            <Text style={styles.btnActionLargeText}>Start Practice Exam</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+        </ScrollView>
+    );
+
+    // Page 5F: Previous Exam PDFs
+    const renderPracticePdfsPage = () => {
+        const pastExams = liveExamsData?.past_exams || [];
+        const filtered =
+            selectedExamCategory && selectedExamCategory.id !== 'all'
+                ? pastExams.filter(ex => ex.category_slug === selectedExamCategory.id)
+                : pastExams;
+
+        return (
+            <ScrollView style={styles.pageScroll} contentContainerStyle={styles.listPadding}>
+                {filtered.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                        <Ionicons name="document-outline" size={32} color="#cbd5e1" style={{ marginBottom: 6 }} />
+                        <Text style={styles.emptyText}>No previous PDFs available.</Text>
+                    </View>
+                ) : (
+                    filtered.map(exam => (
+                        <View key={exam.exam_id} style={styles.pastExamCard}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.pastExamTitle}>{exam.title}</Text>
+                                <Text style={styles.examCardMeta}>
+                                    {exam.total_questions} Qs • {exam.duration_minutes}m
+                                </Text>
                             </View>
-                        );
-                    })
+                            <TouchableOpacity
+                                style={[styles.btnHistoryAction, { backgroundColor: '#dcfce7' }]}
+                                onPress={() => downloadPastExamPDF(exam)}
+                            >
+                                <Ionicons name="download-outline" size={16} color="#15803d" />
+                                <Text style={[styles.btnHistoryActionText, { color: '#15803d' }]}>PDF</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))
                 )}
             </ScrollView>
         );
     };
 
-    // TAB 4: PRACTICE ZONE RENDER
-    const renderPracticeZoneTab = () => {
-        return (
-            <ScrollView
-                style={styles.tabContentScroll}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAllData(userId, true)} />}
-            >
-                {/* 1. Exam Paper Generator Header Card */}
-                <LinearGradient colors={['#11998e', '#38ef7d']} style={styles.practiceHeroCard}>
-                    <Ionicons name="newspaper-outline" size={36} color="white" />
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={styles.practiceHeroTitle}>📝 Exam Paper Generator</Text>
-                        <Text style={styles.practiceHeroSubtitle}>
-                            घरी प्रिंट करण्यासाठी संपूर्ण प्रश्नपत्रिका व मॉडेल उत्तरतालिका PDF मध्ये डाऊनलोड करा!
-                        </Text>
-                    </View>
-                </LinearGradient>
-
-                {/* Step 1: Select Subjects */}
-                <Text style={styles.sectionHeader}>१. विषय निवडा (Select Subjects):</Text>
-                <View style={styles.practiceSubjectGrid}>
-                    {subjects.map(sub => {
-                        const isSelected = selectedPracticeSubjects.some(s => s.subject_id === sub.subject_id);
-                        return (
-                            <TouchableOpacity
-                                key={sub.subject_id}
-                                style={[styles.practiceSubBtn, isSelected && styles.practiceSubBtnSelected]}
-                                onPress={() => togglePracticeSubject(sub)}
-                            >
-                                <Text style={[styles.practiceSubBtnText, isSelected && { color: 'white', fontWeight: 'bold' }]}>
-                                    {sub.subject_name}
-                                </Text>
-                                {isSelected && <Ionicons name="checkmark-circle" size={16} color="white" />}
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-
-                {/* Step 2: Select Chapters */}
-                {selectedPracticeSubjects.length > 0 && (
-                    <View style={{ marginTop: 16 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={styles.sectionHeader}>२. धडे निवडा (Select Chapters):</Text>
-                            <TouchableOpacity onPress={selectAllPracticeChapters}>
-                                <Text style={styles.selectAllText}>सर्व निवडा / हटवा</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {loadingPracticeChapters ? (
-                            <ActivityIndicator color="#8E2DE2" style={{ marginVertical: 12 }} />
-                        ) : (
-                            <View style={styles.practiceChaptersBox}>
-                                {practiceChapters.map(group => (
-                                    <View key={group.subjectId} style={{ marginBottom: 12 }}>
-                                        <Text style={styles.practiceGroupHeader}>📌 {group.subjectName}</Text>
-                                        {group.data.map(ch => {
-                                            const isChecked = selectedPracticeChapters.includes(ch.chapter_id);
-                                            return (
-                                                <TouchableOpacity
-                                                    key={ch.chapter_id}
-                                                    style={styles.practiceChapterRow}
-                                                    onPress={() => togglePracticeChapter(ch.chapter_id)}
-                                                >
-                                                    <Ionicons
-                                                        name={isChecked ? "checkbox" : "square-outline"}
-                                                        size={20}
-                                                        color={isChecked ? "#8E2DE2" : "#888"}
-                                                    />
-                                                    <Text style={[styles.practiceChapterName, isChecked && { fontWeight: '600', color: '#4A00E0' }]}>
-                                                        {ch.chapter_name}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                )}
-
-                {/* Step 3: Question Limit & Actions */}
-                {selectedPracticeChapters.length > 0 && (
-                    <View style={{ marginTop: 20 }}>
-                        <Text style={styles.sectionHeader}>३. प्रश्नांची संख्या निवडा:</Text>
-                        <View style={styles.limitRow}>
-                            {['15', '25', '50'].map(num => (
-                                <TouchableOpacity
-                                    key={num}
-                                    style={[styles.limitBtn, practiceLimit === num && styles.limitBtnSelected]}
-                                    onPress={() => setPracticeLimit(num)}
-                                >
-                                    <Text style={[styles.limitBtnText, practiceLimit === num && styles.limitBtnTextSelected]}>
-                                        {num} प्रश्न
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        {/* Action Buttons */}
-                        <TouchableOpacity
-                            style={styles.btnGeneratePDF}
-                            onPress={generateExamPaperPDF}
-                        >
-                            <Ionicons name="print-outline" size={20} color="white" />
-                            <Text style={styles.btnActionLargeText}>🖨️ Exam Paper PDF तयार करा</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.btnGeneratePDF, { backgroundColor: '#4A00E0', marginTop: 12 }]}
-                            onPress={startCustomOnlineTest}
-                        >
-                            <Ionicons name="play-circle-outline" size={20} color="white" />
-                            <Text style={styles.btnActionLargeText}>⚡ Custom Test ऑनलाईन सुरू करा</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </ScrollView>
-        );
+    const renderPageContent = () => {
+        switch (currentPage) {
+            case 'home': return renderHomePage();
+            case 'live_menu': return renderLiveMenuPage();
+            case 'live_ongoing': return renderLiveOngoingPage();
+            case 'live_history': return renderLiveHistoryPage();
+            case 'exam_list': return renderExamListPage();
+            case 'exam_menu': return renderExamMenuPage();
+            case 'subjects': return renderSubjectsPage();
+            case 'performance_menu': return renderPerformanceMenuPage();
+            case 'perf_weak': return renderPerfWeakPage();
+            case 'perf_negative': return renderPerfNegativePage();
+            case 'perf_syllabus': return renderPerfSyllabusPage();
+            case 'practice_menu': return renderPracticeMenuPage();
+            case 'practice_generator': return renderPracticeSelectorPage('generator');
+            case 'practice_exam': return renderPracticeSelectorPage('practice_exam');
+            case 'practice_pdfs': return renderPracticePdfsPage();
+            default: return renderHomePage();
+        }
     };
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#8E2DE2" />
-            
-            {/* Header */}
-            <LinearGradient colors={['#8E2DE2', '#4A00E0']} style={styles.header}>
+            <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+
+            {/* Minimal Clean Header */}
+            <LinearGradient colors={['#6366F1', '#4A00E0']} style={styles.header}>
                 <SafeAreaView>
                     <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                if (!popPage()) navigation.goBack();
+                            }}
+                            style={styles.backBtn}
+                        >
                             <Ionicons name="arrow-back" size={22} color="white" />
                         </TouchableOpacity>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.headerTitle}>{levelTitle}</Text>
-                            <Text style={styles.headerSubtitle}>नवोदय • सैनिक शाळा • ऑलिम्पियाड • शिष्यवृत्ती</Text>
+                            <Text style={styles.headerTitle} numberOfLines={1}>{getHeaderTitle()}</Text>
                         </View>
                         <LanguageToggle
                             selectedLanguage={selectedLanguage}
                             onLanguageChange={handleLanguageChange}
                         />
                     </View>
-
-                    {/* 4 Core Tabs */}
-                    <View style={styles.tabsRow}>
-                        <TouchableOpacity
-                            style={[styles.tabItem, activeTab === 'live' && styles.tabItemActive]}
-                            onPress={() => setActiveTab('live')}
-                        >
-                            <Text style={[styles.tabItemText, activeTab === 'live' && styles.tabItemTextActive]}>
-                                🔴 Live Exam
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.tabItem, activeTab === 'subjects' && styles.tabItemActive]}
-                            onPress={() => setActiveTab('subjects')}
-                        >
-                            <Text style={[styles.tabItemText, activeTab === 'subjects' && styles.tabItemTextActive]}>
-                                📚 विषय अभ्यास
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.tabItem, activeTab === 'performance' && styles.tabItemActive]}
-                            onPress={() => setActiveTab('performance')}
-                        >
-                            <Text style={[styles.tabItemText, activeTab === 'performance' && styles.tabItemTextActive]}>
-                                📊 माझी प्रगती
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.tabItem, activeTab === 'practice' && styles.tabItemActive]}
-                            onPress={() => setActiveTab('practice')}
-                        >
-                            <Text style={[styles.tabItemText, activeTab === 'practice' && styles.tabItemTextActive]}>
-                                🎯 Practice Zone
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Competitive Exam Horizontal Category Selector */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryScrollContainer}
-                    >
-                        {COMPETITIVE_CATEGORIES.map(cat => {
-                            const isSelected = selectedCategory === cat.id;
-                            const count = categoryCounts[cat.id] ?? 0;
-                            return (
-                                <TouchableOpacity
-                                    key={cat.id}
-                                    style={[
-                                        styles.categoryPill,
-                                        isSelected && styles.categoryPillActive
-                                    ]}
-                                    onPress={() => handleCategorySelect(cat.id)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Ionicons
-                                        name={cat.icon}
-                                        size={14}
-                                        color={isSelected ? '#4A00E0' : 'rgba(255,255,255,0.9)'}
-                                    />
-                                    <Text style={[
-                                        styles.categoryPillText,
-                                        isSelected && styles.categoryPillTextActive
-                                    ]}>
-                                        {cat.title}
-                                    </Text>
-                                    {count > 0 && (
-                                        <View style={[
-                                            styles.categoryCountBadge,
-                                            isSelected && styles.categoryCountBadgeActive
-                                        ]}>
-                                            <Text style={[
-                                                styles.categoryCountText,
-                                                isSelected && styles.categoryCountTextActive
-                                            ]}>
-                                                {count}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
                 </SafeAreaView>
             </LinearGradient>
 
             {/* Body */}
             <View style={styles.mainContainer}>
                 {loading ? (
-                    <ActivityIndicator size="large" color="#8E2DE2" style={{ marginTop: 60 }} />
+                    <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 60 }} />
                 ) : (
-                    activeTab === 'live' ? renderLiveExamTab() :
-                    activeTab === 'subjects' ? renderSubjectsTab() :
-                    activeTab === 'performance' ? renderPerformanceTab() :
-                    renderPracticeZoneTab()
+                    renderPageContent()
                 )}
             </View>
 
@@ -1300,26 +1322,25 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>👑 ऑल-महाराष्ट्र लीडरबोर्ड</Text>
+                            <Text style={styles.modalTitle}>👑 Leaderboard</Text>
                             <TouchableOpacity onPress={() => setLeaderboardModalVisible(false)}>
                                 <Ionicons name="close" size={24} color="#333" />
                             </TouchableOpacity>
                         </View>
 
                         {leaderboardLoading ? (
-                            <ActivityIndicator size="large" color="#8E2DE2" style={{ marginVertical: 40 }} />
+                            <ActivityIndicator size="large" color="#6366F1" style={{ marginVertical: 40 }} />
                         ) : (
                             <ScrollView style={{ maxHeight: 450 }}>
                                 {selectedExamLeaderboard?.user_rank && (
                                     <View style={styles.myRankCard}>
-                                        <Text style={styles.myRankTitle}>तुमची कामगिरी:</Text>
+                                        <Text style={styles.myRankTitle}>Your Rank</Text>
                                         <Text style={styles.myRankDetails}>
-                                            रँक: #{selectedExamLeaderboard.user_rank.rank} | गुण: {selectedExamLeaderboard.user_rank.net_score} | वेळ: {selectedExamLeaderboard.user_rank.formatted_time}
+                                            #{selectedExamLeaderboard.user_rank.rank} • {selectedExamLeaderboard.user_rank.net_score} Marks • {selectedExamLeaderboard.user_rank.formatted_time}
                                         </Text>
                                     </View>
                                 )}
 
-                                <Text style={styles.toppersHeader}>टॉप १० अव्वल विद्यार्थी:</Text>
                                 {(selectedExamLeaderboard?.top_rankers || []).map(r => (
                                     <View key={r.attempt_id} style={styles.rankRow}>
                                         <View style={styles.rankBadgeCircle}>
@@ -1327,9 +1348,9 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                                         </View>
                                         <View style={{ flex: 1, marginLeft: 10 }}>
                                             <Text style={styles.rankStudentName}>{r.student_name}</Text>
-                                            <Text style={styles.rankTimeSpent}>वेळ: {r.formatted_time}</Text>
+                                            <Text style={styles.rankTimeSpent}>{r.formatted_time}</Text>
                                         </View>
-                                        <Text style={styles.rankScore}>{r.net_score} गुण</Text>
+                                        <Text style={styles.rankScore}>{r.net_score}</Text>
                                     </View>
                                 ))}
                             </ScrollView>
@@ -1337,113 +1358,92 @@ const ScholarshipSubjectsScreen = ({ navigation, route }) => {
                     </View>
                 </View>
             </Modal>
+
+            {actionLoading && (
+                <View style={styles.actionLoadingOverlay}>
+                    <View style={styles.actionLoadingBox}>
+                        <ActivityIndicator size="large" color="#6366F1" />
+                        <Text style={styles.actionLoadingText}>Loading...</Text>
+                    </View>
+                </View>
+            )}
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
-    header: { paddingHorizontal: 16, paddingBottom: 12 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginTop: Platform.OS === 'android' ? 30 : 0 },
-    backBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, marginRight: 10 },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: 'white' },
-    headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)' },
-    tabsRow: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 12, padding: 4 },
-    tabItem: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-    tabItemActive: { backgroundColor: 'white' },
-    tabItemText: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
-    tabItemTextActive: { color: '#4A00E0', fontWeight: 'bold' },
-    mainContainer: { flex: 1 },
-    tabContentScroll: { padding: 16 },
-    sectionHeader: { fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginBottom: 8 },
-    sectionSubtext: { fontSize: 12, color: '#64748b', marginBottom: 12 },
-    emptyCard: { backgroundColor: 'white', padding: 20, borderRadius: 12, alignItems: 'center', marginVertical: 8 },
-    emptyText: { color: '#94a3b8', fontSize: 13 },
+    header: { paddingHorizontal: 16, paddingBottom: 14, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', marginTop: Platform.OS === 'android' ? 30 : 0 },
+    backBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, marginRight: 12 },
+    headerTitle: { fontSize: 19, fontWeight: 'bold', color: 'white' },
 
-    /* Spotlight Card */
-    spotlightCard: { borderRadius: 16, padding: 18, marginBottom: 20, shadowColor: '#FF416C', shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
-    spotlightBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 8 },
+    mainContainer: { flex: 1 },
+    pageScroll: { flex: 1 },
+    gridContainer: { padding: 18, paddingBottom: 32 },
+    listPadding: { padding: 16, paddingBottom: 32 },
+
+    /* Minimal Attractive Grid Cards */
+    gridWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 14 },
+    subjectRow: { justifyContent: 'space-between', marginBottom: 14 },
+    gridTile: {
+        width: '47.5%',
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        padding: 16,
+        minHeight: 132,
+        justifyContent: 'space-between',
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 3,
+        marginBottom: 4
+    },
+    gridTileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    gridIconBox: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    gridBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    gridBadgeText: { fontSize: 11, fontWeight: 'bold', color: '#4F46E5' },
+    gridTileTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginTop: 14 },
+
+    sectionHeader: { fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginBottom: 10 },
+    emptyCard: { backgroundColor: 'white', padding: 24, borderRadius: 16, alignItems: 'center', marginVertical: 10 },
+    emptyText: { color: '#94a3b8', fontSize: 13, textAlign: 'center' },
+
+    /* Spotlight Banner */
+    spotlightCard: { borderRadius: 20, padding: 18, marginBottom: 16, elevation: 4 },
+    spotlightBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 8 },
     spotlightBadgeText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
     spotlightTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
-    spotlightSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginBottom: 4 },
-    spotlightTime: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 14 },
+    spotlightSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginBottom: 14 },
     spotlightActions: { flexDirection: 'row', gap: 10 },
-    btnStartSpotlight: { flex: 1, backgroundColor: 'white', paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-    btnStartSpotlightText: { color: '#FF416C', fontWeight: 'bold', fontSize: 14 },
-    btnShareSpotlight: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#25D366', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-    btnShareSpotlightText: { color: 'white', fontWeight: 'bold', fontSize: 13 },
-    attemptedBadge: { flex: 1, backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 10 },
+    btnStartSpotlight: { flex: 1, backgroundColor: 'white', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+    btnStartSpotlightText: { color: '#E11D48', fontWeight: 'bold', fontSize: 14 },
+    btnShareSpotlight: { backgroundColor: '#25D366', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    attemptedBadge: { flex: 1, backgroundColor: 'rgba(255,255,255,0.22)', padding: 11, borderRadius: 12 },
     attemptedText: { color: 'white', fontSize: 12, fontWeight: '600' },
 
-    /* Category Selector (Header) */
-    categoryScrollContainer: { paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' },
-    categoryPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
-    categoryPillActive: { backgroundColor: 'white', borderColor: 'white', elevation: 2 },
-    categoryPillText: { fontSize: 12, fontWeight: '600', color: 'white', marginLeft: 4 },
-    categoryPillTextActive: { color: '#4A00E0', fontWeight: 'bold' },
-    categoryCountBadge: { marginLeft: 6, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
-    categoryCountBadgeActive: { backgroundColor: '#4A00E0' },
-    categoryCountText: { fontSize: 10, color: 'white', fontWeight: 'bold' },
-    categoryCountTextActive: { color: 'white' },
-
-    /* Category Blueprint Card */
-    blueprintCard: { borderRadius: 16, padding: 16, marginBottom: 18, elevation: 3 },
-    blueprintHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-    blueprintIconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
-    blueprintTitle: { color: 'white', fontSize: 15, fontWeight: 'bold' },
-    blueprintSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 1 },
-    blueprintDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 12 },
-    blueprintPatternHeader: { color: 'white', fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
-    blueprintPatternText: { color: 'rgba(255,255,255,0.95)', fontSize: 12, lineHeight: 18, marginBottom: 8 },
-    blueprintTipBox: { backgroundColor: 'rgba(0,0,0,0.18)', padding: 8, borderRadius: 8, marginTop: 4 },
-    blueprintTipText: { color: 'white', fontSize: 11, fontWeight: '500' },
-
-    /* Exam Category Badges */
-    filterIndicator: { fontSize: 11, fontWeight: 'bold' },
-    spotlightCatBadge: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
-    spotlightCatBadgeText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
-    examCatBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: '#f8fafc' },
-    examCatBadgeText: { fontSize: 10, fontWeight: 'bold' },
-    btnShowAllExams: { marginTop: 12, backgroundColor: '#8E2DE2', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-    btnShowAllExamsText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
-
-    /* Subject Category Header Box */
-    subjectCatHeaderBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 12, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', elevation: 1 },
-    subjectCatIconBox: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
-    subjectCatHeaderTitle: { fontSize: 13, fontWeight: 'bold', color: '#1e293b' },
-    subjectCatHeaderSubtitle: { fontSize: 11, color: '#64748b', marginTop: 2 },
-
-    /* Exam Cards */
-    examCard: { flexDirection: 'row', backgroundColor: 'white', padding: 16, borderRadius: 12, marginBottom: 12, alignItems: 'center', borderLeftWidth: 4, borderLeftColor: '#8E2DE2', elevation: 1 },
+    /* Exam & History Cards */
+    examCard: { flexDirection: 'row', backgroundColor: 'white', padding: 16, borderRadius: 16, marginBottom: 12, alignItems: 'center', borderLeftWidth: 4, elevation: 2 },
     examCardTitle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
-    examCardMeta: { fontSize: 12, color: '#64748b', marginTop: 4 },
+    examCardMeta: { fontSize: 12, color: '#64748b', marginTop: 3 },
     statusDot: { width: 8, height: 8, borderRadius: 4 },
-    examStatusText: { fontSize: 11, fontWeight: 'bold', color: '#64748b' },
-    btnActionSmall: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 },
-    btnActionText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
-    pastExamCard: { flexDirection: 'row', backgroundColor: 'white', padding: 14, borderRadius: 12, marginBottom: 10, alignItems: 'center', elevation: 1 },
-    pastExamTitle: { fontSize: 13, fontWeight: '600', color: '#1e293b' },
-    rankPill: { alignSelf: 'flex-start', backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
-    rankPillText: { fontSize: 11, color: '#4A00E0', fontWeight: 'bold' },
-    notAttemptedText: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
-    btnLeaderboard: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f3e8ff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-    btnLeaderboardText: { fontSize: 12, fontWeight: 'bold', color: '#4A00E0' },
+    examStatusText: { fontSize: 10, fontWeight: 'bold', color: '#64748b' },
+    btnActionSmall: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center' },
+    btnActionText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
 
-    /* Subject Grid */
-    subjectRow: { justifyContent: 'space-between', marginBottom: 14 },
-    subjectCard: { width: '48%', height: 110, borderRadius: 16, overflow: 'hidden', elevation: 2 },
-    subjectCardGradient: { flex: 1, padding: 16, justifyContent: 'space-between' },
-    subjectInitial: { fontSize: 24, fontWeight: 'bold', color: 'rgba(255,255,255,0.4)' },
-    subjectCardTitle: { fontSize: 15, fontWeight: 'bold', color: 'white' },
-    subjectArrow: { alignSelf: 'flex-end', backgroundColor: 'rgba(255,255,255,0.2)', padding: 4, borderRadius: 12 },
+    pastExamCard: { flexDirection: 'row', backgroundColor: 'white', padding: 16, borderRadius: 16, marginBottom: 12, alignItems: 'center', elevation: 2 },
+    pastExamTitle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
+    rankPill: { alignSelf: 'flex-start', backgroundColor: '#eef2ff', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginTop: 6 },
+    rankPillText: { fontSize: 12, color: '#4A00E0', fontWeight: 'bold' },
+    notAttemptedText: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
+    btnHistoryAction: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+    btnHistoryActionText: { fontSize: 12, fontWeight: 'bold' },
 
-    /* Performance Tab */
-    readinessCard: { padding: 18, borderRadius: 16, marginBottom: 18 },
-    readinessLabel: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: 'bold' },
-    readinessRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-    readinessNumber: { fontSize: 36, fontWeight: 'bold', color: 'white' },
-    readinessSub: { color: 'white', fontSize: 12 },
-    accordionContainer: { backgroundColor: 'white', borderRadius: 12, marginBottom: 10, overflow: 'hidden', elevation: 1 },
+    /* Performance Pages */
+    accordionContainer: { backgroundColor: 'white', borderRadius: 14, marginBottom: 10, overflow: 'hidden', elevation: 1 },
     accordionHeader: { flexDirection: 'row', alignItems: 'center', padding: 14 },
     accordionTitle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
     accordionMeta: { fontSize: 11, color: '#64748b', marginTop: 2 },
@@ -1454,59 +1454,56 @@ const styles = StyleSheet.create({
     chapterStatusRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
     chapterStatusName: { fontSize: 13, color: '#334155' },
     chapterStatusMeta: { fontSize: 11, color: '#94a3b8' },
-    statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, backgroundColor: '#f1f5f9' },
+    statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: '#f1f5f9' },
     statusPillText: { fontSize: 10, fontWeight: 'bold', color: '#64748b' },
 
-    /* Weak Chapters & Negative Basket */
-    weakCard: { flexDirection: 'row', backgroundColor: '#fff1f2', borderLeftWidth: 4, borderLeftColor: '#f43f5e', padding: 12, borderRadius: 10, marginBottom: 10, alignItems: 'center' },
-    weakTitle: { fontSize: 13, fontWeight: 'bold', color: '#9f1239' },
-    weakMeta: { fontSize: 11, color: '#64748b', marginTop: 2 },
-    btnWeakPractice: { backgroundColor: '#f43f5e', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-    btnWeakPracticeText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
-    btnPracticeAllMistakes: { backgroundColor: '#8E2DE2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-    btnPracticeAllMistakesText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
-    basketQuestionCard: { backgroundColor: 'white', padding: 14, borderRadius: 12, marginBottom: 10, elevation: 1 },
+    weakCard: { flexDirection: 'row', backgroundColor: 'white', borderLeftWidth: 4, borderLeftColor: '#f43f5e', padding: 14, borderRadius: 14, marginBottom: 10, alignItems: 'center', elevation: 1 },
+    weakTitle: { fontSize: 14, fontWeight: 'bold', color: '#0f172a' },
+    weakMeta: { fontSize: 12, color: '#64748b', marginTop: 2 },
+    btnWeakPractice: { backgroundColor: '#f43f5e', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+    btnWeakPracticeText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+
+    basketQuestionCard: { backgroundColor: 'white', padding: 14, borderRadius: 14, marginBottom: 10, elevation: 1 },
     basketQText: { fontSize: 13, fontWeight: 'bold', color: '#1e293b', marginBottom: 10 },
     basketOptionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     basketOptBtn: { width: '48%', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', padding: 8, borderRadius: 8 },
     basketOptBtnText: { fontSize: 12, color: '#334155' },
 
-    /* Practice Zone */
-    practiceHeroCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, marginBottom: 18 },
-    practiceHeroTitle: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-    practiceHeroSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 11, marginTop: 2 },
+    /* Practice Zone Pages */
     practiceSubjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    practiceSubBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', borderWidth: 1, borderColor: '#cbd5e1', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
-    practiceSubBtnSelected: { backgroundColor: '#8E2DE2', borderColor: '#8E2DE2' },
+    practiceSubBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', borderWidth: 1, borderColor: '#cbd5e1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
+    practiceSubBtnSelected: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
     practiceSubBtnText: { fontSize: 12, color: '#475569' },
-    selectAllText: { fontSize: 12, color: '#8E2DE2', fontWeight: 'bold' },
-    practiceChaptersBox: { backgroundColor: 'white', borderRadius: 12, padding: 12, maxHeight: 220, borderWidth: 1, borderColor: '#e2e8f0', marginTop: 8 },
+    selectAllText: { fontSize: 12, color: '#4F46E5', fontWeight: 'bold' },
+    practiceChaptersBox: { backgroundColor: 'white', borderRadius: 14, padding: 12, maxHeight: 240, borderWidth: 1, borderColor: '#e2e8f0', marginTop: 8 },
     practiceGroupHeader: { fontSize: 12, fontWeight: 'bold', color: '#64748b', marginBottom: 6 },
     practiceChapterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
     practiceChapterName: { fontSize: 13, color: '#334155', flex: 1 },
     limitRow: { flexDirection: 'row', gap: 12, marginVertical: 10 },
-    limitBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: 'white', borderWidth: 1, borderColor: '#cbd5e1', alignItems: 'center' },
-    limitBtnSelected: { backgroundColor: '#8E2DE2', borderColor: '#8E2DE2' },
+    limitBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: 'white', borderWidth: 1, borderColor: '#cbd5e1', alignItems: 'center' },
+    limitBtnSelected: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
     limitBtnText: { fontSize: 13, color: '#475569', fontWeight: '600' },
     limitBtnTextSelected: { color: 'white', fontWeight: 'bold' },
-    btnGeneratePDF: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 12, elevation: 2 },
+    btnGeneratePDF: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 14, elevation: 2 },
     btnActionLargeText: { color: 'white', fontSize: 14, fontWeight: 'bold' },
 
-    /* Modal */
+    /* Modal & Overlay */
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-    modalContent: { backgroundColor: 'white', borderRadius: 16, padding: 20, maxHeight: 520 },
+    modalContent: { backgroundColor: 'white', borderRadius: 20, padding: 20, maxHeight: 520 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 12, marginBottom: 12 },
     modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
-    myRankCard: { backgroundColor: '#f3e8ff', padding: 12, borderRadius: 10, marginBottom: 14 },
-    myRankTitle: { fontSize: 12, fontWeight: 'bold', color: '#4A00E0' },
-    myRankDetails: { fontSize: 13, color: '#4A00E0', marginTop: 2 },
-    toppersHeader: { fontSize: 13, fontWeight: 'bold', color: '#64748b', marginBottom: 8 },
+    myRankCard: { backgroundColor: '#eef2ff', padding: 12, borderRadius: 12, marginBottom: 14 },
+    myRankTitle: { fontSize: 12, fontWeight: 'bold', color: '#4F46E5' },
+    myRankDetails: { fontSize: 13, color: '#4F46E5', marginTop: 2 },
     rankRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    rankBadgeCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#8E2DE2', justifyContent: 'center', alignItems: 'center' },
+    rankBadgeCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#6366F1', justifyContent: 'center', alignItems: 'center' },
     rankBadgeText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
     rankStudentName: { fontSize: 13, fontWeight: 'bold', color: '#1e293b' },
     rankTimeSpent: { fontSize: 11, color: '#94a3b8' },
-    rankScore: { fontSize: 14, fontWeight: 'bold', color: '#10b981' }
+    rankScore: { fontSize: 14, fontWeight: 'bold', color: '#10b981' },
+    actionLoadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 23, 42, 0.45)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+    actionLoadingBox: { backgroundColor: 'white', paddingHorizontal: 28, paddingVertical: 22, borderRadius: 16, alignItems: 'center', elevation: 6 },
+    actionLoadingText: { marginTop: 10, fontSize: 13, fontWeight: '600', color: '#1e293b' }
 });
 
 export default ScholarshipSubjectsScreen;

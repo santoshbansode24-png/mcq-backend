@@ -46,7 +46,6 @@ try {
             ea.attempt_id,
             ea.user_id,
             u.name as student_name,
-            u.email,
             ea.correct_count,
             ea.wrong_count,
             ea.unattempted_count,

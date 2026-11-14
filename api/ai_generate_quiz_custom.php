@@ -179,8 +179,8 @@ try {
         }
     }
 
-    // 5. Call Gemini API - using gemini-2.5-flash (confirmed available model)
-    $modelsToTry = ['gemini-2.5-flash'];
+    // 5. Call Gemini API - using gemini-3.8-flash
+    $modelsToTry = ['gemini-3.8-flash'];
     $finalReply = null;
     $lastError = "";
 

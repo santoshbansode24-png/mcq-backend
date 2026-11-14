@@ -162,7 +162,7 @@ if ($file && !empty($file['tmp_name']) && file_exists($file['tmp_name'])) {
     $inlineData = compressAndResizeImage($rawBytes, 1024, 82);
 }
 
-$models = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.6-flash'];
+$models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.6-flash'];
 $apiKey = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : getenv('GEMINI_API_KEY');
 
 if (empty($apiKey)) {

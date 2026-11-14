@@ -84,19 +84,28 @@ try {
     $subjectResults = [];
     $weakChapters = [];
 
-    foreach ($subjects as $sub) {
-        $subId = $sub['subject_id'];
-        
-        // Fetch chapters for this subject
-        $stmtCh = $pdo->prepare("
-            SELECT ch.chapter_id, ch.chapter_name,
-                   (SELECT COUNT(*) FROM mcqs m WHERE m.chapter_id = ch.chapter_id) as total_mcqs
+    // Fetch all chapters + MCQ counts for all subjects in ONE query (eliminates N+1 queries)
+    $chaptersBySubject = [];
+    if (!empty($subjects)) {
+        $subjectIds = array_values(array_map(function($s) { return intval($s['subject_id']); }, $subjects));
+        $subPlaceholders = implode(',', array_fill(0, count($subjectIds), '?'));
+        $stmtChAll = $pdo->prepare("
+            SELECT ch.chapter_id, ch.subject_id, ch.chapter_name, COUNT(m.mcq_id) as total_mcqs
             FROM chapters ch
-            WHERE ch.subject_id = ?
+            LEFT JOIN mcqs m ON m.chapter_id = ch.chapter_id
+            WHERE ch.subject_id IN ($subPlaceholders)
+            GROUP BY ch.chapter_id, ch.subject_id, ch.chapter_name
             ORDER BY ch.chapter_id ASC
         ");
-        $stmtCh->execute([$subId]);
-        $chapters = $stmtCh->fetchAll(PDO::FETCH_ASSOC);
+        $stmtChAll->execute($subjectIds);
+        while ($chRow = $stmtChAll->fetch(PDO::FETCH_ASSOC)) {
+            $chaptersBySubject[$chRow['subject_id']][] = $chRow;
+        }
+    }
+
+    foreach ($subjects as $sub) {
+        $subId = $sub['subject_id'];
+        $chapters = $chaptersBySubject[$subId] ?? [];
 
         $subTotal = count($chapters);
         $subCompleted = 0;
@@ -131,6 +140,7 @@ try {
                     if ($accuracy < 50) {
                         $weakChapters[] = [
                             'chapter_id' => $chId,
+                            'subject_id' => $subId,
                             'chapter_name' => $ch['chapter_name'],
                             'subject_name' => $sub['subject_name'],
                             'accuracy_percentage' => $accuracy,
@@ -169,38 +179,29 @@ try {
     }
 
     // 3. Fetch Negative Basket (Unresolved wrong questions)
-    // Make sure negative_basket exists
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `negative_basket` (
-            `basket_id` INT AUTO_INCREMENT PRIMARY KEY,
-            `student_id` INT NOT NULL,
-            `question_id` INT NOT NULL,
-            `subject_name` VARCHAR(150) DEFAULT NULL,
-            `chapter_name` VARCHAR(150) DEFAULT NULL,
-            `chapter_id` INT DEFAULT NULL,
-            `selected_answer` VARCHAR(100) DEFAULT NULL,
-            `correct_answer` VARCHAR(100) DEFAULT NULL,
-            `wrong_attempt_count` INT NOT NULL DEFAULT 1,
-            `last_wrong_date` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `resolved` TINYINT(1) NOT NULL DEFAULT 0,
-            UNIQUE KEY `unique_student_question` (`student_id`, `question_id`),
-            INDEX `idx_student` (`student_id`),
-            INDEX `idx_resolved` (`resolved`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ");
+    $negativeQuestions = [];
+    $totalNegativeCount = 0;
+    try {
+        $stmtNegCount = $pdo->prepare("SELECT COUNT(*) FROM negative_basket WHERE student_id = ? AND resolved = 0");
+        $stmtNegCount->execute([$user_id]);
+        $totalNegativeCount = intval($stmtNegCount->fetchColumn());
 
-    $stmtNeg = $pdo->prepare("
-        SELECT nb.basket_id, nb.question_id, nb.subject_name, nb.chapter_name, nb.wrong_attempt_count,
-               m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.correct_answer, m.explanation
-        FROM negative_basket nb
-        JOIN mcqs m ON nb.question_id = m.mcq_id
-        WHERE nb.student_id = ? AND nb.resolved = 0
-        ORDER BY nb.last_wrong_date DESC
-        LIMIT 30
-    ");
-    $stmtNeg->execute([$user_id]);
-    $negativeQuestions = $stmtNeg->fetchAll(PDO::FETCH_ASSOC);
-    $totalNegativeCount = count($negativeQuestions);
+        if ($totalNegativeCount > 0) {
+            $stmtNeg = $pdo->prepare("
+                SELECT nb.basket_id, nb.question_id, nb.subject_name, nb.chapter_name, nb.wrong_attempt_count,
+                       m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.correct_answer, m.explanation
+                FROM negative_basket nb
+                JOIN mcqs m ON nb.question_id = m.mcq_id
+                WHERE nb.student_id = ? AND nb.resolved = 0
+                ORDER BY nb.last_wrong_date DESC
+                LIMIT 30
+            ");
+            $stmtNeg->execute([$user_id]);
+            $negativeQuestions = $stmtNeg->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {
+        // Table may not exist yet in a fresh setup; treat as empty
+    }
 
     // 4. Calculate Overall Scholarship Readiness Score
     // Readiness = (Syllabus Completion % * 0.5) + (Accuracy % on attempted questions * 0.5)

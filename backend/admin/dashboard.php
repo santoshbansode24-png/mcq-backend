@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Admin Dashboard
  * Veeru
@@ -56,9 +56,9 @@ if (isset($_GET['setup_scholarship'])) {
             ON DUPLICATE KEY UPDATE subject_name = subject_name
         ");
         
-        $setupMessage = '<div class="alert">✅ Scholarship & Olympiad classes and subjects created successfully!</div>';
+        $setupMessage = '<div class="alert">âœ… Scholarship & Olympiad classes and subjects created successfully!</div>';
     } catch (Exception $e) {
-        $setupMessage = '<div class="alert" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">❌ Error: ' . $e->getMessage() . '</div>';
+        $setupMessage = '<div class="alert" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">âŒ Error: ' . $e->getMessage() . '</div>';
     }
 }
 
@@ -165,12 +165,12 @@ try {
 <body>
     <!-- Header -->
     <div class="header glass">
-        <h1>🎓 Veeru Admin</h1>
+        <h1>ðŸŽ“ Veeru Admin</h1>
         
         <!-- Centered Switch Button -->
         <div class="center-actions">
             <a href="select_board.php" class="btn-switch-board">
-                🔁 Switch Board
+                ðŸ” Switch Board
             </a>
             <span>Running: <?php echo htmlspecialchars($board_name); ?></span>
         </div>
@@ -190,24 +190,34 @@ try {
     <!-- Navigation -->
     <nav class="nav">
         <ul>
-            <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
-            <li><a href="scholarship_hub.php" style="color:#8E2DE2; font-weight:700;"><i class="fa-solid fa-wand-magic-sparkles"></i> Scholarship Studio (AI)</a></li>
-            <li><a href="scholarship_exams.php" style="color:#d63031; font-weight:700;"><i class="fa-solid fa-trophy"></i> Live Exams</a></li>
-            <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
-            <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
-            <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
-            <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
-            <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
-            <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
-            <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
-            <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
-            <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
-            <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
-            <li><a href="data_verification.php"><i class="fa-solid fa-shield-halved"></i> Verify Data</a></li>
-            <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
-            <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
-            <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
-            <li><a href="../api/ai_billing_audit.php" target="_blank"><i class="fa-solid fa-receipt"></i> AI Billing</a></li>
+            <?php if ($selected_board === 'Scholarship'): ?>
+                <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+                <li><a href="scholarship_exams.php" style="color:#d63031; font-weight:700;"><i class="fa-solid fa-trophy"></i> Live Exams</a></li>
+                <li><a href="scholarship_hub.php" style="color:#8E2DE2; font-weight:700;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Question Studio</a></li>
+                <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
+                <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+                <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+                <li><a href="users.php"><i class="fa-solid fa-users"></i> Students</a></li>
+            <?php else: ?>
+                <li><a href="dashboard.php" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+                <li><a href="scholarship_hub.php" style="color:#8E2DE2; font-weight:700;"><i class="fa-solid fa-wand-magic-sparkles"></i> Scholarship Studio (AI)</a></li>
+                <li><a href="scholarship_exams.php" style="color:#d63031; font-weight:700;"><i class="fa-solid fa-trophy"></i> Live Exams</a></li>
+                <li><a href="users.php"><i class="fa-solid fa-users"></i> Users</a></li>
+                <li><a href="teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Teachers</a></li>
+                <li><a href="classes.php"><i class="fa-solid fa-layer-group"></i> Classes</a></li>
+                <li><a href="subjects.php"><i class="fa-solid fa-book"></i> Subjects</a></li>
+                <li><a href="chapters.php"><i class="fa-solid fa-file-lines"></i> Chapters</a></li>
+                <li><a href="mcqs.php"><i class="fa-solid fa-list-check"></i> MCQs</a></li>
+                <li><a href="videos.php"><i class="fa-solid fa-video"></i> Videos</a></li>
+                <li><a href="notes.php"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+                <li><a href="flashcards.php"><i class="fa-solid fa-bolt"></i> Flashcards</a></li>
+                <li><a href="quick_revision.php"><i class="fa-solid fa-clock-rotate-left"></i> Quick Revision</a></li>
+                <li><a href="data_verification.php"><i class="fa-solid fa-shield-halved"></i> Verify Data</a></li>
+                <li><a href="content_manager.php"><i class="fa-solid fa-database"></i> Content Manager</a></li>
+                <li><a href="audit_center.php"><i class="fa-solid fa-clipboard-check"></i> Audit Center</a></li>
+                <li><a href="ai_settings.php"><i class="fa-solid fa-robot"></i> AI Settings</a></li>
+                <li><a href="../api/ai_billing_audit.php" target="_blank"><i class="fa-solid fa-receipt"></i> AI Billing</a></li>
+            <?php endif; ?>
         </ul>
     </nav>
     
@@ -215,25 +225,81 @@ try {
     <div class="container">
         <?php echo $setupMessage; ?>
         
-        <!-- Setup Scholarship Button (only show if Scholarship board is selected) -->
         <?php if ($selected_board === 'Scholarship'): ?>
-        <div style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); padding: 30px; border-radius: 20px; margin-bottom: 40px; text-align: center; box-shadow: 0 10px 25px rgba(142, 45, 226, 0.3);">
-            <h3 style="color: white; margin-bottom: 10px; font-weight: 800;">🏆 Scholarship & Olympiad Setup</h3>
-            <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px; font-size: 15px;">Automatically initialize level-wise subjects for the Scholarship board.</p>
-            <a href="?setup_scholarship=1" onclick="return confirm('This will create Scholarship classes and subjects. Continue?')" style="background: white; color: #4A00E0; padding: 14px 35px; border-radius: 12px; text-decoration: none; font-weight: 800; display: inline-block;">
-                ⚡ Initialize Scholarship Data
-            </a>
-        </div>
-        <?php endif; ?>
-        
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h2 style="font-size:22px; font-weight:800; color:#0f172a; margin:0;">🏆 Scholarship &amp; Competitive Exams</h2>
+                    <p style="font-size:13px; color:#64748b; margin-top:4px;">Simple workspace: manage live exams, AI question studio, subjects, chapters &amp; MCQs.</p>
+                </div>
+                <a href="?setup_scholarship=1" onclick="return confirm('Initialize default Scholarship classes and subjects?')" style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE; padding:10px 16px; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px;">
+                    ⚡ Setup Default Subjects
+                </a>
+            </div>
+
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:28px;">
+                <div class="stat-card">
+                    <div class="icon"><i class="fa-solid fa-user-graduate"></i></div>
+                    <div class="label">Total Students</div>
+                    <div class="value"><?php echo $stats['student'] ?? 0; ?></div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fa-solid fa-book"></i></div>
+                    <div class="label">Total Subjects</div>
+                    <div class="value"><?php echo $stats['subjects'] ?? 0; ?></div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fa-solid fa-file-contract"></i></div>
+                    <div class="label">Total Chapters</div>
+                    <div class="value"><?php echo $stats['chapters'] ?? 0; ?></div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fa-solid fa-list-check"></i></div>
+                    <div class="label">Total MCQs</div>
+                    <div class="value"><?php echo $stats['mcqs'] ?? 0; ?></div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px; margin-bottom:32px;">
+                <a href="scholarship_exams.php" class="stat-card" style="text-decoration:none; border-left:4px solid #E11D48; display:flex; flex-direction:column; gap:8px;">
+                    <div class="icon" style="background:#FFE4E6; color:#E11D48;"><i class="fa-solid fa-trophy"></i></div>
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">Live Exams</div>
+                    <div style="font-size:13px; color:#64748b;">Create &amp; publish live exams</div>
+                </a>
+                <a href="scholarship_hub.php" class="stat-card" style="text-decoration:none; border-left:4px solid #7C3AED; display:flex; flex-direction:column; gap:8px;">
+                    <div class="icon" style="background:#F3E8FF; color:#7C3AED;"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">AI Question Studio</div>
+                    <div style="font-size:13px; color:#64748b;">AI generator &amp; CSV bulk upload</div>
+                </a>
+                <a href="subjects.php" class="stat-card" style="text-decoration:none; border-left:4px solid #4F46E5; display:flex; flex-direction:column; gap:8px;">
+                    <div class="icon" style="background:#EEF2FF; color:#4F46E5;"><i class="fa-solid fa-book"></i></div>
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">Subjects</div>
+                    <div style="font-size:13px; color:#64748b;">Manage exam subjects</div>
+                </a>
+                <a href="chapters.php" class="stat-card" style="text-decoration:none; border-left:4px solid #0284C7; display:flex; flex-direction:column; gap:8px;">
+                    <div class="icon" style="background:#E0F2FE; color:#0284C7;"><i class="fa-solid fa-file-lines"></i></div>
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">Chapters</div>
+                    <div style="font-size:13px; color:#64748b;">Manage chapters &amp; topics</div>
+                </a>
+                <a href="mcqs.php" class="stat-card" style="text-decoration:none; border-left:4px solid #10B981; display:flex; flex-direction:column; gap:8px;">
+                    <div class="icon" style="background:#D1FAE5; color:#10B981;"><i class="fa-solid fa-list-check"></i></div>
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">MCQs</div>
+                    <div style="font-size:13px; color:#64748b;">View &amp; edit question bank</div>
+                </a>
+                <a href="users.php" class="stat-card" style="text-decoration:none; border-left:4px solid #F59E0B; display:flex; flex-direction:column; gap:8px;">
+                    <div class="icon" style="background:#FEF3C7; color:#D97706;"><i class="fa-solid fa-users"></i></div>
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">Students</div>
+                    <div style="font-size:13px; color:#64748b;">Manage student accounts</div>
+                </a>
+            </div>
+        <?php else: ?>
         <!-- Scholarship Studio Banner Card -->
         <div style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); padding: 25px 30px; border-radius: 18px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 10px 25px rgba(142, 45, 226, 0.25);">
             <div>
                 <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
-                    ✨ Competitive Exam & Scholarship Studio (AI)
+                    ✨ Competitive Exam &amp; Scholarship Studio (AI)
                     <span style="background: rgba(255,255,255,0.25); font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700;">GEMINI 2.5</span>
                 </h2>
-                <p style="font-size: 14px; opacity: 0.95; margin: 0;">Generate questions for Navodaya, Sainik School, Olympiad, MTS/NMMS, and 5th & 8th Scholarship exams with AI.</p>
+                <p style="font-size: 14px; opacity: 0.95; margin: 0;">Generate questions for Navodaya, Sainik School, Olympiad, MTS/NMMS, and 5th &amp; 8th Scholarship exams with AI.</p>
             </div>
             <div style="display: flex; gap: 12px;">
                 <a href="scholarship_hub.php" style="background: white; color: #4A00E0; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 14px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
@@ -252,56 +318,48 @@ try {
                 <div class="label">Total Students</div>
                 <div class="value"><?php echo $stats['student'] ?? 0; ?></div>
             </div>
-            
             <div class="stat-card">
                 <div class="icon"><i class="fa-solid fa-chalkboard-user"></i></div>
                 <div class="label">Total Teachers</div>
                 <div class="value"><?php echo $stats['teacher'] ?? 0; ?></div>
             </div>
-            
             <div class="stat-card">
                 <div class="icon"><i class="fa-solid fa-book"></i></div>
                 <div class="label">Total Subjects</div>
                 <div class="value"><?php echo $stats['subjects'] ?? 0; ?></div>
             </div>
-            
             <div class="stat-card">
                 <div class="icon"><i class="fa-solid fa-file-contract"></i></div>
                 <div class="label">Total Chapters</div>
                 <div class="value"><?php echo $stats['chapters'] ?? 0; ?></div>
             </div>
-            
             <div class="stat-card">
                 <div class="icon"><i class="fa-solid fa-list-check"></i></div>
                 <div class="label">Total MCQs</div>
                 <div class="value"><?php echo $stats['mcqs'] ?? 0; ?></div>
             </div>
-            
             <div class="stat-card">
                 <div class="icon"><i class="fa-solid fa-video"></i></div>
                 <div class="label">Total Videos</div>
                 <div class="value"><?php echo $stats['videos'] ?? 0; ?></div>
             </div>
-            
             <div class="stat-card">
                 <div class="icon"><i class="fa-solid fa-note-sticky"></i></div>
                 <div class="label">Total Notes</div>
                 <div class="value"><?php echo $stats['notes'] ?? 0; ?></div>
             </div>
-
-            <!-- New AI Settings Card -->
             <a href="ai_settings.php" class="stat-card ai-card" style="text-decoration: none;">
                 <div class="icon"><i class="fa-solid fa-robot"></i></div>
                 <div class="label">AI Settings</div>
                 <div class="value" style="font-size: 20px;">Limits</div>
             </a>
-
             <a href="../api/ai_billing_audit.php" target="_blank" class="stat-card ai-card" style="text-decoration: none; border-color: #059669; background: #ecfdf5;">
                 <div class="icon" style="background: #d1fae5; color: #059669;"><i class="fa-solid fa-receipt"></i></div>
                 <div class="label" style="color: #059669;">AI Billing</div>
                 <div class="value" style="font-size: 20px; color: #065f46;">View Audit</div>
             </a>
         </div>
+        <?php endif; ?>
         
         <!-- Recent Activity -->
         <div class="section">

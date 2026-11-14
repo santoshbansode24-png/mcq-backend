@@ -4,13 +4,24 @@
  * Veeru
  */
 session_start();
+$isAjaxAi = isset($_POST['action']) && in_array($_POST['action'], ['ai_generate_board_mcqs', 'save_ai_mcqs'], true);
 if (!isset($_SESSION['admin_logged_in'])) {
+    if ($isAjaxAi) {
+        header('Content-Type: application/json; charset=UTF-8', true, 401);
+        echo json_encode(['status' => 'error', 'message' => 'Session expired. Please refresh the page and log in again.']);
+        exit();
+    }
     header('Location: index.php');
     exit();
 }
 
 // Check for Board Selection
 if (!isset($_SESSION['admin_selected_board'])) {
+    if ($isAjaxAi) {
+        header('Content-Type: application/json; charset=UTF-8', true, 401);
+        echo json_encode(['status' => 'error', 'message' => 'Board session expired. Please refresh the page and select a board again.']);
+        exit();
+    }
     header('Location: select_board.php');
     exit();
 }
@@ -460,7 +471,13 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
                     method: 'POST',
                     body: formData
                 });
-                const data = await res.json();
+                const rawText = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (parseErr) {
+                    throw new Error('Server returned an unexpected page (session may have expired — please refresh and log in again).');
+                }
                 
                 if (data.status === 'success' && data.data && data.data.length > 0) {
                     statusBox.innerHTML = '<div style="color: #15803d; font-weight: 600; padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px;">🎉 Successfully generated ' + data.data.length + ' questions! Review, edit if needed, and save below.</div>';

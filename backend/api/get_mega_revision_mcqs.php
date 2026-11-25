@@ -18,6 +18,7 @@ require_once '../config/db.php';
 
 $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
 $medium  = isset($_GET['medium'])  ? strtolower(trim($_GET['medium'])) : 'english';
+$lang    = strtolower(trim($_GET['lang'] ?? $_GET['language'] ?? ($medium === 'marathi' ? 'mr' : 'en')));
 
 if (!$user_id) {
     echo json_encode(['status' => 'error', 'message' => 'User ID required']);
@@ -58,6 +59,8 @@ try {
     $ch_placeholders = implode(',', array_fill(0, count($chapter_ids), '?'));
 
     $sql = "SELECT mcq_id, chapter_id, question, option_a, option_b, option_c, option_d,
+                   question_hi, option_a_hi, option_b_hi, option_c_hi, option_d_hi, explanation_hi,
+                   question_mr, option_a_mr, option_b_mr, option_c_mr, option_d_mr, explanation_mr,
                    correct_answer, explanation, difficulty, medium, image_url
             FROM mcqs
             WHERE chapter_id IN ($ch_placeholders) AND medium = ?";
@@ -83,6 +86,29 @@ try {
 
     shuffle($all_mcqs);
     $selected_mcqs = array_slice($all_mcqs, 0, $limit);
+
+    foreach ($selected_mcqs as &$row) {
+        $isTranslated = true;
+        if ($lang === 'mr') {
+            $isTranslated = !empty($row['question_mr']);
+            if (!empty($row['question_mr'])) $row['question'] = $row['question_mr'];
+            if (!empty($row['option_a_mr'])) $row['option_a'] = $row['option_a_mr'];
+            if (!empty($row['option_b_mr'])) $row['option_b'] = $row['option_b_mr'];
+            if (!empty($row['option_c_mr'])) $row['option_c'] = $row['option_c_mr'];
+            if (!empty($row['option_d_mr'])) $row['option_d'] = $row['option_d_mr'];
+            if (!empty($row['explanation_mr'])) $row['explanation'] = $row['explanation_mr'];
+        } elseif ($lang === 'hi') {
+            $isTranslated = !empty($row['question_hi']);
+            if (!empty($row['question_hi'])) $row['question'] = $row['question_hi'];
+            if (!empty($row['option_a_hi'])) $row['option_a'] = $row['option_a_hi'];
+            if (!empty($row['option_b_hi'])) $row['option_b'] = $row['option_b_hi'];
+            if (!empty($row['option_c_hi'])) $row['option_c'] = $row['option_c_hi'];
+            if (!empty($row['option_d_hi'])) $row['option_d'] = $row['option_d_hi'];
+            if (!empty($row['explanation_hi'])) $row['explanation'] = $row['explanation_hi'];
+        }
+        $row['is_translated'] = $isTranslated;
+    }
+    unset($row);
 
     echo json_encode([
         'status'          => 'success',

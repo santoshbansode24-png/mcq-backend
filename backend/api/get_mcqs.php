@@ -46,9 +46,35 @@ try {
     }
     
     $rows = $stmt->fetchAll();
+
+    // Lazy Fallback (Safety Net): If Marathi is requested and some rows are untranslated, translate up to 10 on the fly
+    if ($lang === 'mr' && ($_GET['auto_translate'] ?? '1') !== '0' && !empty($rows)) {
+        $missingRows = array_values(array_filter($rows, function ($r) {
+            return empty(trim((string)($r['question_mr'] ?? '')));
+        }));
+        if (!empty($missingRows) && file_exists(__DIR__ . '/../config/marathi_translator.php')) {
+            try {
+                require_once __DIR__ . '/../config/marathi_translator.php';
+                $batch = array_slice($missingRows, 0, 10);
+                $txResult = translateMcqsToMarathi($pdo, $batch);
+                if (!empty($txResult['items'])) {
+                    foreach ($rows as &$r) {
+                        $id = (int)$r['mcq_id'];
+                        if (isset($txResult['items'][$id])) {
+                            $r = array_merge($r, $txResult['items'][$id]);
+                        }
+                    }
+                    unset($r);
+                }
+            } catch (Throwable $txErr) {
+                error_log('Lazy Marathi MCQ translation fallback failed: ' . $txErr->getMessage());
+            }
+        }
+    }
     
     $mcqs = [];
     foreach ($rows as $row) {
+        $isTranslated = true;
         $mcq = [
             'mcq_id' => $row['mcq_id'],
             'chapter_id' => $row['chapter_id'],
@@ -62,7 +88,17 @@ try {
             'difficulty' => $row['difficulty']
         ];
 
+        if ($lang !== 'en') {
+            $mcq['question_en'] = $row['question'];
+            $mcq['option_a_en'] = $row['option_a'];
+            $mcq['option_b_en'] = $row['option_b'];
+            $mcq['option_c_en'] = $row['option_c'];
+            $mcq['option_d_en'] = $row['option_d'];
+            $mcq['explanation_en'] = $row['explanation'];
+        }
+
         if ($lang === 'hi') {
+            $isTranslated = !empty($row['question_hi']);
             if (!empty($row['question_hi'])) $mcq['question'] = $row['question_hi'];
             if (!empty($row['option_a_hi'])) $mcq['option_a'] = $row['option_a_hi'];
             if (!empty($row['option_b_hi'])) $mcq['option_b'] = $row['option_b_hi'];
@@ -70,6 +106,7 @@ try {
             if (!empty($row['option_d_hi'])) $mcq['option_d'] = $row['option_d_hi'];
             if (!empty($row['explanation_hi'])) $mcq['explanation'] = $row['explanation_hi'];
         } elseif ($lang === 'mr') {
+            $isTranslated = !empty($row['question_mr']);
             if (!empty($row['question_mr'])) $mcq['question'] = $row['question_mr'];
             if (!empty($row['option_a_mr'])) $mcq['option_a'] = $row['option_a_mr'];
             if (!empty($row['option_b_mr'])) $mcq['option_b'] = $row['option_b_mr'];
@@ -78,6 +115,7 @@ try {
             if (!empty($row['explanation_mr'])) $mcq['explanation'] = $row['explanation_mr'];
         }
 
+        $mcq['is_translated'] = $isTranslated;
         $mcqs[] = $mcq;
     }
     

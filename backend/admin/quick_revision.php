@@ -18,6 +18,9 @@ $selected_board = $_SESSION['admin_selected_board'];
 $board_name = $_SESSION['board_name'];
 
 require_once '../config/db.php';
+if (file_exists('../config/reel_voice_helper.php')) {
+    require_once '../config/reel_voice_helper.php';
+}
 
 // Handle Delete
 if (isset($_GET['delete'])) {
@@ -147,6 +150,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($key_points)) {
         $message = "Error: Please add at least one Q&A pair via form or CSV.";
     } else {
+        $voiceNote = '';
+        if (!empty($_POST['auto_voiceover_r2']) && count($key_points) <= 5 && function_exists('enrichQuickRevisionItemWithVoiceover')) {
+            try {
+                $stmtSub = $pdo->prepare("SELECT s.subject_name FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+                $stmtSub->execute([$chapter_id]);
+                $subName = $stmtSub->fetchColumn() ?: '';
+                foreach ($key_points as $kIdx => $kpItem) {
+                    $key_points[$kIdx] = enrichQuickRevisionItemWithVoiceover($kpItem, $lang, $subName, true);
+                }
+                $voiceNote = " + AI Teacher Voiceover & R2 audio generated!";
+            } catch (Exception $ve) {
+                $voiceNote = " (AI Voiceover skipped: " . $ve->getMessage() . ")";
+            }
+        } elseif (!empty($_POST['auto_voiceover_r2']) && count($key_points) > 5) {
+            $voiceNote = " (Saved! Click '🎙️ AI Voice + R2' in the table below to batch-generate audio for all " . count($key_points) . " items.)";
+        }
         $json_points = json_encode($key_points, JSON_UNESCAPED_UNICODE);
         
         try {
@@ -445,7 +464,14 @@ $revisions = $revisions_query->fetchAll();
                     <button type="button" class="btn-small btn-plus" onclick="addQuaRow()">+ Add Point</button>
                 </div>
 
-                <button type="submit" class="btn-add" style="margin-top: 20px; width: 100%;">Save Revision Content</button>
+                <div style="margin-top: 16px; padding: 12px 14px; background: #faf5ff; border: 1px solid #ddd6fe; border-radius: 8px; display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" id="auto_voiceover_r2" name="auto_voiceover_r2" value="1" checked style="width:18px; height:18px; cursor:pointer;">
+                    <label for="auto_voiceover_r2" style="margin:0; font-size:13px; font-weight:600; color:#4c1d95; cursor:pointer;">
+                        ✨ Rewrite Explanations with AI Teacher Voiceover (Natural Pauses) & Upload MP3 to Cloudflare R2
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-add" style="margin-top: 16px; width: 100%;">Save Revision Content</button>
             </form>
         </div>
 
@@ -481,7 +507,8 @@ $revisions = $revisions_query->fetchAll();
                             ?> points
                         </td>
                         <td>
-                            <button type="button" onclick='showPointsPreview(<?php echo htmlspecialchars(json_encode($points ?: []), ENT_QUOTES, "UTF-8"); ?>, <?php echo htmlspecialchars(json_encode($rev["title"]), ENT_QUOTES, "UTF-8"); ?>)' class="btn-small" style="background:#4f46e5;color:#fff;margin-right:8px;padding:6px 12px;border-radius:6px;cursor:pointer;">👁️ View</button>
+                            <button type="button" onclick='showPointsPreview(<?php echo htmlspecialchars(json_encode($points ?: []), ENT_QUOTES, "UTF-8"); ?>, <?php echo htmlspecialchars(json_encode($rev["title"]), ENT_QUOTES, "UTF-8"); ?>)' class="btn-small" style="background:#4f46e5;color:#fff;margin-right:6px;padding:6px 12px;border-radius:6px;cursor:pointer;">👁️ View</button>
+                            <button type="button" onclick="generateReelVoiceBatch(<?php echo (int)$rev['revision_id']; ?>, '<?php echo !empty($rev['key_points_mr']) && empty($rev['key_points']) ? 'mr' : 'en'; ?>', this)" class="btn-small" style="background:#7c3aed;color:#fff;margin-right:6px;padding:6px 10px;border-radius:6px;cursor:pointer;border:none;">🎙️ AI Voice + R2</button>
                             <a href="?delete=<?php echo $rev['revision_id']; ?>" class="btn-delete" onclick="return confirm('Delete this revision?')">Delete</a>
                         </td>
                     </tr>
@@ -503,6 +530,35 @@ $revisions = $revisions_query->fetchAll();
     </div>
 
     <script>
+        async function generateReelVoiceBatch(revisionId, lang, btn) {
+            const origText = btn.textContent;
+            btn.disabled = true;
+            let totalDone = 0;
+            try {
+                while (true) {
+                    btn.textContent = '⏳ ' + totalDone + ' done...';
+                    const fd = new FormData();
+                    fd.append('revision_id', revisionId);
+                    fd.append('lang', lang);
+                    fd.append('batch_size', '3');
+                    const res = await fetch('ajax_generate_reel_voice.php', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.status !== 'success') throw new Error(data.message || 'Failed');
+                    totalDone += (data.processed || 0);
+                    if (!data.remaining || data.remaining <= 0 || data.processed === 0) {
+                        btn.textContent = '✓ Voice Ready (' + totalDone + ')';
+                        btn.style.background = '#15803d';
+                        break;
+                    }
+                }
+            } catch (e) {
+                alert('Voiceover error: ' + e.message);
+                btn.textContent = origText;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         function showPointsPreview(points, title) {
             document.getElementById('modalTitle').textContent = title || 'Revision Points';
             const body = document.getElementById('modalBody');

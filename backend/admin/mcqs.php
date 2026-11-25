@@ -32,6 +32,9 @@ require_once '../config/db.php';
 if (file_exists('../config/ai_config.php')) {
     require_once '../config/ai_config.php';
 }
+if (file_exists('../config/marathi_translator.php')) {
+    require_once '../config/marathi_translator.php';
+}
 
 // Handle AJAX AI MCQ Generation
 if (isset($_POST['action']) && $_POST['action'] === 'ai_generate_board_mcqs') {
@@ -157,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $messageType = "error";
     } else {
         $savedCount = 0;
+        $insertedRows = [];
         try {
             $stmt = $pdo->prepare("INSERT INTO mcqs (chapter_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, medium) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             foreach ($questions as $q) {
@@ -174,10 +178,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                 if (empty($qText) || empty($optA) || empty($optB)) continue;
                 
                 $stmt->execute([$chapter_id, $qText, $optA, $optB, $optC, $optD, $ans, $expl, $diff, $medium]);
+                $insertedRows[] = [
+                    'mcq_id' => (int)$pdo->lastInsertId(),
+                    'question' => $qText,
+                    'option_a' => $optA,
+                    'option_b' => $optB,
+                    'option_c' => $optC,
+                    'option_d' => $optD,
+                    'explanation' => $expl
+                ];
                 $savedCount++;
             }
             if ($savedCount > 0) {
-                $message = "🎉 Successfully generated and saved {$savedCount} MCQs with AI to the selected chapter!";
+                $mrMsg = '';
+                if (!empty($_POST['auto_translate_mr']) && $medium !== 'marathi' && function_exists('translateMcqsToMarathi')) {
+                    try {
+                        $ctxStmt = $pdo->prepare("SELECT ch.chapter_name, s.subject_name FROM chapters ch JOIN subjects s ON ch.subject_id = s.subject_id WHERE ch.chapter_id = ?");
+                        $ctxStmt->execute([$chapter_id]);
+                        $ctx = $ctxStmt->fetch(PDO::FETCH_ASSOC);
+                        $txRes = translateMcqsToMarathi($pdo, $insertedRows, $ctx['subject_name'] ?? '', $ctx['chapter_name'] ?? '', $board_name);
+                        $mrMsg = " Also translated {$txRes['translated']} MCQs to Marathi!";
+                    } catch (Exception $txE) {
+                        $mrMsg = " (Marathi auto-translate skipped: " . $txE->getMessage() . ")";
+                    }
+                }
+                $message = "🎉 Successfully generated and saved {$savedCount} MCQs with AI to the selected chapter!{$mrMsg}";
                 $messageType = "success";
             } else {
                 $message = "No questions were selected or saved.";
@@ -557,7 +582,10 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
                 html += '</div>';
             });
             
-            html += '<div style="text-align: right; margin-top: 15px;">';
+            html += '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top: 15px;">';
+            html += '  <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#4c1d95; cursor:pointer; font-size:14px;">';
+            html += '    <input type="checkbox" name="auto_translate_mr" value="1" checked style="width:17px; height:17px;"> Also auto-translate saved MCQs to Marathi (Balbharati AI)';
+            html += '  </label>';
             html += '  <button type="submit" class="btn-ai-generate" style="padding: 12px 28px; font-size: 15px;"><i class="fa-solid fa-floppy-disk"></i> Save Selected MCQs to Chapter</button>';
             html += '</div>';
             html += '</form>';
@@ -606,6 +634,65 @@ $mcqs_q = $pdo->prepare($q); $mcqs_q->execute($p); $mcqs = $mcqs_q->fetchAll();
     </nav>
 
     <div class="container">
+        <div class="card" style="margin-bottom: 18px; border-left: 4px solid #7C3AED; background: #faf5ff;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 style="margin:0 0 4px 0; color:#4c1d95; font-size:16px;"><i class="fa-solid fa-language"></i> Batch Translate Chapter MCQs to Marathi (AI)</h3>
+                    <p style="margin:0; color:#6b7280; font-size:13px;">Translates missing <code>_mr</code> columns (Question + Options A–D + Explanation) using Maharashtra State Board Balbharati terminology.</p>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <select id="mr_class_select" onchange="filterSubjects('mr_')" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db;">
+                        <option value="">Class</option>
+                        <?php foreach($classes as $c): ?><option value="<?php echo $c['class_id']; ?>"><?php echo htmlspecialchars($c['class_name']); ?></option><?php endforeach; ?>
+                    </select>
+                    <select id="mr_subject_select" onchange="filterChapters('mr_')" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db;">
+                        <option value="">Subject</option>
+                    </select>
+                    <select id="mr_chapter_select" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db;">
+                        <option value="">Chapter</option>
+                    </select>
+                    <button type="button" id="btn-batch-mr-mcq" onclick="batchTranslateMcqsToMarathi()" class="btn-ai-generate" style="padding:9px 16px; font-size:13px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Translate Missing to Marathi
+                    </button>
+                </div>
+            </div>
+            <div id="mr-batch-status" style="margin-top:10px; font-size:13px; font-weight:600; display:none;"></div>
+        </div>
+        <script>
+        async function batchTranslateMcqsToMarathi() {
+            const chapterId = document.getElementById('mr_chapter_select').value;
+            const statusEl = document.getElementById('mr-batch-status');
+            const btn = document.getElementById('btn-batch-mr-mcq');
+            if (!chapterId) { alert('Please select a Chapter first.'); return; }
+            btn.disabled = true;
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#6d28d9';
+            let totalDone = 0;
+            try {
+                while (true) {
+                    statusEl.textContent = 'Translating batch to Marathi... (' + totalDone + ' done so far)';
+                    const fd = new FormData();
+                    fd.append('type', 'mcqs');
+                    fd.append('chapter_id', chapterId);
+                    fd.append('batch_size', '10');
+                    const res = await fetch('ajax_translate_marathi.php', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.status !== 'success') throw new Error(data.message || 'Translation failed');
+                    totalDone += (data.translated || 0);
+                    if (!data.remaining || data.remaining <= 0 || data.translated === 0) {
+                        statusEl.style.color = '#15803d';
+                        statusEl.textContent = '✓ Complete! Translated ' + totalDone + ' MCQs. Remaining: ' + (data.remaining || 0) + '.';
+                        break;
+                    }
+                }
+            } catch (e) {
+                statusEl.style.color = '#b91c1c';
+                statusEl.textContent = '❌ ' + e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        </script>
         <div class="card">
             <div class="tabs" style="align-items: center;">
                 <button class="tab-btn active" id="ai-btn" onclick="switchTab('ai')" style="color: #7C3AED; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">

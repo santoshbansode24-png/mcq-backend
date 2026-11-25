@@ -19,6 +19,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { fetchSubjects } from '../api/subjects';
 import { fetchChapters } from '../api/chapters';
 import { fetchMCQs, fetchFlashcards, fetchQuickRevision } from '../api/content';
@@ -74,6 +75,7 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
     const { theme, isDarkMode } = useTheme();
 
     // Data State
+    const { language } = useLanguage();
     const [subjects, setSubjects] = useState([]);
     const [chapters, setChapters] = useState([]); // Array of { subjectName, data: [] }
 
@@ -247,20 +249,20 @@ const WorksheetGeneratorScreen = ({ navigation, user }) => {
 
                 if (shouldFetchMCQ) {
                     try {
-                        const res = await fetchMCQs(chapterId);
+                        const res = await fetchMCQs(chapterId, false, language);
                         if (res.status === 'success') results.mcqs = res.data;
                     } catch (e) { }
                 }
                 if (shouldFetchShort) {
                     try {
-                        const res = await fetchFlashcards(chapterId);
+                        const res = await fetchFlashcards(chapterId, false, language);
                         if (Array.isArray(res)) results.flashcards = res;
                         else if (res.data) results.flashcards = res.data;
                     } catch (e) { }
                 }
                 if (shouldFetchLong) {
                     try {
-                        const res = await fetchQuickRevision(chapterId);
+                        const res = await fetchQuickRevision(chapterId, false, language);
                         if (res.data) results.revision = res.data;
                     } catch (e) { }
                 }

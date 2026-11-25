@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av'; // Import Audio
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { fetchFlashcards, markSetCompleted } from '../api/content'; // Import from content.js for caching
 
 import { fonts } from '../styles/typography';
@@ -74,6 +75,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
     const themeContext = useTheme();
     const theme = themeContext?.theme || { primary: '#4f46e5', text: '#000', textSecondary: '#666' };
     const isDarkMode = themeContext?.isDarkMode || false;
+    const { language, changeLanguage } = useLanguage();
 
     const { chapterId, chapterName, flashcardsData, setLabel, setIndex } = route.params || {}; // Get setIndex
 
@@ -179,22 +181,22 @@ const FlashcardsScreen = ({ navigation, route }) => {
         // Shuffle colors once on mount
         setShuffledGradients([...CARD_GRADIENTS].sort(() => Math.random() - 0.5));
 
-        if (flashcardsData && flashcardsData.length > 0) {
+        if (chapterId) {
+            loadCards();
+        } else if (flashcardsData && flashcardsData.length > 0) {
             setCards(flashcardsData);
             setLoading(false);
-        } else if (chapterId) {
-            loadCards();
         } else {
             console.warn("No ChapterId provided to FlashcardsScreen");
             setLoading(false);
             setError("No Chapter Selected");
         }
-    }, [chapterId, flashcardsData]);
+    }, [chapterId, flashcardsData, language]);
 
     const loadCards = async (forceRefresh = false) => {
         if (!forceRefresh) {
-            // 1. Try cache first
-            const cacheKey = `flashcards_${chapterId}`;
+            // 1. Try cache first (language-scoped)
+            const cacheKey = `flashcards_${chapterId}_${language}`;
             try {
                 const cachedData = await AsyncStorage.getItem(`@cache_${cacheKey}`);
                 if (cachedData) {
@@ -217,7 +219,7 @@ const FlashcardsScreen = ({ navigation, route }) => {
         if (!cards || cards.length === 0) setLoading(true);
         setError(null);
         try {
-            const response = await fetchFlashcards(chapterId, forceRefresh);
+            const response = await fetchFlashcards(chapterId, forceRefresh, language);
 
             if (response && (response.status === 'success' || Array.isArray(response))) {
                 const data = Array.isArray(response) ? response : (response.data || []);
@@ -445,7 +447,25 @@ const FlashcardsScreen = ({ navigation, route }) => {
                 <Text style={[styles.headerTitle, { color: theme.text }]}>
                     {setLabel ? `${setLabel}` : (chapterName || 'Flashcards')}
                 </Text>
-                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                    <TouchableOpacity
+                        onPress={() => changeLanguage(language === 'mr' ? 'en' : 'mr')}
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: isDarkMode ? '#1e293b' : '#ede9fe',
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: language === 'mr' ? '#7c3aed' : (isDarkMode ? '#334155' : '#c4b5fd'),
+                        }}
+                    >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: language === 'en' ? '#7c3aed' : theme.textSecondary }}>EN</Text>
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginHorizontal: 4 }}>|</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: language === 'mr' ? '#7c3aed' : theme.textSecondary }}>मराठी</Text>
+                    </TouchableOpacity>
+
                     <StudyTimer initialSeconds={taskTimer} isActive={isTaskActive} onFinish={finishTask} />
 
                     <TouchableOpacity onPress={shuffleCards} style={styles.iconBtn}>

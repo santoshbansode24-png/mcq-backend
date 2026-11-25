@@ -108,6 +108,9 @@ try {
                     if (!empty($point['opt_a'])) $pointArr['opt_a'] = html_entity_decode(trim($point['opt_a']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     if (!empty($point['opt_b'])) $pointArr['opt_b'] = html_entity_decode(trim($point['opt_b']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     if (!empty($point['correct'])) $pointArr['correct'] = trim($point['correct']);
+                    if (!empty($point['step_audio_urls']) && is_array($point['step_audio_urls'])) {
+                        $pointArr['step_audio_urls'] = $point['step_audio_urls'];
+                    }
                     $normalizedPoints[] = $pointArr;
                 }
             }

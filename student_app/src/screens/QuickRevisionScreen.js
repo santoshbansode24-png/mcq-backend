@@ -151,6 +151,7 @@ const buildCardSlides = (item) => {
     }
 
     // Slide 1, 2, 3: Explanation Steps
+    const stepAudioUrls = Array.isArray(item.step_audio_urls) ? item.step_audio_urls : [];
     steps.forEach((step, idx) => {
         slides.push({
             type: 'step',
@@ -161,6 +162,7 @@ const buildCardSlides = (item) => {
             icon: step.icon,
             accent: step.accent,
             audioText: step.text,
+            audioUrl: stepAudioUrls[idx] || null,
             langCode,
             speaker,
         });
@@ -300,7 +302,8 @@ const QuickRevisionScreen = ({ navigation, route }) => {
                 const opt_a = item.opt_a || item.Option_A || item.option_a || '';
                 const opt_b = item.opt_b || item.Option_B || item.option_b || '';
                 const correct = item.correct || item.Correct || 'A';
-                return { q, a, e, opt_a, opt_b, correct };
+                const step_audio_urls = Array.isArray(item.step_audio_urls) ? item.step_audio_urls : [];
+                return { q, a, e, opt_a, opt_b, correct, step_audio_urls };
             })
             .filter((item) => item.q && (item.a || item.opt_a));
     };
@@ -513,7 +516,21 @@ const QuickRevisionScreen = ({ navigation, route }) => {
 
         // 2. If this is an Explanation Step Slide (Slide 1, 2, 3...):
         try {
-            const soundObj = await playGoogleTTS(currentSlide.audioText, langCode, speed, speaker);
+            let soundObj = null;
+            if (currentSlide.audioUrl) {
+                try {
+                    const { sound } = await Audio.Sound.createAsync(
+                        { uri: currentSlide.audioUrl },
+                        { shouldPlay: true, rate: speed, shouldCorrectPitch: true }
+                    );
+                    soundObj = sound;
+                } catch (r2Err) {
+                    console.warn('[Slide] R2 audio failed, falling back to TTS:', r2Err);
+                }
+            }
+            if (!soundObj) {
+                soundObj = await playGoogleTTS(currentSlide.audioText, langCode, speed, speaker);
+            }
             if (thisToken !== activePlayTokenRef.current) {
                 if (soundObj?.unloadAsync) soundObj.unloadAsync().catch(() => {});
                 return;

@@ -1428,6 +1428,25 @@ const ChapterContentScreen = ({ navigation, route }) => {
                         </Text>
                     </View>
 
+                    <TouchableOpacity
+                        onPress={() => changeLanguage(language === 'mr' ? 'en' : 'mr')}
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: isDarkMode ? '#1e293b' : '#ede9fe',
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: language === 'mr' ? '#7c3aed' : (isDarkMode ? '#334155' : '#c4b5fd'),
+                            marginRight: 8,
+                        }}
+                    >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: language === 'en' ? '#7c3aed' : theme.textSecondary }}>EN</Text>
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginHorizontal: 4 }}>|</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: language === 'mr' ? '#7c3aed' : theme.textSecondary }}>मराठी</Text>
+                    </TouchableOpacity>
+
                     <StudyTimer initialSeconds={taskTimer} isActive={isTaskActive} onFinish={finishTask} />
                 </View>
 

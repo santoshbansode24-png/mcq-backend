@@ -36,8 +36,34 @@ try {
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Lazy Fallback (Safety Net): If Marathi is requested and some rows are untranslated, translate up to 10 on the fly
+    if ($lang === 'mr' && ($_GET['auto_translate'] ?? '1') !== '0' && !empty($rows)) {
+        $missingRows = array_values(array_filter($rows, function ($r) {
+            return empty(trim((string)($r['question_front_mr'] ?? '')));
+        }));
+        if (!empty($missingRows) && file_exists(__DIR__ . '/../config/marathi_translator.php')) {
+            try {
+                require_once __DIR__ . '/../config/marathi_translator.php';
+                $batch = array_slice($missingRows, 0, 10);
+                $txResult = translateFlashcardsToMarathi($pdo, $batch);
+                if (!empty($txResult['items'])) {
+                    foreach ($rows as &$r) {
+                        $id = (int)$r['id'];
+                        if (isset($txResult['items'][$id])) {
+                            $r = array_merge($r, $txResult['items'][$id]);
+                        }
+                    }
+                    unset($r);
+                }
+            } catch (Throwable $txErr) {
+                error_log('Lazy Marathi Flashcard translation fallback failed: ' . $txErr->getMessage());
+            }
+        }
+    }
+
     $cards = [];
     foreach ($rows as $row) {
+        $isTranslated = true;
         $card = [
             'id' => $row['id'],
             'chapter_id' => $row['chapter_id'],
@@ -47,14 +73,22 @@ try {
             'answer_back' => $row['answer_back']
         ];
 
+        if ($lang !== 'en') {
+            $card['question_front_en'] = $row['question_front'];
+            $card['answer_back_en'] = $row['answer_back'];
+        }
+
         if ($lang === 'hi') {
+            $isTranslated = !empty($row['question_front_hi']);
             if (!empty($row['question_front_hi'])) $card['question_front'] = $row['question_front_hi'];
             if (!empty($row['answer_back_hi'])) $card['answer_back'] = $row['answer_back_hi'];
         } elseif ($lang === 'mr') {
+            $isTranslated = !empty($row['question_front_mr']);
             if (!empty($row['question_front_mr'])) $card['question_front'] = $row['question_front_mr'];
             if (!empty($row['answer_back_mr'])) $card['answer_back'] = $row['answer_back_mr'];
         }
 
+        $card['is_translated'] = $isTranslated;
         $cards[] = $card;
     }
 

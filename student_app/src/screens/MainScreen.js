@@ -193,6 +193,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
     }, [userState?.class_id, route.params?.isNewSelection]);
 
     // SELF-HEALING: Load user data if it's missing or refresh it when screen focuses
+    const pushRegisteredForUserRef = useRef(null);
     useEffect(() => {
         const recoverUser = async () => {
             try {
@@ -209,14 +210,17 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
                             return prev;
                         });
 
-                        // Register push notifications in the background
-                        try {
-                            const { registerForPushNotificationsAsync } = require('../utils/pushNotificationHelper');
-                            registerForPushNotificationsAsync(parsedUser.user_id).catch(err => {
-                                console.log('[PushRegister] Async error:', err);
-                            });
-                        } catch (pushErr) {
-                            console.log('[PushRegister] Failed to invoke push registration:', pushErr.message);
+                        // Register push notifications once per user session
+                        if (pushRegisteredForUserRef.current !== parsedUser.user_id) {
+                            pushRegisteredForUserRef.current = parsedUser.user_id;
+                            try {
+                                const { registerForPushNotificationsAsync } = require('../utils/pushNotificationHelper');
+                                registerForPushNotificationsAsync(parsedUser.user_id).catch(err => {
+                                    console.log('[PushRegister] Async error:', err);
+                                });
+                            } catch (pushErr) {
+                                console.log('[PushRegister] Failed to invoke push registration:', pushErr.message);
+                            }
                         }
                     }
                 }
@@ -371,11 +375,26 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
         route: { params: viewParams }
     }), [userState, handleUpdateUser, handleLogout, handleNavigate, handleGoBack, parentNavigation.replace, registerBackInterceptor, unregisterBackInterceptor, viewParams]);
 
+    // Keep visited root tabs mounted so switching tabs is instantaneous and avoids re-fetching
+    const [mountedTabs, setMountedTabs] = useState({ Home: true });
+    useEffect(() => {
+        if (['Home', 'Subjects', 'AI', 'ClassUpdates'].includes(currentView)) {
+            setMountedTabs(prev => (prev[currentView] ? prev : { ...prev, [currentView]: true }));
+        }
+    }, [currentView]);
+
+    const rootTabProps = useMemo(() => ({
+        user: userState,
+        onUserUpdate: handleUpdateUser,
+        onLogout: handleLogout,
+        navigation: commonProps.navigation,
+        route: { params: {} }
+    }), [userState, handleUpdateUser, handleLogout, commonProps.navigation]);
+
+    const isRootTabView = ['Home', 'Subjects', 'AI', 'ClassUpdates'].includes(currentView);
+
     const renderContent = () => {
         switch (currentView) {
-            case 'Home': return <HomeScreen {...commonProps} />;
-            case 'Subjects': return <SubjectsScreen {...commonProps} />;
-            case 'AI': return <AIScreen {...commonProps} />;
             case 'PDFToExam': return <PDFToExamScreen {...commonProps} />;
             case 'Profile': return <ProfileScreen {...commonProps} />;
             case 'Leaderboard': return <LeaderboardScreen {...commonProps} />;
@@ -406,8 +425,7 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
             case 'AIPdfWorksheet': return <AIPdfWorksheetScreen {...commonProps} />;
             case 'StudyDetail': return <StudyDetailScreen {...commonProps} />;
             case 'AIPdfNotes': return <AIPdfNotesScreen {...commonProps} />;
-            case 'ClassUpdates': return <ClassUpdatesScreen {...commonProps} />;
-            default: return <HomeScreen {...commonProps} />;
+            default: return null;
         }
     };
 
@@ -424,7 +442,31 @@ const MainScreen = ({ navigation: parentNavigation, route }) => {
 
             <SafeAreaView style={[styles.safeAreaTop, { backgroundColor: isDarkMode ? '#0f172a' : '#f0f9ff' }]} edges={['top']}>
                 <View style={styles.content}>
-                    {renderContent()}
+                    {mountedTabs.Home && (
+                        <View style={{ flex: 1, display: currentView === 'Home' ? 'flex' : 'none' }}>
+                            <HomeScreen {...rootTabProps} />
+                        </View>
+                    )}
+                    {mountedTabs.Subjects && (
+                        <View style={{ flex: 1, display: currentView === 'Subjects' ? 'flex' : 'none' }}>
+                            <SubjectsScreen {...rootTabProps} />
+                        </View>
+                    )}
+                    {mountedTabs.AI && (
+                        <View style={{ flex: 1, display: currentView === 'AI' ? 'flex' : 'none' }}>
+                            <AIScreen {...rootTabProps} />
+                        </View>
+                    )}
+                    {mountedTabs.ClassUpdates && (
+                        <View style={{ flex: 1, display: currentView === 'ClassUpdates' ? 'flex' : 'none' }}>
+                            <ClassUpdatesScreen {...rootTabProps} />
+                        </View>
+                    )}
+                    {!isRootTabView && (
+                        <View style={{ flex: 1 }}>
+                            {renderContent()}
+                        </View>
+                    )}
                 </View>
             </SafeAreaView>
 

@@ -61,14 +61,6 @@ try {
     // Force MySQL connection session to use UTC
     $pdo->exec("SET time_zone = '+00:00'");
     
-    // session-based packet size increase for PDF handling (if user lacks global PERMISSION)
-    try {
-        $pdo->exec("SET SESSION max_allowed_packet = 104857600"); // 100MB
-    } catch (Exception $e) {
-        // Silently fail if not supported, but log it
-        error_log("DB session packet size increase failed: " . $e->getMessage());
-    }
-    
 } catch (PDOException $e) {   
     // Inject CORS headers to prevent clients blocking error response
     if (isset($_SERVER['HTTP_ORIGIN'])) {
@@ -106,6 +98,9 @@ function sendResponse($status, $message, $data = null, $httpCode = 200) {
 
     http_response_code($httpCode);
     header("Content-Type: application/json; charset=UTF-8");
+    if (!ob_get_level() && extension_loaded('zlib') && !ini_get('zlib.output_compression') && !headers_sent()) {
+        ob_start('ob_gzhandler');
+    }
     echo json_encode([
         'status' => $status,
         'message' => $message,

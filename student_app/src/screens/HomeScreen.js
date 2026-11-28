@@ -408,9 +408,13 @@ const HomeScreen = ({ user, navigation, route }) => {
     const syncRotAnim = useRef(new Animated.Value(0)).current;
     const [perfSummary, setPerfSummary] = useState(null);
 
-    const loadPerformanceSummary = useCallback(async () => {
+    const lastPerfLoadTime = useRef(0);
+    const loadPerformanceSummary = useCallback(async (force = false) => {
         const uid = user?.user_id || user?.id;
         if (!uid) return;
+        const now = Date.now();
+        if (!force && now - lastPerfLoadTime.current < 60000) return;
+        lastPerfLoadTime.current = now;
         try {
             const res = await axios.get(`${API_URL}/get_student_performance.php?user_id=${uid}`, { timeout: 6000 });
             if (res.data?.status === 'success' && res.data.data?.summary) {
@@ -432,16 +436,19 @@ const HomeScreen = ({ user, navigation, route }) => {
         if (!classId) return;
         const checkExam = async () => {
             try {
-                // Check Live Exam (passes user_id to auto-hide if already completed)
-                const response = await axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}&user_id=${user?.user_id || user?.id || 0}`, { timeout: 8000 });
-                if (response.data && response.data.status === 'success' && response.data.data) {
-                    setActiveLiveExam(response.data.data);
+                const uid = user?.user_id || user?.id || 0;
+                const [examResult, notifsResult] = await Promise.allSettled([
+                    axios.get(`${API_URL}/student/check_live_exam.php?class_id=${classId}&user_id=${uid}`, { timeout: 8000 }),
+                    fetchNotifications(classId, user?.user_id || user?.id)
+                ]);
+
+                if (examResult.status === 'fulfilled' && examResult.value.data?.status === 'success' && examResult.value.data.data) {
+                    setActiveLiveExam(examResult.value.data.data);
                 } else {
                     setActiveLiveExam(null);
                 }
 
-                // Check Notifications for Live Class (pass user ID for classroom resolution)
-                const notifsResponse = await fetchNotifications(classId, user?.user_id || user?.id);
+                const notifsResponse = notifsResult.status === 'fulfilled' ? notifsResult.value : null;
                 if (notifsResponse && notifsResponse.status === 'success' && Array.isArray(notifsResponse.data)) {
                     const today = new Date().toDateString();
                     const latestLiveClass = notifsResponse.data.find(n => 
@@ -472,13 +479,8 @@ const HomeScreen = ({ user, navigation, route }) => {
             if (status.itemsLeft !== undefined) setItemsLeft(status.itemsLeft);
             if (status.isFullySynced !== undefined) {
                 setIsFullySynced(status.isFullySynced);
-                if (status.isFullySynced) {
-                    checkVersion();
-                }
             }
         });
-
-        checkVersion();
 
         return () => unsubscribe();
     }, []);
@@ -620,7 +622,7 @@ const HomeScreen = ({ user, navigation, route }) => {
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        loadPerformanceSummary();
+        loadPerformanceSummary(true);
         if (classId) {
             await dataCache.remove(`subjects_${classId}`);
             await loadSubjects(true);

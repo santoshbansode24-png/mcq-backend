@@ -10,10 +10,8 @@
 require_once __DIR__ . '/cors_middleware.php';
 require_once __DIR__ . '/../config/db.php';
 
-// Prevent caching of chapters response
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+// Allow brief HTTP caching for chapter lists
+header("Cache-Control: public, max-age=60");
 
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

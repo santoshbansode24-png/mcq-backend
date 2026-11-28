@@ -126,21 +126,23 @@ export const SmartCacheService = {
 
             const subjects = Array.isArray(subjectRes) ? subjectRes : (subjectRes.data || []);
 
-            // Initialize Queue
+            // Initialize Queue (fetch chapters in small batches of 3 to avoid network/bridge congestion)
             const fullQueue = [];
-            const chapterPromises = subjects.map(subject => 
-                SmartCacheService.retry(() => fetchChapters(subject.subject_id, true))
-                    .then(chapterRes => {
-                        const isChapterSuccess = chapterRes && (chapterRes.status === 'success' || Array.isArray(chapterRes.data) || Array.isArray(chapterRes));
-                        if (isChapterSuccess) {
-                            const chapters = Array.isArray(chapterRes) ? chapterRes : (chapterRes.data || []);
-                            chapters.forEach(ch => fullQueue.push(ch.chapter_id));
-                        }
-                    })
-                    .catch(e => console.warn(`[SmartCache] Failed to fetch chapters for subject ${subject.subject_id}`))
-            );
-
-            await Promise.all(chapterPromises);
+            const BATCH_SIZE = 3;
+            for (let i = 0; i < subjects.length; i += BATCH_SIZE) {
+                const batch = subjects.slice(i, i + BATCH_SIZE);
+                await Promise.all(batch.map(subject =>
+                    SmartCacheService.retry(() => fetchChapters(subject.subject_id, isPriority))
+                        .then(chapterRes => {
+                            const isChapterSuccess = chapterRes && (chapterRes.status === 'success' || Array.isArray(chapterRes.data) || Array.isArray(chapterRes));
+                            if (isChapterSuccess) {
+                                const chapters = Array.isArray(chapterRes) ? chapterRes : (chapterRes.data || []);
+                                chapters.forEach(ch => fullQueue.push(ch.chapter_id));
+                            }
+                        })
+                        .catch(() => console.warn(`[SmartCache] Failed to fetch chapters for subject ${subject.subject_id}`))
+                ));
+            }
 
             // Save queue to storage so we can resume if app closes
             await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(fullQueue));
@@ -211,7 +213,7 @@ export const SmartCacheService = {
                 
                 try {
                     // Try to sync this specific chapter
-                    await SmartCacheService.syncChapterContent(chapterId);
+                    await SmartCacheService.syncChapterContent(chapterId, internalCall);
                 } catch (chapterErr) {
                     console.warn(`[SmartCache] ⚠️ Chapter ${chapterId} sync failed (skipped):`, chapterErr.message);
                     failureCount++;
@@ -222,15 +224,14 @@ export const SmartCacheService = {
                 queue.shift();
                 processedCount++;
 
-                // Save progress periodically
+                // Save progress and notify UI periodically (every 5 items or on finish) to prevent render storms
                 if (processedCount % 5 === 0 || queue.length === 0) {
                     await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+                    notifyListeners({ isSyncing: true, isFullySynced: false, itemsLeft: queue.length });
                 }
 
-                notifyListeners({ isSyncing: true, isFullySynced: false, itemsLeft: queue.length });
-
-                // Throttle slightly to keep UI responsive
-                await new Promise(r => setTimeout(r, processedCount % 10 === 0 ? 100 : 30));
+                // Throttle gently to keep UI & JS thread responsive
+                await new Promise(r => setTimeout(r, processedCount % 5 === 0 ? 250 : 120));
             }
 
             // Final safety: if queue is empty, mark status as completed
@@ -300,15 +301,15 @@ export const SmartCacheService = {
     /**
      * Sync all content types for a single chapter
      */
-    syncChapterContent: async (chapterId) => {
+    syncChapterContent: async (chapterId, forceRefresh = false) => {
         try {
-            // 1. Fetch JSON Content in Parallel for speed
+            // 1. Fetch JSON Content in Parallel (reuse valid cache when not forced)
             const results = await Promise.allSettled([
-                SmartCacheService.retry(() => fetchMCQs(chapterId, true)),
-                SmartCacheService.retry(() => fetchFlashcards(chapterId, true)),
-                SmartCacheService.retry(() => fetchQuickRevision(chapterId, true)),
-                SmartCacheService.retry(() => fetchNotes(chapterId, true)),
-                SmartCacheService.retry(() => fetchVideos(chapterId, true))
+                SmartCacheService.retry(() => fetchMCQs(chapterId, forceRefresh)),
+                SmartCacheService.retry(() => fetchFlashcards(chapterId, forceRefresh)),
+                SmartCacheService.retry(() => fetchQuickRevision(chapterId, forceRefresh)),
+                SmartCacheService.retry(() => fetchNotes(chapterId, forceRefresh)),
+                SmartCacheService.retry(() => fetchVideos(chapterId, forceRefresh))
             ]);
 
             // If ALL endpoints failed, it's likely a network issue. Abort to pause the queue.

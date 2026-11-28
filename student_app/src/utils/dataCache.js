@@ -8,6 +8,18 @@ const EXPIRY_MAP = {
     default:  60 * 60 * 1000,      // 1 hour fallback (was 24 hrs)
 };
 
+// Fast L1 in-memory cache to avoid repeated AsyncStorage SQLite reads & JSON.parse
+const memoryCache = new Map();
+const MAX_MEMORY_CACHE_ENTRIES = 120;
+
+const setMemoryEntry = (key, cacheItem) => {
+    if (memoryCache.size >= MAX_MEMORY_CACHE_ENTRIES && !memoryCache.has(key)) {
+        const oldestKey = memoryCache.keys().next().value;
+        memoryCache.delete(oldestKey);
+    }
+    memoryCache.set(key, cacheItem);
+};
+
 const DEBUG = false;
 
 export const dataCache = {
@@ -26,6 +38,7 @@ export const dataCache = {
                 type,
                 isEmpty
             };
+            setMemoryEntry(key, cacheItem);
             await AsyncStorage.setItem(`@cache_${key}`, JSON.stringify(cacheItem));
             if (DEBUG) console.log(`[Cache] Saved ${key} (${type})`);
         } catch (error) {
@@ -38,10 +51,14 @@ export const dataCache = {
      */
     get: async (key, type) => {
         try {
-            const raw = await AsyncStorage.getItem(`@cache_${key}`);
-            if (!raw) return null;
+            let cacheItem = memoryCache.get(key);
+            if (!cacheItem) {
+                const raw = await AsyncStorage.getItem(`@cache_${key}`);
+                if (!raw) return null;
+                cacheItem = JSON.parse(raw);
+                setMemoryEntry(key, cacheItem);
+            }
 
-            const cacheItem = JSON.parse(raw);
             // If data was empty, revalidate quickly (30s) so newly uploaded content appears
             const ttl = cacheItem.isEmpty ? 30 * 1000 : (EXPIRY_MAP[type] || EXPIRY_MAP.default);
             const age = Date.now() - cacheItem.timestamp;
@@ -73,9 +90,12 @@ export const dataCache = {
      */
     getStale: async (key) => {
         try {
+            const memItem = memoryCache.get(key);
+            if (memItem) return memItem.data;
             const raw = await AsyncStorage.getItem(`@cache_${key}`);
             if (!raw) return null;
             const cacheItem = JSON.parse(raw);
+            setMemoryEntry(key, cacheItem);
             return cacheItem.data;
         } catch (error) {
             if (DEBUG) console.warn('[Cache] getStale failed:', error);
@@ -88,6 +108,7 @@ export const dataCache = {
      */
     remove: async (key) => {
         try {
+            memoryCache.delete(key);
             await AsyncStorage.removeItem(`@cache_${key}`);
         } catch (error) {
             if (DEBUG) console.warn('[Cache] Remove failed:', error);
@@ -99,6 +120,7 @@ export const dataCache = {
      */
     clear: async () => {
         try {
+            memoryCache.clear();
             const keys = await AsyncStorage.getAllKeys();
             const cacheKeys = keys.filter(k => k.startsWith('@cache_'));
             if (cacheKeys.length > 0) await AsyncStorage.multiRemove(cacheKeys);

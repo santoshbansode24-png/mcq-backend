@@ -1,4 +1,10 @@
 import { Platform } from 'react-native';
+import axios from 'axios';
+
+// Prevent hanging network requests on slow mobile connections
+if (!axios.defaults.timeout) {
+    axios.defaults.timeout = 15000;
+}
 
 // ========================================
 // LOCAL XAMPP CONFIGURATION
